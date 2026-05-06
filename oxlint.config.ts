@@ -10,6 +10,7 @@ export default defineConfig({
     "**/snap/**",
     "**/vite.config.*.timestamp-*.*",
     "**.gen.ts",
+    "**/src/components/ui/**",
   ],
   options: {
     typeAware: true,

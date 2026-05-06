@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+# Drizzle Studio serves its local bridge over HTTPS when mkcert is available.
+# In WSL, Windows Chrome reaches that bridge through localhost forwarding, and
+# the hosted Studio UI expects the bridge to be plain HTTP. Shadowing mkcert for
+# this script makes Drizzle fall back to HTTP without changing the system setup.
+exit 127
