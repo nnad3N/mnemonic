@@ -30,5 +30,8 @@
   "auth_error_password_too_short": "Hasło jest za krótkie.",
   "auth_error_password_too_long": "Hasło jest za długie.",
   "auth_error_credential_account_not_found": "To konto nie ma ustawionego hasła. Spróbuj innej metody logowania.",
-  "auth_error_session_expired": "Twoja sesja wygasła. Zaloguj się ponownie."
+  "auth_error_session_expired": "Twoja sesja wygasła. Zaloguj się ponownie.",
+  "not_found_title": "Nie znaleziono strony",
+  "not_found_description": "Ten link może być nieaktualny albo strona została przeniesiona. Sprawdź adres URL lub wróć na stronę startową.",
+  "not_found_back_home": "Wróć na stronę główną"
 }

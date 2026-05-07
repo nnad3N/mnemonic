@@ -30,5 +30,8 @@
   "auth_error_password_too_short": "Password is too short.",
   "auth_error_password_too_long": "Password is too long.",
   "auth_error_credential_account_not_found": "No password is set for this account. Try a different sign-in method.",
-  "auth_error_session_expired": "Your session has expired. Please sign in again."
+  "auth_error_session_expired": "Your session has expired. Please sign in again.",
+  "not_found_title": "Page not found",
+  "not_found_description": "This link may be broken, or the page was moved. Check the URL or head back to the start.",
+  "not_found_back_home": "Back to home"
 }

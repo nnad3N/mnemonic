@@ -14,12 +14,15 @@ import type { RouterContext } from "@/integrations/tanstack-query/root-provider"
 import { authClient } from "@/lib/auth-client";
 import { authKeys, authSessionQuery } from "@/lib/auth-query";
 import { getLocale } from "@/paraglide/runtime";
+import { NotFoundPage } from "@/not-found";
 
 import PostHogProvider from "../integrations/posthog/provider";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 
 import appCss from "../styles.css?url";
+
 export const Route = createRootRouteWithContext<RouterContext>()({
+notFoundComponent: NotFoundPage,
   beforeLoad: async ({ context }) => {
     // Other redirect strategies are possible; see
     // https://github.com/TanStack/router/tree/main/examples/react/i18n-paraglide#offline-redirect
