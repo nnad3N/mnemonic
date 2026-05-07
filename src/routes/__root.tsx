@@ -14,34 +14,6 @@ import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 
 import appCss from "../styles.css?url";
 
-const RootDocument = ({ children }: { children: React.ReactNode }) => {
-  return (
-    <html lang={getLocale()}>
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        <PostHogProvider>
-          {children}
-          <TanStackDevtools
-            config={{
-              position: "bottom-right",
-            }}
-            plugins={[
-              {
-                name: "Tanstack Router",
-                render: <TanStackRouterDevtoolsPanel />,
-              },
-              TanStackQueryDevtools,
-            ]}
-          />
-        </PostHogProvider>
-        <Scripts />
-      </body>
-    </html>
-  );
-};
-
 interface MyRouterContext {
   queryClient: QueryClient;
 }
@@ -77,3 +49,32 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
   }),
   shellComponent: RootDocument,
 });
+
+/* oxlint-disable func-style */
+function RootDocument({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang={getLocale()}>
+      <head>
+        <HeadContent />
+      </head>
+      <body>
+        <PostHogProvider>
+          {children}
+          <TanStackDevtools
+            config={{
+              position: "bottom-right",
+            }}
+            plugins={[
+              {
+                name: "Tanstack Router",
+                render: <TanStackRouterDevtoolsPanel />,
+              },
+              TanStackQueryDevtools,
+            ]}
+          />
+        </PostHogProvider>
+        <Scripts />
+      </body>
+    </html>
+  );
+}

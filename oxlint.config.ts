@@ -15,15 +15,6 @@ export default defineConfig({
   options: {
     typeAware: true,
   },
-  overrides: [
-    {
-      files: ["**/*.{js,ts,tsx}"],
-      jsPlugins: ["@stylistic/eslint-plugin"],
-      rules: {
-        "@stylistic/spaced-comment": "error",
-      },
-    },
-  ],
   rules: {
     "arrow-body-style": "off",
     "import/no-commonjs": "error",
