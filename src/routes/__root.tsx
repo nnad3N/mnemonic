@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 
+import { ToastProvider } from "@/components/ui/toast";
 import { getLocale } from "@/paraglide/runtime";
 
 import PostHogProvider from "../integrations/posthog/provider";
@@ -59,19 +60,21 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <PostHogProvider>
-          {children}
-          <TanStackDevtools
-            config={{
-              position: "bottom-right",
-            }}
-            plugins={[
-              {
-                name: "Tanstack Router",
-                render: <TanStackRouterDevtoolsPanel />,
-              },
-              TanStackQueryDevtools,
-            ]}
-          />
+          <ToastProvider>
+            {children}
+            <TanStackDevtools
+              config={{
+                position: "bottom-right",
+              }}
+              plugins={[
+                {
+                  name: "Tanstack Router",
+                  render: <TanStackRouterDevtoolsPanel />,
+                },
+                TanStackQueryDevtools,
+              ]}
+            />
+          </ToastProvider>
         </PostHogProvider>
         <Scripts />
       </body>

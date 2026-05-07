@@ -103,6 +103,119 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
 
 ---
 
+## TanStack Router file routes
+
+Every file under `src/routes/` follows the same shape. `createFileRoute(...)({ component: ... })` runs **before** the component is defined, so the component must be a **hoisted function declaration**, not an arrow function expression.
+
+- Name the component **`RouteComponent`** for page routes and **`LayoutComponent`** for pathless layouts (`_*.tsx` / `_*/route.tsx`). Don't invent per-route names like `SignInRoute` or `AuthLayout` — keep the name uniform across files so jumping between routes is predictable.
+- Disable `func-style` for the declaration with a file-scoped comment: `/* oxlint-disable func-style */` directly above `function RouteComponent() {`. This is the only place `func-style` should be disabled in the codebase; everywhere else, prefer arrow functions per the Modern JS guidance above.
+- Reference the component by name inside `createFileRoute`:
+
+```tsx
+export const Route = createFileRoute("/some/path")({
+  component: RouteComponent,
+});
+
+/* oxlint-disable func-style */
+function RouteComponent() {
+  // ...
+}
+```
+
+- Do **not** convert these to `const RouteComponent = () => {}` — the resulting temporal dead zone breaks the route registration.
+
+---
+
+## Forms
+
+This project pairs **TanStack React Form** (validation/state) with **Base UI Form** (`@/components/ui/form`, `@/components/ui/field`) for the rendering layer. Follow this pattern for every form.
+
+### Building a form
+
+- **Schema with Valibot** at the top of the component, using Paraglide messages for error copy:
+
+```tsx
+const schema = v.object({
+  email: v.pipe(
+    v.string(),
+    v.nonEmpty(m.auth_validation_required()),
+    v.email(m.auth_validation_email_invalid())
+  ),
+});
+```
+
+- **Inline literal constraints** (e.g. `v.minLength(8, ...)`) — do not extract magic-number constants like `MIN_PASSWORD_LENGTH`.
+- **`useForm`** with `defaultValues` and a single **`onDynamic`** validator. `onDynamic` adapts to field state: validates on blur/submit before the field is touched, then on every change after — one validator slot, no duplication.
+- **`validationLogic: revalidateLogic()`** from `@tanstack/react-form` is **required** when the form-level schema lives only in `onDynamic`. TanStack's default validation logic runs `onChange` / `onBlur` / `onSubmit` on submit — it does **not** include `onDynamic`, so without `revalidateLogic()` submit would skip the schema and `onSubmit` could run with invalid data.
+
+```tsx
+const form = useForm({
+  defaultValues: { email: "", password: "" },
+  onSubmit: async ({ value }) => {
+    /* ... */
+  },
+  validationLogic: revalidateLogic(),
+  validators: { onDynamic: schema },
+});
+```
+
+- **Locate the schema inside the component** so Paraglide message getters re-evaluate per render and stay aligned with the active locale.
+
+### Wiring validation errors to Base UI
+
+- Use `toFormErrors` from [`src/lib/form-errors.ts`](src/lib/form-errors.ts) to flatten TanStack `fieldMeta` into the `Record<string, string>` shape Base UI's `<Form errors>` expects:
+
+```tsx
+const formErrors = useStore(form.store, (s) => toFormErrors(s.fieldMeta));
+```
+
+- Pass it on the form: `<Form errors={formErrors}>`.
+- Each `Field` must set **`name={field.name}`** so Base UI can resolve `errors[name]`.
+- Render errors with a self-closing **`<FieldError />`** — no `match` prop, no children, no manual `meta.errors` joining. Base UI handles the visibility based on the `errors` map.
+
+### Submit button state
+
+Subscribe narrowly to drive the submit button:
+
+```tsx
+<form.Subscribe
+  selector={(s) => ({ canSubmit: s.canSubmit, isSubmitting: s.isSubmitting })}
+>
+  {({ canSubmit, isSubmitting }) => (
+    <Button disabled={!canSubmit} loading={isSubmitting} type="submit">
+      {m.auth_sign_in_submit()}
+    </Button>
+  )}
+</form.Subscribe>
+```
+
+### API errors vs validation errors
+
+- **Validation errors** (client-side, from the schema) → Base UI `<FieldError />` via the `toFormErrors` flow above.
+- **Generic API errors** (e.g. Better Auth) → `toastManager.add(...)`. Translate via an error-code lookup (see [`src/lib/auth-errors.ts`](src/lib/auth-errors.ts)); never display raw provider messages.
+
+### Submit handler shape
+
+Always `preventDefault` + `stopPropagation` and forward to TanStack:
+
+```tsx
+<Form
+  errors={formErrors}
+  onSubmit={(event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    void form.handleSubmit();
+  }}
+>
+```
+
+### Reference implementations
+
+- [`src/routes/_auth/sign-in.tsx`](src/routes/_auth/sign-in.tsx)
+- [`src/routes/_auth/sign-up.tsx`](src/routes/_auth/sign-up.tsx)
+
+---
+
 ## Testing
 
 - Write assertions inside `it()` or `test()` blocks
