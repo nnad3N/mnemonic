@@ -17,6 +17,7 @@ export default defineConfig({
   },
   rules: {
     "arrow-body-style": "off",
+    "eslint(sort-keys)": "off",
     "import/no-commonjs": "error",
     "no-use-before-define": "allow",
     "typescript/ban-ts-comment": [

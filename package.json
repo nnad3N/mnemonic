@@ -21,12 +21,16 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:pull": "drizzle-kit pull",
-    "db:studio": "PATH=\"./scripts/bin:$PATH\" drizzle-kit studio"
+    "db:studio": "PATH=\"./scripts/bin:$PATH\" drizzle-kit studio",
+    "mastra:dev": "mastra dev",
+    "mastra:build": "mastra build"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
     "@fontsource-variable/geist-mono": "^5.2.7",
     "@fontsource/geist-sans": "^5.2.5",
+    "@mastra/core": "^1.32.1",
+    "@mastra/pg": "^1.10.0",
     "@posthog/react": "^1.9.0",
     "@t3-oss/env-core": "^0.13.11",
     "@tailwindcss/vite": "^4.2.4",
@@ -39,6 +43,7 @@
     "@tanstack/react-router-ssr-query": "latest",
     "@tanstack/react-start": "latest",
     "@tanstack/router-plugin": "^1.167.35",
+    "@valibot/to-json-schema": "^1.7.0",
     "better-auth": "^1.6.9",
     "better-result": "^2.9.2",
     "class-variance-authority": "^0.7.1",
@@ -70,6 +75,7 @@
     "@typescript/native-preview": "^7.0.0-dev.20260507.1",
     "@vitejs/plugin-react": "^6.0.1",
     "babel-plugin-react-compiler": "^1.0.0",
+    "mastra": "^1.8.1",
     "oxfmt": "^0.48.0",
     "oxlint": "^1.63.0",
     "oxlint-tsgolint": "^0.22.1",
