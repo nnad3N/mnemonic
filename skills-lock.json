@@ -7,6 +7,12 @@
       "skillPath": "skills/use-ai-sdk/SKILL.md",
       "computedHash": "2249889eb47ef0f61c4dba4cf2afe01c1c8dd793bb4c24230347c1ab909bb7dd"
     },
+    "assistant-ui": {
+      "source": "assistant-ui/skills",
+      "sourceType": "github",
+      "skillPath": "assistant-ui/skills/assistant-ui/SKILL.md",
+      "computedHash": "cfce3ce8c4c2da38f0fc8e881af677efa8166d379862541f79c54e66f1a599d5"
+    },
     "better-result-adopt": {
       "source": "dmmulroy/better-result",
       "sourceType": "github",
@@ -30,6 +36,30 @@
       "sourceType": "github",
       "skillPath": "skills/mastra/SKILL.md",
       "computedHash": "b42f583342dfee7deb541f4d094f03e8748898257f1f884fa71de1fdba9f38a2"
+    },
+    "primitives": {
+      "source": "assistant-ui/skills",
+      "sourceType": "github",
+      "skillPath": "assistant-ui/skills/primitives/SKILL.md",
+      "computedHash": "acdb5ddbdd066abf513a3f729198cee8ad79d03b18ba3329e609658d88bc09ee"
+    },
+    "setup": {
+      "source": "assistant-ui/skills",
+      "sourceType": "github",
+      "skillPath": "assistant-ui/skills/setup/SKILL.md",
+      "computedHash": "283c7cbc08cbc1a3b58307083f505a24fcc8b5e5621608d6e1fb88034b1afce0"
+    },
+    "thread-list": {
+      "source": "assistant-ui/skills",
+      "sourceType": "github",
+      "skillPath": "assistant-ui/skills/thread-list/SKILL.md",
+      "computedHash": "aaa49c0f8c1a3c5cf37498c8019f7e0d4f614053b17728593a27755b663e9d7c"
+    },
+    "update": {
+      "source": "assistant-ui/skills",
+      "sourceType": "github",
+      "skillPath": "assistant-ui/skills/update/SKILL.md",
+      "computedHash": "9ce8f6ff9d76fb1fa3101da8240b805da09836bf6aad9a1bc3f671060de461a7"
     }
   }
 }
