@@ -18,6 +18,12 @@
       "sourceType": "github",
       "skillPath": "apps/ui/skills/coss-particles/SKILL.md",
       "computedHash": "44c9d1c501a8f76c5332740795a2fa0f07dc814cd1a2c4a6103a971eb982db79"
+    },
+    "mastra": {
+      "source": "mastra-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/mastra/SKILL.md",
+      "computedHash": "b42f583342dfee7deb541f4d094f03e8748898257f1f884fa71de1fdba9f38a2"
     }
   }
 }
