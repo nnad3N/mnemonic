@@ -33,5 +33,9 @@
   "auth_error_session_expired": "Twoja sesja wygasła. Zaloguj się ponownie.",
   "not_found_title": "Nie znaleziono strony",
   "not_found_description": "Ten link może być nieaktualny albo strona została przeniesiona. Sprawdź adres URL lub wróć na stronę startową.",
-  "not_found_back_home": "Wróć na stronę główną"
+  "not_found_back_home": "Wróć na stronę główną",
+  "route_error_session_title": "Błąd sesji",
+  "route_error_try_again": "Spróbuj ponownie",
+  "route_error_sign_out": "Wyloguj się",
+  "route_error_contact_support_if_persists": "Jeśli problem będzie się powtarzał, skontaktuj się z pomocą techniczną."
 }

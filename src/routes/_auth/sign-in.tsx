@@ -8,7 +8,7 @@ import { Form } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { toastManager } from "@/components/ui/toast";
 import { authClient } from "@/lib/auth-client";
-import { getAuthErrorDescription } from "@/lib/auth-errors";
+import { getAuthErrorDescription } from "@/lib/errors/auth-error";
 import { toFormErrors } from "@/lib/form-errors";
 import { m } from "@/paraglide/messages";
 import { localizeHref } from "@/paraglide/runtime";
@@ -62,7 +62,7 @@ function RouteComponent() {
 
   return (
     <Form
-      className="flex flex-col gap-4"
+      className="flex flex-col gap-4 "
       errors={formErrors}
       onSubmit={(event) => {
         event.preventDefault();

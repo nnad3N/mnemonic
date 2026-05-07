@@ -1,5 +1,5 @@
 import { TanStackDevtools } from "@tanstack/react-devtools";
-import { useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import {
   HeadContent,
   Scripts,
@@ -9,20 +9,19 @@ import {
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { useEffect } from "react";
 
+import { ErrorComponent } from "@/components/route-components/error";
+import { NotFoundComponent } from "@/components/route-components/not-found";
 import { ToastProvider } from "@/components/ui/toast";
+import PostHogProvider from "@/integrations/posthog/provider";
+import TanStackQueryDevtools from "@/integrations/tanstack-query/devtools";
 import type { RouterContext } from "@/integrations/tanstack-query/root-provider";
 import { authClient } from "@/lib/auth-client";
 import { authKeys, authSessionQuery } from "@/lib/auth-query";
 import { getLocale } from "@/paraglide/runtime";
-import { NotFoundPage } from "@/not-found";
 
-import PostHogProvider from "../integrations/posthog/provider";
-import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
-
-import appCss from "../styles.css?url";
+import appCss from "@/styles.css?url";
 
 export const Route = createRootRouteWithContext<RouterContext>()({
-notFoundComponent: NotFoundPage,
   beforeLoad: async ({ context }) => {
     // Other redirect strategies are possible; see
     // https://github.com/TanStack/router/tree/main/examples/react/i18n-paraglide#offline-redirect
@@ -34,7 +33,7 @@ notFoundComponent: NotFoundPage,
 
     return { session: session?.data?.session, user: session?.data?.user };
   },
-
+  errorComponent: ErrorComponent,
   head: () => ({
     links: [
       {
@@ -55,6 +54,7 @@ notFoundComponent: NotFoundPage,
       },
     ],
   }),
+  notFoundComponent: NotFoundComponent,
   shellComponent: RootDocument,
 });
 
@@ -69,22 +69,19 @@ export const useAuthSessionQuery = (): void => {
   useSuspenseQuery(authSessionQuery);
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { data, error, isPending } = authClient.useSession();
+  const { data, error, isPending, isRefetching } = authClient.useSession();
 
   useEffect(() => {
-    if (isPending) {
+    if (isPending || isRefetching) {
       return;
     }
 
-    queryClient.setQueryData(authKeys.session(), {
-      data,
-      error: error ?? null,
-    });
+    queryClient.setQueryData(authKeys.session(), { data, error });
     void router.invalidate();
-  }, [data, error, isPending, queryClient, router]);
+  }, [data, error, isPending, isRefetching, queryClient, router]);
 };
 
-/* oxlint-disable func-style */
+// oxlint-disable-next-line func-style
 function RootDocument({ children }: { children: React.ReactNode }) {
   useAuthSessionQuery();
 
@@ -96,7 +93,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <body>
         <PostHogProvider>
           <ToastProvider>
-            {children}
+            <main className="flex min-h-dvh items-center justify-center">
+              {children}
+            </main>
             <TanStackDevtools
               config={{
                 position: "bottom-right",

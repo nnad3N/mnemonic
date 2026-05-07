@@ -18,10 +18,7 @@ export default defineConfig({
   rules: {
     "arrow-body-style": "off",
     "import/no-commonjs": "error",
-    "no-use-before-define": [
-      "error",
-      { allowNamedExports: true, functions: false },
-    ],
+    "no-use-before-define": "allow",
     "typescript/ban-ts-comment": [
       "error",
       {
@@ -50,5 +47,6 @@ export default defineConfig({
       "error",
       { allowNullableBoolean: true, allowNullableString: true },
     ],
+    "typescript/strict-void-return": "off",
   },
 });

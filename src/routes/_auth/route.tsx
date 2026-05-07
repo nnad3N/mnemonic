@@ -16,32 +16,30 @@ function LayoutComponent() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   return (
-    <main className="flex min-h-svh items-center justify-center p-6">
-      <Frame className="w-full max-w-md">
-        <FrameHeader className="p-1">
-          <Tabs value={pathname}>
-            <TabsList className="w-full">
-              <TabsTab
-                nativeButton={false}
-                render={<Link to="/sign-in" />}
-                value="/sign-in"
-              >
-                {m.auth_sign_in()}
-              </TabsTab>
-              <TabsTab
-                nativeButton={false}
-                render={<Link to="/sign-up" />}
-                value="/sign-up"
-              >
-                {m.auth_sign_up()}
-              </TabsTab>
-            </TabsList>
-          </Tabs>
-        </FrameHeader>
-        <FramePanel>
-          <Outlet />
-        </FramePanel>
-      </Frame>
-    </main>
+    <Frame className="w-full max-w-md">
+      <FrameHeader className="p-1">
+        <Tabs value={pathname}>
+          <TabsList className="w-full">
+            <TabsTab
+              nativeButton={false}
+              render={<Link to="/sign-in" />}
+              value="/sign-in"
+            >
+              {m.auth_sign_in()}
+            </TabsTab>
+            <TabsTab
+              nativeButton={false}
+              render={<Link to="/sign-up" />}
+              value="/sign-up"
+            >
+              {m.auth_sign_up()}
+            </TabsTab>
+          </TabsList>
+        </Tabs>
+      </FrameHeader>
+      <FramePanel>
+        <Outlet />
+      </FramePanel>
+    </Frame>
   );
 }
