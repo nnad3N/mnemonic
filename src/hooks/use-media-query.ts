@@ -78,12 +78,12 @@ const getServerSnapshot = (): boolean => {
   return false;
 };
 
-export interface MediaQueryInput {
+export type MediaQueryInput = {
   min?: Breakpoint | number;
   max?: Breakpoint | number;
   /** Touch-like input (finger). Use "fine" for mouse/trackpad. */
   pointer?: "coarse" | "fine";
-}
+};
 
 export const useMediaQuery = (
   // oxlint-disable-next-line typescript/ban-types

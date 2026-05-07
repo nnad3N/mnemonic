@@ -29,9 +29,22 @@ export default defineConfig({
         "ts-ignore": "allow-with-description",
       },
     ],
+    "typescript/consistent-type-definitions": ["error", "type"],
     "typescript/no-misused-promises": [
       "error",
       { checksVoidReturn: { attributes: false } },
+    ],
+    "typescript/only-throw-error": [
+      "error",
+      {
+        allow: [
+          {
+            from: "package",
+            name: ["Redirect", "AnyRedirect"],
+            package: "@tanstack/router-core",
+          },
+        ],
+      },
     ],
     "typescript/strict-boolean-expressions": [
       "error",

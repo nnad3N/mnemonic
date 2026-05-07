@@ -1,31 +1,35 @@
 import { TanStackDevtools } from "@tanstack/react-devtools";
-import type { QueryClient } from "@tanstack/react-query";
+import { useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import {
   HeadContent,
   Scripts,
   createRootRouteWithContext,
+  useRouter,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
+import { useEffect } from "react";
 
 import { ToastProvider } from "@/components/ui/toast";
+import type { RouterContext } from "@/integrations/tanstack-query/root-provider";
+import { authClient } from "@/lib/auth-client";
+import { authKeys, authSessionQuery } from "@/lib/auth-query";
 import { getLocale } from "@/paraglide/runtime";
 
 import PostHogProvider from "../integrations/posthog/provider";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 
 import appCss from "../styles.css?url";
-
-interface MyRouterContext {
-  queryClient: QueryClient;
-}
-
-export const Route = createRootRouteWithContext<MyRouterContext>()({
-  beforeLoad: () => {
+export const Route = createRootRouteWithContext<RouterContext>()({
+  beforeLoad: async ({ context }) => {
     // Other redirect strategies are possible; see
     // https://github.com/TanStack/router/tree/main/examples/react/i18n-paraglide#offline-redirect
     if (typeof document !== "undefined") {
       document.documentElement.setAttribute("lang", getLocale());
     }
+
+    const session = await context.queryClient.ensureQueryData(authSessionQuery);
+
+    return { session: session?.data?.session, user: session?.data?.user };
   },
 
   head: () => ({
@@ -51,8 +55,36 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
   shellComponent: RootDocument,
 });
 
+/**
+ * Mirrors Better Auth's reactive session (`useSession`, documented client hook) into the
+ * TanStack Query cache populated via `getSession` (documented for React Query).
+ *
+ * @see https://www.better-auth.com/docs/basic-usage#get-session — `getSession` + TanStack Query
+ * @see https://www.better-auth.com/docs/basic-usage#use-session — reactive session on the client
+ */
+export const useAuthSessionQuery = (): void => {
+  useSuspenseQuery(authSessionQuery);
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const { data, error, isPending } = authClient.useSession();
+
+  useEffect(() => {
+    if (isPending) {
+      return;
+    }
+
+    queryClient.setQueryData(authKeys.session(), {
+      data,
+      error: error ?? null,
+    });
+    void router.invalidate();
+  }, [data, error, isPending, queryClient, router]);
+};
+
 /* oxlint-disable func-style */
 function RootDocument({ children }: { children: React.ReactNode }) {
+  useAuthSessionQuery();
+
   return (
     <html lang={getLocale()}>
       <head>

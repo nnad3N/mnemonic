@@ -25,8 +25,11 @@ export const getRouter = () => {
   return router;
 };
 
+export type Router = ReturnType<typeof getRouter>;
+
 declare module "@tanstack/react-router" {
+  // oxlint-disable-next-line typescript/consistent-type-definitions
   interface Register {
-    router: ReturnType<typeof getRouter>;
+    router: Router;
   }
 }
