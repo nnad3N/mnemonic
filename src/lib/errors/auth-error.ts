@@ -1,6 +1,6 @@
 import { TaggedError } from "better-result";
 
-import { authClient } from "@/lib/auth-client";
+import { authClient } from "@/lib/better-auth/auth-client";
 import { m } from "@/paraglide/messages";
 
 export const AUTH_ERROR_CODES = authClient.$ERROR_CODES;

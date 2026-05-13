@@ -18,6 +18,7 @@ export default defineConfig({
   },
   rules: {
     "arrow-body-style": "off",
+    "require-await": "off",
     "sort-keys": "off",
     "import/no-commonjs": "error",
     "no-use-before-define": "allow",

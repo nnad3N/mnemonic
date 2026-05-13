@@ -4,5 +4,5 @@ export const Route = createFileRoute("/")({ component: RouteComponent });
 
 /* oxlint-disable func-style */
 function RouteComponent() {
-  return <Navigate to="/chat" />;
+  return <Navigate to="/search" />;
 }

@@ -1,17 +1,25 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Link,
   Outlet,
   createFileRoute,
   redirect,
-  useNavigate,
 } from "@tanstack/react-router";
 import {
+  ChevronRightIcon,
   LogOutIcon,
-  MessageCircleIcon,
   MoreHorizontalIcon,
+  PlusIcon,
+  SearchIcon,
 } from "lucide-react";
+import type React from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Menu,
   MenuItem,
@@ -25,15 +33,26 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
   SidebarInset,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
   SidebarRail,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
-import { authClient } from "@/lib/auth-client";
+import { toastManager } from "@/components/ui/toast";
+import { authClient } from "@/lib/better-auth/auth-client";
 import { m } from "@/paraglide/messages";
+
+import { createConversation } from "./_protected.chat.$threadId/-thread.api/create-thread";
+import { threadKeys } from "./_protected.chat.$threadId/-thread.api/query-keys";
+import { sidebarDataQuery } from "./_protected.chat.$threadId/-thread.api/sidebar-data";
+import type { SidebarTopic } from "./_protected.chat.$threadId/-thread.api/types";
 
 export const Route = createFileRoute("/_protected")({
   beforeLoad: ({ context }) => {
@@ -48,27 +67,96 @@ export const Route = createFileRoute("/_protected")({
 
 /* oxlint-disable func-style */
 function LayoutComponent() {
-  const navigate = useNavigate();
+  const navigate = Route.useNavigate();
+  const queryClient = useQueryClient();
+
   const user = Route.useRouteContext({ select: (context) => context.user });
-  const displayName = user.name || user.email;
+  const displayName = user.name ?? user.email;
   const initials = getInitials(displayName);
+
+  const { data: sidebarData } = useQuery(sidebarDataQuery);
+  const conversationThreads = sidebarData?.conversationThreads ?? [];
+  const topics = sidebarData?.topics ?? [];
+
+  const createConversationMutation = useMutation({
+    mutationFn: async () => {
+      const thread = await createConversation({
+        data: { title: m.nav_new_conversation_default_title() },
+      });
+
+      return thread;
+    },
+    onError: () => {
+      toastManager.add({
+        description: m.nav_new_thread_error_description(),
+        title: m.nav_new_thread_error_title(),
+        type: "error",
+      });
+    },
+    onSuccess: async (thread) => {
+      await navigate({
+        params: { threadId: thread.id },
+        to: "/chat/$threadId",
+      });
+      await queryClient.invalidateQueries({ queryKey: threadKeys.sidebar() });
+    },
+  });
 
   return (
     <SidebarProvider>
       <Sidebar collapsible="icon">
+        <SidebarHeader>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <Link to="/search">
+                {({ isActive }) => (
+                  <SidebarMenuButton isActive={isActive}>
+                    <SearchIcon aria-hidden="true" />
+                    <span>{m.nav_search()}</span>
+                  </SidebarMenuButton>
+                )}
+              </Link>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                disabled={createConversationMutation.isPending}
+                onClick={() => {
+                  createConversationMutation.mutate();
+                }}
+                tooltip={m.nav_new_thread()}
+              >
+                <PlusIcon aria-hidden="true" />
+                <span>{m.nav_new_thread()}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarHeader>
         <SidebarContent>
           <SidebarGroup>
+            <SidebarGroupLabel>{m.nav_recent_threads()}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    render={<Link to="/chat" />}
-                    tooltip={m.nav_chat()}
-                  >
-                    <MessageCircleIcon aria-hidden="true" />
-                    <span>{m.nav_chat()}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                {conversationThreads.map((thread) => (
+                  <SidebarMenuItem key={thread.id}>
+                    <Link params={{ threadId: thread.id }} to="/chat/$threadId">
+                      {({ isActive }) => (
+                        <SidebarMenuButton isActive={isActive}>
+                          <span>{thread.title}</span>
+                        </SidebarMenuButton>
+                      )}
+                    </Link>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+          <SidebarGroup>
+            <SidebarGroupLabel>{m.nav_topics()}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {topics.map((topic) => (
+                  <SidebarTopicItem key={topic.id} topic={topic} />
+                ))}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -119,6 +207,41 @@ function LayoutComponent() {
         <Outlet />
       </SidebarInset>
     </SidebarProvider>
+  );
+}
+
+function SidebarTopicItem({
+  topic,
+}: {
+  topic: SidebarTopic;
+}): React.ReactElement {
+  return (
+    <SidebarMenuItem>
+      <Collapsible className="group/topic" defaultOpen>
+        <CollapsibleTrigger render={<SidebarMenuButton />}>
+          <ChevronRightIcon
+            aria-hidden="true"
+            className="transition-transform group-data-[panel-open]/topic:rotate-90"
+          />
+          <span>{topic.title}</span>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <SidebarMenuSub>
+            {topic.threads.map((thread) => (
+              <SidebarMenuSubItem key={thread.id}>
+                <Link params={{ threadId: thread.id }} to="/chat/$threadId">
+                  {({ isActive }) => (
+                    <SidebarMenuSubButton isActive={isActive}>
+                      {thread.title}
+                    </SidebarMenuSubButton>
+                  )}
+                </Link>
+              </SidebarMenuSubItem>
+            ))}
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      </Collapsible>
+    </SidebarMenuItem>
   );
 }
 

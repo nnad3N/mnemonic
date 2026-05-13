@@ -12,12 +12,12 @@ import { useEffect } from "react";
 import { ErrorComponent } from "@/components/route-components/error";
 import { NotFoundComponent } from "@/components/route-components/not-found";
 import { ToastProvider } from "@/components/ui/toast";
-import PostHogProvider from "@/integrations/posthog/provider";
-import TanStackQueryDevtools from "@/integrations/tanstack-query/devtools";
-import type { RouterContext } from "@/integrations/tanstack-query/root-provider";
-import { authClient } from "@/lib/auth-client";
-import { authKeys, authSessionQuery } from "@/lib/auth-query";
+import { authClient } from "@/lib/better-auth/auth-client";
+import PostHogProvider from "@/lib/posthog/provider";
+import TanStackQueryDevtools from "@/lib/tanstack-query/devtools";
+import type { RouterContext } from "@/lib/tanstack-query/root-provider";
 import { getLocale } from "@/paraglide/runtime";
+import { authKeys, authSessionQuery } from "@/routes/_auth/-auth.api";
 
 import appCss from "@/styles.css?url";
 
