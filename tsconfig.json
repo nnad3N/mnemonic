@@ -1,5 +1,10 @@
 {
-  "include": ["**/*.ts", "**/*.tsx", "vite.config.ts"],
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "vite.config.ts",
+    "src/routes/_protected.chat/$threadId"
+  ],
 
   "compilerOptions": {
     "target": "ESNext",

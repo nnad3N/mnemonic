@@ -31,7 +31,6 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarRail,
-  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { authClient } from "@/lib/auth-client";
 import { m } from "@/paraglide/messages";
@@ -56,7 +55,7 @@ function LayoutComponent() {
 
   return (
     <SidebarProvider>
-      <Sidebar>
+      <Sidebar collapsible="icon">
         <SidebarContent>
           <SidebarGroup>
             <SidebarGroupContent>
@@ -117,9 +116,6 @@ function LayoutComponent() {
         <SidebarRail />
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-12 shrink-0 items-center border-b px-4">
-          <SidebarTrigger />
-        </header>
         <Outlet />
       </SidebarInset>
     </SidebarProvider>

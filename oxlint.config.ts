@@ -11,13 +11,14 @@ export default defineConfig({
     "**/vite.config.*.timestamp-*.*",
     "**.gen.ts",
     "**/src/components/ui/**",
+    "**/src/components/assistant-ui/**",
   ],
   options: {
     typeAware: true,
   },
   rules: {
     "arrow-body-style": "off",
-    "eslint(sort-keys)": "off",
+    "sort-keys": "off",
     "import/no-commonjs": "error",
     "no-use-before-define": "allow",
     "typescript/ban-ts-comment": [

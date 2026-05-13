@@ -2,8 +2,10 @@ import { Agent } from "@mastra/core/agent";
 
 import { memoryTool } from "../tools/memory-tool";
 
+export const mnemonicAgentId = "mnemonic-agent";
+
 export const mnemonicAgent = new Agent({
-  id: "mnemonic-agent",
+  id: mnemonicAgentId,
   name: "Mnemonic Agent",
   instructions: `
 You help users remember information by turning facts, concepts, and lists into concise mnemonics.

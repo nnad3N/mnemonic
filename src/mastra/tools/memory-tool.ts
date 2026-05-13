@@ -15,6 +15,7 @@ export const memoryTool = createTool({
       mnemonic: v.string(),
     })
   ),
+  // oxlint-disable-next-line require-await
   execute: async ({ subject }) => {
     const firstLetters = subject
       .split(/\s+/)
