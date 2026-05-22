@@ -7,9 +7,9 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Form } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { toastManager } from "@/components/ui/toast";
-import { authClient } from "@/lib/auth-client";
+import { authClient } from "@/lib/better-auth/auth-client";
 import { getAuthErrorDescription } from "@/lib/errors/auth-error";
-import { toFormErrors } from "@/lib/form-errors";
+import { toFormErrors } from "@/lib/errors/form-errors";
 import { m } from "@/paraglide/messages";
 import { localizeHref } from "@/paraglide/runtime";
 

@@ -11,12 +11,15 @@ export default defineConfig({
     "**/vite.config.*.timestamp-*.*",
     "**.gen.ts",
     "**/src/components/ui/**",
+    "**/src/components/assistant-ui/**",
   ],
   options: {
     typeAware: true,
   },
   rules: {
     "arrow-body-style": "off",
+    "require-await": "off",
+    "sort-keys": "off",
     "import/no-commonjs": "error",
     "no-use-before-define": "allow",
     "typescript/ban-ts-comment": [
@@ -37,7 +40,7 @@ export default defineConfig({
         allow: [
           {
             from: "package",
-            name: ["Redirect", "AnyRedirect"],
+            name: ["Redirect", "AnyRedirect", "NotFoundError"],
             package: "@tanstack/router-core",
           },
         ],

@@ -13,7 +13,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { authClient } from "@/lib/auth-client";
+import { authClient } from "@/lib/better-auth/auth-client";
 import { AuthError, getAuthErrorDescription } from "@/lib/errors/auth-error";
 import { m } from "@/paraglide/messages";
 

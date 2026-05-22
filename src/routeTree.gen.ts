@@ -12,10 +12,13 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ProtectedRouteImport } from './routes/_protected'
 import { Route as AuthRouteRouteImport } from './routes/_auth/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as ProtectedSearchRouteImport } from './routes/_protected.search'
 import { Route as AuthSignUpRouteImport } from './routes/_auth/sign-up'
 import { Route as AuthSignInRouteImport } from './routes/_auth/sign-in'
-import { Route as ProtectedChatIndexRouteImport } from './routes/_protected.chat/index'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ProtectedChatThreadIdRouteRouteImport } from './routes/_protected.chat.$threadId/route'
+import { Route as ProtectedChatThreadIdIndexRouteImport } from './routes/_protected.chat.$threadId/index'
 
 const ProtectedRoute = ProtectedRouteImport.update({
   id: '/_protected',
@@ -30,6 +33,16 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiChatRoute = ApiChatRouteImport.update({
+  id: '/api/chat',
+  path: '/api/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProtectedSearchRoute = ProtectedSearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => ProtectedRoute,
+} as any)
 const AuthSignUpRoute = AuthSignUpRouteImport.update({
   id: '/sign-up',
   path: '/sign-up',
@@ -40,30 +53,42 @@ const AuthSignInRoute = AuthSignInRouteImport.update({
   path: '/sign-in',
   getParentRoute: () => AuthRouteRoute,
 } as any)
-const ProtectedChatIndexRoute = ProtectedChatIndexRouteImport.update({
-  id: '/chat/',
-  path: '/chat/',
-  getParentRoute: () => ProtectedRoute,
-} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProtectedChatThreadIdRouteRoute =
+  ProtectedChatThreadIdRouteRouteImport.update({
+    id: '/chat/$threadId',
+    path: '/chat/$threadId',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
+const ProtectedChatThreadIdIndexRoute =
+  ProtectedChatThreadIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => ProtectedChatThreadIdRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/sign-in': typeof AuthSignInRoute
   '/sign-up': typeof AuthSignUpRoute
+  '/search': typeof ProtectedSearchRoute
+  '/api/chat': typeof ApiChatRoute
+  '/chat/$threadId': typeof ProtectedChatThreadIdRouteRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/chat/': typeof ProtectedChatIndexRoute
+  '/chat/$threadId/': typeof ProtectedChatThreadIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/sign-in': typeof AuthSignInRoute
   '/sign-up': typeof AuthSignUpRoute
+  '/search': typeof ProtectedSearchRoute
+  '/api/chat': typeof ApiChatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/chat': typeof ProtectedChatIndexRoute
+  '/chat/$threadId': typeof ProtectedChatThreadIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -72,14 +97,32 @@ export interface FileRoutesById {
   '/_protected': typeof ProtectedRouteWithChildren
   '/_auth/sign-in': typeof AuthSignInRoute
   '/_auth/sign-up': typeof AuthSignUpRoute
+  '/_protected/search': typeof ProtectedSearchRoute
+  '/api/chat': typeof ApiChatRoute
+  '/_protected/chat/$threadId': typeof ProtectedChatThreadIdRouteRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/_protected/chat/': typeof ProtectedChatIndexRoute
+  '/_protected/chat/$threadId/': typeof ProtectedChatThreadIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/sign-in' | '/sign-up' | '/api/auth/$' | '/chat/'
+  fullPaths:
+    | '/'
+    | '/sign-in'
+    | '/sign-up'
+    | '/search'
+    | '/api/chat'
+    | '/chat/$threadId'
+    | '/api/auth/$'
+    | '/chat/$threadId/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/sign-in' | '/sign-up' | '/api/auth/$' | '/chat'
+  to:
+    | '/'
+    | '/sign-in'
+    | '/sign-up'
+    | '/search'
+    | '/api/chat'
+    | '/api/auth/$'
+    | '/chat/$threadId'
   id:
     | '__root__'
     | '/'
@@ -87,14 +130,18 @@ export interface FileRouteTypes {
     | '/_protected'
     | '/_auth/sign-in'
     | '/_auth/sign-up'
+    | '/_protected/search'
+    | '/api/chat'
+    | '/_protected/chat/$threadId'
     | '/api/auth/$'
-    | '/_protected/chat/'
+    | '/_protected/chat/$threadId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRouteRoute: typeof AuthRouteRouteWithChildren
   ProtectedRoute: typeof ProtectedRouteWithChildren
+  ApiChatRoute: typeof ApiChatRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -121,6 +168,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/chat': {
+      id: '/api/chat'
+      path: '/api/chat'
+      fullPath: '/api/chat'
+      preLoaderRoute: typeof ApiChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_protected/search': {
+      id: '/_protected/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof ProtectedSearchRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
     '/_auth/sign-up': {
       id: '/_auth/sign-up'
       path: '/sign-up'
@@ -135,19 +196,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSignInRouteImport
       parentRoute: typeof AuthRouteRoute
     }
-    '/_protected/chat/': {
-      id: '/_protected/chat/'
-      path: '/chat'
-      fullPath: '/chat/'
-      preLoaderRoute: typeof ProtectedChatIndexRouteImport
-      parentRoute: typeof ProtectedRoute
-    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_protected/chat/$threadId': {
+      id: '/_protected/chat/$threadId'
+      path: '/chat/$threadId'
+      fullPath: '/chat/$threadId'
+      preLoaderRoute: typeof ProtectedChatThreadIdRouteRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/chat/$threadId/': {
+      id: '/_protected/chat/$threadId/'
+      path: '/'
+      fullPath: '/chat/$threadId/'
+      preLoaderRoute: typeof ProtectedChatThreadIdIndexRouteImport
+      parentRoute: typeof ProtectedChatThreadIdRouteRoute
     }
   }
 }
@@ -166,12 +234,28 @@ const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(
   AuthRouteRouteChildren,
 )
 
+interface ProtectedChatThreadIdRouteRouteChildren {
+  ProtectedChatThreadIdIndexRoute: typeof ProtectedChatThreadIdIndexRoute
+}
+
+const ProtectedChatThreadIdRouteRouteChildren: ProtectedChatThreadIdRouteRouteChildren =
+  {
+    ProtectedChatThreadIdIndexRoute: ProtectedChatThreadIdIndexRoute,
+  }
+
+const ProtectedChatThreadIdRouteRouteWithChildren =
+  ProtectedChatThreadIdRouteRoute._addFileChildren(
+    ProtectedChatThreadIdRouteRouteChildren,
+  )
+
 interface ProtectedRouteChildren {
-  ProtectedChatIndexRoute: typeof ProtectedChatIndexRoute
+  ProtectedSearchRoute: typeof ProtectedSearchRoute
+  ProtectedChatThreadIdRouteRoute: typeof ProtectedChatThreadIdRouteRouteWithChildren
 }
 
 const ProtectedRouteChildren: ProtectedRouteChildren = {
-  ProtectedChatIndexRoute: ProtectedChatIndexRoute,
+  ProtectedSearchRoute: ProtectedSearchRoute,
+  ProtectedChatThreadIdRouteRoute: ProtectedChatThreadIdRouteRouteWithChildren,
 }
 
 const ProtectedRouteWithChildren = ProtectedRoute._addFileChildren(
@@ -182,6 +266,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRouteRoute: AuthRouteRouteWithChildren,
   ProtectedRoute: ProtectedRouteWithChildren,
+  ApiChatRoute: ApiChatRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

@@ -1,5 +1,6 @@
 import type { Form } from "@base-ui/react/form";
 import type { AnyFieldMeta } from "@tanstack/react-form";
+import { panic } from "better-result";
 
 export type FormErrors = NonNullable<Form.Props["errors"]>;
 
@@ -18,7 +19,7 @@ const fieldErrorsToString = (errors: readonly unknown[]): string | null => {
         return error.message;
       }
 
-      return "Unknown error";
+      return panic("Failed to convert field errors to string");
     })
     .join(", ");
 };

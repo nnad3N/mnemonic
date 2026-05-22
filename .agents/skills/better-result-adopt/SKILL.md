@@ -73,7 +73,8 @@ Do not convert the whole codebase at once.
 function parseConfig(json: string): Result<Config, ParseError> {
   return Result.try({
     try: () => JSON.parse(json) as Config,
-    catch: (cause) => new ParseError({ cause, message: `Parse failed: ${cause}` }),
+    catch: (cause) =>
+      new ParseError({ cause, message: `Parse failed: ${cause}` }),
   });
 }
 ```
@@ -81,14 +82,21 @@ function parseConfig(json: string): Result<Config, ParseError> {
 ### Async throws → `Result.tryPromise`
 
 ```ts
-async function fetchUser(id: string): Promise<Result<User, ApiError | UnhandledException>> {
+async function fetchUser(
+  id: string
+): Promise<Result<User, ApiError | UnhandledException>> {
   return Result.tryPromise({
     try: async () => {
       const res = await fetch(`/api/users/${id}`);
-      if (!res.ok) throw new ApiError({ status: res.status, message: `API ${res.status}` });
+      if (!res.ok)
+        throw new ApiError({
+          status: res.status,
+          message: `API ${res.status}`,
+        });
       return res.json() as Promise<User>;
     },
-    catch: (cause) => (cause instanceof ApiError ? cause : new UnhandledException({ cause })),
+    catch: (cause) =>
+      cause instanceof ApiError ? cause : new UnhandledException({ cause }),
   });
 }
 ```
@@ -107,7 +115,9 @@ function findUser(id: string): Result<User, NotFoundError> {
 ### Nested flow → `Result.gen`
 
 ```ts
-async function processOrder(orderId: string): Promise<Result<OrderResult, OrderError>> {
+async function processOrder(
+  orderId: string
+): Promise<Result<OrderResult, OrderError>> {
   return Result.gen(async function* () {
     const order = yield* Result.await(fetchOrder(orderId));
     const validated = yield* validateOrder(order);
