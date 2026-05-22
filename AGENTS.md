@@ -47,6 +47,9 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
 ### React & JSX
 
 - Use function components over class components
+- Prefer arrow function components; use implicit return (`() => (...)`) when the body is only JSX — do not wrap a single JSX return in `{ return ...; }`
+- Components that call hooks use a block body; the JSX return after hooks is fine
+- Define a named `ComponentNameProps` type for each component's props — do not inline prop object types in the parameter list
 - Call hooks at the top level only, never conditionally
 - Specify all dependencies in hook dependency arrays correctly
 - Use the `key` prop for elements in iterables (prefer unique IDs over array indices)

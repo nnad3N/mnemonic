@@ -48,13 +48,16 @@ export const getThreadMessages = createServerFn({ method: "GET" })
       perPage: false,
     });
 
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- UIMessage metadata is `unknown`; runtime value is JSON-serializable
-    return toAISdkMessages(messages, {
-      version: "v6",
-    }) as (UIMessage & TsrSerializable)[];
+    return {
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+      messages: toAISdkMessages(messages, {
+        version: "v6",
+      }) as (UIMessage & TsrSerializable)[],
+      resourceId: thread.resourceId,
+    };
   });
 
-export const threadMessagesQuery = (threadId: string) =>
+export const threadQuery = (threadId: string) =>
   queryOptions({
     queryFn: async () => {
       const messages = await getThreadMessages({
@@ -63,5 +66,5 @@ export const threadMessagesQuery = (threadId: string) =>
 
       return messages;
     },
-    queryKey: threadKeys.messages(threadId),
+    queryKey: threadKeys.byId(threadId),
   });

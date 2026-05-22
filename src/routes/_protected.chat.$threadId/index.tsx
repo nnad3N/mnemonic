@@ -8,9 +8,5 @@ export const Route = createFileRoute("/_protected/chat/$threadId/")({
 
 // oxlint-disable-next-line func-style
 function RouteComponent() {
-  return (
-    <div className="h-full min-h-0">
-      <Thread />
-    </div>
-  );
+  return <Thread />;
 }

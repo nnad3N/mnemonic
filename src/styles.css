@@ -279,4 +279,9 @@
   html {
     @apply font-sans font-mono;
   }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
 }

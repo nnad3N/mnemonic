@@ -78,8 +78,7 @@ export const listSidebarData = createServerFn({ method: "GET" })
     }
 
     return {
-      conversationThreads:
-        conversationThreadsResult.threads.map(toSidebarThread),
+      conversations: conversationThreadsResult.threads.map(toSidebarThread),
       topics,
     };
   });

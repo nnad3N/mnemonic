@@ -35,7 +35,8 @@ export const createConversation = createServerFn({ method: "POST" })
 export const createTopic = createServerFn({ method: "POST" })
   .inputValidator(
     v.object({
-      title: v.pipe(v.string(), v.nonEmpty()),
+      conversationTitle: v.pipe(v.string(), v.nonEmpty()),
+      topicTitle: v.pipe(v.string(), v.nonEmpty()),
     })
   )
   .middleware([authMiddleware])
@@ -44,7 +45,7 @@ export const createTopic = createServerFn({ method: "POST" })
     await db.insert(topic).values({
       id: topicId,
       userId: context.user.id,
-      title: data.title,
+      title: data.topicTitle,
     });
 
     const memoryStore = await getMemoryStore();
@@ -53,7 +54,7 @@ export const createTopic = createServerFn({ method: "POST" })
       thread: {
         id: nanoid(),
         resourceId: topicId,
-        title: data.title,
+        title: data.conversationTitle,
         createdAt: now,
         updatedAt: now,
       },

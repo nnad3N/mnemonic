@@ -7,12 +7,12 @@ import {
 } from "@tanstack/react-router";
 import {
   ChevronRightIcon,
+  FolderPlusIcon,
   LogOutIcon,
   MoreHorizontalIcon,
-  PlusIcon,
   SearchIcon,
+  SquarePenIcon,
 } from "lucide-react";
-import type React from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -45,13 +45,18 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toastManager } from "@/components/ui/toast";
 import { authClient } from "@/lib/better-auth/auth-client";
+import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
+import { sidebarDataQuery } from "@/routes/_protected.chat.$threadId/-thread.api/sidebar-data";
 
-import { createConversation } from "./_protected.chat.$threadId/-thread.api/create-thread";
+import {
+  createConversation,
+  createTopic,
+} from "./_protected.chat.$threadId/-thread.api/create-thread";
 import { threadKeys } from "./_protected.chat.$threadId/-thread.api/query-keys";
-import { sidebarDataQuery } from "./_protected.chat.$threadId/-thread.api/sidebar-data";
 import type { SidebarTopic } from "./_protected.chat.$threadId/-thread.api/types";
 
 export const Route = createFileRoute("/_protected")({
@@ -68,39 +73,11 @@ export const Route = createFileRoute("/_protected")({
 /* oxlint-disable func-style */
 function LayoutComponent() {
   const navigate = Route.useNavigate();
-  const queryClient = useQueryClient();
-
   const user = Route.useRouteContext({ select: (context) => context.user });
   const displayName = user.name ?? user.email;
   const initials = getInitials(displayName);
 
-  const { data: sidebarData } = useQuery(sidebarDataQuery);
-  const conversationThreads = sidebarData?.conversationThreads ?? [];
-  const topics = sidebarData?.topics ?? [];
-
-  const createConversationMutation = useMutation({
-    mutationFn: async () => {
-      const thread = await createConversation({
-        data: { title: m.nav_new_conversation_default_title() },
-      });
-
-      return thread;
-    },
-    onError: () => {
-      toastManager.add({
-        description: m.nav_new_thread_error_description(),
-        title: m.nav_new_thread_error_title(),
-        type: "error",
-      });
-    },
-    onSuccess: async (thread) => {
-      await navigate({
-        params: { threadId: thread.id },
-        to: "/chat/$threadId",
-      });
-      await queryClient.invalidateQueries({ queryKey: threadKeys.sidebar() });
-    },
-  });
+  const { data, isSuccess } = useQuery(sidebarDataQuery);
 
   return (
     <SidebarProvider className="h-full min-h-0">
@@ -117,36 +94,35 @@ function LayoutComponent() {
                 )}
               </Link>
             </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                disabled={createConversationMutation.isPending}
-                onClick={() => {
-                  createConversationMutation.mutate();
-                }}
-                tooltip={m.nav_new_thread()}
-              >
-                <PlusIcon aria-hidden="true" />
-                <span>{m.nav_new_thread()}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            <NewConversationButton />
+            <NewTopicButton />
           </SidebarMenu>
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup>
-            <SidebarGroupLabel>{m.nav_recent_threads()}</SidebarGroupLabel>
+            <SidebarGroupLabel>
+              {m.nav_recent_conversations()}
+            </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {conversationThreads.map((thread) => (
-                  <SidebarMenuItem key={thread.id}>
-                    <Link params={{ threadId: thread.id }} to="/chat/$threadId">
-                      {({ isActive }) => (
-                        <SidebarMenuButton isActive={isActive}>
-                          <span>{thread.title}</span>
-                        </SidebarMenuButton>
-                      )}
-                    </Link>
-                  </SidebarMenuItem>
-                ))}
+                {isSuccess ? (
+                  data.conversations.map((thread) => (
+                    <SidebarMenuItem key={thread.id}>
+                      <Link
+                        params={{ threadId: thread.id }}
+                        to="/chat/$threadId"
+                      >
+                        {({ isActive }) => (
+                          <SidebarMenuButton isActive={isActive}>
+                            <span>{thread.title}</span>
+                          </SidebarMenuButton>
+                        )}
+                      </Link>
+                    </SidebarMenuItem>
+                  ))
+                ) : (
+                  <SidebarConversationsSkeleton count={4} />
+                )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -154,9 +130,13 @@ function LayoutComponent() {
             <SidebarGroupLabel>{m.nav_topics()}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {topics.map((topic) => (
-                  <SidebarTopicItem key={topic.id} topic={topic} />
-                ))}
+                {isSuccess ? (
+                  data.topics.map((topic) => (
+                    <SidebarTopicItem key={topic.id} topic={topic} />
+                  ))
+                ) : (
+                  <SidebarTopicsSkeleton count={2} />
+                )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -210,40 +190,206 @@ function LayoutComponent() {
   );
 }
 
-function SidebarTopicItem({
-  topic,
-}: {
-  topic: SidebarTopic;
-}): React.ReactElement {
+const NewConversationButton = () => {
+  const navigate = Route.useNavigate();
+  const queryClient = useQueryClient();
+
+  const createConversationMutation = useMutation({
+    mutationFn: async () => {
+      const thread = await createConversation({
+        data: { title: m.nav_new_conversation_default_title() },
+      });
+
+      return thread;
+    },
+    onError: () => {
+      toastManager.add({
+        description: m.nav_new_conversation_error_description(),
+        title: m.nav_new_conversation_error_title(),
+        type: "error",
+      });
+    },
+    onSuccess: async (thread) => {
+      await navigate({
+        params: { threadId: thread.id },
+        to: "/chat/$threadId",
+      });
+      await queryClient.invalidateQueries({ queryKey: threadKeys.sidebar() });
+    },
+  });
+
   return (
     <SidebarMenuItem>
-      <Collapsible className="group/topic" defaultOpen>
-        <CollapsibleTrigger render={<SidebarMenuButton />}>
-          <ChevronRightIcon
-            aria-hidden="true"
-            className="transition-transform group-data-[panel-open]/topic:rotate-90"
-          />
-          <span>{topic.title}</span>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <SidebarMenuSub>
-            {topic.threads.map((thread) => (
-              <SidebarMenuSubItem key={thread.id}>
-                <Link params={{ threadId: thread.id }} to="/chat/$threadId">
-                  {({ isActive }) => (
-                    <SidebarMenuSubButton isActive={isActive}>
-                      {thread.title}
-                    </SidebarMenuSubButton>
-                  )}
-                </Link>
-              </SidebarMenuSubItem>
-            ))}
-          </SidebarMenuSub>
-        </CollapsibleContent>
-      </Collapsible>
+      <SidebarMenuButton
+        disabled={createConversationMutation.isPending}
+        onClick={() => {
+          createConversationMutation.mutate();
+        }}
+        tooltip={m.nav_new_conversation()}
+      >
+        <SquarePenIcon aria-hidden="true" />
+        <span>{m.nav_new_conversation()}</span>
+      </SidebarMenuButton>
     </SidebarMenuItem>
   );
-}
+};
+
+const NewTopicButton = () => {
+  const navigate = Route.useNavigate();
+  const queryClient = useQueryClient();
+
+  const createTopicMutation = useMutation({
+    mutationFn: async () => {
+      const thread = await createTopic({
+        data: {
+          conversationTitle: m.nav_new_topic_default_title(),
+          topicTitle: m.nav_new_topic_default_title(),
+        },
+      });
+
+      return thread;
+    },
+    onError: () => {
+      toastManager.add({
+        description: m.nav_new_topic_error_description(),
+        title: m.nav_new_topic_error_title(),
+        type: "error",
+      });
+    },
+    onSuccess: async (thread) => {
+      await navigate({
+        params: { threadId: thread.id },
+        to: "/chat/$threadId",
+      });
+      await queryClient.invalidateQueries({ queryKey: threadKeys.sidebar() });
+    },
+  });
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        disabled={createTopicMutation.isPending}
+        onClick={() => {
+          createTopicMutation.mutate();
+        }}
+        tooltip={m.nav_new_topic()}
+      >
+        <FolderPlusIcon aria-hidden="true" />
+        <span>{m.nav_new_topic()}</span>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+};
+
+const SKELETON_WIDTHS = ["w-3/5", "w-2/3", "w-4/5", "w-1/2"] as const;
+
+const getSkeletonWidthClass = (seed: number): string =>
+  SKELETON_WIDTHS[seed % SKELETON_WIDTHS.length] ?? SKELETON_WIDTHS[0];
+
+type SidebarMenuButtonSkeletonProps = {
+  seed: number;
+  showIcon?: boolean;
+};
+
+const SidebarMenuButtonSkeleton = ({
+  seed,
+  showIcon = false,
+}: SidebarMenuButtonSkeletonProps) => (
+  <SidebarMenuButton
+    aria-hidden="true"
+    className="pointer-events-none"
+    disabled
+    tabIndex={-1}
+  >
+    {showIcon ? <Skeleton className="size-4 shrink-0 rounded-sm" /> : null}
+    <Skeleton className={cn("h-4 flex-1", getSkeletonWidthClass(seed))} />
+  </SidebarMenuButton>
+);
+
+type SidebarMenuSubButtonSkeletonProps = {
+  seed: number;
+};
+
+const SidebarMenuSubButtonSkeleton = ({
+  seed,
+}: SidebarMenuSubButtonSkeletonProps) => (
+  <SidebarMenuSubButton
+    aria-disabled="true"
+    aria-hidden="true"
+    className="pointer-events-none w-full"
+    render={<button className="w-full" disabled type="button" />}
+    tabIndex={-1}
+  >
+    <Skeleton className={cn("h-4 flex-1", getSkeletonWidthClass(seed))} />
+  </SidebarMenuSubButton>
+);
+
+type SidebarConversationsSkeletonProps = {
+  count: number;
+};
+
+const SidebarConversationsSkeleton = ({
+  count,
+}: SidebarConversationsSkeletonProps) =>
+  Array.from({ length: count }, (_, index) => (
+    <SidebarMenuItem key={index}>
+      <SidebarMenuButtonSkeleton seed={index} />
+    </SidebarMenuItem>
+  ));
+
+type SidebarTopicsSkeletonProps = {
+  count: number;
+};
+
+const SidebarTopicsSkeleton = ({ count }: SidebarTopicsSkeletonProps) =>
+  Array.from({ length: count }, (_, index) => (
+    <SidebarMenuItem key={index}>
+      <SidebarMenuButtonSkeleton seed={index} showIcon />
+      <SidebarMenuSub>
+        {Array.from({ length: 2 }, (__, threadIndex) => (
+          <SidebarMenuSubItem key={threadIndex}>
+            <SidebarMenuSubButtonSkeleton seed={index * 2 + threadIndex} />
+          </SidebarMenuSubItem>
+        ))}
+      </SidebarMenuSub>
+    </SidebarMenuItem>
+  ));
+
+type SidebarTopicItemProps = {
+  topic: SidebarTopic;
+};
+
+const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => (
+  <SidebarMenuItem>
+    <Collapsible className="group/topic" defaultOpen>
+      <CollapsibleTrigger render={<SidebarMenuButton />}>
+        <ChevronRightIcon
+          aria-hidden="true"
+          className="transition-transform group-data-panel-open/topic:rotate-90"
+        />
+        <span>{topic.title}</span>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <SidebarMenuSub>
+          {topic.threads.map((thread) => (
+            <SidebarMenuSubItem key={thread.id}>
+              <Link params={{ threadId: thread.id }} to="/chat/$threadId">
+                {({ isActive }) => (
+                  <SidebarMenuSubButton
+                    isActive={isActive}
+                    render={<button className="w-full" />}
+                  >
+                    {thread.title}
+                  </SidebarMenuSubButton>
+                )}
+              </Link>
+            </SidebarMenuSubItem>
+          ))}
+        </SidebarMenuSub>
+      </CollapsibleContent>
+    </Collapsible>
+  </SidebarMenuItem>
+);
 
 const getInitials = (value: string): string => {
   const parts = value
