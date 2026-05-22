@@ -53,6 +53,7 @@ export const Route = createFileRoute("/api/chat")({
         }
 
         const body = result.output;
+
         const memoryStore = await getMemoryStore();
         const thread = await memoryStore.getThreadById({
           threadId: body.threadId,
@@ -72,7 +73,7 @@ export const Route = createFileRoute("/api/chat")({
           });
 
           if (!ownedTopic) {
-            return new Response("Forbidden", { status: 403 });
+            return new Response("Not Found", { status: 404 });
           }
 
           await db

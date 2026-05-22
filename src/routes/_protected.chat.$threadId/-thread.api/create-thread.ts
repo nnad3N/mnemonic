@@ -4,6 +4,7 @@ import * as v from "valibot";
 
 import { db } from "@/db";
 import { topic } from "@/db/schema";
+import { topicAccessMiddleware } from "@/lib/middleware/assert-thread-access";
 import { authMiddleware } from "@/lib/middleware/auth-middleware";
 import { getMemoryStore } from "@/mastra/memory";
 
@@ -63,4 +64,28 @@ export const createTopic = createServerFn({ method: "POST" })
     return {
       id: thread.id,
     };
+  });
+
+export const createTopicConversation = createServerFn({ method: "POST" })
+  .inputValidator(
+    v.object({
+      title: v.pipe(v.string(), v.nonEmpty()),
+      topicId: v.pipe(v.string(), v.nonEmpty()),
+    })
+  )
+  .middleware([topicAccessMiddleware])
+  .handler(async ({ context, data }) => {
+    const memoryStore = await getMemoryStore();
+    const now = new Date();
+    const thread = await memoryStore.saveThread({
+      thread: {
+        id: nanoid(),
+        resourceId: context.topic.id,
+        title: data.title,
+        createdAt: now,
+        updatedAt: now,
+      },
+    });
+
+    return { id: thread.id };
   });

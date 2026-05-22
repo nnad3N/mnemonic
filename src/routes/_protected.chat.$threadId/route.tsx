@@ -6,7 +6,7 @@ import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { DefaultChatTransport } from "ai";
 
 import { Spinner } from "@/components/ui/spinner";
-import { threadQuery } from "@/routes/_protected.chat.$threadId/-thread.api/thread-messages";
+import { threadQuery } from "@/routes/_protected.chat.$threadId/-thread.api/get-thread";
 
 export const Route = createFileRoute("/_protected/chat/$threadId")({
   component: RouteComponent,
