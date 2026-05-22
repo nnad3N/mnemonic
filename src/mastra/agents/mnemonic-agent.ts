@@ -43,10 +43,10 @@ Short-term memory:
       observationalMemory: {
         model: "vercel/deepseek/deepseek-v4-flash",
         retrieval: {
-          scope: "resource",
+          scope: "thread",
           vector: true,
         },
-        scope: "resource",
+        scope: "thread",
         temporalMarkers: true,
       },
       workingMemory: {
