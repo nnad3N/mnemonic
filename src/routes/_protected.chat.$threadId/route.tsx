@@ -35,8 +35,10 @@ function RouteComponent() {
   });
 
   return (
-    <AssistantRuntimeProvider runtime={runtime}>
-      <Outlet />
-    </AssistantRuntimeProvider>
+    <div className="flex h-full min-h-0 flex-col">
+      <AssistantRuntimeProvider runtime={runtime}>
+        <Outlet />
+      </AssistantRuntimeProvider>
+    </div>
   );
 }

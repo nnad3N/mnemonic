@@ -103,7 +103,7 @@ function LayoutComponent() {
   });
 
   return (
-    <SidebarProvider>
+    <SidebarProvider className="h-full min-h-0">
       <Sidebar collapsible="icon">
         <SidebarHeader>
           <SidebarMenu>
@@ -203,7 +203,7 @@ function LayoutComponent() {
         </SidebarFooter>
         <SidebarRail />
       </Sidebar>
-      <SidebarInset>
+      <SidebarInset className="min-h-0 overflow-hidden">
         <Outlet />
       </SidebarInset>
     </SidebarProvider>

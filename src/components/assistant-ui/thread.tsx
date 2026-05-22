@@ -51,7 +51,7 @@ import { cn } from "@/lib/utils";
 export const Thread: FC = () => {
   return (
     <ThreadPrimitive.Root
-      className="aui-root aui-thread-root @container flex h-full flex-col bg-background"
+      className="aui-root aui-thread-root @container flex h-full min-h-0 flex-col bg-background"
       style={{
         ["--thread-max-width" as string]: "44rem",
         ["--composer-radius" as string]: "24px",
@@ -61,9 +61,9 @@ export const Thread: FC = () => {
       <ThreadPrimitive.Viewport
         turnAnchor="top"
         data-slot="aui_thread-viewport"
-        className="relative flex flex-1 flex-col overflow-x-auto overflow-y-scroll scroll-smooth"
+        className="relative flex min-h-0 flex-1 flex-col overflow-x-auto overflow-y-auto scroll-smooth"
       >
-        <div className="mx-auto flex w-full max-w-(--thread-max-width) flex-1 flex-col px-4 pt-4">
+        <div className="mx-auto flex w-full max-w-(--thread-max-width) min-h-full flex-col px-4 pt-4">
           <AuiIf condition={(s) => s.thread.isEmpty}>
             <ThreadWelcome />
           </AuiIf>
@@ -226,15 +226,15 @@ const MessageError: FC = () => {
 const AssistantMessage: FC = () => {
   // reserves space for action bar and compensates with `-mb` for consistent msg spacing
   // keeps hovered action bar from shifting layout (autohide doesn't support absolute positioning well)
-  // for pt-[n] use -mb-[n + 6] & min-h-[n + 6] to preserve compensation
+  // min-h must fit pt + action bar row (size-6 icon buttons render ~32px tall)
   const ACTION_BAR_PT = "pt-1.5";
-  const ACTION_BAR_HEIGHT = `-mb-7.5 min-h-7.5 ${ACTION_BAR_PT}`;
+  const ACTION_BAR_HEIGHT = `-mb-9.5 min-h-9.5 ${ACTION_BAR_PT}`;
 
   return (
     <MessagePrimitive.Root
       data-slot="aui_assistant-message-root"
       data-role="assistant"
-      className="fade-in slide-in-from-bottom-1 relative animate-in duration-150 [contain-intrinsic-size:auto_300px] [content-visibility:auto]"
+      className="group/message fade-in slide-in-from-bottom-1 relative animate-in duration-150"
     >
       <div
         data-slot="aui_assistant-message-content"
@@ -293,7 +293,9 @@ const AssistantMessage: FC = () => {
         className={cn("ms-2 flex items-center", ACTION_BAR_HEIGHT)}
       >
         <BranchPicker />
-        <AssistantActionBar />
+        <div className="opacity-0 transition-opacity group-hover/message:opacity-100">
+          <AssistantActionBar />
+        </div>
       </div>
     </MessagePrimitive.Root>
   );
@@ -303,7 +305,7 @@ const AssistantActionBar: FC = () => {
   return (
     <ActionBarPrimitive.Root
       hideWhenRunning
-      autohide="not-last"
+      autohide="never"
       className="aui-assistant-action-bar-root col-start-3 row-start-2 -ms-1 flex gap-1 text-muted-foreground"
     >
       <ActionBarPrimitive.Copy asChild>
@@ -351,7 +353,7 @@ const UserMessage: FC = () => {
   return (
     <MessagePrimitive.Root
       data-slot="aui_user-message-root"
-      className="fade-in slide-in-from-bottom-1 grid animate-in auto-rows-auto grid-cols-[minmax(72px,1fr)_auto] content-start gap-y-2 px-2 duration-150 [contain-intrinsic-size:auto_60px] [content-visibility:auto] [&:where(>*)]:col-start-2"
+      className="group/message fade-in slide-in-from-bottom-1 grid animate-in auto-rows-auto grid-cols-[minmax(72px,1fr)_auto] content-start gap-y-2 px-2 duration-150 [&:where(>*)]:col-start-2"
       data-role="user"
     >
       <UserMessageAttachments />
@@ -360,7 +362,7 @@ const UserMessage: FC = () => {
         <div className="aui-user-message-content wrap-break-word peer rounded-2xl bg-muted px-4 py-2.5 text-foreground empty:hidden">
           <MessagePrimitive.Parts />
         </div>
-        <div className="aui-user-action-bar-wrapper absolute start-0 top-1/2 -translate-x-full -translate-y-1/2 pe-2 peer-empty:hidden rtl:translate-x-full">
+        <div className="aui-user-action-bar-wrapper pointer-events-none absolute start-0 top-1/2 -translate-x-full -translate-y-1/2 pe-2 opacity-0 transition-opacity group-hover/message:pointer-events-auto group-hover/message:opacity-100 peer-empty:hidden rtl:translate-x-full">
           <UserActionBar />
         </div>
       </div>
@@ -377,11 +379,11 @@ const UserActionBar: FC = () => {
   return (
     <ActionBarPrimitive.Root
       hideWhenRunning
-      autohide="not-last"
+      autohide="never"
       className="aui-user-action-bar-root flex flex-col items-end"
     >
       <ActionBarPrimitive.Edit asChild>
-        <TooltipIconButton tooltip="Edit" className="aui-user-action-edit p-4">
+        <TooltipIconButton tooltip="Edit" className="aui-user-action-edit">
           <PencilIcon />
         </TooltipIconButton>
       </ActionBarPrimitive.Edit>

@@ -93,7 +93,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <body>
         <PostHogProvider>
           <ToastProvider>
-            <main className="flex min-h-dvh items-center justify-center">
+            <main className="flex h-dvh flex-col overflow-hidden">
               {children}
             </main>
             <TanStackDevtools
