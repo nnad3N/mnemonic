@@ -33,6 +33,7 @@
     "@fontsource/geist-sans": "^5.2.5",
     "@mastra/ai-sdk": "^1.4.2",
     "@mastra/core": "^1.32.1",
+    "@mastra/memory": "^1.19.0",
     "@mastra/pg": "^1.10.0",
     "@posthog/react": "^1.9.0",
     "@t3-oss/env-core": "^0.13.11",

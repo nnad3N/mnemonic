@@ -68,7 +68,7 @@ Am example chat application built with TanStack Start, TanStack Store, and Claud
 ## .env Updates
 
 ```env
-ANTHROPIC_API_KEY=your_anthropic_api_key
+AI_GATEWAY_API_KEY=your_ai_gateway_api_key
 ```
 
 ## ✨ Features

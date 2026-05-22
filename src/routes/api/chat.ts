@@ -86,9 +86,13 @@ export const Route = createFileRoute("/api/chat")({
           agentId: mnemonicAgentId,
           params: {
             ...body,
+            abortSignal: request.signal,
+            memory: {
+              resource: thread.resourceId,
+              thread: body.threadId,
+            },
             // oxlint-disable-next-line typescript/no-unsafe-type-assertion
             messages: body.messages as UIMessage[],
-            abortSignal: request.signal,
           },
           version: "v6",
         });
