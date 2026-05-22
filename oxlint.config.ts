@@ -40,7 +40,7 @@ export default defineConfig({
         allow: [
           {
             from: "package",
-            name: ["Redirect", "AnyRedirect"],
+            name: ["Redirect", "AnyRedirect", "NotFoundError"],
             package: "@tanstack/router-core",
           },
         ],
