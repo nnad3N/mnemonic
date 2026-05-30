@@ -7,28 +7,41 @@ import type {
   UITools,
 } from "ai";
 import { FileIcon, FileTextIcon, LinkIcon } from "lucide-react";
+import { Streamdown } from "streamdown";
 
 import { AssistantReasoningPart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-reasoning-part";
 import { ThreadMetaLine } from "@/routes/_protected.chat.$threadId/-thread-components/thread-meta-line";
 
 type AssistantMessageProps = {
+  isAnimating?: boolean;
   message: { parts: UIMessagePart<UIDataTypes, UITools>[] };
 };
 
-export const AssistantMessage = ({ message }: AssistantMessageProps) => {
+export const AssistantMessage = ({
+  isAnimating = false,
+  message,
+}: AssistantMessageProps) => {
   return message.parts.map((part, i) => (
-    <AssistantMessagePart key={`${part.type}-${i}`} part={part} />
+    <AssistantMessagePart
+      isAnimating={isAnimating}
+      key={`${part.type}-${i}`}
+      part={part}
+    />
   ));
 };
 
 type AssistantMessagePartProps = {
+  isAnimating: boolean;
   part: UIMessagePart<UIDataTypes, UITools>;
 };
 
-const AssistantMessagePart = ({ part }: AssistantMessagePartProps) => {
+const AssistantMessagePart = ({
+  isAnimating,
+  part,
+}: AssistantMessagePartProps) => {
   switch (part.type) {
     case "text": {
-      return <div>{part.text}</div>;
+      return <Streamdown isAnimating={isAnimating}>{part.text}</Streamdown>;
     }
     case "dynamic-tool":
     case "step-start": {

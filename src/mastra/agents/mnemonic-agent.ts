@@ -6,7 +6,7 @@ import { pgVector, postgresStore } from "@/mastra/storage";
 
 export const mnemonicAgentId = "mnemonic-agent";
 
-const model = "vercel/xiaomi/mimo-v2.5";
+const model = "vercel/openai/gpt-5-nano";
 
 export const mnemonicAgent = new Agent({
   name: "Mnemonic",

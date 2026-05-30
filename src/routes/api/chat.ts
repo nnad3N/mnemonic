@@ -107,6 +107,7 @@ export const Route = createFileRoute("/api/chat")({
             // oxlint-disable-next-line typescript/no-unsafe-type-assertion
             messages: body.messages as UIMessage[],
           },
+          sendReasoning: true,
           version: "v6",
         });
 

@@ -1,4 +1,6 @@
+@source "../node_modules/streamdown/dist/*.js";
 @import "tailwindcss";
+@import "streamdown/styles.css";
 @import "@fontsource/geist-sans/latin.css";
 @import "@fontsource-variable/geist-mono";
 @import "tw-shimmer";

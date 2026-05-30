@@ -35,7 +35,7 @@ export const AssistantReasoningPart = ({
         </ThreadMetaLine>
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <ScrollArea className="h-24">
+        <ScrollArea className="*:data-[slot=scroll-area-viewport]:h-auto *:data-[slot=scroll-area-viewport]:max-h-24">
           <div className="text-sm whitespace-pre-wrap text-muted-foreground">
             {part.text}
           </div>
