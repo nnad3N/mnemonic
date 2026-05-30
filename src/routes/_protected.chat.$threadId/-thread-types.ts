@@ -1,7 +1,7 @@
 import type { DataOmPart } from "@mastra/memory/processors";
 import type { UIMessage, UIMessagePart, DataUIPart } from "ai";
 
-import type { MnemonicMemoryUITools } from "@/mastra/mnemonic-memory-tool-types";
+import type { MnemonicUITools } from "@/mastra/mnemonic-tool-types";
 
 type OmDataKey<P extends DataOmPart> = P["type"] extends `data-${infer K}`
   ? K
@@ -14,7 +14,7 @@ export type ThreadUIDataTypes = {
   >["data"];
 };
 
-export type ThreadUITools = MnemonicMemoryUITools;
+export type ThreadUITools = MnemonicUITools;
 
 export type ThreadUIMessage = UIMessage<
   unknown,

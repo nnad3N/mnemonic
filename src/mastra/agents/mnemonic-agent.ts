@@ -8,6 +8,33 @@ export const mnemonicAgentId = "mnemonic-agent";
 
 const model = "vercel/openai/gpt-5-nano";
 
+export const mnemonicMemory = new Memory({
+  embedder: gateway.embeddingModel("openai/text-embedding-3-small"),
+  options: {
+    generateTitle: true,
+    observationalMemory: {
+      model,
+      retrieval: {
+        scope: "thread",
+        vector: true,
+      },
+      scope: "thread",
+      temporalMarkers: true,
+    },
+    workingMemory: {
+      enabled: true,
+      scope: "thread",
+      template: `
+# Short-term memory
+- **Current task:**
+- **User expects:**
+- **Response prefs:** [tone, format, frustration handling — one line, actionable only]`,
+    },
+  },
+  storage: postgresStore,
+  vector: pgVector,
+});
+
 export const mnemonicAgent = new Agent({
   name: "Mnemonic",
   id: mnemonicAgentId,
@@ -38,32 +65,7 @@ Short-term memory:
 - Keep each field to one short line. Store actionable response prefs, not emotional narratives.
 - Use it for what should affect your few next replies, not for long-term context.
 `,
-  memory: new Memory({
-    embedder: gateway.embeddingModel("openai/text-embedding-3-small"),
-    options: {
-      generateTitle: true,
-      observationalMemory: {
-        model,
-        retrieval: {
-          scope: "thread",
-          vector: true,
-        },
-        scope: "thread",
-        temporalMarkers: true,
-      },
-      workingMemory: {
-        enabled: true,
-        scope: "thread",
-        template: `
-# Short-term memory
-- **Current task:**
-- **User expects:**
-- **Response prefs:** [tone, format, frustration handling — one line, actionable only]`,
-      },
-    },
-    storage: postgresStore,
-    vector: pgVector,
-  }),
+  memory: mnemonicMemory,
 
   model,
 });
