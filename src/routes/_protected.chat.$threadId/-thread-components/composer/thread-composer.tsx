@@ -1,5 +1,10 @@
 import { getRouteApi } from "@tanstack/react-router";
-import { Plate, PlateContent, usePlateEditor } from "platejs/react";
+import {
+  Plate,
+  PlateContent,
+  useEditorMounted,
+  usePlateEditor,
+} from "platejs/react";
 import { useEffect, useRef } from "react";
 
 import { cn } from "@/lib/utils";
@@ -33,6 +38,7 @@ export const ThreadComposer = ({ location }: ThreadComposerProps) => {
     plugins: threadEditorPlugins,
     autoSelect: "end",
   });
+  const isEditorMounted = useEditorMounted(editorId);
 
   const { cancelEditing, sendMessage, stopStream } =
     useComposerActions(location);
@@ -58,13 +64,16 @@ export const ThreadComposer = ({ location }: ThreadComposerProps) => {
   }, [cancelEditing, location]);
 
   useEffect(() => {
-    if (location !== "edit" || !editingState?.markdown) {
+    if (editor.meta.isFallback || !isEditorMounted) {
       return;
     }
 
-    editor.tf.setValue(markdownToPlateValue(editor, editingState.markdown));
+    if (location === "edit" && editingState?.markdown) {
+      editor.tf.setValue(markdownToPlateValue(editor, editingState.markdown));
+    }
+
     editor.tf.focus({ edge: "endEditor" });
-  }, [editor, location, editingState?.markdown]);
+  }, [editor, editorId, editingState?.markdown, isEditorMounted, location]);
 
   useEffect(() => {
     if (editor.meta.isFallback) {
