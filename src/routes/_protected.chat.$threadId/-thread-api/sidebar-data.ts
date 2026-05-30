@@ -7,11 +7,11 @@ import { db } from "@/db";
 import { topic } from "@/db/schema";
 import { authMiddleware } from "@/lib/middleware/auth-middleware";
 import { getMemoryStore } from "@/mastra/memory";
-import { threadKeys } from "@/routes/_protected.chat.$threadId/-thread.api/query-keys";
+import { threadKeys } from "@/routes/_protected.chat.$threadId/-thread-api/query-keys";
 import type {
   SidebarThread,
   SidebarTopic,
-} from "@/routes/_protected.chat.$threadId/-thread.api/types";
+} from "@/routes/_protected.chat.$threadId/-thread-api/types";
 
 const CONVERSATIONS_LIMIT = 5;
 const TOPICS_LIMIT = 5;

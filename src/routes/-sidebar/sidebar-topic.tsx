@@ -33,10 +33,10 @@ import {
 } from "@/components/ui/sidebar";
 import { m } from "@/paraglide/messages";
 
-import { createTopicConversation } from "../_protected.chat.$threadId/-thread.api/create-thread";
-import { threadKeys } from "../_protected.chat.$threadId/-thread.api/query-keys";
-import { sidebarDataQuery } from "../_protected.chat.$threadId/-thread.api/sidebar-data";
-import type { SidebarTopic } from "../_protected.chat.$threadId/-thread.api/types";
+import { createTopicConversation } from "../_protected.chat.$threadId/-thread-api/create-thread";
+import { threadKeys } from "../_protected.chat.$threadId/-thread-api/query-keys";
+import { sidebarDataQuery } from "../_protected.chat.$threadId/-thread-api/sidebar-data";
+import type { SidebarTopic } from "../_protected.chat.$threadId/-thread-api/types";
 import { DeleteTopicDialog, RenameTopicField } from "./sidebar-context-menu";
 import { SidebarConversationItem } from "./sidebar-conversation";
 import { SidebarGroupEmpty } from "./sidebar-empty";

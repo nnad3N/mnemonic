@@ -1,6 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { Thread } from "@/components/assistant-ui/thread";
+import { AssistantMessage } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-message";
+import { UserMessage } from "@/routes/_protected.chat.$threadId/-thread-components/user-message";
+
+import { useChat } from "./-use-chat";
 
 export const Route = createFileRoute("/_protected/chat/$threadId/")({
   component: RouteComponent,
@@ -8,5 +11,17 @@ export const Route = createFileRoute("/_protected/chat/$threadId/")({
 
 // oxlint-disable-next-line func-style
 function RouteComponent() {
-  return <Thread />;
+  const chat = useChat();
+
+  return (
+    <div>
+      {chat.messages.map((message) =>
+        message.role === "user" ? (
+          <UserMessage key={message.id} message={message} />
+        ) : (
+          <AssistantMessage key={message.id} message={message} />
+        )
+      )}
+    </div>
+  );
 }
