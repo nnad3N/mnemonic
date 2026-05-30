@@ -51,6 +51,7 @@ export const useComposerActions = (location: ThreadInputLocation) => {
       setEditingState(null);
     }
     editor.tf.setValue(markdownToPlateValue(editor, ""));
+    editor.tf.focus({ edge: "endEditor" });
 
     await chat.sendMessage({
       text,
