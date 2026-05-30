@@ -7,10 +7,11 @@ import * as v from "valibot";
 
 import { db } from "@/db";
 import { topic } from "@/db/schema";
+import { applyMessageEdit } from "@/lib/chat/apply-message-edit";
 import { authMiddleware } from "@/lib/middleware/auth-middleware";
 import { mastra } from "@/mastra";
 import { mnemonicAgentId } from "@/mastra/agents/mnemonic-agent";
-import { getMemoryStore } from "@/mastra/memory";
+import { getAgentMemory, getMemoryStore } from "@/mastra/memory";
 
 const uiMessageSchema = v.object({
   id: v.string(),
@@ -80,6 +81,17 @@ export const Route = createFileRoute("/api/chat")({
             .update(topic)
             .set({ updatedAt: new Date() })
             .where(eq(topic.id, thread.resourceId));
+        }
+
+        if (body.messageId) {
+          const memory = await getAgentMemory();
+
+          await applyMessageEdit({
+            memory,
+            memoryStore,
+            threadId: body.threadId,
+            messageId: body.messageId,
+          });
         }
 
         const stream = await handleChatStream<UIMessage>({
