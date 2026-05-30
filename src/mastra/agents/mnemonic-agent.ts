@@ -2,18 +2,16 @@ import { Agent } from "@mastra/core/agent";
 import { Memory } from "@mastra/memory";
 import { gateway } from "ai";
 
+import { models } from "@/mastra/models";
 import { pgVector, postgresStore } from "@/mastra/storage";
 
 export const mnemonicAgentId = "mnemonic-agent";
 
-const model = "vercel/openai/gpt-5-nano";
-
 export const mnemonicMemory = new Memory({
-  embedder: gateway.embeddingModel("openai/text-embedding-3-small"),
+  embedder: gateway.embeddingModel(models.embedding),
   options: {
-    generateTitle: true,
     observationalMemory: {
-      model,
+      model: models.observationalMemory,
       retrieval: {
         scope: "thread",
         vector: true,
@@ -67,5 +65,5 @@ Short-term memory:
 `,
   memory: mnemonicMemory,
 
-  model,
+  model: models.mnemonicAgent,
 });

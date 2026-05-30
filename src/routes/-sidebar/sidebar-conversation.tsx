@@ -87,7 +87,7 @@ export const SidebarConversationItem = ({
         <Link params={{ threadId: thread.id }} to="/chat/$threadId">
           {({ isActive }) => (
             <ContextMenuTrigger render={renderButton(isActive)}>
-              {thread.title}
+              <span className="min-w-0 truncate">{thread.title}</span>
             </ContextMenuTrigger>
           )}
         </Link>

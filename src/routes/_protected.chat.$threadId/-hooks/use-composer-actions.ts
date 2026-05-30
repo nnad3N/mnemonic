@@ -1,6 +1,7 @@
 import { getRouteApi } from "@tanstack/react-router";
 import { useEditorRef, useEditorSelector } from "platejs/react";
 
+import { useCreateThreadTitle } from "../-thread-api/create-thread-title";
 import { useThreadChat } from "../-thread-chat-context";
 import {
   getThreadEditorId,
@@ -31,6 +32,7 @@ export const useComposerActions = (location: ThreadInputLocation) => {
   );
 
   const chat = useThreadChat();
+  const createThreadTitleMutation = useCreateThreadTitle();
   const editingState = useThreadStore((state) => state.editingState);
   const setEditingState = useThreadStore((state) => state.setEditingState);
 
@@ -53,6 +55,7 @@ export const useComposerActions = (location: ThreadInputLocation) => {
     editor.tf.setValue(markdownToPlateValue(editor, ""));
     editor.tf.focus({ edge: "endEditor" });
 
+    createThreadTitleMutation.mutate({ text, threadId });
     await chat.sendMessage({
       text,
       messageId: location === "edit" ? editingState?.messageId : undefined,
