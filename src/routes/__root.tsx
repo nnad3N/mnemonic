@@ -11,7 +11,7 @@ import { useEffect } from "react";
 
 import { ErrorComponent } from "@/components/route-components/error";
 import { NotFoundComponent } from "@/components/route-components/not-found";
-import { ToastProvider } from "@/components/ui/toast";
+import { Toaster } from "@/components/ui/sonner";
 import { authClient } from "@/lib/better-auth/auth-client";
 import PostHogProvider from "@/lib/posthog/provider";
 import TanStackQueryDevtools from "@/lib/tanstack-query/devtools";
@@ -92,23 +92,22 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <PostHogProvider>
-          <ToastProvider>
-            <main className="flex h-dvh flex-col overflow-hidden">
-              {children}
-            </main>
-            <TanStackDevtools
-              config={{
-                position: "bottom-right",
-              }}
-              plugins={[
-                {
-                  name: "Tanstack Router",
-                  render: <TanStackRouterDevtoolsPanel />,
-                },
-                TanStackQueryDevtools,
-              ]}
-            />
-          </ToastProvider>
+          <Toaster />
+          <main className="flex h-dvh flex-col overflow-hidden">
+            {children}
+          </main>
+          <TanStackDevtools
+            config={{
+              position: "bottom-right",
+            }}
+            plugins={[
+              {
+                name: "Tanstack Router",
+                render: <TanStackRouterDevtoolsPanel />,
+              },
+              TanStackQueryDevtools,
+            ]}
+          />
         </PostHogProvider>
         <Scripts />
       </body>

@@ -7,7 +7,7 @@ import type * as React from "react";
 import {
   ContextMenu,
   ContextMenuItem,
-  ContextMenuPopup,
+  ContextMenuContent,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import {
@@ -23,6 +23,7 @@ import { m } from "@/paraglide/messages";
 import { sidebarDataQuery } from "../_protected.chat.$threadId/-thread.api/sidebar-data";
 import type { SidebarThread } from "../_protected.chat.$threadId/-thread.api/types";
 import { DeleteThreadDialog, RenameField } from "./sidebar-context-menu";
+import { SidebarGroupEmpty } from "./sidebar-empty";
 import { SidebarConversationsSkeleton } from "./sidebar-skeleton";
 
 export const SidebarConversations = () => {
@@ -46,6 +47,9 @@ export const SidebarConversations = () => {
             ))
           ) : (
             <SidebarConversationsSkeleton count={4} />
+          )}
+          {isSuccess && data.conversations.length === 0 && (
+            <SidebarGroupEmpty>{m.nav_no_conversations()}</SidebarGroupEmpty>
           )}
         </SidebarMenu>
       </SidebarGroupContent>
@@ -87,13 +91,13 @@ export const SidebarConversationItem = ({
             </ContextMenuTrigger>
           )}
         </Link>
-        <ContextMenuPopup>
+        <ContextMenuContent>
           <ContextMenuItem
             onClick={() => {
               setIsRenaming(true);
             }}
           >
-            <PencilIcon aria-hidden="true" />
+            <PencilIcon />
             {m.nav_rename()}
           </ContextMenuItem>
           <ContextMenuItem
@@ -102,10 +106,10 @@ export const SidebarConversationItem = ({
             }}
             variant="destructive"
           >
-            <Trash2Icon aria-hidden="true" />
+            <Trash2Icon />
             {m.nav_delete()}
           </ContextMenuItem>
-        </ContextMenuPopup>
+        </ContextMenuContent>
       </ContextMenu>
 
       <DeleteThreadDialog

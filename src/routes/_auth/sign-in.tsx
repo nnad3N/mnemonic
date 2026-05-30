@@ -1,15 +1,14 @@
-import { revalidateLogic, useForm, useStore } from "@tanstack/react-form";
+import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
 import * as v from "valibot";
 
+import { FieldError } from "@/components/field-error";
 import { Button } from "@/components/ui/button";
-import { Field, FieldError, FieldLabel } from "@/components/ui/field";
-import { Form } from "@/components/ui/form";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { toastManager } from "@/components/ui/toast";
 import { authClient } from "@/lib/better-auth/auth-client";
 import { getAuthErrorDescription } from "@/lib/errors/auth-error";
-import { toFormErrors } from "@/lib/errors/form-errors";
 import { m } from "@/paraglide/messages";
 import { localizeHref } from "@/paraglide/runtime";
 
@@ -44,10 +43,8 @@ function RouteComponent() {
       });
 
       if (error) {
-        toastManager.add({
+        toast.error(m.auth_error_generic_title(), {
           description: getAuthErrorDescription(error.code),
-          title: m.auth_error_generic_title(),
-          type: "error",
         });
         return;
       }
@@ -58,78 +55,70 @@ function RouteComponent() {
     validators: { onDynamic: schema },
   });
 
-  const formErrors = useStore(form.store, (s) => toFormErrors(s.fieldMeta));
-
   return (
-    <Form
-      className="flex flex-col gap-4 "
-      errors={formErrors}
+    <form
+      className="flex flex-col gap-4"
       onSubmit={(event) => {
         event.preventDefault();
-        event.stopPropagation();
         void form.handleSubmit();
       }}
     >
-      <form.Field name="email">
-        {(field) => (
-          <Field name={field.name}>
-            <FieldLabel htmlFor={field.name}>{m.auth_email_label()}</FieldLabel>
-            <Input
-              autoComplete="email"
-              id={field.name}
-              name={field.name}
-              onBlur={field.handleBlur}
-              onChange={(event) => {
-                field.handleChange(event.target.value);
-              }}
-              placeholder={m.auth_email_placeholder()}
-              type="email"
-              value={field.state.value}
-            />
-            <FieldError />
-          </Field>
-        )}
-      </form.Field>
+      <FieldGroup>
+        <form.Field name="email">
+          {(field) => (
+            <Field field={field}>
+              <FieldLabel htmlFor={field.name}>
+                {m.auth_email_label()}
+              </FieldLabel>
+              <Input
+                autoComplete="email"
+                id={field.name}
+                name={field.name}
+                onBlur={field.handleBlur}
+                onChange={(event) => {
+                  field.handleChange(event.target.value);
+                }}
+                placeholder={m.auth_email_placeholder()}
+                type="email"
+                value={field.state.value}
+              />
+              <FieldError field={field} />
+            </Field>
+          )}
+        </form.Field>
+      </FieldGroup>
 
-      <form.Field name="password">
-        {(field) => (
-          <Field name={field.name}>
-            <FieldLabel htmlFor={field.name}>
-              {m.auth_password_label()}
-            </FieldLabel>
-            <Input
-              autoComplete="current-password"
-              id={field.name}
-              name={field.name}
-              onBlur={field.handleBlur}
-              onChange={(event) => {
-                field.handleChange(event.target.value);
-              }}
-              type="password"
-              value={field.state.value}
-            />
-            <FieldError />
-          </Field>
-        )}
-      </form.Field>
+      <FieldGroup>
+        <form.Field name="password">
+          {(field) => (
+            <Field field={field}>
+              <FieldLabel htmlFor={field.name}>
+                {m.auth_password_label()}
+              </FieldLabel>
+              <Input
+                autoComplete="current-password"
+                id={field.name}
+                name={field.name}
+                onBlur={field.handleBlur}
+                onChange={(event) => {
+                  field.handleChange(event.target.value);
+                }}
+                type="password"
+                value={field.state.value}
+              />
+              <FieldError field={field} />
+            </Field>
+          )}
+        </form.Field>
+      </FieldGroup>
 
-      <form.Subscribe
-        selector={(state) => ({
-          canSubmit: state.canSubmit,
-          isSubmitting: state.isSubmitting,
-        })}
-      >
-        {({ canSubmit, isSubmitting }) => (
-          <Button
-            className="mt-2 w-full"
-            disabled={!canSubmit}
-            loading={isSubmitting}
-            type="submit"
-          >
+      <form.Subscribe selector={(state) => state.canSubmit}>
+        {(canSubmit) => (
+          <Button className="mt-2 w-full" disabled={!canSubmit} type="submit">
             {m.auth_sign_in_submit()}
           </Button>
         )}
       </form.Subscribe>
-    </Form>
+    </form>
   );
 }

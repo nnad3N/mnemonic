@@ -5,8 +5,8 @@ import {
   useLocation,
 } from "@tanstack/react-router";
 
-import { Frame, FrameHeader, FramePanel } from "@/components/ui/frame";
-import { Tabs, TabsList, TabsTab } from "@/components/ui/tabs";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { m } from "@/paraglide/messages";
 import { Route as SignInRoute } from "@/routes/_auth/sign-in";
 import { Route as SignUpRoute } from "@/routes/_auth/sign-up";
@@ -19,31 +19,31 @@ function LayoutComponent() {
 
   return (
     <div className="flex flex-1 items-center justify-center overflow-y-auto p-4">
-      <Frame className="w-full max-w-md">
-        <FrameHeader className="p-1">
+      <Card className="w-full max-w-md">
+        <CardHeader>
           <Tabs value={pathname}>
             <TabsList className="w-full">
-              <TabsTab
+              <TabsTrigger
                 nativeButton={false}
                 render={<Link to={SignInRoute.fullPath} />}
                 value={SignInRoute.fullPath}
               >
                 {m.auth_sign_in()}
-              </TabsTab>
-              <TabsTab
+              </TabsTrigger>
+              <TabsTrigger
                 nativeButton={false}
                 render={<Link to={SignUpRoute.fullPath} />}
                 value={SignUpRoute.fullPath}
               >
                 {m.auth_sign_up()}
-              </TabsTab>
+              </TabsTrigger>
             </TabsList>
           </Tabs>
-        </FrameHeader>
-        <FramePanel>
+        </CardHeader>
+        <CardContent>
           <Outlet />
-        </FramePanel>
-      </Frame>
+        </CardContent>
+      </Card>
     </div>
   );
 }

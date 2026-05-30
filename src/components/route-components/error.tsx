@@ -37,7 +37,7 @@ export const AuthErrorComponent = ({ reset, error }: AuthErrorProps) => {
     <Empty>
       <EmptyHeader>
         <EmptyMedia variant="icon">
-          <AlertCircle aria-hidden="true" className="text-destructive" />
+          <AlertCircle className="text-destructive" />
         </EmptyMedia>
         <EmptyTitle className="text-destructive">
           {m.route_error_session_title()}
@@ -92,7 +92,7 @@ export const GenericErrorComponent = ({ reset }: ErrorComponentProps) => {
     <Empty>
       <EmptyHeader>
         <EmptyMedia variant="icon">
-          <AlertCircle aria-hidden="true" className="text-destructive" />
+          <AlertCircle className="text-destructive" />
         </EmptyMedia>
         <EmptyTitle className="text-destructive">
           {m.auth_error_generic_title()}
