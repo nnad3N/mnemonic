@@ -2,9 +2,36 @@ import { Agent } from "@mastra/core/agent";
 import { Memory } from "@mastra/memory";
 import { gateway } from "ai";
 
+import { models } from "@/mastra/models";
 import { pgVector, postgresStore } from "@/mastra/storage";
 
 export const mnemonicAgentId = "mnemonic-agent";
+
+export const mnemonicMemory = new Memory({
+  embedder: gateway.embeddingModel(models.embedding),
+  options: {
+    observationalMemory: {
+      model: models.observationalMemory,
+      retrieval: {
+        scope: "thread",
+        vector: true,
+      },
+      scope: "thread",
+      temporalMarkers: true,
+    },
+    workingMemory: {
+      enabled: true,
+      scope: "thread",
+      template: `
+# Short-term memory
+- **Current task:**
+- **User expects:**
+- **Response prefs:** [tone, format, frustration handling — one line, actionable only]`,
+    },
+  },
+  storage: postgresStore,
+  vector: pgVector,
+});
 
 export const mnemonicAgent = new Agent({
   name: "Mnemonic",
@@ -36,32 +63,7 @@ Short-term memory:
 - Keep each field to one short line. Store actionable response prefs, not emotional narratives.
 - Use it for what should affect your few next replies, not for long-term context.
 `,
-  memory: new Memory({
-    embedder: gateway.embeddingModel("openai/text-embedding-3-small"),
-    options: {
-      generateTitle: true,
-      observationalMemory: {
-        model: "vercel/deepseek/deepseek-v4-flash",
-        retrieval: {
-          scope: "thread",
-          vector: true,
-        },
-        scope: "thread",
-        temporalMarkers: true,
-      },
-      workingMemory: {
-        enabled: true,
-        scope: "thread",
-        template: `
-# Short-term memory
-- **Current task:**
-- **User expects:**
-- **Response prefs:** [tone, format, frustration handling — one line, actionable only]`,
-      },
-    },
-    storage: postgresStore,
-    vector: pgVector,
-  }),
+  memory: mnemonicMemory,
 
-  model: "vercel/deepseek/deepseek-v4-flash",
+  model: models.mnemonicAgent,
 });

@@ -20,8 +20,8 @@ import {
 } from "@/components/ui/sidebar";
 import { m } from "@/paraglide/messages";
 
-import { sidebarDataQuery } from "../_protected.chat.$threadId/-thread.api/sidebar-data";
-import type { SidebarThread } from "../_protected.chat.$threadId/-thread.api/types";
+import { sidebarDataQuery } from "../_protected.chat.$threadId/-thread-api/sidebar-data";
+import type { SidebarThread } from "../_protected.chat.$threadId/-thread-api/types";
 import { DeleteThreadDialog, RenameField } from "./sidebar-context-menu";
 import { SidebarGroupEmpty } from "./sidebar-empty";
 import { SidebarConversationsSkeleton } from "./sidebar-skeleton";
@@ -87,7 +87,7 @@ export const SidebarConversationItem = ({
         <Link params={{ threadId: thread.id }} to="/chat/$threadId">
           {({ isActive }) => (
             <ContextMenuTrigger render={renderButton(isActive)}>
-              {thread.title}
+              <span className="min-w-0 truncate">{thread.title}</span>
             </ContextMenuTrigger>
           )}
         </Link>

@@ -31,8 +31,8 @@ import { m } from "@/paraglide/messages";
 import {
   createConversation,
   createTopic,
-} from "../_protected.chat.$threadId/-thread.api/create-thread";
-import { threadKeys } from "../_protected.chat.$threadId/-thread.api/query-keys";
+} from "../_protected.chat.$threadId/-thread-api/create-thread";
+import { threadKeys } from "../_protected.chat.$threadId/-thread-api/query-keys";
 
 const getInitials = (value: string): string => {
   const parts = value

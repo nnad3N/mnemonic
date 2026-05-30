@@ -19,13 +19,13 @@ import { m } from "@/paraglide/messages";
 import {
   deleteConversation,
   deleteTopic,
-} from "@/routes/_protected.chat.$threadId/-thread.api/delete-thread";
-import { threadKeys } from "@/routes/_protected.chat.$threadId/-thread.api/query-keys";
+} from "@/routes/_protected.chat.$threadId/-thread-api/delete-thread";
+import { threadKeys } from "@/routes/_protected.chat.$threadId/-thread-api/query-keys";
 import {
   renameConversation,
   renameTopic,
-} from "@/routes/_protected.chat.$threadId/-thread.api/rename-thread";
-import type { SidebarTopic } from "@/routes/_protected.chat.$threadId/-thread.api/types";
+} from "@/routes/_protected.chat.$threadId/-thread-api/rename-thread";
+import type { SidebarTopic } from "@/routes/_protected.chat.$threadId/-thread-api/types";
 
 type RenameFieldProps = {
   threadId: string;

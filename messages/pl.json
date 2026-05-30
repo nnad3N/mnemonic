@@ -68,5 +68,10 @@
   "route_error_session_title": "Błąd sesji",
   "route_error_try_again": "Spróbuj ponownie",
   "route_error_sign_out": "Wyloguj się",
-  "route_error_contact_support_if_persists": "Jeśli problem będzie się powtarzał, skontaktuj się z pomocą techniczną."
+  "route_error_contact_support_if_persists": "Jeśli problem się powtarza, skontaktuj się z pomocą techniczną.",
+  "chat_thread_pending_planning": "Planuję kolejne kroki...",
+  "chat_thread_reasoning_thinking": "Myślę...",
+  "chat_thread_reasoning_thought": "Przemyślane",
+  "chat_thread_error_unknown": "Wystąpił nieznany błąd.",
+  "chat_thread_error_retry": "Spróbuj ponownie"
 }

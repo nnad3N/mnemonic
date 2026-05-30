@@ -1,16 +1,17 @@
 import { handleChatStream } from "@mastra/ai-sdk";
 import { createFileRoute } from "@tanstack/react-router";
 import { createUIMessageStreamResponse } from "ai";
-import type { UIMessage } from "ai";
 import { eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { db } from "@/db";
 import { topic } from "@/db/schema";
+import { applyMessageEdit } from "@/lib/chat/apply-message-edit";
 import { authMiddleware } from "@/lib/middleware/auth-middleware";
 import { mastra } from "@/mastra";
 import { mnemonicAgentId } from "@/mastra/agents/mnemonic-agent";
-import { getMemoryStore } from "@/mastra/memory";
+import { getAgentMemory, getMemoryStore } from "@/mastra/memory";
+import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 
 const uiMessageSchema = v.object({
   id: v.string(),
@@ -82,7 +83,18 @@ export const Route = createFileRoute("/api/chat")({
             .where(eq(topic.id, thread.resourceId));
         }
 
-        const stream = await handleChatStream<UIMessage>({
+        if (body.messageId) {
+          const memory = await getAgentMemory();
+
+          await applyMessageEdit({
+            memory,
+            memoryStore,
+            threadId: body.threadId,
+            messageId: body.messageId,
+          });
+        }
+
+        const stream = await handleChatStream<ThreadUIMessage>({
           mastra,
           agentId: mnemonicAgentId,
           params: {
@@ -93,8 +105,9 @@ export const Route = createFileRoute("/api/chat")({
               thread: body.threadId,
             },
             // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-            messages: body.messages as UIMessage[],
+            messages: body.messages as ThreadUIMessage[],
           },
+          sendReasoning: true,
           version: "v6",
         });
 
