@@ -51,7 +51,7 @@ export const ThreadComposer = ({ location }: ThreadComposerProps) => {
   return (
     <div
       className={cn(
-        "w-full max-w-lg min-w-0 rounded-2xl border bg-input/50 p-2 text-base md:text-sm"
+        "w-full min-w-0 rounded-2xl border bg-input/50 p-2 text-base md:text-sm"
       )}
     >
       <Plate editor={editor}>

@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AssistantMessage } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-message";
 import { ThreadComposer } from "@/routes/_protected.chat.$threadId/-thread-components/composer/thread-composer";
+import { ThreadError } from "@/routes/_protected.chat.$threadId/-thread-components/thread-error";
+import { ThreadPending } from "@/routes/_protected.chat.$threadId/-thread-components/thread-pending";
 import { UserMessage } from "@/routes/_protected.chat.$threadId/-thread-components/user-message";
 
 import { useThreadChat } from "./-hooks/use-thread-chat";
@@ -23,16 +25,19 @@ function RouteComponent() {
   const chat = useThreadChat();
   const stickToBottom = useStickToBottom({
     resize: "smooth",
-    initial: "smooth",
+    initial: "instant",
   });
 
   return (
     <StickToBottom
-      className="flex h-full min-h-0 w-full flex-col"
+      className="flex h-full min-h-0 w-full flex-col p-3"
       instance={stickToBottom}
     >
       <ScrollArea className="h-full" viewportRef={stickToBottom.scrollRef}>
-        <div ref={stickToBottom.contentRef}>
+        <div
+          className="mx-auto flex w-full max-w-lg min-w-0 flex-col gap-2 px-4 pb-4"
+          ref={stickToBottom.contentRef}
+        >
           {chat.messages.map((message) =>
             message.role === "user" ? (
               <UserMessage key={message.id} message={message} />
@@ -40,10 +45,12 @@ function RouteComponent() {
               <AssistantMessage key={message.id} message={message} />
             )
           )}
+          <ThreadPending />
+          <ThreadError />
         </div>
       </ScrollArea>
 
-      <div className="relative flex justify-center p-4 pt-2">
+      <div className="relative mx-auto flex w-full max-w-lg justify-center">
         <ScrollToBottomButton />
         <ThreadComposer location="main" />
       </div>
