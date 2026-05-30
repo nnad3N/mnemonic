@@ -1,9 +1,7 @@
-import { Chat } from "@ai-sdk/react";
 import { toAISdkMessages } from "@mastra/ai-sdk/ui";
 import { queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import type { TsrSerializable } from "@tanstack/router-core";
-import { DefaultChatTransport } from "ai";
 import type { UIMessage } from "ai";
 
 import { threadAccessMiddleware } from "@/lib/middleware/assert-thread-access";
@@ -36,24 +34,11 @@ export const threadQuery = (threadId: string) =>
         data: { threadId },
       });
 
-      const chat = new Chat({
-        id: threadId,
-        messages: data.messages,
-        transport: new DefaultChatTransport({
-          api: "/api/chat",
-          prepareSendMessagesRequest: (options) => ({
-            body: {
-              ...options,
-              resourceId: data.resourceId,
-              threadId,
-            },
-          }),
-        }),
-      });
-
-      return chat;
+      return {
+        resourceId: data.resourceId,
+        messages: data.messages as UIMessage[],
+      };
     },
     queryKey: threadKeys.byId(threadId),
     staleTime: Infinity,
-    structuralSharing: false,
   });

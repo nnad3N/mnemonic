@@ -3,7 +3,7 @@ import { RotateCwIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { m } from "@/paraglide/messages";
 
-import { useThreadChat } from "../-hooks/use-thread-chat";
+import { useThreadChat } from "../-thread-chat-context";
 
 export const ThreadError = () => {
   const chat = useThreadChat();

@@ -3,7 +3,7 @@ import { ArrowUpIcon, SquareIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 import { useComposerActions } from "../../-hooks/use-composer-actions";
-import { useThreadChat } from "../../-hooks/use-thread-chat";
+import { useThreadChat } from "../../-thread-chat-context";
 import type { ThreadInputLocation } from "../../-thread-store";
 
 type ComposerFooterProps = {

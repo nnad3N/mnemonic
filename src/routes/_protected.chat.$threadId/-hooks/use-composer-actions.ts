@@ -1,6 +1,7 @@
 import { getRouteApi } from "@tanstack/react-router";
 import { useEditorRef, useEditorSelector } from "platejs/react";
 
+import { useThreadChat } from "../-thread-chat-context";
 import {
   getThreadEditorId,
   markdownToPlateValue,
@@ -8,7 +9,6 @@ import {
 } from "../-thread-components/composer/plate";
 import type { ThreadInputLocation } from "../-thread-store";
 import { useThreadStore } from "../-thread-store";
-import { useThreadChat } from "./use-thread-chat";
 
 const Route = getRouteApi("/_protected/chat/$threadId");
 

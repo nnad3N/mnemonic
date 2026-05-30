@@ -1,9 +1,8 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { PlateController } from "platejs/react";
 
 import { Spinner } from "@/components/ui/spinner";
-import { threadQuery } from "@/routes/_protected.chat.$threadId/-thread-api/get-thread";
+import { ThreadChatProvider } from "@/routes/_protected.chat.$threadId/-thread-chat-context";
 
 export const Route = createFileRoute("/_protected/chat/$threadId")({
   component: RouteComponent,
@@ -17,13 +16,14 @@ export const Route = createFileRoute("/_protected/chat/$threadId")({
 /* oxlint-disable func-style */
 function RouteComponent() {
   const { threadId } = Route.useParams();
-  useSuspenseQuery(threadQuery(threadId));
 
   return (
-    <PlateController>
-      <div className="flex h-full min-h-0 flex-col">
-        <Outlet />
-      </div>
-    </PlateController>
+    <ThreadChatProvider threadId={threadId}>
+      <PlateController>
+        <div className="flex h-full min-h-0 flex-col">
+          <Outlet />
+        </div>
+      </PlateController>
+    </ThreadChatProvider>
   );
 }
