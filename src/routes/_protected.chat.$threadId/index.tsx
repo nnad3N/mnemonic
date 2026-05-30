@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { AssistantMessage } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-message";
+import { ThreadComposer } from "@/routes/_protected.chat.$threadId/-thread-components/composer/thread-composer";
 import { UserMessage } from "@/routes/_protected.chat.$threadId/-thread-components/user-message";
 
 import { useChat } from "./-use-chat";
@@ -22,6 +23,7 @@ function RouteComponent() {
           <AssistantMessage key={message.id} message={message} />
         )
       )}
+      <ThreadComposer location="main" />
     </div>
   );
 }

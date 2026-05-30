@@ -1,5 +1,6 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { PlateController } from "platejs/react";
 
 import { Spinner } from "@/components/ui/spinner";
 import { threadQuery } from "@/routes/_protected.chat.$threadId/-thread-api/get-thread";
@@ -19,8 +20,10 @@ function RouteComponent() {
   useSuspenseQuery(threadQuery(threadId));
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <Outlet />
-    </div>
+    <PlateController>
+      <div className="flex h-full min-h-0 flex-col">
+        <Outlet />
+      </div>
+    </PlateController>
   );
 }
