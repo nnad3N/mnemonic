@@ -5,7 +5,8 @@ export type ThreadInputLocation = "main" | "edit";
 
 type EditingState = {
   messageId: string;
-  files: File[];
+  messageIndex: number;
+  markdown: string;
 };
 
 type State = {

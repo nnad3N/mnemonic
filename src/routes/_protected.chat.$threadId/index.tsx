@@ -8,6 +8,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 import { AssistantMessage } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-message";
 import { ThreadComposer } from "@/routes/_protected.chat.$threadId/-thread-components/composer/thread-composer";
 import { ThreadError } from "@/routes/_protected.chat.$threadId/-thread-components/thread-error";
@@ -15,6 +16,7 @@ import { ThreadPending } from "@/routes/_protected.chat.$threadId/-thread-compon
 import { UserMessage } from "@/routes/_protected.chat.$threadId/-thread-components/user-message";
 
 import { useThreadChat } from "./-hooks/use-thread-chat";
+import { useThreadStore } from "./-thread-store";
 
 export const Route = createFileRoute("/_protected/chat/$threadId/")({
   component: RouteComponent,
@@ -23,6 +25,8 @@ export const Route = createFileRoute("/_protected/chat/$threadId/")({
 // oxlint-disable-next-line func-style
 function RouteComponent() {
   const chat = useThreadChat();
+  const editingMessageIndex =
+    useThreadStore((state) => state.editingState?.messageIndex) ?? Infinity;
   const stickToBottom = useStickToBottom({
     resize: "smooth",
     initial: "instant",
@@ -38,13 +42,18 @@ function RouteComponent() {
           className="mx-auto flex w-full max-w-lg min-w-0 flex-col gap-2 px-4 pb-4"
           ref={stickToBottom.contentRef}
         >
-          {chat.messages.map((message) =>
-            message.role === "user" ? (
-              <UserMessage key={message.id} message={message} />
-            ) : (
-              <AssistantMessage key={message.id} message={message} />
-            )
-          )}
+          {chat.messages.map((message, index) => (
+            <div
+              className={cn(index > editingMessageIndex && "opacity-50")}
+              key={message.id}
+            >
+              {message.role === "user" ? (
+                <UserMessage message={message} index={index} />
+              ) : (
+                <AssistantMessage message={message} />
+              )}
+            </div>
+          ))}
           <ThreadPending />
           <ThreadError />
         </div>
