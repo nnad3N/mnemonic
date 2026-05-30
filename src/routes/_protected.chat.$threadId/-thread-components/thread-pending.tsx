@@ -3,6 +3,7 @@ import type { ChatStatus, UIMessage } from "ai";
 import { m } from "@/paraglide/messages";
 
 import { useThreadChat } from "../-hooks/use-thread-chat";
+import { ThreadMetaLine } from "./thread-meta-line";
 
 const shouldShowThreadPending = (
   status: ChatStatus,
@@ -35,8 +36,6 @@ export const ThreadPending = () => {
   }
 
   return (
-    <p className="w-full shimmer px-2.5 text-base text-muted-foreground md:text-sm">
-      {m.chat_thread_pending_planning()}
-    </p>
+    <ThreadMetaLine>{m.chat_thread_pending_planning()}</ThreadMetaLine>
   );
 };

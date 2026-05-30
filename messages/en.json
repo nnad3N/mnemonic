@@ -67,7 +67,10 @@
   "route_error_session_title": "Session error",
   "route_error_try_again": "Try again",
   "route_error_sign_out": "Sign out",
+  "route_error_contact_support_if_persists": "If this problem persists, please contact support.",
   "chat_thread_pending_planning": "Planning next moves...",
+  "chat_thread_reasoning_thinking": "Thinking...",
+  "chat_thread_reasoning_thought": "Thought",
   "chat_thread_error_unknown": "Unknown error has occurred.",
   "chat_thread_error_retry": "Retry"
 }

@@ -6,6 +6,8 @@ import { pgVector, postgresStore } from "@/mastra/storage";
 
 export const mnemonicAgentId = "mnemonic-agent";
 
+const model = "vercel/xiaomi/mimo-v2.5";
+
 export const mnemonicAgent = new Agent({
   name: "Mnemonic",
   id: mnemonicAgentId,
@@ -41,7 +43,7 @@ Short-term memory:
     options: {
       generateTitle: true,
       observationalMemory: {
-        model: "vercel/deepseek/deepseek-v4-flash",
+        model,
         retrieval: {
           scope: "thread",
           vector: true,
@@ -63,5 +65,5 @@ Short-term memory:
     vector: pgVector,
   }),
 
-  model: "vercel/deepseek/deepseek-v4-flash",
+  model,
 });
