@@ -15,10 +15,10 @@ export const Route = createFileRoute("/_protected/chat/$threadId")({
 
 /* oxlint-disable func-style */
 function RouteComponent() {
-  const { threadId } = Route.useParams();
+  const threadId = Route.useParams({ select: (params) => params.threadId });
 
   return (
-    <ThreadChatProvider threadId={threadId}>
+    <ThreadChatProvider key={threadId} threadId={threadId}>
       <PlateController>
         <div className="flex h-full min-h-0 flex-col">
           <Outlet />
