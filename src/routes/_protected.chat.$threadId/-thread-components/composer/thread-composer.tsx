@@ -3,10 +3,13 @@ import {
   Plate,
   PlateContent,
   useEditorMounted,
+  useEditorScrollRef,
   usePlateEditor,
 } from "platejs/react";
 import { useEffect, useRef } from "react";
+import type { PropsWithChildren } from "react";
 
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 import { useComposerActions } from "../../-hooks/use-composer-actions";
@@ -100,9 +103,24 @@ export const ThreadComposer = ({ location }: ThreadComposerProps) => {
       ref={composerRef}
     >
       <Plate editor={editor}>
-        <PlateContent className="p-1 outline-none" />
+        <ComposerScrollArea>
+          <PlateContent className="p-1 outline-none" />
+        </ComposerScrollArea>
       </Plate>
       <ComposerFooter location={location} />
     </div>
+  );
+};
+
+const ComposerScrollArea = ({ children }: PropsWithChildren) => {
+  const scrollRef = useEditorScrollRef();
+
+  return (
+    <ScrollArea
+      className="*:data-[slot=scroll-area-viewport]:h-auto *:data-[slot=scroll-area-viewport]:max-h-42"
+      viewportRef={scrollRef}
+    >
+      {children}
+    </ScrollArea>
   );
 };
