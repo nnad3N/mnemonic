@@ -1,13 +1,14 @@
-import type { ChatStatus, UIMessage } from "ai";
+import type { ChatStatus } from "ai";
 
 import { m } from "@/paraglide/messages";
 import { AssistantMessage } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-message";
 import { ThreadMetaLine } from "@/routes/_protected.chat.$threadId/-thread-components/thread-meta-line";
 import { UserMessage } from "@/routes/_protected.chat.$threadId/-thread-components/user-message";
+import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 
 type IsWithoutVisiblePartsProps = {
   status: ChatStatus;
-  message: UIMessage;
+  message: ThreadUIMessage;
   index: number;
   messageCount: number;
 };
@@ -36,7 +37,7 @@ const isWithoutVisibleParts = ({
 };
 
 type ThreadMessageProps = {
-  message: UIMessage;
+  message: ThreadUIMessage;
   index: number;
   messageCount: number;
   status: ChatStatus;
@@ -69,9 +70,7 @@ export const ThreadMessage = ({
         </ThreadMetaLine>
       ) : (
         <AssistantMessage
-          isAnimating={
-            status === "streaming" && index === messageCount - 1
-          }
+          isAnimating={status === "streaming" && index === messageCount - 1}
           message={message}
         />
       )}

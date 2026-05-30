@@ -1,11 +1,10 @@
-import type { UIMessage } from "@ai-sdk/react";
-
 import { ThreadComposer } from "@/routes/_protected.chat.$threadId/-thread-components/composer/thread-composer";
+import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 
 import { useThreadStore } from "../-thread-store";
 
 type UserMessageProps = {
-  message: UIMessage;
+  message: ThreadUIMessage;
   index: number;
 };
 

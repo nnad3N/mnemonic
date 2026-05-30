@@ -1,20 +1,17 @@
-import type {
-  FileUIPart,
-  SourceDocumentUIPart,
-  SourceUrlUIPart,
-  UIDataTypes,
-  UIMessagePart,
-  UITools,
-} from "ai";
+import type { FileUIPart, SourceDocumentUIPart, SourceUrlUIPart } from "ai";
 import { FileIcon, FileTextIcon, LinkIcon } from "lucide-react";
 import { Streamdown } from "streamdown";
 
 import { AssistantReasoningPart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-reasoning-part";
 import { ThreadMetaLine } from "@/routes/_protected.chat.$threadId/-thread-components/thread-meta-line";
+import type {
+  ThreadUIMessage,
+  ThreadUIMessagePart,
+} from "@/routes/_protected.chat.$threadId/-thread-types";
 
 type AssistantMessageProps = {
   isAnimating?: boolean;
-  message: { parts: UIMessagePart<UIDataTypes, UITools>[] };
+  message: ThreadUIMessage;
 };
 
 export const AssistantMessage = ({
@@ -32,20 +29,17 @@ export const AssistantMessage = ({
 
 type AssistantMessagePartProps = {
   isAnimating: boolean;
-  part: UIMessagePart<UIDataTypes, UITools>;
+  part: ThreadUIMessagePart;
 };
 
 const AssistantMessagePart = ({
   isAnimating,
   part,
 }: AssistantMessagePartProps) => {
+  // oxlint-disable-next-line typescript/switch-exhaustiveness-check
   switch (part.type) {
     case "text": {
       return <Streamdown isAnimating={isAnimating}>{part.text}</Streamdown>;
-    }
-    case "dynamic-tool":
-    case "step-start": {
-      return null;
     }
     case "reasoning": {
       return <AssistantReasoningPart part={part} />;
