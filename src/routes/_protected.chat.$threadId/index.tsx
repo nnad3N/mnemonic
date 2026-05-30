@@ -12,7 +12,7 @@ import { AssistantMessage } from "@/routes/_protected.chat.$threadId/-thread-com
 import { ThreadComposer } from "@/routes/_protected.chat.$threadId/-thread-components/composer/thread-composer";
 import { UserMessage } from "@/routes/_protected.chat.$threadId/-thread-components/user-message";
 
-import { useChat } from "./-use-chat";
+import { useThreadChat } from "./-hooks/use-thread-chat";
 
 export const Route = createFileRoute("/_protected/chat/$threadId/")({
   component: RouteComponent,
@@ -20,7 +20,7 @@ export const Route = createFileRoute("/_protected/chat/$threadId/")({
 
 // oxlint-disable-next-line func-style
 function RouteComponent() {
-  const chat = useChat();
+  const chat = useThreadChat();
   const stickToBottom = useStickToBottom({
     resize: "smooth",
     initial: "smooth",

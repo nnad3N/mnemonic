@@ -13,8 +13,7 @@ type State = {
 };
 
 type Actions = {
-  setEditingState: (data: EditingState) => void;
-  clearEditingState: () => void;
+  setEditingState: (data: EditingState | null) => void;
 };
 
 export const useThreadStore = create<State & Actions>()(
@@ -23,11 +22,6 @@ export const useThreadStore = create<State & Actions>()(
     setEditingState: (data) => {
       set((state) => {
         state.editingState = data;
-      });
-    },
-    clearEditingState: () => {
-      set((state) => {
-        state.editingState = null;
       });
     },
   }))

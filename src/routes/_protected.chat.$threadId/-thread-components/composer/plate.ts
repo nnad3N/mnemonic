@@ -8,10 +8,12 @@ import type { PlateEditor } from "platejs/react";
 import remarkGfm from "remark-gfm";
 
 import type { ThreadInputLocation } from "../../-thread-store";
+import { ThreadComposerKeyboardPlugin } from "./plate-plugins";
 
 export const threadEditorPlugins = [
   BasicBlocksPlugin,
   BasicMarksPlugin,
+  ThreadComposerKeyboardPlugin,
   MarkdownPlugin.configure({
     options: {
       remarkPlugins: [remarkGfm],
