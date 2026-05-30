@@ -1,20 +1,20 @@
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
+import { toast } from "sonner";
 import * as v from "valibot";
 
 import {
   AlertDialog,
-  AlertDialogClose,
+  AlertDialogCancel,
+  AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogPopup,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { toastManager } from "@/components/ui/toast";
 import { m } from "@/paraglide/messages";
 import {
   deleteConversation,
@@ -45,10 +45,8 @@ export const RenameField = ({
       await renameConversation({ data: { threadId, title } });
     },
     onError: () => {
-      toastManager.add({
+      toast.error(m.nav_rename_thread_error_title(), {
         description: m.nav_rename_thread_error_description(),
-        title: m.nav_rename_thread_error_title(),
-        type: "error",
       });
     },
     onSuccess: async () => {
@@ -129,10 +127,8 @@ export const RenameTopicField = ({
       await renameTopic({ data: { topicId, title } });
     },
     onError: () => {
-      toastManager.add({
+      toast.error(m.nav_rename_topic_error_title(), {
         description: m.nav_rename_topic_error_description(),
-        title: m.nav_rename_topic_error_title(),
-        type: "error",
       });
     },
     onSuccess: async () => {
@@ -219,10 +215,8 @@ export const DeleteThreadDialog = ({
       await deleteConversation({ data: { threadId } });
     },
     onError: () => {
-      toastManager.add({
+      toast.error(m.nav_delete_thread_error_title(), {
         description: m.nav_delete_thread_error_description(),
-        title: m.nav_delete_thread_error_title(),
-        type: "error",
       });
     },
     onSuccess: async () => {
@@ -236,7 +230,7 @@ export const DeleteThreadDialog = ({
 
   return (
     <AlertDialog onOpenChange={onOpenChange} open={open}>
-      <AlertDialogPopup>
+      <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
             {m.nav_delete_thread_confirm_title()}
@@ -246,11 +240,11 @@ export const DeleteThreadDialog = ({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogClose render={<Button variant="outline" />}>
+          <AlertDialogCancel render={<Button variant="outline" />}>
             {m.nav_cancel()}
-          </AlertDialogClose>
+          </AlertDialogCancel>
           <Button
-            loading={deleteMutation.isPending}
+            disabled={deleteMutation.isPending}
             onClick={() => {
               deleteMutation.mutate();
             }}
@@ -259,7 +253,7 @@ export const DeleteThreadDialog = ({
             {m.nav_confirm_delete()}
           </Button>
         </AlertDialogFooter>
-      </AlertDialogPopup>
+      </AlertDialogContent>
     </AlertDialog>
   );
 };
@@ -288,10 +282,8 @@ export const DeleteTopicDialog = ({
       await deleteTopic({ data: { topicId: topic.id } });
     },
     onError: () => {
-      toastManager.add({
+      toast.error(m.nav_delete_topic_error_title(), {
         description: m.nav_delete_topic_error_description(),
-        title: m.nav_delete_topic_error_title(),
-        type: "error",
       });
     },
     onSuccess: async () => {
@@ -308,7 +300,7 @@ export const DeleteTopicDialog = ({
 
   return (
     <AlertDialog onOpenChange={onOpenChange} open={open}>
-      <AlertDialogPopup>
+      <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
             {m.nav_delete_topic_confirm_title()}
@@ -318,11 +310,11 @@ export const DeleteTopicDialog = ({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogClose render={<Button variant="outline" />}>
+          <AlertDialogCancel render={<Button variant="outline" />}>
             {m.nav_cancel()}
-          </AlertDialogClose>
+          </AlertDialogCancel>
           <Button
-            loading={deleteMutation.isPending}
+            disabled={deleteMutation.isPending}
             onClick={() => {
               deleteMutation.mutate();
             }}
@@ -331,7 +323,7 @@ export const DeleteTopicDialog = ({
             {m.nav_confirm_delete()}
           </Button>
         </AlertDialogFooter>
-      </AlertDialogPopup>
+      </AlertDialogContent>
     </AlertDialog>
   );
 };

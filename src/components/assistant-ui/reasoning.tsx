@@ -103,7 +103,7 @@ function ReasoningFade({ className, ...props }: React.ComponentProps<"div">) {
         "aui-reasoning-fade pointer-events-none absolute inset-x-0 bottom-0 z-10 h-8",
         "bg-[linear-gradient(to_top,var(--color-background),transparent)]",
         "group-data-[variant=muted]/reasoning-root:bg-[linear-gradient(to_top,hsl(var(--muted)/0.5),transparent)]",
-        "fade-in-0 animate-in",
+        "animate-in fade-in-0",
         "group-data-[state=open]/collapsible-content:animate-out",
         "group-data-[state=open]/collapsible-content:fade-out-0",
         "group-data-[state=open]/collapsible-content:delay-[calc(var(--animation-duration)*0.75)]",
@@ -132,7 +132,7 @@ function ReasoningTrigger({
     <CollapsibleTrigger
       data-slot="reasoning-trigger"
       className={cn(
-        "aui-reasoning-trigger group/trigger flex max-w-[75%] items-center gap-2 py-1 text-muted-foreground text-sm transition-colors hover:text-foreground",
+        "aui-reasoning-trigger group/trigger flex max-w-[75%] items-center gap-2 py-1 text-sm text-muted-foreground transition-colors hover:text-foreground",
         className
       )}
       {...props}
@@ -150,7 +150,7 @@ function ReasoningTrigger({
           <span
             aria-hidden
             data-slot="reasoning-trigger-shimmer"
-            className="aui-reasoning-trigger-shimmer shimmer pointer-events-none absolute inset-0 motion-reduce:animate-none"
+            className="aui-reasoning-trigger-shimmer pointer-events-none absolute inset-0 shimmer motion-reduce:animate-none"
           >
             Reasoning{durationText}
           </span>
@@ -178,7 +178,7 @@ function ReasoningContent({
     <CollapsibleContent
       data-slot="reasoning-content"
       className={cn(
-        "aui-reasoning-content relative overflow-hidden text-muted-foreground text-sm outline-none",
+        "aui-reasoning-content relative overflow-hidden text-sm text-muted-foreground outline-none",
         "group/collapsible-content ease-out",
         "data-[state=closed]:animate-collapsible-up",
         "data-[state=open]:animate-collapsible-down",

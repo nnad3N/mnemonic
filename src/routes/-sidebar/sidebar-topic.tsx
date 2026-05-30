@@ -7,6 +7,7 @@ import {
   Trash2Icon,
 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import {
   Collapsible,
@@ -16,7 +17,7 @@ import {
 import {
   ContextMenu,
   ContextMenuItem,
-  ContextMenuPopup,
+  ContextMenuContent,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import {
@@ -30,7 +31,6 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
-import { toastManager } from "@/components/ui/toast";
 import { m } from "@/paraglide/messages";
 
 import { createTopicConversation } from "../_protected.chat.$threadId/-thread.api/create-thread";
@@ -39,6 +39,7 @@ import { sidebarDataQuery } from "../_protected.chat.$threadId/-thread.api/sideb
 import type { SidebarTopic } from "../_protected.chat.$threadId/-thread.api/types";
 import { DeleteTopicDialog, RenameTopicField } from "./sidebar-context-menu";
 import { SidebarConversationItem } from "./sidebar-conversation";
+import { SidebarGroupEmpty } from "./sidebar-empty";
 import { SidebarTopicsSkeleton } from "./sidebar-skeleton";
 
 export const SidebarTopics = () => {
@@ -55,6 +56,9 @@ export const SidebarTopics = () => {
             ))
           ) : (
             <SidebarTopicsSkeleton count={2} />
+          )}
+          {isSuccess && data.topics.length === 0 && (
+            <SidebarGroupEmpty>{m.nav_no_topics()}</SidebarGroupEmpty>
           )}
         </SidebarMenu>
       </SidebarGroupContent>
@@ -84,10 +88,8 @@ const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
       return thread;
     },
     onError: () => {
-      toastManager.add({
+      toast.error(m.nav_new_conversation_error_title(), {
         description: m.nav_new_conversation_error_description(),
-        title: m.nav_new_conversation_error_title(),
-        type: "error",
       });
     },
     onSuccess: async (thread) => {
@@ -115,22 +117,19 @@ const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
             <ContextMenuTrigger
               render={<CollapsibleTrigger render={<SidebarMenuButton />} />}
             >
-              <ChevronRightIcon
-                aria-hidden="true"
-                className="transition-transform group-data-panel-open/topic:rotate-90"
-              />
+              <ChevronRightIcon className="transition-transform group-data-panel-open/topic:rotate-90" />
 
               <span className="truncate">{topic.title}</span>
             </ContextMenuTrigger>
           )}
 
-          <ContextMenuPopup>
+          <ContextMenuContent>
             <ContextMenuItem
               onClick={() => {
                 setIsRenaming(true);
               }}
             >
-              <PencilIcon aria-hidden="true" />
+              <PencilIcon />
               {m.nav_rename()}
             </ContextMenuItem>
             <ContextMenuItem
@@ -139,7 +138,7 @@ const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
                 createConversationMutation.mutate();
               }}
             >
-              <MessageCirclePlusIcon aria-hidden="true" />
+              <MessageCirclePlusIcon />
               {m.nav_create_conversation_in_topic()}
             </ContextMenuItem>
             <ContextMenuItem
@@ -148,10 +147,10 @@ const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
               }}
               variant="destructive"
             >
-              <Trash2Icon aria-hidden="true" />
+              <Trash2Icon />
               {m.nav_delete()}
             </ContextMenuItem>
-          </ContextMenuPopup>
+          </ContextMenuContent>
         </ContextMenu>
 
         <CollapsibleContent>
