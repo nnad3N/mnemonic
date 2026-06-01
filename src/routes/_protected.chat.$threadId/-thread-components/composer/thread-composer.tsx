@@ -1,3 +1,5 @@
+import { mergeProps } from "@base-ui/react/merge-props";
+import { useRender } from "@base-ui/react/use-render";
 import { getRouteApi } from "@tanstack/react-router";
 import {
   Plate,
@@ -18,7 +20,7 @@ import { useThreadStore } from "../../-thread-store";
 import { ComposerFooter } from "./composer-footer";
 import {
   getThreadEditorId,
-  markdownToPlateValue,
+  markdownToPlate,
   threadEditorPlugins,
 } from "./plate";
 import { ThreadComposerKeyboardPlugin } from "./plate-plugins";
@@ -72,7 +74,7 @@ export const ThreadComposer = ({ location }: ThreadComposerProps) => {
     }
 
     if (location === "edit" && editingState?.markdown) {
-      editor.tf.setValue(markdownToPlateValue(editor, editingState.markdown));
+      editor.tf.setValue(markdownToPlate(editor, editingState.markdown));
     }
 
     editor.tf.focus({ edge: "endEditor" });
@@ -96,20 +98,37 @@ export const ThreadComposer = ({ location }: ThreadComposerProps) => {
   }, [cancelEditing, editor, sendMessage, stopStream]);
 
   return (
-    <div
-      className={cn(
-        "w-full min-w-0 rounded-2xl border bg-input/50 p-2 text-base md:text-sm"
-      )}
-      ref={composerRef}
-    >
+    <ComposerWrapper className="bg-input/50" ref={composerRef}>
       <Plate editor={editor}>
         <ComposerScrollArea>
           <PlateContent className="p-1 outline-none" />
         </ComposerScrollArea>
       </Plate>
       <ComposerFooter location={location} />
-    </div>
+    </ComposerWrapper>
   );
+};
+
+type ComposerWrapperProps = useRender.ComponentProps<"div">;
+
+export const ComposerWrapper = ({
+  className,
+  render,
+  ...props
+}: ComposerWrapperProps) => {
+  return useRender({
+    defaultTagName: "div",
+    props: mergeProps<"div">(
+      {
+        className: cn(
+          "w-full min-w-0 rounded-2xl border p-1.5 text-sm",
+          className
+        ),
+      },
+      props
+    ),
+    render,
+  });
 };
 
 const ComposerScrollArea = ({ children }: PropsWithChildren) => {
