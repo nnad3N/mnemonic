@@ -1,7 +1,15 @@
-import { Streamdown } from "streamdown";
+import { createStaticEditor, PlateStatic } from "platejs/static";
+import { useMemo } from "react";
 
 import { useClampHeight } from "@/hooks/use-clamp-height";
-import { ThreadComposer } from "@/routes/_protected.chat.$threadId/-thread-components/composer/thread-composer";
+import {
+  markdownToPlate,
+  threadStaticEditorPlugins,
+} from "@/routes/_protected.chat.$threadId/-thread-components/composer/plate";
+import {
+  ComposerWrapper,
+  ThreadComposer,
+} from "@/routes/_protected.chat.$threadId/-thread-components/composer/thread-composer";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 
 import { useThreadStore } from "../-thread-store";
@@ -27,8 +35,8 @@ export const UserMessage = ({ message, index }: UserMessageProps) => {
   }
 
   return (
-    <button
-      className="relative block w-full cursor-pointer overflow-clip rounded-2xl border bg-secondary px-3 py-2.5 text-left text-base transition-colors hover:border-ring md:text-sm"
+    <ComposerWrapper
+      className="relative block w-full overflow-clip bg-secondary text-left transition-colors hover:border-ring"
       onClick={() => {
         setEditingState({
           messageId: message.id,
@@ -36,30 +44,37 @@ export const UserMessage = ({ message, index }: UserMessageProps) => {
           markdown,
         });
       }}
-      type="button"
+      render={<button type="button" />}
     >
       <UserMessageContent markdown={markdown} />
-    </button>
+    </ComposerWrapper>
   );
 };
-
 const UserMessageContent = ({ markdown }: UserMessageContentProps) => {
-  const { isHeightClamped, lineHeight, maxHeight, ref } =
-    useClampHeight<HTMLDivElement>();
+  const { isHeightClamped, maxHeight, ref } = useClampHeight<HTMLDivElement>({
+    // text-sm line-height
+    lineHeight: 1.25 / 0.875,
+  });
+
+  const editor = useMemo(
+    () =>
+      createStaticEditor({
+        plugins: threadStaticEditorPlugins,
+        value: (plate) => markdownToPlate(plate, markdown),
+      }),
+    [markdown]
+  );
 
   return (
     <>
-      <div
-        className="overflow-hidden"
-        ref={ref}
-        style={{
-          lineHeight,
-          maxHeight,
-        }}
-      >
-        <Streamdown className="whitespace-pre-line" mode="static">
-          {markdown}
-        </Streamdown>
+      <div className="overflow-hidden p-1" ref={ref}>
+        <PlateStatic
+          style={{
+            maxHeight,
+          }}
+          className="wrap-break-word whitespace-pre-wrap outline-none"
+          editor={editor}
+        />
       </div>
       {isHeightClamped && (
         <span className="pointer-events-none absolute right-0 bottom-0 left-0 h-1/4 bg-linear-to-t from-secondary from-10% to-transparent" />

@@ -79,7 +79,7 @@ export const SidebarHeaderSection = () => {
     mutationFn: async () => {
       const thread = await createTopic({
         data: {
-          conversationTitle: m.nav_new_topic_default_title(),
+          conversationTitle: m.nav_new_conversation_default_title(),
           topicTitle: m.nav_new_topic_default_title(),
         },
       });

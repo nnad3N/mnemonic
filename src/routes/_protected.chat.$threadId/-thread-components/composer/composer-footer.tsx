@@ -20,7 +20,7 @@ export const ComposerFooter = ({ location }: ComposerFooterProps) => {
           onClick={async () => {
             await chat.stop();
           }}
-          size="icon-sm"
+          size="icon-xs"
           type="button"
         >
           <SquareIcon />

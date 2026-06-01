@@ -5,8 +5,7 @@ import { useCreateThreadTitle } from "../-thread-api/create-thread-title";
 import { useThreadChat } from "../-thread-chat-context";
 import {
   getThreadEditorId,
-  markdownToPlateValue,
-  plateValueToMarkdown,
+  plateToMarkdown,
 } from "../-thread-components/composer/plate";
 import type { ThreadInputLocation } from "../-thread-store";
 import { useThreadStore } from "../-thread-store";
@@ -47,12 +46,12 @@ export const useComposerActions = (location: ThreadInputLocation) => {
       return;
     }
 
-    const text = plateValueToMarkdown(editor).trim();
+    const text = plateToMarkdown(editor).trim();
 
     if (location === "edit") {
       setEditingState(null);
     }
-    editor.tf.setValue(markdownToPlateValue(editor, ""));
+    editor.tf.setValue();
     editor.tf.focus({ edge: "endEditor" });
 
     createThreadTitleMutation.mutate({ text, threadId });
