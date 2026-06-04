@@ -17,6 +17,7 @@ export default defineConfig({
     typeAware: true,
   },
   rules: {
+    "prefer-destructuring": "off",
     "arrow-body-style": "off",
     "require-await": "off",
     "sort-keys": "off",

@@ -3,6 +3,7 @@
   "home_page": "Home page",
   "about_page": "About page",
   "example_message": "Welcome to your i18n app.",
+  "common_no_results": "No results",
   "language_label": "Language",
   "current_locale": "Current locale: {locale}",
   "learn_router": "Learn Paraglide JS",

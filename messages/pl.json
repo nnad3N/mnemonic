@@ -3,6 +3,7 @@
   "home_page": "Strona główna",
   "about_page": "O nas",
   "example_message": "Witaj w aplikacji i18n.",
+  "common_no_results": "Brak wyników",
   "language_label": "Język",
   "current_locale": "Bieżący język: {locale}",
   "learn_router": "Naucz się Paraglide JS",

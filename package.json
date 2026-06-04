@@ -39,6 +39,7 @@
     "@mastra/rag": "^2.2.1",
     "@platejs/basic-nodes": "^53.0.0",
     "@platejs/markdown": "^53.0.4",
+    "@platejs/mention": "^53.0.0",
     "@posthog/react": "^1.9.0",
     "@t3-oss/env-core": "^0.13.11",
     "@tailwindcss/vite": "^4.2.4",

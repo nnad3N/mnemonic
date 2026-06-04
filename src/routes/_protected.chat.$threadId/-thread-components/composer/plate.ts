@@ -3,16 +3,28 @@ import {
   BaseBasicMarksPlugin,
 } from "@platejs/basic-nodes";
 import { MarkdownPlugin } from "@platejs/markdown";
+import { MentionInputPlugin, MentionPlugin } from "@platejs/mention/react";
 import type { Value } from "platejs";
 import type { PlateEditor } from "platejs/react";
 import remarkGfm from "remark-gfm";
 
 import type { ThreadInputLocation } from "../../-thread-store";
+import {
+  ThreadMentionElement,
+  ThreadMentionInputElement,
+} from "./mention-node";
 import { ThreadComposerKeyboardPlugin } from "./plate-plugins";
 
 export const threadStaticEditorPlugins = [
   BaseBasicBlocksPlugin,
   BaseBasicMarksPlugin,
+  MentionPlugin.configure({
+    options: {
+      insertSpaceAfterMention: true,
+      triggerPreviousCharPattern: /^$|^[\s"']$/,
+    },
+  }).withComponent(ThreadMentionElement),
+  MentionInputPlugin.withComponent(ThreadMentionInputElement),
   MarkdownPlugin.configure({
     options: {
       remarkPlugins: [remarkGfm],
