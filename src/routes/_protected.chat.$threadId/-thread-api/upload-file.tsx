@@ -1,27 +1,20 @@
 import { mutationOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
-import { Result, TaggedError } from "better-result";
+import { Result } from "better-result";
+import type { SerializedResult } from "better-result";
 import * as v from "valibot";
 
 import { db } from "@/db";
 import { artifact } from "@/db/schema";
 import { env } from "@/env";
+import { FileUploadError } from "@/lib/errors/file-upload-error";
+import type { FileUploadErrorShape } from "@/lib/errors/file-upload-error";
 import { threadAccessMiddleware } from "@/lib/middleware/assert-thread-access";
 import { getPresignedPutUrl, S3Error } from "@/lib/s3";
-import { isSupportedMimeType } from "@/lib/supported-mime-types";
+import { validateUploadFile } from "@/lib/supported-files";
 import { mastra } from "@/mastra";
 
 import { threadMutationKeys } from "./query-keys";
-
-export class UnsupportedUploadMimeError extends TaggedError(
-  "UnsupportedUploadMimeError"
-)<{
-  message: string;
-}>() {
-  constructor() {
-    super({ message: "Unsupported file type" });
-  }
-}
 
 const getTopicForUpload = async (resourceId: string, userId: string) => {
   const ownedTopic = await db.query.topic.findFirst({
@@ -39,14 +32,18 @@ const getTopicForUpload = async (resourceId: string, userId: string) => {
   return ownedTopic.id;
 };
 
-type GetPresignedUrlResult =
-  | { type: "skipped"; artifactId: string }
-  | { type: "upload"; artifactId: string; presignedUrl: string }
-  | { type: "unsupported" };
+type GetPresignedUrlOk =
+  | { type: "skipped" }
+  | { type: "upload"; presignedUrl: string };
+
+type GetPresignedUrlResult = SerializedResult<
+  GetPresignedUrlOk,
+  FileUploadErrorShape
+>;
 
 const getPresignedUrlInputSchema = v.object({
   displayName: v.pipe(v.string(), v.nonEmpty()),
-  fileId: v.pipe(v.string(), v.nanoid()),
+  artifactId: v.pipe(v.string(), v.nanoid()),
   mimeType: v.pipe(v.string(), v.nonEmpty()),
   sha256: v.pipe(v.string(), v.length(64)),
   sizeBytes: v.pipe(v.number(), v.minValue(1)),
@@ -57,79 +54,82 @@ const getPresignedUrl = createServerFn({ method: "POST" })
   .inputValidator(getPresignedUrlInputSchema)
   .middleware([threadAccessMiddleware])
   .handler(async ({ context, data }): Promise<GetPresignedUrlResult> => {
-    if (!isSupportedMimeType(data.mimeType)) {
-      return { type: "unsupported" };
-    }
-
-    const topicId = await getTopicForUpload(
-      context.thread.resourceId,
-      context.user.id
-    );
-
-    const resolution = await db.transaction(async (tx) => {
-      const existing = await tx.query.artifact.findFirst({
-        where: {
-          sha256: data.sha256,
-          topicId,
-        },
-      });
-
-      if (existing?.status === "ready" || existing?.status === "processing") {
-        return {
-          artifactId: existing.id,
-          s3Key: undefined,
-        };
-      }
-
-      if (existing) {
-        return {
-          artifactId: existing.id,
-          s3Key: existing.s3Key,
-        };
-      }
-
-      const s3Key = `${topicId}/${data.fileId}`;
-
-      await tx.insert(artifact).values({
-        displayName: data.displayName,
-        id: data.fileId,
+    const result = await Result.gen(async function* () {
+      yield* validateUploadFile({
         mimeType: data.mimeType,
-        s3Bucket: env.S3_BUCKET,
-        s3Key,
-        sha256: data.sha256,
         sizeBytes: data.sizeBytes,
-        status: "uploading",
-        topicId,
       });
 
-      return {
-        artifactId: data.fileId,
-        s3Key,
-      };
+      const topicId = await getTopicForUpload(
+        context.thread.resourceId,
+        context.user.id
+      );
+
+      const artifactKey = await db.transaction(async (tx) => {
+        const existing = await tx.query.artifact.findFirst({
+          where: {
+            sha256: data.sha256,
+            topicId,
+          },
+        });
+
+        if (existing?.status === "ready" || existing?.status === "processing") {
+          return;
+        }
+
+        if (existing) {
+          return existing.s3Key;
+        }
+
+        const s3Key = `${topicId}/${data.artifactId}`;
+
+        await tx.insert(artifact).values({
+          id: data.artifactId,
+          topicId,
+          displayName: data.displayName,
+          mimeType: data.mimeType,
+          s3Bucket: env.S3_BUCKET,
+          s3Key,
+          sha256: data.sha256,
+          sizeBytes: data.sizeBytes,
+          status: "uploading",
+        });
+
+        return s3Key;
+      });
+
+      if (!artifactKey) {
+        return Result.ok({
+          type: "skipped" as const,
+        });
+      }
+
+      const presignedUrl = yield* Result.await(
+        getPresignedPutUrl({
+          contentLength: data.sizeBytes,
+          contentType: data.mimeType,
+          key: artifactKey,
+        })
+      );
+
+      return Result.ok({
+        type: "upload" as const,
+        presignedUrl,
+      });
     });
 
-    if (!resolution.s3Key) {
-      return {
-        type: "skipped",
-        artifactId: resolution.artifactId,
-      };
-    }
+    return Result.serialize(
+      result.mapError((error) => {
+        if (S3Error.is(error)) {
+          return new FileUploadError({
+            reason: "s3-error",
+            message: error.message,
+          });
+        }
 
-    const presignedResult = await getPresignedPutUrl({
-      contentLength: data.sizeBytes,
-      contentType: data.mimeType,
-      key: resolution.s3Key,
-    });
-
-    if (Result.isError(presignedResult)) {
-      throw presignedResult.error;
-    }
-
-    return {
-      type: "upload",
-      artifactId: resolution.artifactId,
-      presignedUrl: presignedResult.value,
-    };
+        return error;
+      })
+    );
   });
 
 const processArtifactInputSchema = v.object({
@@ -168,12 +168,12 @@ const processArtifact = createServerFn({ method: "POST" })
 
 export type UploadFileVars = {
   file: File;
-  fileId: string;
+  artifactId: string;
 };
 
 export const uploadFileMutation = (threadId: string) =>
   mutationOptions({
-    mutationFn: async ({ file, fileId }: UploadFileVars) => {
+    mutationFn: async ({ file, artifactId }: UploadFileVars) => {
       const digest = await crypto.subtle.digest(
         "SHA-256",
         await file.arrayBuffer()
@@ -182,10 +182,10 @@ export const uploadFileMutation = (threadId: string) =>
         .map((byte) => byte.toString(16).padStart(2, "0"))
         .join("");
 
-      const result = await getPresignedUrl({
+      const serialized = await getPresignedUrl({
         data: {
           displayName: file.name,
-          fileId,
+          artifactId,
           mimeType: file.type,
           sha256,
           sizeBytes: file.size,
@@ -193,15 +193,20 @@ export const uploadFileMutation = (threadId: string) =>
         },
       });
 
-      if (result.type === "unsupported") {
-        throw new UnsupportedUploadMimeError();
+      const result = Result.deserialize<
+        GetPresignedUrlOk,
+        FileUploadErrorShape
+      >(serialized);
+
+      if (Result.isError(result)) {
+        throw result.error;
       }
 
-      if (result.type === "skipped") {
-        return { artifactId: result.artifactId };
+      if (result.value.type === "skipped") {
+        return { artifactId };
       }
 
-      const uploadResponse = await fetch(result.presignedUrl, {
+      const uploadResponse = await fetch(result.value.presignedUrl, {
         body: file,
         headers: {
           "Content-Type": file.type,
@@ -218,12 +223,12 @@ export const uploadFileMutation = (threadId: string) =>
 
       await processArtifact({
         data: {
-          artifactId: result.artifactId,
+          artifactId,
           threadId,
         },
       });
 
-      return { artifactId: result.artifactId };
+      return { artifactId };
     },
     mutationKey: threadMutationKeys.uploadFile(threadId),
   });

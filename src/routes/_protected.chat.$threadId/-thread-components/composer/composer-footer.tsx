@@ -7,7 +7,7 @@ import { useEditorRef } from "platejs/react";
 import { useRef } from "react";
 
 import { Button } from "@/components/ui/button";
-import { FILE_INPUT_ACCEPT } from "@/lib/supported-mime-types";
+import { FILE_INPUT_ACCEPT } from "@/lib/supported-files";
 
 import { useComposerActions } from "../../-hooks/use-composer-actions";
 import { uploadFileMutation } from "../../-thread-api/upload-file";
@@ -76,10 +76,10 @@ const UploadButton = ({ location }: ComposerFooterProps) => {
           }
 
           for (const file of files) {
-            const fileId = nanoid();
-            mutate({ fileId, file });
+            const artifactId = nanoid();
+            mutate({ artifactId, file });
             editor.getTransforms(MentionPlugin).insert.mention({
-              key: getMentionKey({ type: "artifact", value: fileId }),
+              key: getMentionKey({ type: "artifact", value: artifactId }),
               search: "",
               value: file.name,
             });

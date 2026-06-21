@@ -1,10 +1,12 @@
 import { Agent } from "@mastra/core/agent";
 import { Memory } from "@mastra/memory";
-import { createGraphRAGTool } from "@mastra/rag";
 import { gateway } from "ai";
 
 import { models } from "@/mastra/models";
 import { pgVector, postgresStore } from "@/mastra/storage";
+import { artifactGraphRagTool } from "@/mastra/tools/artifact-graph-rag-tool";
+import { artifactVectorSearchTool } from "@/mastra/tools/artifact-vector-search-tool";
+import { getArtifactFromS3Tool } from "@/mastra/tools/get-artifact-from-s3-tool";
 
 export const mnemonicAgentId = "mnemonic-agent";
 
@@ -32,17 +34,6 @@ export const mnemonicMemory = new Memory({
   },
   storage: postgresStore,
   vector: pgVector,
-});
-
-const artifactGraphRagTool = createGraphRAGTool({
-  enableFilter: true,
-  graphOptions: {
-    dimension: 1536,
-    threshold: 0.7,
-  },
-  indexName: "artifact-embeddings",
-  model: gateway.embeddingModel(models.embedding),
-  vectorStoreName: "pgVector",
 });
 
 export const mnemonicAgent = new Agent({
@@ -75,11 +66,24 @@ Short-term memory:
 - Keep each field to one short line. Store actionable response prefs, not emotional narratives.
 - Use it for what should affect your few next replies, not for long-term context.
 
-Uploaded files:
-- When the user references uploaded files or artifacts, use the graph RAG tool to retrieve relevant content from their topic documents.
-- Scope retrieval to the current topic using the topic filter when available.
+Topic file access:
+Use these tools in order when the user references uploaded files or artifacts:
+
+1. artifact-vector-search — Default first step. Use for direct facts, quotes, or specific passages in uploaded documents.
+2. artifact-graph-rag — Use when vector search is insufficient: information spans multiple files, connected passages matter, or relationships between concepts are important.
+3. get-artifact-from-s3 — Load the raw file for direct inspection:
+   - Always use for images. Uploaded images are not text-indexed; S3 is the only source.
+   - Use as a fallback when vector or graph search did not answer the question.
+   - Only works for LLM-native file types. For office documents and other extracted-only formats, rely on the search tools instead.
+   - Pass the artifactId from @-mentions when the user references a specific file.
+
+Search tools are automatically scoped to the current topic. Do not call get-artifact-from-s3 for file types it cannot load.
 `,
   memory: mnemonicMemory,
   model: models.mnemonicAgent,
-  tools: { artifactGraphRagTool },
+  tools: {
+    artifactGraphRagTool,
+    artifactVectorSearchTool,
+    getArtifactFromS3Tool,
+  },
 });

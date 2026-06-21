@@ -1,6 +1,10 @@
 // Generated from @kreuzberg/node@4.9.9 via validateMimeType.
 
-export const SUPPORTED_MIME_TYPES = [
+import { Result } from "better-result";
+
+import { FileUploadError } from "@/lib/errors/file-upload-error";
+
+const SUPPORTED_MIME_TYPES = [
   "application/docbook+xml",
   "application/epub+zip",
   "application/gzip",
@@ -133,12 +137,47 @@ export const SUPPORTED_MIME_TYPES = [
   "text/x-org",
   "text/xml",
   "text/yaml",
-] as const;
+];
+
+const MEBIBYTE = 1024 * 1024;
+
+export const UPLOAD_INLINE_MAX_BYTES = 7 * MEBIBYTE;
+export const UPLOAD_PDF_MAX_BYTES = 50 * MEBIBYTE;
+
+export const getMaxUploadBytes = (mimeType: string): number =>
+  mimeType === "application/pdf"
+    ? UPLOAD_PDF_MAX_BYTES
+    : UPLOAD_INLINE_MAX_BYTES;
 
 export const isSupportedMimeType = (mimeType: string): boolean =>
-  SUPPORTED_MIME_TYPES.includes(mimeType as any);
+  SUPPORTED_MIME_TYPES.includes(mimeType);
 
 export const isImageMimeType = (mimeType: string): boolean =>
   mimeType.startsWith("image/");
+
+export const validateUploadFile = (input: {
+  mimeType: string;
+  sizeBytes: number;
+}) => {
+  if (!isSupportedMimeType(input.mimeType)) {
+    return Result.err(
+      new FileUploadError({
+        reason: "unsupported-mime-type",
+      })
+    );
+  }
+
+  const maxBytes = getMaxUploadBytes(input.mimeType);
+
+  if (input.sizeBytes > maxBytes) {
+    return Result.err(
+      new FileUploadError({
+        reason: "file-too-large",
+      })
+    );
+  }
+
+  return Result.ok();
+};
 
 export const FILE_INPUT_ACCEPT = SUPPORTED_MIME_TYPES.join(",");

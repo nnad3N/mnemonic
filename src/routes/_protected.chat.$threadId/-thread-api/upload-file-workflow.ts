@@ -3,7 +3,7 @@ import { extractBytes } from "@kreuzberg/node";
 import { createStep, createWorkflow } from "@mastra/core/workflows";
 import { MDocument } from "@mastra/rag";
 import { toStandardJsonSchema } from "@valibot/to-json-schema";
-import { embedMany, gateway } from "ai";
+import { embedMany } from "ai";
 import { Result } from "better-result";
 import { eq } from "drizzle-orm";
 import * as v from "valibot";
@@ -11,12 +11,13 @@ import * as v from "valibot";
 import { db } from "@/db";
 import { artifact } from "@/db/schema";
 import { getObject, headObject, S3Error } from "@/lib/s3";
-import { isImageMimeType } from "@/lib/supported-mime-types";
-import { models } from "@/mastra/models";
+import { isImageMimeType } from "@/lib/supported-files";
+import {
+  ARTIFACT_EMBEDDING_DIMENSION,
+  ARTIFACT_EMBEDDINGS_INDEX,
+  artifactEmbeddingModel,
+} from "@/mastra/artifact-rag-config";
 import { pgVector } from "@/mastra/storage";
-
-const ARTIFACT_EMBEDDINGS_INDEX = "artifact-embeddings";
-const EMBEDDING_DIMENSION = 1536;
 
 const workflowInputSchema = v.object({
   artifactId: v.pipe(v.string(), v.nonEmpty()),
@@ -141,12 +142,12 @@ const processForRagStep = createStep({
     }
 
     const { embeddings } = await embedMany({
-      model: gateway.embeddingModel(models.embedding),
+      model: artifactEmbeddingModel,
       values: chunks.map((chunk) => chunk.text),
     });
 
     await pgVector.createIndex({
-      dimension: EMBEDDING_DIMENSION,
+      dimension: ARTIFACT_EMBEDDING_DIMENSION,
       indexName: ARTIFACT_EMBEDDINGS_INDEX,
       metadataIndexes: ["topicId", "artifactId"],
     });

@@ -11,3 +11,5 @@ export const pgVector = new PgVector({
   id: "mnemonic-pg-vector",
   connectionString: env.DATABASE_URL,
 });
+
+export const PG_VECTOR_STORE_NAME = "pg-vector";

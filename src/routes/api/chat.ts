@@ -2,16 +2,15 @@ import { handleChatStream } from "@mastra/ai-sdk";
 import { RequestContext } from "@mastra/core/request-context";
 import { createFileRoute } from "@tanstack/react-router";
 import { createUIMessageStreamResponse } from "ai";
-import { eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { db } from "@/db";
-import { topic } from "@/db/schema";
 import { applyMessageEdit } from "@/lib/chat/apply-message-edit";
 import { authMiddleware } from "@/lib/middleware/auth-middleware";
 import { mastra } from "@/mastra";
 import { mnemonicAgentId } from "@/mastra/agents/mnemonic-agent";
 import { getAgentMemory, getMemoryStore } from "@/mastra/memory";
+import type { MnemonicRequestContext } from "@/mastra/request-context";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 
 const uiMessageSchema = v.object({
@@ -65,24 +64,13 @@ export const Route = createFileRoute("/api/chat")({
           return new Response("Not Found", { status: 404 });
         }
 
-        if (thread.resourceId !== context.user.id) {
-          const ownedTopic = await db.query.topic.findFirst({
-            where: {
-              id: thread.resourceId,
-              userId: context.user.id,
-            },
-            columns: { id: true },
-          });
-
-          if (!ownedTopic) {
-            return new Response("Not Found", { status: 404 });
-          }
-
-          await db
-            .update(topic)
-            .set({ updatedAt: new Date() })
-            .where(eq(topic.id, thread.resourceId));
-        }
+        const topic = await db.query.topic.findFirst({
+          where: {
+            id: thread.resourceId,
+            userId: context.user.id,
+          },
+          columns: { id: true },
+        });
 
         if (body.messageId) {
           const memory = await getAgentMemory();
@@ -95,13 +83,11 @@ export const Route = createFileRoute("/api/chat")({
           });
         }
 
-        const requestContext = new RequestContext();
+        const requestContext = new RequestContext<MnemonicRequestContext>();
+        requestContext.set("userId", context.user.id);
 
-        if (thread.resourceId !== context.user.id) {
-          requestContext.set(
-            "filter",
-            JSON.stringify({ topicId: thread.resourceId })
-          );
+        if (topic) {
+          requestContext.set("filter", { topicId: topic.id });
         }
 
         const stream = await handleChatStream<ThreadUIMessage>({

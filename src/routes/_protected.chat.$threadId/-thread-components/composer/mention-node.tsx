@@ -46,7 +46,7 @@ export const ThreadMentionElement = (
     },
   }).find(
     // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-    (mutation) => (mutation.variables as UploadFileVars).fileId === value
+    (mutation) => (mutation.variables as UploadFileVars).artifactId === value
   );
   const status = mutationState?.status;
 
