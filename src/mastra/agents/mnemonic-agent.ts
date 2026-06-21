@@ -1,5 +1,6 @@
 import { Agent } from "@mastra/core/agent";
 import { Memory } from "@mastra/memory";
+import { createGraphRAGTool } from "@mastra/rag";
 import { gateway } from "ai";
 
 import { models } from "@/mastra/models";
@@ -33,6 +34,17 @@ export const mnemonicMemory = new Memory({
   vector: pgVector,
 });
 
+const artifactGraphRagTool = createGraphRAGTool({
+  enableFilter: true,
+  graphOptions: {
+    dimension: 1536,
+    threshold: 0.7,
+  },
+  indexName: "artifact-embeddings",
+  model: gateway.embeddingModel(models.embedding),
+  vectorStoreName: "pgVector",
+});
+
 export const mnemonicAgent = new Agent({
   name: "Mnemonic",
   id: mnemonicAgentId,
@@ -62,8 +74,12 @@ Short-term memory:
 - Update working memory when the user states a goal, corrects your tone, shows frustration, or clarifies what they expect.
 - Keep each field to one short line. Store actionable response prefs, not emotional narratives.
 - Use it for what should affect your few next replies, not for long-term context.
+
+Uploaded files:
+- When the user references uploaded files or artifacts, use the graph RAG tool to retrieve relevant content from their topic documents.
+- Scope retrieval to the current topic using the topic filter when available.
 `,
   memory: mnemonicMemory,
-
   model: models.mnemonicAgent,
+  tools: { artifactGraphRagTool },
 });

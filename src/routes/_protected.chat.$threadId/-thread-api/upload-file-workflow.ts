@@ -1,13 +1,22 @@
+import { extractBytes } from "@kreuzberg/node";
 // oxlint-disable promise/prefer-await-to-then
 import { createStep, createWorkflow } from "@mastra/core/workflows";
+import { MDocument } from "@mastra/rag";
 import { toStandardJsonSchema } from "@valibot/to-json-schema";
+import { embedMany, gateway } from "ai";
 import { Result } from "better-result";
 import { eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { db } from "@/db";
 import { artifact } from "@/db/schema";
-import { headObject, S3Error } from "@/lib/s3";
+import { getObject, headObject, S3Error } from "@/lib/s3";
+import { isImageMimeType } from "@/lib/supported-mime-types";
+import { models } from "@/mastra/models";
+import { pgVector } from "@/mastra/storage";
+
+const ARTIFACT_EMBEDDINGS_INDEX = "artifact-embeddings";
+const EMBEDDING_DIMENSION = 1536;
 
 const workflowInputSchema = v.object({
   artifactId: v.pipe(v.string(), v.nonEmpty()),
@@ -18,8 +27,11 @@ type WorkflowInputSchema = v.InferInput<typeof workflowInputSchema>;
 
 const validatedArtifactSchema = v.object({
   artifactId: v.pipe(v.string(), v.nonEmpty()),
+  displayName: v.pipe(v.string(), v.nonEmpty()),
+  mimeType: v.pipe(v.string(), v.nonEmpty()),
   s3Bucket: v.pipe(v.string(), v.nonEmpty()),
   s3Key: v.pipe(v.string(), v.nonEmpty()),
+  topicId: v.pipe(v.string(), v.nonEmpty()),
 });
 
 const workflowOutputSchema = v.object({
@@ -39,7 +51,9 @@ const validateArtifactStep = createStep({
         topicId,
       },
       columns: {
+        displayName: true,
         id: true,
+        mimeType: true,
         s3Bucket: true,
         s3Key: true,
         sizeBytes: true,
@@ -74,8 +88,11 @@ const validateArtifactStep = createStep({
 
     return {
       artifactId: row.id,
+      displayName: row.displayName,
+      mimeType: row.mimeType,
       s3Bucket: row.s3Bucket,
       s3Key: row.s3Key,
+      topicId,
     };
   },
 });
@@ -85,9 +102,67 @@ const processForRagStep = createStep({
   inputSchema: toStandardJsonSchema(validatedArtifactSchema),
   outputSchema: toStandardJsonSchema(workflowOutputSchema),
   execute: async ({ inputData }) => {
-    const { artifactId } = inputData;
+    const { artifactId, displayName, mimeType, s3Key, topicId } = inputData;
 
-    await Bun.sleep(2000);
+    if (isImageMimeType(mimeType)) {
+      await db
+        .update(artifact)
+        .set({ status: "ready" })
+        .where(eq(artifact.id, artifactId));
+
+      return { artifactId };
+    }
+
+    const objectResult = await getObject({ key: s3Key });
+
+    if (Result.isError(objectResult)) {
+      throw objectResult.error;
+    }
+
+    const extraction = await extractBytes(
+      Buffer.from(objectResult.value),
+      mimeType
+    );
+
+    const doc = MDocument.fromText(extraction.content);
+    const chunks = await doc.chunk({
+      strategy: "recursive",
+      maxSize: 512,
+      overlap: 50,
+    });
+
+    if (chunks.length === 0) {
+      await db
+        .update(artifact)
+        .set({ status: "ready" })
+        .where(eq(artifact.id, artifactId));
+
+      return { artifactId };
+    }
+
+    const { embeddings } = await embedMany({
+      model: gateway.embeddingModel(models.embedding),
+      values: chunks.map((chunk) => chunk.text),
+    });
+
+    await pgVector.createIndex({
+      dimension: EMBEDDING_DIMENSION,
+      indexName: ARTIFACT_EMBEDDINGS_INDEX,
+      metadataIndexes: ["topicId", "artifactId"],
+    });
+
+    await pgVector.upsert({
+      ids: chunks.map((_, index) => `${artifactId}:${index}`),
+      indexName: ARTIFACT_EMBEDDINGS_INDEX,
+      metadata: chunks.map((chunk, index) => ({
+        topicId,
+        artifactId,
+        chunkIndex: index,
+        displayName,
+        text: chunk.text,
+      })),
+      vectors: embeddings,
+    });
 
     await db
       .update(artifact)

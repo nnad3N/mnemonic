@@ -1,4 +1,5 @@
 import {
+  GetObjectCommand,
   HeadObjectCommand,
   PutObjectCommand,
   S3Client,
@@ -100,4 +101,38 @@ export const headObject = async (input: { key: string }) => {
 
     return Result.ok({ contentLength });
   });
+};
+
+export const getObject = async (input: { key: string }) => {
+  const result = await Result.tryPromise(
+    {
+      try: async () =>
+        client.send(
+          new GetObjectCommand({
+            Bucket: env.S3_BUCKET,
+            Key: input.key,
+          })
+        ),
+      catch: toS3Error,
+    },
+    { retry: S3_RETRY }
+  );
+
+  if (Result.isError(result)) {
+    return Result.err(result.error);
+  }
+
+  const { Body } = result.value;
+
+  if (Body === undefined) {
+    return Result.err(
+      new S3Error({
+        message: "Object exists but body is missing",
+      })
+    );
+  }
+
+  const bytes = await Body.transformToByteArray();
+
+  return Result.ok(bytes);
 };

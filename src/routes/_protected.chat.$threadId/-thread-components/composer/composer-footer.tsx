@@ -7,6 +7,7 @@ import { useEditorRef } from "platejs/react";
 import { useRef } from "react";
 
 import { Button } from "@/components/ui/button";
+import { FILE_INPUT_ACCEPT } from "@/lib/supported-mime-types";
 
 import { useComposerActions } from "../../-hooks/use-composer-actions";
 import { uploadFileMutation } from "../../-thread-api/upload-file";
@@ -55,27 +56,7 @@ const UploadButton = ({ location }: ComposerFooterProps) => {
     useIsMutating({
       mutationKey: uploadFileOptions.mutationKey,
     }) > 0;
-  const { mutate } = useMutation({
-    ...uploadFileOptions,
-    onSuccess: (data, { fileId }) => {
-      if (data.artifactId === fileId) {
-        return;
-      }
-
-      const oldKey = getMentionKey({ type: "artifact", value: fileId });
-      const newKey = getMentionKey({
-        type: "artifact",
-        value: data.artifactId,
-      });
-
-      for (const [, path] of editor.api.nodes({
-        at: [],
-        match: (node) => "key" in node && node.key === oldKey,
-      })) {
-        editor.tf.setNodes({ key: newKey }, { at: path });
-      }
-    },
-  });
+  const { mutate } = useMutation(uploadFileMutation(threadId));
 
   return (
     <Button
@@ -86,6 +67,7 @@ const UploadButton = ({ location }: ComposerFooterProps) => {
       type="button"
     >
       <input
+        accept={FILE_INPUT_ACCEPT}
         onChange={(e) => {
           const files = e.target.files;
 

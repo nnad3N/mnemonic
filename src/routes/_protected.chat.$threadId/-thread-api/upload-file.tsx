@@ -1,6 +1,6 @@
 import { mutationOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
-import { Result } from "better-result";
+import { Result, TaggedError } from "better-result";
 import * as v from "valibot";
 
 import { db } from "@/db";
@@ -8,9 +8,20 @@ import { artifact } from "@/db/schema";
 import { env } from "@/env";
 import { threadAccessMiddleware } from "@/lib/middleware/assert-thread-access";
 import { getPresignedPutUrl, S3Error } from "@/lib/s3";
+import { isSupportedMimeType } from "@/lib/supported-mime-types";
 import { mastra } from "@/mastra";
 
 import { threadMutationKeys } from "./query-keys";
+
+export class UnsupportedUploadMimeError extends TaggedError(
+  "UnsupportedUploadMimeError"
+)<{
+  message: string;
+}>() {
+  constructor() {
+    super({ message: "Unsupported file type" });
+  }
+}
 
 const getTopicForUpload = async (resourceId: string, userId: string) => {
   const ownedTopic = await db.query.topic.findFirst({
@@ -30,21 +41,26 @@ const getTopicForUpload = async (resourceId: string, userId: string) => {
 
 type GetPresignedUrlResult =
   | { type: "skipped"; artifactId: string }
-  | { type: "upload"; artifactId: string; presignedUrl: string };
+  | { type: "upload"; artifactId: string; presignedUrl: string }
+  | { type: "unsupported" };
 
 const getPresignedUrlInputSchema = v.object({
   displayName: v.pipe(v.string(), v.nonEmpty()),
-  fileId: v.pipe(v.string(), v.nonEmpty()),
+  fileId: v.pipe(v.string(), v.nanoid()),
   mimeType: v.pipe(v.string(), v.nonEmpty()),
   sha256: v.pipe(v.string(), v.length(64)),
   sizeBytes: v.pipe(v.number(), v.minValue(1)),
-  threadId: v.pipe(v.string(), v.nonEmpty()),
+  threadId: v.pipe(v.string(), v.nanoid()),
 });
 
 const getPresignedUrl = createServerFn({ method: "POST" })
   .inputValidator(getPresignedUrlInputSchema)
   .middleware([threadAccessMiddleware])
-  .handler(async ({ context, data }) => {
+  .handler(async ({ context, data }): Promise<GetPresignedUrlResult> => {
+    if (!isSupportedMimeType(data.mimeType)) {
+      return { type: "unsupported" };
+    }
+
     const topicId = await getTopicForUpload(
       context.thread.resourceId,
       context.user.id
@@ -96,7 +112,7 @@ const getPresignedUrl = createServerFn({ method: "POST" })
       return {
         type: "skipped",
         artifactId: resolution.artifactId,
-      } satisfies GetPresignedUrlResult;
+      };
     }
 
     const presignedResult = await getPresignedPutUrl({
@@ -176,6 +192,10 @@ export const uploadFileMutation = (threadId: string) =>
           threadId,
         },
       });
+
+      if (result.type === "unsupported") {
+        throw new UnsupportedUploadMimeError();
+      }
 
       if (result.type === "skipped") {
         return { artifactId: result.artifactId };

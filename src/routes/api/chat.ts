@@ -1,4 +1,5 @@
 import { handleChatStream } from "@mastra/ai-sdk";
+import { RequestContext } from "@mastra/core/request-context";
 import { createFileRoute } from "@tanstack/react-router";
 import { createUIMessageStreamResponse } from "ai";
 import { eq } from "drizzle-orm";
@@ -94,6 +95,15 @@ export const Route = createFileRoute("/api/chat")({
           });
         }
 
+        const requestContext = new RequestContext();
+
+        if (thread.resourceId !== context.user.id) {
+          requestContext.set(
+            "filter",
+            JSON.stringify({ topicId: thread.resourceId })
+          );
+        }
+
         const stream = await handleChatStream<ThreadUIMessage>({
           mastra,
           agentId: mnemonicAgentId,
@@ -106,6 +116,7 @@ export const Route = createFileRoute("/api/chat")({
             },
             // oxlint-disable-next-line typescript/no-unsafe-type-assertion
             messages: body.messages as ThreadUIMessage[],
+            requestContext,
           },
           sendReasoning: true,
           version: "v6",
