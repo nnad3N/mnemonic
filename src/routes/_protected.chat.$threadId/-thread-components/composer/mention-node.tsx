@@ -1,5 +1,6 @@
 import { getMentionOnSelectItem } from "@platejs/mention";
 import { useMutationState } from "@tanstack/react-query";
+import type { MutationStatus } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
 import {
   AlertTriangleIcon,
@@ -24,8 +25,8 @@ import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
 import { threadMutationKeys } from "../../-thread-api/query-keys";
-import type { UploadFileVars } from "../../-thread-api/upload-file";
-import type { MentionValue } from "./plate-plugins";
+import type { UploadFileMutationState } from "../../-thread-api/upload-file";
+import type { MentionValue, ParseMentionKeyResult } from "./plate-plugins";
 import { parseMentionKey } from "./plate-plugins";
 
 export const ThreadMentionElement = (
@@ -40,25 +41,12 @@ export const ThreadMentionElement = (
     select: (params) => params.threadId,
   });
 
-  const mutationState = useMutationState({
+  const mutationState = useMutationState<UploadFileMutationState>({
     filters: {
       mutationKey: threadMutationKeys.uploadFile(threadId),
     },
-  }).find(
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-    (mutation) => (mutation.variables as UploadFileVars).artifactId === value
-  );
+  }).find((mutation) => mutation.variables?.artifactId === value);
   const status = mutationState?.status;
-
-  // TODO: simplify this
-  const Icon =
-    // oxlint-disable-next-line no-nested-ternary
-    status === "error"
-      ? AlertTriangleIcon
-      : // oxlint-disable-next-line unicorn/no-nested-ternary
-        type === "artifact"
-        ? FileIcon
-        : TextIcon;
 
   return (
     <PlateElement
@@ -88,7 +76,11 @@ export const ThreadMentionElement = (
             <Loader2Icon className="animate-spin" />
           ) : (
             <>
-              <Icon className="absolute inset-0 opacity-100 group-hover:opacity-0" />
+              <MentionIcon
+                className="absolute inset-0 opacity-100 group-hover:opacity-0"
+                status={status}
+                type={type}
+              />
               <XIcon className="absolute inset-0 scale-110 opacity-0 group-hover:opacity-100" />
             </>
           )}
@@ -98,6 +90,24 @@ export const ThreadMentionElement = (
       </button>
     </PlateElement>
   );
+};
+
+type MentionIconProps = {
+  className?: string;
+  status: MutationStatus | undefined;
+  type: ParseMentionKeyResult["type"];
+};
+
+const MentionIcon = ({ className, status, type }: MentionIconProps) => {
+  if (status === "error") {
+    return <AlertTriangleIcon className={className} />;
+  }
+
+  if (type === "artifact") {
+    return <FileIcon className={className} />;
+  }
+
+  return <TextIcon className={className} />;
 };
 
 const onSelectItem = getMentionOnSelectItem();

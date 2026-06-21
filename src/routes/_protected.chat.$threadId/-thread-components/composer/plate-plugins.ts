@@ -18,9 +18,12 @@ export type MentionValue = {
   text: string;
 };
 
-export const parseMentionKey = (
-  key: unknown
-): { type: MentionKeyType | "unknown"; value: string } => {
+export type ParseMentionKeyResult = {
+  type: MentionKeyType | "unknown";
+  value: string;
+};
+
+export const parseMentionKey = (key: unknown): ParseMentionKeyResult => {
   if (typeof key !== "string") {
     return { type: "unknown", value: "" };
   }

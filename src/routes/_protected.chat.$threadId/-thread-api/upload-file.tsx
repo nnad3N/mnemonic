@@ -1,4 +1,5 @@
 import { mutationOptions } from "@tanstack/react-query";
+import type { MutationState } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { Result } from "better-result";
 import type { SerializedResult } from "better-result";
@@ -170,6 +171,12 @@ export type UploadFileVars = {
   file: File;
   artifactId: string;
 };
+
+export type UploadFileMutationState = MutationState<
+  { artifactId: string },
+  Error,
+  UploadFileVars
+>;
 
 export const uploadFileMutation = (threadId: string) =>
   mutationOptions({
