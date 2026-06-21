@@ -55,7 +55,27 @@ const UploadButton = ({ location }: ComposerFooterProps) => {
     useIsMutating({
       mutationKey: uploadFileOptions.mutationKey,
     }) > 0;
-  const { mutate } = useMutation(uploadFileOptions);
+  const { mutate } = useMutation({
+    ...uploadFileOptions,
+    onSuccess: (data, { fileId }) => {
+      if (data.artifactId === fileId) {
+        return;
+      }
+
+      const oldKey = getMentionKey({ type: "artifact", value: fileId });
+      const newKey = getMentionKey({
+        type: "artifact",
+        value: data.artifactId,
+      });
+
+      for (const [, path] of editor.api.nodes({
+        at: [],
+        match: (node) => "key" in node && node.key === oldKey,
+      })) {
+        editor.tf.setNodes({ key: newKey }, { at: path });
+      }
+    },
+  });
 
   return (
     <Button
