@@ -1,6 +1,5 @@
 import { getMentionOnSelectItem } from "@platejs/mention";
-import { useMutationState } from "@tanstack/react-query";
-import type { MutationStatus } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
 import {
   AlertTriangleIcon,
@@ -24,10 +23,11 @@ import {
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
-import { threadMutationKeys } from "../../-thread-api/query-keys";
-import type { UploadFileMutationState } from "../../-thread-api/upload-file";
+import { mentionsQuery } from "../../-thread-api/get-mentions";
+import { threadQuery } from "../../-thread-api/get-thread";
+import { isMentionPending } from "../../-thread-utils";
 import type { MentionValue, ParseMentionKeyResult } from "./plate-plugins";
-import { parseMentionKey } from "./plate-plugins";
+import { getMentionKey, parseMentionKey } from "./plate-plugins";
 
 export const ThreadMentionElement = (
   props: PlateElementProps<TMentionElement>
@@ -40,13 +40,17 @@ export const ThreadMentionElement = (
     from: "/_protected/chat/$threadId",
     select: (params) => params.threadId,
   });
+  const topicId = useSuspenseQuery({
+    ...threadQuery(threadId),
+    select: (data) => data.topicId,
+  }).data;
+  const mention = useSuspenseQuery({
+    ...mentionsQuery(topicId),
+    select: (mentions) => mentions.find((item) => item.id === value),
+  }).data;
 
-  const mutationState = useMutationState<UploadFileMutationState>({
-    filters: {
-      mutationKey: threadMutationKeys.uploadFile(threadId),
-    },
-  }).find((mutation) => mutation.variables?.artifactId === value);
-  const status = mutationState?.status;
+  const isPending = mention && isMentionPending(mention);
+  const isError = mention?.status === "failed";
 
   return (
     <PlateElement
@@ -58,11 +62,11 @@ export const ThreadMentionElement = (
       className={cn(
         "mx-px inline-block translate-y-0.25 rounded-sm border border-teal-200 bg-teal-100 px-1 py-0.5 align-baseline",
         selected && focused && "ring-1 ring-ring",
-        status === "error" && "border-destructive/15 bg-destructive/10"
+        isError && "border-destructive/15 bg-destructive/10"
       )}
     >
       <button
-        disabled={status === "pending"}
+        disabled={isPending}
         className="group flex items-center gap-1 text-sm leading-none font-medium select-none disabled:opacity-50"
         onClick={(e) => {
           e.preventDefault();
@@ -72,13 +76,13 @@ export const ThreadMentionElement = (
         }}
       >
         <div className="relative size-3.25 shrink-0 [&_svg]:size-3.25">
-          {status === "pending" ? (
+          {isPending ? (
             <Loader2Icon className="animate-spin" />
           ) : (
             <>
               <MentionIcon
                 className="absolute inset-0 opacity-100 group-hover:opacity-0"
-                status={status}
+                isError={isError}
                 type={type}
               />
               <XIcon className="absolute inset-0 scale-110 opacity-0 group-hover:opacity-100" />
@@ -94,12 +98,12 @@ export const ThreadMentionElement = (
 
 type MentionIconProps = {
   className?: string;
-  status: MutationStatus | undefined;
+  isError: boolean;
   type: ParseMentionKeyResult["type"];
 };
 
-const MentionIcon = ({ className, status, type }: MentionIconProps) => {
-  if (status === "error") {
+const MentionIcon = ({ className, isError, type }: MentionIconProps) => {
+  if (isError) {
     return <AlertTriangleIcon className={className} />;
   }
 
@@ -116,10 +120,26 @@ export const ThreadMentionInputElement = (
   props: PlateElementProps<TComboboxInputElement>
 ) => {
   const { editor, element } = props;
+  const threadId = useParams({
+    from: "/_protected/chat/$threadId",
+    select: (params) => params.threadId,
+  });
+  const topicId = useSuspenseQuery({
+    ...threadQuery(threadId),
+    select: (data) => data.topicId,
+  }).data;
+  const mentionables = useSuspenseQuery({
+    ...mentionsQuery(topicId),
+    select: (mentions): MentionValue[] =>
+      mentions.map((mention) => ({
+        key: getMentionKey({ type: "artifact", value: mention.id }),
+        text: mention.displayName,
+      })),
+  });
 
   return (
     <PlateElement {...props} as="span">
-      <Autocomplete element={element} trigger="@" items={MENTIONABLES}>
+      <Autocomplete element={element} trigger="@" items={mentionables.data}>
         <AutocompleteInput />
         <AutocompleteContent>
           <AutocompleteEmpty>{m.common_no_results()}</AutocompleteEmpty>
@@ -142,8 +162,3 @@ export const ThreadMentionInputElement = (
     </PlateElement>
   );
 };
-
-const MENTIONABLES: MentionValue[] = [
-  { key: "artifact::123", text: "File 1" },
-  { key: "artifact::456", text: "File 2" },
-];

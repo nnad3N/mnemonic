@@ -2,7 +2,7 @@
 
 import { Result } from "better-result";
 
-import { FileUploadError } from "@/lib/errors/file-upload-error";
+import { ArtifactUploadError } from "@/lib/errors/artifact-upload-error";
 
 const SUPPORTED_MIME_TYPES = [
   "application/docbook+xml",
@@ -161,7 +161,7 @@ export const validateUploadFile = (input: {
 }) => {
   if (!isSupportedMimeType(input.mimeType)) {
     return Result.err(
-      new FileUploadError({
+      new ArtifactUploadError({
         reason: "unsupported-mime-type",
       })
     );
@@ -171,7 +171,7 @@ export const validateUploadFile = (input: {
 
   if (input.sizeBytes > maxBytes) {
     return Result.err(
-      new FileUploadError({
+      new ArtifactUploadError({
         reason: "file-too-large",
       })
     );

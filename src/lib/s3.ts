@@ -10,8 +10,6 @@ import { Result, TaggedError } from "better-result";
 
 import { env } from "@/env";
 
-const PRESIGNED_URL_EXPIRY_SECONDS = 15 * 60;
-
 const S3_RETRY = {
   times: 3,
   delayMs: 200,
@@ -53,6 +51,7 @@ const client = new S3Client({
 export const getPresignedPutUrl = async (input: {
   contentLength: number;
   contentType: string;
+  expiresIn: number;
   key: string;
 }) =>
   Result.tryPromise(
@@ -66,7 +65,7 @@ export const getPresignedPutUrl = async (input: {
             ContentType: input.contentType,
             Key: input.key,
           }),
-          { expiresIn: PRESIGNED_URL_EXPIRY_SECONDS }
+          { expiresIn: input.expiresIn }
         ),
       catch: toS3Error,
     },

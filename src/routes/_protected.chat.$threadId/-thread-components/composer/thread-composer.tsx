@@ -1,5 +1,6 @@
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import {
   Plate,
@@ -13,13 +14,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 import { useComposerActions } from "../../-hooks/use-composer-actions";
+import { threadQuery } from "../../-thread-api/get-thread";
 import type { ThreadInputLocation } from "../../-thread-store";
 import { useThreadStore } from "../../-thread-store";
 import { ComposerFooter } from "./composer-footer";
 import {
+  getThreadEditorPlugins,
   getThreadEditorId,
   markdownToPlate,
-  threadEditorPlugins,
 } from "./plate";
 import { ThreadComposerKeyboardPlugin } from "./plate-plugins";
 
@@ -33,12 +35,16 @@ export const ThreadComposer = ({ location }: ThreadComposerProps) => {
   const threadId = Route.useParams({
     select: (params) => params.threadId,
   });
+  const topicId = useSuspenseQuery({
+    ...threadQuery(threadId),
+    select: (data) => data.topicId,
+  }).data;
   const editorId = getThreadEditorId(threadId, location);
   const editingState = useThreadStore((state) => state.editingState);
 
   const editor = usePlateEditor({
     id: editorId,
-    plugins: threadEditorPlugins,
+    plugins: getThreadEditorPlugins(topicId),
     autoSelect: "end",
   });
   const isEditorMounted = useEditorMounted(editorId);
@@ -102,7 +108,7 @@ export const ThreadComposer = ({ location }: ThreadComposerProps) => {
           <PlateContent className="p-1 outline-none" />
         </Plate>
       </ScrollArea>
-      <ComposerFooter location={location} />
+      <ComposerFooter location={location} threadId={threadId} />
     </ComposerWrapper>
   );
 };

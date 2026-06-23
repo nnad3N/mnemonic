@@ -1,31 +1,47 @@
 import { MentionPlugin } from "@platejs/mention/react";
-import { useIsMutating, useMutation } from "@tanstack/react-query";
-import { useParams } from "@tanstack/react-router";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { ArrowUpIcon, PaperclipIcon, SquareIcon } from "lucide-react";
 import { nanoid } from "nanoid";
 import { useEditorRef } from "platejs/react";
 import { useRef } from "react";
 
 import { Button } from "@/components/ui/button";
+import { hashFileContents } from "@/lib/hash";
 import { FILE_INPUT_ACCEPT } from "@/lib/supported-files";
 
 import { useComposerActions } from "../../-hooks/use-composer-actions";
-import { uploadFileMutation } from "../../-thread-api/upload-file";
+import {
+  useIsUploadingArtifact,
+  useUploadArtifact,
+} from "../../-hooks/use-upload-artifact";
+import { mentionsQuery } from "../../-thread-api/get-mentions";
+import { threadQuery } from "../../-thread-api/get-thread";
 import { useThreadChat } from "../../-thread-chat-context";
 import type { ThreadInputLocation } from "../../-thread-store";
 import { getThreadEditorId } from "./plate";
 import { getMentionKey } from "./plate-plugins";
 
 type ComposerFooterProps = {
+  threadId: string;
   location: ThreadInputLocation;
 };
 
-export const ComposerFooter = ({ location }: ComposerFooterProps) => {
+export const ComposerFooter = ({ threadId, location }: ComposerFooterProps) => {
   const chat = useThreadChat();
+  const topicId = useSuspenseQuery({
+    ...threadQuery(threadId),
+    select: (data) => data.topicId,
+  }).data;
 
   return (
     <div className="flex w-full items-center justify-between">
-      <UploadButton location={location} />
+      {topicId && (
+        <UploadButton
+          location={location}
+          topicId={topicId}
+          threadId={threadId}
+        />
+      )}
       {chat.status === "streaming" ? (
         <Button
           onClick={async () => {
@@ -37,26 +53,25 @@ export const ComposerFooter = ({ location }: ComposerFooterProps) => {
           <SquareIcon />
         </Button>
       ) : (
-        <SendButton location={location} />
+        <SendButton location={location} threadId={threadId} />
       )}
     </div>
   );
 };
 
-const UploadButton = ({ location }: ComposerFooterProps) => {
+type UploadButtonProps = {
+  location: ThreadInputLocation;
+  topicId: string;
+  threadId: string;
+};
+
+const UploadButton = ({ location, threadId, topicId }: UploadButtonProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
-  const threadId = useParams({
-    from: "/_protected/chat/$threadId",
-    select: (params) => params.threadId,
-  });
   const editorId = getThreadEditorId(threadId, location);
   const editor = useEditorRef(editorId);
-  const uploadFileOptions = uploadFileMutation(threadId);
-  const isUploading =
-    useIsMutating({
-      mutationKey: uploadFileOptions.mutationKey,
-    }) > 0;
-  const { mutate } = useMutation(uploadFileMutation(threadId));
+  const isUploading = useIsUploadingArtifact(threadId);
+  const { mutate } = useUploadArtifact(threadId);
+  const { data: mentions } = useSuspenseQuery(mentionsQuery(topicId));
 
   return (
     <Button
@@ -68,7 +83,7 @@ const UploadButton = ({ location }: ComposerFooterProps) => {
     >
       <input
         accept={FILE_INPUT_ACCEPT}
-        onChange={(e) => {
+        onChange={async (e) => {
           const files = e.target.files;
 
           if (!files) {
@@ -76,8 +91,16 @@ const UploadButton = ({ location }: ComposerFooterProps) => {
           }
 
           for (const file of files) {
-            const artifactId = nanoid();
-            mutate({ artifactId, file });
+            const sha256 = await hashFileContents(file);
+            const existingArtifact = mentions.find(
+              (mention) => mention.sha256 === sha256
+            );
+            const artifactId = existingArtifact?.id ?? nanoid();
+
+            if (!existingArtifact || existingArtifact.status === "failed") {
+              mutate({ topicId, artifactId, file, sha256 });
+            }
+
             editor.getTransforms(MentionPlugin).insert.mention({
               key: getMentionKey({ type: "artifact", value: artifactId }),
               search: "",

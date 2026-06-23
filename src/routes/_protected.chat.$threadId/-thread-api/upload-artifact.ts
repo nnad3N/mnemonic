@@ -1,20 +1,19 @@
-import { mutationOptions } from "@tanstack/react-query";
-import type { MutationState } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
-import { Result } from "better-result";
 import type { SerializedResult } from "better-result";
+import { Result } from "better-result";
+import { eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { db } from "@/db";
 import { artifact } from "@/db/schema";
-import { FileUploadError } from "@/lib/errors/file-upload-error";
-import type { FileUploadErrorShape } from "@/lib/errors/file-upload-error";
+import type { ArtifactUploadErrorShape } from "@/lib/errors/artifact-upload-error";
+import { ArtifactUploadError } from "@/lib/errors/artifact-upload-error";
 import { threadAccessMiddleware } from "@/lib/middleware/assert-thread-access";
 import { getPresignedPutUrl, S3Error } from "@/lib/s3";
 import { validateUploadFile } from "@/lib/supported-files";
 import { mastra } from "@/mastra";
 
-import { threadMutationKeys } from "./query-keys";
+export const ARTIFACT_UPLOAD_TTL_SECONDS = 60;
 
 type GetTopicForUploadProps = {
   resourceId: string;
@@ -40,13 +39,13 @@ const getTopicForUpload = async ({
   return ownedTopic.id;
 };
 
-type GetPresignedUrlOk =
+export type GetPresignedUrlOk =
   | { type: "skipped" }
   | { type: "upload"; presignedUrl: string };
 
-type GetPresignedUrlResult = SerializedResult<
+export type GetPresignedUrlResult = SerializedResult<
   GetPresignedUrlOk,
-  FileUploadErrorShape
+  ArtifactUploadErrorShape
 >;
 
 const getPresignedUrlInputSchema = v.object({
@@ -58,7 +57,7 @@ const getPresignedUrlInputSchema = v.object({
   threadId: v.pipe(v.string(), v.nanoid()),
 });
 
-const getPresignedUrl = createServerFn({ method: "POST" })
+export const getPresignedUrl = createServerFn({ method: "POST" })
   .inputValidator(getPresignedUrlInputSchema)
   .middleware([threadAccessMiddleware])
   .handler(async ({ context, data }): Promise<GetPresignedUrlResult> => {
@@ -86,6 +85,11 @@ const getPresignedUrl = createServerFn({ method: "POST" })
         }
 
         if (existing) {
+          await tx
+            .update(artifact)
+            .set({ status: "uploading" })
+            .where(eq(artifact.id, existing.id));
+
           return existing.s3Key;
         }
 
@@ -116,6 +120,7 @@ const getPresignedUrl = createServerFn({ method: "POST" })
         getPresignedPutUrl({
           contentLength: data.sizeBytes,
           contentType: data.mimeType,
+          expiresIn: ARTIFACT_UPLOAD_TTL_SECONDS,
           key: artifactKey,
         })
       );
@@ -129,7 +134,7 @@ const getPresignedUrl = createServerFn({ method: "POST" })
     return Result.serialize(
       result.mapError((error) => {
         if (S3Error.is(error)) {
-          return new FileUploadError({
+          return new ArtifactUploadError({
             reason: "s3-error",
             message: error.message,
           });
@@ -140,12 +145,31 @@ const getPresignedUrl = createServerFn({ method: "POST" })
     );
   });
 
+const updateArtifactStatusInputSchema = v.object({
+  artifactId: v.pipe(v.string(), v.nonEmpty()),
+  threadId: v.pipe(v.string(), v.nonEmpty()),
+  status: v.pipe(
+    v.string(),
+    v.picklist(["uploading", "processing", "ready", "failed"])
+  ),
+});
+
+export const updateArtifactStatus = createServerFn({ method: "POST" })
+  .inputValidator(updateArtifactStatusInputSchema)
+  .middleware([threadAccessMiddleware])
+  .handler(async ({ data }) => {
+    await db
+      .update(artifact)
+      .set({ status: data.status })
+      .where(eq(artifact.id, data.artifactId));
+  });
+
 const processArtifactInputSchema = v.object({
   artifactId: v.pipe(v.string(), v.nonEmpty()),
   threadId: v.pipe(v.string(), v.nonEmpty()),
 });
 
-const processArtifact = createServerFn({ method: "POST" })
+export const processArtifact = createServerFn({ method: "POST" })
   .inputValidator(processArtifactInputSchema)
   .middleware([threadAccessMiddleware])
   .handler(async ({ context, data }) => {
@@ -172,77 +196,4 @@ const processArtifact = createServerFn({ method: "POST" })
     }
 
     return { artifactId: data.artifactId };
-  });
-
-export type UploadFileVars = {
-  file: File;
-  artifactId: string;
-};
-
-export type UploadFileMutationState = MutationState<
-  { artifactId: string },
-  Error,
-  UploadFileVars
->;
-
-export const uploadFileMutation = (threadId: string) =>
-  mutationOptions({
-    mutationFn: async ({ file, artifactId }: UploadFileVars) => {
-      const digest = await crypto.subtle.digest(
-        "SHA-256",
-        await file.arrayBuffer()
-      );
-      const sha256 = [...new Uint8Array(digest)]
-        .map((byte) => byte.toString(16).padStart(2, "0"))
-        .join("");
-
-      const serialized = await getPresignedUrl({
-        data: {
-          displayName: file.name,
-          artifactId,
-          mimeType: file.type,
-          sha256,
-          sizeBytes: file.size,
-          threadId,
-        },
-      });
-
-      const result = Result.deserialize<
-        GetPresignedUrlOk,
-        FileUploadErrorShape
-      >(serialized);
-
-      if (Result.isError(result)) {
-        throw result.error;
-      }
-
-      if (result.value.type === "skipped") {
-        return { artifactId };
-      }
-
-      const uploadResponse = await fetch(result.value.presignedUrl, {
-        body: file,
-        headers: {
-          "Content-Type": file.type,
-        },
-        method: "PUT",
-      });
-
-      if (!uploadResponse.ok) {
-        throw new S3Error({
-          message: `Upload failed with status ${uploadResponse.status}`,
-          status: uploadResponse.status,
-        });
-      }
-
-      await processArtifact({
-        data: {
-          artifactId,
-          threadId,
-        },
-      });
-
-      return { artifactId };
-    },
-    mutationKey: threadMutationKeys.uploadFile(threadId),
   });

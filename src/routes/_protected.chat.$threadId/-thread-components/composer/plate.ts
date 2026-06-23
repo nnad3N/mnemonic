@@ -15,16 +15,19 @@ import {
 } from "./mention-node";
 import { ThreadComposerKeyboardPlugin } from "./plate-plugins";
 
-export const threadStaticEditorPlugins = [
+export const getThreadStaticEditorPlugins = (topicId?: string) => [
   BaseBasicBlocksPlugin,
   BaseBasicMarksPlugin,
   MentionPlugin.configure({
+    enabled: !!topicId,
     options: {
       insertSpaceAfterMention: true,
       triggerPreviousCharPattern: /^$|^[\s"']$/,
     },
   }).withComponent(ThreadMentionElement),
-  MentionInputPlugin.withComponent(ThreadMentionInputElement),
+  MentionInputPlugin.configure({
+    enabled: !!topicId,
+  }).withComponent(ThreadMentionInputElement),
   MarkdownPlugin.configure({
     options: {
       remarkPlugins: [remarkGfm],
@@ -32,8 +35,8 @@ export const threadStaticEditorPlugins = [
   }),
 ];
 
-export const threadEditorPlugins = [
-  ...threadStaticEditorPlugins,
+export const getThreadEditorPlugins = (topicId?: string) => [
+  ...getThreadStaticEditorPlugins(topicId),
   ThreadComposerKeyboardPlugin,
 ];
 
