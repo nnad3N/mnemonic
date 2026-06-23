@@ -107,8 +107,7 @@ const ThreadMentionElementContent = ({
     defaultTagName: "span",
     render,
     props: {
-      className:
-        "flex items-center gap-1 text-sm leading-none font-medium select-none",
+      className: "flex items-center gap-1 text-sm leading-none select-none",
       children: (
         <>
           <div className="relative size-3.25 shrink-0 [&_svg]:size-3.25">
@@ -124,8 +123,7 @@ const ThreadMentionElementContent = ({
               </>
             )}
           </div>
-
-          {children}
+          <span className="max-w-48 truncate">{children}</span>
         </>
       ),
     },
