@@ -36,6 +36,9 @@ export const artifact = pgTable(
     id: varchar("id", { length: 21 })
       .primaryKey()
       .$defaultFn(() => nanoid()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict" }),
     topicId: varchar("topic_id", { length: 21 })
       .notNull()
       .references(() => topic.id, { onDelete: "restrict" }),
@@ -45,7 +48,6 @@ export const artifact = pgTable(
     sizeBytes: integer("size_bytes").notNull(),
     sha256: varchar("sha256", { length: 64 }).notNull(),
 
-    s3Bucket: varchar("s3_bucket", { length: 255 }).notNull(),
     s3Key: text("s3_key").notNull(),
 
     status: varchar("status", { length: 32 })

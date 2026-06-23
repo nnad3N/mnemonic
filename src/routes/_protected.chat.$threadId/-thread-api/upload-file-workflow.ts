@@ -30,7 +30,6 @@ const validatedArtifactSchema = v.object({
   artifactId: v.pipe(v.string(), v.nonEmpty()),
   displayName: v.pipe(v.string(), v.nonEmpty()),
   mimeType: v.pipe(v.string(), v.nonEmpty()),
-  s3Bucket: v.pipe(v.string(), v.nonEmpty()),
   s3Key: v.pipe(v.string(), v.nonEmpty()),
   topicId: v.pipe(v.string(), v.nonEmpty()),
 });
@@ -55,7 +54,6 @@ const validateArtifactStep = createStep({
         displayName: true,
         id: true,
         mimeType: true,
-        s3Bucket: true,
         s3Key: true,
         sizeBytes: true,
         status: true,
@@ -91,7 +89,6 @@ const validateArtifactStep = createStep({
       artifactId: row.id,
       displayName: row.displayName,
       mimeType: row.mimeType,
-      s3Bucket: row.s3Bucket,
       s3Key: row.s3Key,
       topicId,
     };

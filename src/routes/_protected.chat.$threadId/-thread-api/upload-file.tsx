@@ -7,7 +7,6 @@ import * as v from "valibot";
 
 import { db } from "@/db";
 import { artifact } from "@/db/schema";
-import { env } from "@/env";
 import { FileUploadError } from "@/lib/errors/file-upload-error";
 import type { FileUploadErrorShape } from "@/lib/errors/file-upload-error";
 import { threadAccessMiddleware } from "@/lib/middleware/assert-thread-access";
@@ -17,7 +16,15 @@ import { mastra } from "@/mastra";
 
 import { threadMutationKeys } from "./query-keys";
 
-const getTopicForUpload = async (resourceId: string, userId: string) => {
+type GetTopicForUploadProps = {
+  resourceId: string;
+  userId: string;
+};
+
+const getTopicForUpload = async ({
+  resourceId,
+  userId,
+}: GetTopicForUploadProps) => {
   const ownedTopic = await db.query.topic.findFirst({
     columns: { id: true },
     where: {
@@ -61,10 +68,10 @@ const getPresignedUrl = createServerFn({ method: "POST" })
         sizeBytes: data.sizeBytes,
       });
 
-      const topicId = await getTopicForUpload(
-        context.thread.resourceId,
-        context.user.id
-      );
+      const topicId = await getTopicForUpload({
+        resourceId: context.thread.resourceId,
+        userId: context.user.id,
+      });
 
       const artifactKey = await db.transaction(async (tx) => {
         const existing = await tx.query.artifact.findFirst({
@@ -82,14 +89,14 @@ const getPresignedUrl = createServerFn({ method: "POST" })
           return existing.s3Key;
         }
 
-        const s3Key = `${topicId}/${data.artifactId}`;
+        const s3Key = `${context.user.id}/${topicId}/${data.artifactId}`;
 
         await tx.insert(artifact).values({
           id: data.artifactId,
+          userId: context.user.id,
           topicId,
           displayName: data.displayName,
           mimeType: data.mimeType,
-          s3Bucket: env.S3_BUCKET,
           s3Key,
           sha256: data.sha256,
           sizeBytes: data.sizeBytes,
@@ -142,10 +149,10 @@ const processArtifact = createServerFn({ method: "POST" })
   .inputValidator(processArtifactInputSchema)
   .middleware([threadAccessMiddleware])
   .handler(async ({ context, data }) => {
-    const topicId = await getTopicForUpload(
-      context.thread.resourceId,
-      context.user.id
-    );
+    const topicId = await getTopicForUpload({
+      resourceId: context.thread.resourceId,
+      userId: context.user.id,
+    });
 
     const workflow = mastra.getWorkflow("process-artifact");
     const run = await workflow.createRun();
