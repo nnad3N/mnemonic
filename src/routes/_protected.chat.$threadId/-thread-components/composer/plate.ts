@@ -2,7 +2,8 @@ import {
   BaseBasicBlocksPlugin,
   BaseBasicMarksPlugin,
 } from "@platejs/basic-nodes";
-import { MarkdownPlugin } from "@platejs/markdown";
+import { MarkdownPlugin, remarkMention } from "@platejs/markdown";
+import { BaseMentionPlugin } from "@platejs/mention";
 import { MentionInputPlugin, MentionPlugin } from "@platejs/mention/react";
 import type { Value } from "platejs";
 import type { PlateEditor } from "platejs/react";
@@ -11,13 +12,30 @@ import remarkGfm from "remark-gfm";
 import type { ThreadInputLocation } from "../../-thread-store";
 import {
   ThreadMentionElement,
+  ThreadMentionElementStatic,
   ThreadMentionInputElement,
 } from "./mention-node";
 import { ThreadComposerKeyboardPlugin } from "./plate-plugins";
 
-export const getThreadStaticEditorPlugins = (topicId?: string) => [
+const sharedPlugins = [
   BaseBasicBlocksPlugin,
   BaseBasicMarksPlugin,
+  MarkdownPlugin.configure({
+    options: {
+      remarkPlugins: [remarkGfm, remarkMention],
+    },
+  }),
+];
+
+export const getThreadStaticEditorPlugins = (topicId?: string) => [
+  ...sharedPlugins,
+  BaseMentionPlugin.configure({
+    enabled: !!topicId,
+  }).withComponent(ThreadMentionElementStatic),
+];
+
+export const getThreadEditorPlugins = (topicId?: string) => [
+  ...sharedPlugins,
   MentionPlugin.configure({
     enabled: !!topicId,
     options: {
@@ -28,15 +46,6 @@ export const getThreadStaticEditorPlugins = (topicId?: string) => [
   MentionInputPlugin.configure({
     enabled: !!topicId,
   }).withComponent(ThreadMentionInputElement),
-  MarkdownPlugin.configure({
-    options: {
-      remarkPlugins: [remarkGfm],
-    },
-  }),
-];
-
-export const getThreadEditorPlugins = (topicId?: string) => [
-  ...getThreadStaticEditorPlugins(topicId),
   ThreadComposerKeyboardPlugin,
 ];
 
