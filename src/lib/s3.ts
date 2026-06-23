@@ -1,4 +1,5 @@
 import {
+  DeleteObjectsCommand,
   GetObjectCommand,
   HeadObjectCommand,
   PutObjectCommand,
@@ -15,6 +16,8 @@ const S3_RETRY = {
   delayMs: 200,
   backoff: "exponential" as const,
 };
+
+const S3_BATCH_DELETE_MAX_KEYS = 1000;
 
 export class S3Error extends TaggedError("S3Error")<{
   message: string;
@@ -134,4 +137,62 @@ export const getObject = async (input: { key: string }) => {
   const bytes = await Body.transformToByteArray();
 
   return Result.ok(bytes);
+};
+
+const deleteObjectBatch = async (input: { keys: string[] }) =>
+  Result.tryPromise(
+    {
+      try: async () => {
+        const output = await client.send(
+          new DeleteObjectsCommand({
+            Bucket: env.S3_BUCKET,
+            Delete: {
+              Objects: input.keys.map((Key) => ({ Key })),
+              Quiet: true,
+            },
+          })
+        );
+
+        const failed = output.Errors ?? [];
+
+        if (failed.length > 0) {
+          const first = failed[0];
+
+          throw new S3Error({
+            message: first?.Message ?? "Batch delete failed",
+          });
+        }
+      },
+      catch: toS3Error,
+    },
+    { retry: S3_RETRY }
+  );
+
+const chunkKeys = (keys: string[], size: number) => {
+  const chunks: string[][] = [];
+
+  for (let index = 0; index < keys.length; index += size) {
+    chunks.push(keys.slice(index, index + size));
+  }
+
+  return chunks;
+};
+
+export const deleteObjects = async (input: { keys: string[] }) => {
+  if (input.keys.length === 0) {
+    return Result.ok();
+  }
+
+  const batchResults = await Promise.all(
+    chunkKeys(input.keys, S3_BATCH_DELETE_MAX_KEYS).map(async (keys) =>
+      deleteObjectBatch({ keys })
+    )
+  );
+  const [, errors] = Result.partition(batchResults);
+
+  if (errors.length > 0) {
+    return Result.err(errors[0]);
+  }
+
+  return Result.ok();
 };
