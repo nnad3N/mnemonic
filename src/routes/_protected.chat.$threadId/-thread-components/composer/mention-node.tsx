@@ -1,6 +1,6 @@
 import { useRender } from "@base-ui/react/use-render";
 import { getMentionOnSelectItem } from "@platejs/mention";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
 import {
   AlertTriangleIcon,
@@ -15,6 +15,8 @@ import { PlateElement, useFocused, useSelected } from "platejs/react";
 import type { SlateElementProps } from "platejs/static";
 import { SlateElement } from "platejs/static";
 import type { PropsWithChildren } from "react";
+import { useState } from "react";
+import { useDebounce } from "use-debounce";
 
 import {
   Autocomplete,
@@ -27,7 +29,10 @@ import {
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
-import { mentionsQuery } from "../../-thread-api/get-mentions";
+import {
+  mentionByIdQuery,
+  mentionsQuery,
+} from "../../-thread-api/get-mentions";
 import { threadQuery } from "../../-thread-api/get-thread";
 import type { MentionValue, ParseMentionKeyResult } from "./plate-plugins";
 import { getMentionKey, parseMentionKey } from "./plate-plugins";
@@ -40,19 +45,18 @@ type ThreadMentionState = {
 const useThreadMentionState = (
   element: TMentionElement
 ): ThreadMentionState => {
-  const { type, value } = parseMentionKey(element.key);
+  const { type, value: mentionId } = parseMentionKey(element.key);
   const threadId = useParams({
     from: "/_protected/chat/$threadId",
     select: (params) => params.threadId,
   });
-  const topicId = useSuspenseQuery({
+  const { data: topicId } = useSuspenseQuery({
     ...threadQuery(threadId),
     select: (data) => data.topicId,
-  }).data;
-  const mention = useSuspenseQuery({
-    ...mentionsQuery(topicId),
-    select: (mentions) => mentions.find((item) => item.id === value),
-  }).data;
+  });
+  const { data: mention } = useQuery(
+    mentionByIdQuery({ topicId, artifactId: mentionId })
+  );
 
   if (mention?.status === "uploading" || mention?.status === "processing") {
     return {
@@ -227,18 +231,28 @@ export const ThreadMentionInputElement = (
     ...threadQuery(threadId),
     select: (data) => data.topicId,
   }).data;
-  const mentionables = useSuspenseQuery({
-    ...mentionsQuery(topicId),
-    select: (mentions): MentionValue[] =>
-      mentions.map((mention) => ({
-        key: getMentionKey({ type: "artifact", value: mention.id }),
-        text: mention.displayName,
-      })),
+  const [search, setSearch] = useState("");
+  const [debouncedSearch] = useDebounce(search, 300);
+  const { data: mentions } = useQuery({
+    ...mentionsQuery({ query: debouncedSearch, topicId }),
+    select: (data) =>
+      data.map(
+        (mention): MentionValue => ({
+          key: getMentionKey({ type: "artifact", value: mention.id }),
+          text: mention.displayName,
+        })
+      ),
   });
 
   return (
     <PlateElement {...props} as="span">
-      <Autocomplete element={element} trigger="@" items={mentionables.data}>
+      <Autocomplete
+        element={element}
+        items={mentions ?? []}
+        setValue={setSearch}
+        trigger="@"
+        value={search}
+      >
         <AutocompleteInput />
         <AutocompleteContent>
           <AutocompleteEmpty>{m.common_no_results()}</AutocompleteEmpty>

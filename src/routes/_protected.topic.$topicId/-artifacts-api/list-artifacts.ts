@@ -7,7 +7,7 @@ import { db } from "@/db";
 import { artifact } from "@/db/schema";
 import type { ArtifactStatus } from "@/db/schema";
 import { topicAccessMiddleware } from "@/lib/middleware/assert-thread-access";
-import { threadKeys } from "@/routes/_protected.chat.$threadId/-thread-api/query-keys";
+import { topicKeys } from "@/routes/_protected.topic.$topicId/-topic-api/query-keys";
 
 const listArtifactsInputSchema = v.object({
   page: v.pipe(v.number(), v.integer(), v.minValue(1)),
@@ -92,6 +92,6 @@ export const artifactsQuery = ({
       listArtifacts({
         data: { page, pageSize, search, topicId },
       }),
-    queryKey: [...threadKeys.artifacts(topicId), { page, pageSize, search }],
+    queryKey: [...topicKeys.artifacts(topicId), { page, pageSize, search }],
     placeholderData: keepPreviousData,
   });

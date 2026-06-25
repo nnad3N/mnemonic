@@ -1,12 +1,11 @@
 export const threadKeys = {
   all: ["threads"] as const,
-  artifacts: (topicId: string) =>
-    [...threadKeys.all, topicId, "artifacts"] as const,
   byId: (threadId: string) => [...threadKeys.all, threadId] as const,
-  mentions: (topicId?: string) =>
-    [...threadKeys.all, topicId ?? "global", "mentions"] as const,
+  mentions: (topicId: string) =>
+    [...threadKeys.all, topicId, "mentions"] as const,
+  mention: (key: { topicId: string; artifactId: string }) =>
+    [...threadKeys.mentions(key.topicId), key.artifactId] as const,
   sidebar: () => [...threadKeys.all, "sidebar"] as const,
-  topic: (topicId: string) => [...threadKeys.all, topicId, "topic"] as const,
 };
 
 export const threadMutationKeys = {

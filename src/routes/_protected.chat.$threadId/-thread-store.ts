@@ -11,26 +11,32 @@ type EditingState = {
 
 type State = {
   editingState: EditingState | null;
-  pollingTopicId: string | null;
+  pollingTopicIds: Set<string>;
 };
 
 type Actions = {
   setEditingState: (data: EditingState | null) => void;
-  setPollingTopicId: (topicId: string | null) => void;
+  addPollingTopicId: (topicId: string) => void;
+  removePollingTopicId: (topicId: string) => void;
 };
 
 export const useThreadStore = create<State & Actions>()(
   immer((set) => ({
     editingState: null,
-    pollingTopicId: null,
+    pollingTopicIds: new Set(),
     setEditingState: (data) => {
       set((state) => {
         state.editingState = data;
       });
     },
-    setPollingTopicId: (topicId) => {
-      set({
-        pollingTopicId: topicId,
+    addPollingTopicId: (topicId) => {
+      set((state) => {
+        state.pollingTopicIds.add(topicId);
+      });
+    },
+    removePollingTopicId: (topicId) => {
+      set((state) => {
+        state.pollingTopicIds.delete(topicId);
       });
     },
   }))

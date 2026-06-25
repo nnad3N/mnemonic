@@ -5,8 +5,8 @@ import { panic } from "better-result";
 import { createContext, useContext, useState } from "react";
 import type { PropsWithChildren } from "react";
 
+import { ArtifactsSync } from "../_protected.topic.$topicId/-topic-components/artifacts-sync";
 import { threadQuery } from "./-thread-api/get-thread";
-import { TopicMentionsSync } from "./-thread-components/topic-mentions-sync";
 import type { ThreadUIMessage } from "./-thread-types";
 
 const ThreadChatContext = createContext<Chat<ThreadUIMessage> | null>(null);
@@ -41,7 +41,7 @@ export const ThreadChatProvider = ({
   return (
     <ThreadChatContext.Provider value={chat}>
       {data.topicId && (
-        <TopicMentionsSync threadId={threadId} topicId={data.topicId} />
+        <ArtifactsSync threadId={threadId} topicId={data.topicId} />
       )}
       {children}
     </ThreadChatContext.Provider>

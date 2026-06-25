@@ -1,5 +1,5 @@
 import { MentionPlugin } from "@platejs/mention/react";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { ArrowUpIcon, PaperclipIcon, SquareIcon } from "lucide-react";
 import { nanoid } from "nanoid";
 import { useEditorRef } from "platejs/react";
@@ -14,7 +14,7 @@ import {
   useIsUploadingArtifact,
   useUploadArtifact,
 } from "../../-hooks/use-upload-artifact";
-import { mentionsQuery } from "../../-thread-api/get-mentions";
+import { findArtifactsBySha256 } from "../../-thread-api/find-artifacts-by-sha256";
 import { threadQuery } from "../../-thread-api/get-thread";
 import { useThreadChat } from "../../-thread-chat-context";
 import type { ThreadInputLocation } from "../../-thread-store";
@@ -70,8 +70,13 @@ const UploadButton = ({ location, threadId, topicId }: UploadButtonProps) => {
   const editorId = getThreadEditorId(threadId, location);
   const editor = useEditorRef(editorId);
   const isUploading = useIsUploadingArtifact(threadId);
-  const { mutate } = useUploadArtifact(threadId);
-  const { data: mentions } = useSuspenseQuery(mentionsQuery(topicId));
+  const { mutate: uploadArtifact } = useUploadArtifact(threadId);
+  const { mutateAsync: findDuplicateArtifacts } = useMutation({
+    mutationFn: async (sha256s: string[]) =>
+      findArtifactsBySha256({
+        data: { sha256s, topicId },
+      }),
+  });
 
   return (
     <Button
@@ -86,19 +91,29 @@ const UploadButton = ({ location, threadId, topicId }: UploadButtonProps) => {
         onChange={async (e) => {
           const files = e.target.files;
 
-          if (!files) {
+          if (!files || files.length === 0) {
             return;
           }
 
-          for (const file of files) {
-            const sha256 = await hashFileContents(file);
-            const existingArtifact = mentions.find(
-              (mention) => mention.sha256 === sha256
+          const fileEntries = await Promise.all(
+            [...files].map(async (file) => ({
+              file,
+              sha256: await hashFileContents(file),
+            }))
+          );
+
+          const existingArtifacts = await findDuplicateArtifacts(
+            fileEntries.map((entry) => entry.sha256)
+          );
+
+          for (const { file, sha256 } of fileEntries) {
+            const existingArtifact = existingArtifacts.find(
+              (artifact) => artifact.sha256 === sha256
             );
             const artifactId = existingArtifact?.id ?? nanoid();
 
             if (!existingArtifact || existingArtifact.status === "failed") {
-              mutate({ topicId, artifactId, file, sha256 });
+              uploadArtifact({ topicId, artifactId, file, sha256 });
             }
 
             editor.getTransforms(MentionPlugin).insert.mention({

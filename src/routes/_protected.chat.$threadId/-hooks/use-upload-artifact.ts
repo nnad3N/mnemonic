@@ -8,7 +8,7 @@ import { Result } from "better-result";
 import type { ArtifactUploadErrorShape } from "@/lib/errors/artifact-upload-error";
 import { ArtifactUploadError } from "@/lib/errors/artifact-upload-error";
 
-import { mentionsQuery } from "../-thread-api/get-mentions";
+import { mentionByIdQuery } from "../-thread-api/get-mentions";
 import { threadKeys, threadMutationKeys } from "../-thread-api/query-keys";
 import {
   getPresignedUrl,
@@ -90,37 +90,22 @@ export const useUploadArtifact = (threadId: string) => {
 
       return { artifactId };
     },
-    onMutate: async ({ topicId, artifactId, file, sha256 }) => {
-      const mentionsOptions = mentionsQuery(topicId);
+    onMutate: async ({ topicId, artifactId, file }) => {
+      const mentionQuery = mentionByIdQuery({ topicId, artifactId });
 
-      await queryClient.cancelQueries({ queryKey: mentionsOptions.queryKey });
+      await queryClient.cancelQueries({ queryKey: mentionQuery.queryKey });
 
-      queryClient.setQueryData(mentionsOptions.queryKey, (mentions = []) => {
-        const uploadingMention = {
-          id: artifactId,
-          displayName: file.name,
-          sha256,
-          status: "uploading" as const,
-        };
-
-        if (!mentions.some((mention) => mention.id === artifactId)) {
-          return [...mentions, uploadingMention];
-        }
-
-        return mentions.map((mention) =>
-          mention.id === artifactId ? uploadingMention : mention
-        );
-      });
+      queryClient.setQueryData(mentionQuery.queryKey, () => ({
+        id: artifactId,
+        displayName: file.name,
+        status: "uploading" as const,
+      }));
     },
     onError: async (error, { topicId, artifactId }) => {
-      const mentionsOptions = mentionsQuery(topicId);
+      const mentionQuery = mentionByIdQuery({ topicId, artifactId });
 
-      queryClient.setQueryData(mentionsOptions.queryKey, (mentions) =>
-        mentions?.map((mention) =>
-          mention.id === artifactId
-            ? { ...mention, status: "failed" as const }
-            : mention
-        )
+      queryClient.setQueryData(mentionQuery.queryKey, (current) =>
+        current ? { ...current, status: "failed" as const } : current
       );
 
       if (ArtifactUploadError.is(error) && error.reason === "s3-error") {
@@ -143,10 +128,15 @@ export const useUploadArtifact = (threadId: string) => {
         );
       }
     },
-    onSettled: async (_data, _error, { topicId }) => {
-      await queryClient.invalidateQueries({
-        queryKey: threadKeys.mentions(topicId),
-      });
+    onSettled: async (_data, _error, { topicId, artifactId }) => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: threadKeys.mention({ topicId, artifactId }),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: threadKeys.mentions(topicId),
+        }),
+      ]);
     },
   });
 };

@@ -15,6 +15,7 @@ import { m } from "@/paraglide/messages";
 import { threadKeys } from "@/routes/_protected.chat.$threadId/-thread-api/query-keys";
 import { deleteArtifact } from "@/routes/_protected.topic.$topicId/-artifacts-api/delete-artifact";
 import type { ArtifactItem } from "@/routes/_protected.topic.$topicId/-artifacts-api/list-artifacts";
+import { topicKeys } from "@/routes/_protected.topic.$topicId/-topic-api/query-keys";
 
 type DeleteArtifactDialogProps = {
   topicId: string;
@@ -45,7 +46,7 @@ export const DeleteArtifactDialog = ({
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: threadKeys.artifacts(topicId),
+          queryKey: topicKeys.artifacts(topicId),
         }),
         queryClient.invalidateQueries({
           queryKey: threadKeys.mentions(topicId),
