@@ -5,6 +5,7 @@ import {
 import { MarkdownPlugin, remarkMention } from "@platejs/markdown";
 import { BaseMentionPlugin } from "@platejs/mention";
 import { MentionInputPlugin, MentionPlugin } from "@platejs/mention/react";
+import { normalizeStaticValue } from "platejs";
 import type { Value } from "platejs";
 import type { PlateEditor } from "platejs/react";
 import remarkGfm from "remark-gfm";
@@ -51,6 +52,11 @@ export const getThreadEditorPlugins = (topicId?: string) => [
 
 export const markdownToPlate = (editor: PlateEditor, markdown: string): Value =>
   editor.getApi(MarkdownPlugin).markdown.deserialize(markdown);
+
+export const markdownToStaticPlate = (
+  editor: PlateEditor,
+  markdown: string
+): Value => normalizeStaticValue(markdownToPlate(editor, markdown));
 
 export const plateToMarkdown = (editor: PlateEditor, value?: Value): string =>
   editor.getApi(MarkdownPlugin).markdown.serialize({
