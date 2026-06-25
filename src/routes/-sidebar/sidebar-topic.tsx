@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   ChevronRightIcon,
+  FileIcon,
   MessageCirclePlusIcon,
   PencilIcon,
   Trash2Icon,
@@ -140,6 +141,17 @@ const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
             >
               <MessageCirclePlusIcon />
               {m.nav_create_conversation_in_topic()}
+            </ContextMenuItem>
+            <ContextMenuItem
+              render={
+                <Link
+                  params={{ topicId: topic.id }}
+                  to="/topic/$topicId/artifacts"
+                />
+              }
+            >
+              <FileIcon />
+              {m.nav_artifacts()}
             </ContextMenuItem>
             <ContextMenuItem
               onClick={() => {

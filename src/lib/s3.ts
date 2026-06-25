@@ -75,6 +75,28 @@ export const getPresignedPutUrl = async (input: {
     { retry: S3_RETRY }
   );
 
+export const getPresignedGetUrl = async (input: {
+  expiresIn: number;
+  key: string;
+  responseContentDisposition?: string;
+}) =>
+  Result.tryPromise(
+    {
+      try: async () =>
+        getSignedUrl(
+          client,
+          new GetObjectCommand({
+            Bucket: env.S3_BUCKET,
+            Key: input.key,
+            ResponseContentDisposition: input.responseContentDisposition,
+          }),
+          { expiresIn: input.expiresIn }
+        ),
+      catch: toS3Error,
+    },
+    { retry: S3_RETRY }
+  );
+
 export const headObject = async (input: { key: string }) => {
   const result = await Result.tryPromise(
     {

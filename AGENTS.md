@@ -61,6 +61,41 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
   - Add labels for form inputs
   - Include keyboard event handlers alongside mouse events
   - Use semantic elements (`<button>`, `<nav>`, etc.) instead of divs with roles
+- **Variant styling** — do not add helper functions that map a discriminant to Tailwind class strings (e.g. `getStatusClassName(status)` with a `switch`). Either inline classes in JSX with `cn(..., condition && "class")`, or extract a small component that owns the variant markup:
+
+```tsx
+// Good — inline
+<span
+  className={cn(
+    "size-1.5 rounded-full",
+    status === "ready" && "bg-green-500",
+    status === "failed" && "bg-red-500"
+  )}
+/>;
+
+// Good — component owns the variants
+const ArtifactStatusChip = ({ status }: { status: ArtifactStatus }) => (
+  <Badge variant="outline">
+    <span
+      className={cn(
+        "size-1.5 rounded-full",
+        status === "ready" && "bg-green-500",
+        status === "failed" && "bg-red-500"
+      )}
+    />
+    {label}
+  </Badge>
+);
+
+// Bad — class-string lookup helper
+const getStatusDotClassName = (status: ArtifactStatus) => {
+  switch (status) {
+    case "ready":
+      return "bg-green-500";
+    // ...
+  }
+};
+```
 
 ### Error Handling & Debugging
 
@@ -68,6 +103,7 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
 - Throw `Error` objects with descriptive messages, not strings or other values
 - Use `try-catch` blocks meaningfully - don't catch errors just to rethrow them
 - Prefer early returns over nested conditionals for error cases
+- **Never render raw error messages in client UI** — do not display `error.message`, provider/API payloads, stack traces, or other server-derived text. Show user-safe copy via Paraglide messages or an error-code lookup (see [`src/lib/auth-errors.ts`](src/lib/auth-errors.ts)); log details server-side for debugging
 
 ### Code Organization
 
@@ -130,6 +166,30 @@ function RouteComponent() {
 ```
 
 - Do **not** convert these to `const RouteComponent = () => {}` — the resulting temporal dead zone breaks the route registration.
+
+### Search param updates (`navigate` / `Link`)
+
+When updating search params with a functional updater (`search: (prev) => …`), **never spread `prev`**. Use Immer `produce` instead:
+
+```tsx
+import { produce } from "immer";
+
+void navigate({
+  to: ".",
+  search: (prev) =>
+    produce(prev, (draft) => {
+      draft.page = 1;
+      draft.query = nextQuery;
+    }),
+});
+```
+
+TanStack Router's `search` option is typed loosely — you can return almost any object and TypeScript will not complain. Spreading `{ ...prev, query: nextQuery }` silently survives schema renames (e.g. `query` → `q`) and typos on keys you omit. Mutating through Immer's `draft` is checked against the inferred search type, so renames and removed fields surface as type errors.
+
+- Prefer **`Route.useNavigate()`** / **`Route.Link`** (or `from={Route.fullPath}`) so `prev` is inferred from the route's `validateSearch` schema.
+- Ensure **`Register.router`** uses `typeof router` on a module-level router instance (see [`src/router.tsx`](src/router.tsx)) — not `ReturnType<typeof getRouter>`.
+
+Reference: [`src/routes/_protected.topic.$topicId/artifacts.tsx`](src/routes/_protected.topic.$topicId/artifacts.tsx)
 
 ---
 
