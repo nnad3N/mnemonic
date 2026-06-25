@@ -46,7 +46,7 @@ export const RenameField = ({
     },
     onError: () => {
       toast.error(m.nav_rename_thread_error_title(), {
-        description: m.nav_rename_thread_error_description(),
+        description: m.common_please_try_again(),
       });
     },
     onSuccess: async () => {
@@ -128,7 +128,7 @@ export const RenameTopicField = ({
     },
     onError: () => {
       toast.error(m.nav_rename_topic_error_title(), {
-        description: m.nav_rename_topic_error_description(),
+        description: m.common_please_try_again(),
       });
     },
     onSuccess: async () => {
@@ -216,7 +216,7 @@ export const DeleteThreadDialog = ({
     },
     onError: () => {
       toast.error(m.nav_delete_thread_error_title(), {
-        description: m.nav_delete_thread_error_description(),
+        description: m.common_please_try_again(),
       });
     },
     onSuccess: async () => {
@@ -241,7 +241,7 @@ export const DeleteThreadDialog = ({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel render={<Button variant="outline" />}>
-            {m.nav_cancel()}
+            {m.common_cancel()}
           </AlertDialogCancel>
           <Button
             disabled={deleteMutation.isPending}
@@ -250,7 +250,7 @@ export const DeleteThreadDialog = ({
             }}
             variant="destructive"
           >
-            {m.nav_confirm_delete()}
+            {m.common_delete()}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -283,7 +283,7 @@ export const DeleteTopicDialog = ({
     },
     onError: () => {
       toast.error(m.nav_delete_topic_error_title(), {
-        description: m.nav_delete_topic_error_description(),
+        description: m.common_please_try_again(),
       });
     },
     onSuccess: async () => {
@@ -311,7 +311,7 @@ export const DeleteTopicDialog = ({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel render={<Button variant="outline" />}>
-            {m.nav_cancel()}
+            {m.common_cancel()}
           </AlertDialogCancel>
           <Button
             disabled={deleteMutation.isPending}
@@ -320,7 +320,7 @@ export const DeleteTopicDialog = ({
             }}
             variant="destructive"
           >
-            {m.nav_confirm_delete()}
+            {m.common_delete()}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

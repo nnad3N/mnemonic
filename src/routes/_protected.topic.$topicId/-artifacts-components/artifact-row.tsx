@@ -55,7 +55,7 @@ export const ArtifactRow = ({ artifact, topicId }: ArtifactRowProps) => {
       }),
     onError: () => {
       toast.error(m.artifacts_download_error_title(), {
-        description: m.artifacts_download_error_description(),
+        description: m.common_please_try_again(),
       });
     },
     onSuccess: ({ url }) => {
@@ -87,7 +87,7 @@ export const ArtifactRow = ({ artifact, topicId }: ArtifactRowProps) => {
             <DropdownMenuTrigger
               render={
                 <Button
-                  aria-label={m.artifacts_column_actions()}
+                  aria-label={m.common_actions()}
                   className="opacity-0 group-hover/artifact-row:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100"
                   size="icon-sm"
                   variant="ghost"
@@ -106,7 +106,7 @@ export const ArtifactRow = ({ artifact, topicId }: ArtifactRowProps) => {
                 }}
               >
                 <DownloadIcon />
-                {m.artifacts_download()}
+                {m.common_download()}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => {
@@ -115,7 +115,7 @@ export const ArtifactRow = ({ artifact, topicId }: ArtifactRowProps) => {
                 variant="destructive"
               >
                 <Trash2Icon />
-                {m.artifacts_delete()}
+                {m.common_delete()}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -136,16 +136,16 @@ const getStatusLabel = (status: ArtifactStatus) => {
   // oxlint-disable-next-line default-case
   switch (status) {
     case "uploading": {
-      return m.artifacts_status_uploading();
+      return m.common_uploading();
     }
     case "processing": {
-      return m.artifacts_status_processing();
+      return m.common_processing();
     }
     case "failed": {
-      return m.artifacts_status_failed();
+      return m.common_failed();
     }
     case "ready": {
-      return m.artifacts_status_ready();
+      return m.common_ready();
     }
   }
 };

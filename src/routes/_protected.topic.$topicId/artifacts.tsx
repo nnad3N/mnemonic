@@ -64,10 +64,10 @@ const getVisiblePageNumbers = (current: number, total: number) => {
 
 const getColumns = () =>
   [
-    m.artifacts_column_name(),
-    m.artifacts_column_status(),
-    m.artifacts_column_size(),
-    m.artifacts_column_created(),
+    m.common_name(),
+    m.common_status(),
+    m.common_size(),
+    m.common_created(),
     null,
   ] as const;
 
@@ -161,7 +161,7 @@ function RouteComponent() {
                       }}
                       variant="outline"
                     >
-                      {m.artifacts_retry()}
+                      {m.common_try_again()}
                     </Button>
                   </EmptyContent>
                 </Empty>

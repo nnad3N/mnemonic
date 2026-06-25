@@ -232,8 +232,8 @@ export const ThreadMentionInputElement = (
     select: (data) => data.topicId,
   }).data;
   const [search, setSearch] = useState("");
-  const [debouncedSearch] = useDebounce(search, 300);
-  const { data: mentions } = useQuery({
+  const [debouncedSearch] = useDebounce(search, 100);
+  const mentions = useQuery({
     ...mentionsQuery({ query: debouncedSearch, topicId }),
     select: (data) =>
       data.map(
@@ -248,14 +248,16 @@ export const ThreadMentionInputElement = (
     <PlateElement {...props} as="span">
       <Autocomplete
         element={element}
-        items={mentions ?? []}
+        items={mentions.data ?? []}
         setValue={setSearch}
         trigger="@"
         value={search}
       >
         <AutocompleteInput />
-        <AutocompleteContent>
-          <AutocompleteEmpty>{m.common_no_results()}</AutocompleteEmpty>
+        <AutocompleteContent side="top">
+          <AutocompleteEmpty>
+            {mentions.isLoading ? m.common_loading() : m.common_no_results()}
+          </AutocompleteEmpty>
           <AutocompleteList>
             {(item) => (
               <AutocompleteItem

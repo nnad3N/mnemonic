@@ -28,7 +28,7 @@ export const ArtifactSearch = ({ onChange, value }: ArtifactSearchProps) => (
     {value.length > 0 && (
       <InputGroupAddon align="inline-end">
         <InputGroupButton
-          aria-label={m.nav_cancel()}
+          aria-label={m.common_cancel()}
           onClick={() => {
             onChange("");
           }}

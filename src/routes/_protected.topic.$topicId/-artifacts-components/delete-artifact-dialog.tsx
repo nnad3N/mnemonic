@@ -40,7 +40,7 @@ export const DeleteArtifactDialog = ({
     },
     onError: () => {
       toast.error(m.artifacts_delete_error_title(), {
-        description: m.artifacts_delete_error_description(),
+        description: m.common_please_try_again(),
       });
     },
     onSuccess: async () => {
@@ -71,7 +71,7 @@ export const DeleteArtifactDialog = ({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel render={<Button variant="outline" />}>
-            {m.nav_cancel()}
+            {m.common_cancel()}
           </AlertDialogCancel>
           <Button
             disabled={deleteMutation.isPending}
@@ -80,7 +80,7 @@ export const DeleteArtifactDialog = ({
             }}
             variant="destructive"
           >
-            {m.nav_confirm_delete()}
+            {m.common_delete()}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -90,7 +90,7 @@ const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
     },
     onError: () => {
       toast.error(m.nav_new_conversation_error_title(), {
-        description: m.nav_new_conversation_error_description(),
+        description: m.common_please_try_again(),
       });
     },
     onSuccess: async (thread) => {
@@ -131,7 +131,7 @@ const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
               }}
             >
               <PencilIcon />
-              {m.nav_rename()}
+              {m.common_rename()}
             </ContextMenuItem>
             <ContextMenuItem
               disabled={createConversationMutation.isPending}
@@ -160,7 +160,7 @@ const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
               variant="destructive"
             >
               <Trash2Icon />
-              {m.nav_delete()}
+              {m.common_delete()}
             </ContextMenuItem>
           </ContextMenuContent>
         </ContextMenu>

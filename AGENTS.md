@@ -283,6 +283,16 @@ Always `preventDefault` + `stopPropagation` and forward to TanStack:
 
 ---
 
+## Internationalization (Paraglide)
+
+Messages live in [`messages/en.json`](messages/en.json) and [`messages/pl.json`](messages/pl.json). Use Paraglide getters from `@/paraglide/messages` (`m.message_key()`).
+
+- **`common_*` for generic UI copy** — reuse shared keys for words and short phrases that mean the same everywhere (`common_loading`, `common_retry`, `common_try_again`, `common_please_try_again`, `common_cancel`, `common_delete`, `common_search`, `common_rename`, `common_download`, `common_sign_out`, `common_no_results`, status labels, table column headers, etc.). Do **not** create feature-scoped one-offs when a `common_*` key already fits.
+- **Feature-scoped keys** (`chat_*`, `artifacts_*`, `nav_*`, …) are for context-specific copy only: page titles, empty-state descriptions, error explanations, placeholders tied to a screen or domain concept.
+- When adding a string, check `common_*` first before introducing a new key.
+
+---
+
 ## Testing
 
 - Write assertions inside `it()` or `test()` blocks

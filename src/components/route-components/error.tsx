@@ -56,7 +56,7 @@ export const AuthErrorComponent = ({ reset, error }: AuthErrorProps) => {
             }}
             variant="default"
           >
-            {m.route_error_try_again()}
+            {m.common_try_again()}
           </Button>
           {data ? (
             <Button
@@ -66,7 +66,7 @@ export const AuthErrorComponent = ({ reset, error }: AuthErrorProps) => {
               }}
               variant="outline"
             >
-              {m.route_error_sign_out()}
+              {m.common_sign_out()}
             </Button>
           ) : (
             <Button
@@ -116,7 +116,7 @@ export const GenericErrorComponent = ({ reset }: ErrorComponentProps) => {
           }}
           variant="default"
         >
-          {m.route_error_try_again()}
+          {m.common_try_again()}
         </Button>
       </EmptyContent>
     </Empty>
