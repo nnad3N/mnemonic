@@ -1,8 +1,10 @@
 import type { FileUIPart, SourceDocumentUIPart, SourceUrlUIPart } from "ai";
+import { isToolUIPart } from "ai";
 import { FileIcon, FileTextIcon, LinkIcon } from "lucide-react";
 import { Streamdown } from "streamdown";
 
 import { AssistantReasoningPart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-reasoning-part";
+import { AssistantToolPart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-tool-part";
 import { ThreadMetaLine } from "@/routes/_protected.chat.$threadId/-thread-components/thread-meta-line";
 import type {
   ThreadUIMessage,
@@ -18,13 +20,17 @@ export const AssistantMessage = ({
   isAnimating = false,
   message,
 }: AssistantMessageProps) => {
-  return message.parts.map((part, i) => (
-    <AssistantMessagePart
-      isAnimating={isAnimating}
-      key={`${part.type}-${i}`}
-      part={part}
-    />
-  ));
+  return (
+    <div className="flex flex-col gap-1">
+      {message.parts.map((part, i) => (
+        <AssistantMessagePart
+          isAnimating={isAnimating}
+          key={`${part.type}-${i}`}
+          part={part}
+        />
+      ))}
+    </div>
+  );
 };
 
 type AssistantMessagePartProps = {
@@ -54,6 +60,10 @@ const AssistantMessagePart = ({
       return <SourceDocumentPart part={part} />;
     }
     default: {
+      if (isToolUIPart(part)) {
+        return <AssistantToolPart part={part} />;
+      }
+
       return null;
     }
   }

@@ -22,6 +22,6 @@ const embedding = wrapEmbeddingModel({
 export const models = {
   embedding,
   mnemonicAgent: google("gemini-3.1-flash-lite"),
-  observationalMemory: google("gemma-4-26b-a4b-it"),
+  observationalMemory: google("gemini-3.1-flash-lite"),
   threadTitle: google("gemma-4-26b-a4b-it"),
 } as const;

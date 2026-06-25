@@ -35,6 +35,12 @@ export const mnemonicMemory = new Memory({
   vector: pgVector,
 });
 
+export const mnemonicAgentTools = {
+  "artifact-graph-rag": artifactGraphRagTool,
+  "artifact-vector-search": artifactVectorSearchTool,
+  "get-artifact-from-s3": getArtifactFromS3Tool,
+} as const;
+
 export const mnemonicAgent = new Agent({
   name: "Mnemonic",
   id: mnemonicAgentId,
@@ -80,9 +86,5 @@ Search tools are automatically scoped to the current topic. Do not call get-arti
 `,
   memory: mnemonicMemory,
   model: models.mnemonicAgent,
-  tools: {
-    artifactGraphRagTool,
-    artifactVectorSearchTool,
-    getArtifactFromS3Tool,
-  },
+  tools: mnemonicAgentTools,
 });
