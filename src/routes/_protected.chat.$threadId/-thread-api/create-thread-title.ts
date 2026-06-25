@@ -32,7 +32,7 @@ const sanitizeTitle = (value: string) => {
 };
 
 const createThreadTitleSchema = v.object({
-  threadId: v.pipe(v.string(), v.nonEmpty()),
+  threadId: v.pipe(v.string(), v.nanoid()),
   text: v.pipe(v.string(), v.nonEmpty()),
 });
 

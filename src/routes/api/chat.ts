@@ -14,7 +14,7 @@ import type { MnemonicRequestContext } from "@/mastra/request-context";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 
 const uiMessageSchema = v.object({
-  id: v.string(),
+  id: v.pipe(v.string(), v.nanoid()),
   role: v.picklist(["system", "user", "assistant"]),
   parts: v.array(v.looseObject({})),
   metadata: v.optional(v.unknown()),
@@ -22,15 +22,15 @@ const uiMessageSchema = v.object({
 
 const chatRequestSchema = v.pipe(
   v.object({
-    threadId: v.pipe(v.string(), v.nonEmpty()),
+    threadId: v.pipe(v.string(), v.nanoid()),
     messages: v.array(uiMessageSchema),
     trigger: v.optional(v.picklist(["submit-message", "regenerate-message"])),
-    runId: v.optional(v.string()),
+    runId: v.optional(v.pipe(v.string(), v.nanoid())),
     resumeData: v.optional(v.record(v.string(), v.unknown())),
-    id: v.optional(v.string()),
-    messageId: v.optional(v.string()),
+    id: v.optional(v.pipe(v.string(), v.nanoid())),
+    messageId: v.optional(v.pipe(v.string(), v.nanoid())),
     metadata: v.optional(v.unknown()),
-    resourceId: v.optional(v.string()),
+    resourceId: v.optional(v.pipe(v.string(), v.nanoid())),
   }),
   v.forward(
     v.check(

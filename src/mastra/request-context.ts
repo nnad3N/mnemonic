@@ -1,10 +1,10 @@
 import * as v from "valibot";
 
 export const mnemonicRequestContextSchema = v.object({
-  userId: v.pipe(v.string(), v.nonEmpty()),
+  userId: v.pipe(v.string(), v.nanoid()),
   filter: v.optional(
     v.object({
-      topicId: v.optional(v.pipe(v.string(), v.nonEmpty())),
+      topicId: v.optional(v.pipe(v.string(), v.nanoid())),
     })
   ),
 });

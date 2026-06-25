@@ -146,8 +146,8 @@ export const getPresignedUrl = createServerFn({ method: "POST" })
   });
 
 const updateArtifactStatusInputSchema = v.object({
-  artifactId: v.pipe(v.string(), v.nonEmpty()),
-  threadId: v.pipe(v.string(), v.nonEmpty()),
+  artifactId: v.pipe(v.string(), v.nanoid()),
+  threadId: v.pipe(v.string(), v.nanoid()),
   status: v.pipe(
     v.string(),
     v.picklist(["uploading", "processing", "ready", "failed"])
@@ -165,8 +165,8 @@ export const updateArtifactStatus = createServerFn({ method: "POST" })
   });
 
 const processArtifactInputSchema = v.object({
-  artifactId: v.pipe(v.string(), v.nonEmpty()),
-  threadId: v.pipe(v.string(), v.nonEmpty()),
+  artifactId: v.pipe(v.string(), v.nanoid()),
+  threadId: v.pipe(v.string(), v.nanoid()),
 });
 
 export const processArtifact = createServerFn({ method: "POST" })

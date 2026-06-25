@@ -20,22 +20,22 @@ import {
 import { pgVector } from "@/mastra/storage";
 
 const workflowInputSchema = v.object({
-  artifactId: v.pipe(v.string(), v.nonEmpty()),
-  topicId: v.pipe(v.string(), v.nonEmpty()),
+  artifactId: v.pipe(v.string(), v.nanoid()),
+  topicId: v.pipe(v.string(), v.nanoid()),
 });
 
 type WorkflowInputSchema = v.InferInput<typeof workflowInputSchema>;
 
 const validatedArtifactSchema = v.object({
-  artifactId: v.pipe(v.string(), v.nonEmpty()),
+  artifactId: v.pipe(v.string(), v.nanoid()),
   displayName: v.pipe(v.string(), v.nonEmpty()),
   mimeType: v.pipe(v.string(), v.nonEmpty()),
   s3Key: v.pipe(v.string(), v.nonEmpty()),
-  topicId: v.pipe(v.string(), v.nonEmpty()),
+  topicId: v.pipe(v.string(), v.nanoid()),
 });
 
 const workflowOutputSchema = v.object({
-  artifactId: v.pipe(v.string(), v.nonEmpty()),
+  artifactId: v.pipe(v.string(), v.nanoid()),
 });
 
 const validateArtifactStep = createStep({

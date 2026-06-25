@@ -11,12 +11,12 @@ import { isImageMimeType } from "@/lib/supported-files";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context";
 
 const inputSchema = v.object({
-  artifactId: v.pipe(v.string(), v.nonEmpty()),
+  artifactId: v.pipe(v.string(), v.nanoid()),
 });
 
 const successOutputSchema = v.object({
   type: v.literal("success"),
-  artifactId: v.pipe(v.string(), v.nonEmpty()),
+  artifactId: v.pipe(v.string(), v.nanoid()),
   data: v.pipe(v.string(), v.nonEmpty()),
   displayName: v.pipe(v.string(), v.nonEmpty()),
   mimeType: v.pipe(v.string(), v.nonEmpty()),

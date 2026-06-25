@@ -193,6 +193,41 @@ Reference: [`src/routes/_protected.topic.$topicId/artifacts.tsx`](src/routes/_pr
 
 ---
 
+## Valibot schemas
+
+Use Valibot for every input boundary: server fn validators, middleware `inputValidator`, route `validateSearch`, env vars, tool/workflow schemas, and form `onDynamic` schemas.
+
+### Pipe constraints
+
+Always compose base types and refinements with **`v.pipe`**. Do not use bare action schemas (`v.nonEmpty()`, `v.minLength()`, `v.integer()`, `v.nanoid()`, etc.) without a preceding base type in the pipe.
+
+```tsx
+// Good
+title: v.pipe(v.string(), v.nonEmpty()),
+page: v.pipe(v.number(), v.integer(), v.minValue(1)),
+sha256: v.pipe(v.string(), v.length(64)),
+
+// Bad
+title: v.nonEmpty(),
+page: v.integer(),
+id: v.string(),
+```
+
+For optional fields, wrap the full pipe: `v.optional(v.pipe(v.string(), v.nonEmpty()), defaultValue)`.
+
+### ID fields
+
+Any schema field named `id` or ending in `Id` (`topicId`, `threadId`, `artifactId`, `userId`, `messageId`, …) must validate as a nanoid:
+
+```tsx
+topicId: v.pipe(v.string(), v.nanoid()),
+messageId: v.optional(v.pipe(v.string(), v.nanoid())),
+```
+
+Reference: [`src/routes/_protected.topic.$topicId/-artifacts-api/list-artifacts.ts`](src/routes/_protected.topic.$topicId/-artifacts-api/list-artifacts.ts), [`src/lib/middleware/assert-thread-access.ts`](src/lib/middleware/assert-thread-access.ts)
+
+---
+
 ## Forms
 
 This project pairs **TanStack React Form** (validation/state) with **Base UI Form** (`@/components/ui/form`, `@/components/ui/field`) for the rendering layer. Follow this pattern for every form.
