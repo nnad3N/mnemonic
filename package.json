@@ -11,7 +11,6 @@
     "preview": "bunx --bun vite preview",
     "test": "vitest run",
     "typecheck": "tsgo --noEmit",
-    "check": "bun run typecheck && bun run build",
     "lint": "oxlint --fix",
     "format": "oxfmt",
     "fix": "bun run lint && bun run format",
