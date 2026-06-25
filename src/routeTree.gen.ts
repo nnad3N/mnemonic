@@ -17,8 +17,10 @@ import { Route as ProtectedSearchRouteImport } from './routes/_protected.search'
 import { Route as AuthSignUpRouteImport } from './routes/_auth/sign-up'
 import { Route as AuthSignInRouteImport } from './routes/_auth/sign-in'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ProtectedTopicTopicIdRouteRouteImport } from './routes/_protected.topic.$topicId/route'
 import { Route as ProtectedChatThreadIdRouteRouteImport } from './routes/_protected.chat.$threadId/route'
 import { Route as ProtectedChatThreadIdIndexRouteImport } from './routes/_protected.chat.$threadId/index'
+import { Route as ProtectedTopicTopicIdArtifactsRouteImport } from './routes/_protected.topic.$topicId/artifacts'
 
 const ProtectedRoute = ProtectedRouteImport.update({
   id: '/_protected',
@@ -58,6 +60,12 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProtectedTopicTopicIdRouteRoute =
+  ProtectedTopicTopicIdRouteRouteImport.update({
+    id: '/topic/$topicId',
+    path: '/topic/$topicId',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
 const ProtectedChatThreadIdRouteRoute =
   ProtectedChatThreadIdRouteRouteImport.update({
     id: '/chat/$threadId',
@@ -70,6 +78,12 @@ const ProtectedChatThreadIdIndexRoute =
     path: '/',
     getParentRoute: () => ProtectedChatThreadIdRouteRoute,
   } as any)
+const ProtectedTopicTopicIdArtifactsRoute =
+  ProtectedTopicTopicIdArtifactsRouteImport.update({
+    id: '/artifacts',
+    path: '/artifacts',
+    getParentRoute: () => ProtectedTopicTopicIdRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -78,7 +92,9 @@ export interface FileRoutesByFullPath {
   '/search': typeof ProtectedSearchRoute
   '/api/chat': typeof ApiChatRoute
   '/chat/$threadId': typeof ProtectedChatThreadIdRouteRouteWithChildren
+  '/topic/$topicId': typeof ProtectedTopicTopicIdRouteRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/topic/$topicId/artifacts': typeof ProtectedTopicTopicIdArtifactsRoute
   '/chat/$threadId/': typeof ProtectedChatThreadIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -87,7 +103,9 @@ export interface FileRoutesByTo {
   '/sign-up': typeof AuthSignUpRoute
   '/search': typeof ProtectedSearchRoute
   '/api/chat': typeof ApiChatRoute
+  '/topic/$topicId': typeof ProtectedTopicTopicIdRouteRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/topic/$topicId/artifacts': typeof ProtectedTopicTopicIdArtifactsRoute
   '/chat/$threadId': typeof ProtectedChatThreadIdIndexRoute
 }
 export interface FileRoutesById {
@@ -100,7 +118,9 @@ export interface FileRoutesById {
   '/_protected/search': typeof ProtectedSearchRoute
   '/api/chat': typeof ApiChatRoute
   '/_protected/chat/$threadId': typeof ProtectedChatThreadIdRouteRouteWithChildren
+  '/_protected/topic/$topicId': typeof ProtectedTopicTopicIdRouteRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/_protected/topic/$topicId/artifacts': typeof ProtectedTopicTopicIdArtifactsRoute
   '/_protected/chat/$threadId/': typeof ProtectedChatThreadIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -112,7 +132,9 @@ export interface FileRouteTypes {
     | '/search'
     | '/api/chat'
     | '/chat/$threadId'
+    | '/topic/$topicId'
     | '/api/auth/$'
+    | '/topic/$topicId/artifacts'
     | '/chat/$threadId/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -121,7 +143,9 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/search'
     | '/api/chat'
+    | '/topic/$topicId'
     | '/api/auth/$'
+    | '/topic/$topicId/artifacts'
     | '/chat/$threadId'
   id:
     | '__root__'
@@ -133,7 +157,9 @@ export interface FileRouteTypes {
     | '/_protected/search'
     | '/api/chat'
     | '/_protected/chat/$threadId'
+    | '/_protected/topic/$topicId'
     | '/api/auth/$'
+    | '/_protected/topic/$topicId/artifacts'
     | '/_protected/chat/$threadId/'
   fileRoutesById: FileRoutesById
 }
@@ -203,6 +229,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_protected/topic/$topicId': {
+      id: '/_protected/topic/$topicId'
+      path: '/topic/$topicId'
+      fullPath: '/topic/$topicId'
+      preLoaderRoute: typeof ProtectedTopicTopicIdRouteRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
     '/_protected/chat/$threadId': {
       id: '/_protected/chat/$threadId'
       path: '/chat/$threadId'
@@ -216,6 +249,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/chat/$threadId/'
       preLoaderRoute: typeof ProtectedChatThreadIdIndexRouteImport
       parentRoute: typeof ProtectedChatThreadIdRouteRoute
+    }
+    '/_protected/topic/$topicId/artifacts': {
+      id: '/_protected/topic/$topicId/artifacts'
+      path: '/artifacts'
+      fullPath: '/topic/$topicId/artifacts'
+      preLoaderRoute: typeof ProtectedTopicTopicIdArtifactsRouteImport
+      parentRoute: typeof ProtectedTopicTopicIdRouteRoute
     }
   }
 }
@@ -248,14 +288,30 @@ const ProtectedChatThreadIdRouteRouteWithChildren =
     ProtectedChatThreadIdRouteRouteChildren,
   )
 
+interface ProtectedTopicTopicIdRouteRouteChildren {
+  ProtectedTopicTopicIdArtifactsRoute: typeof ProtectedTopicTopicIdArtifactsRoute
+}
+
+const ProtectedTopicTopicIdRouteRouteChildren: ProtectedTopicTopicIdRouteRouteChildren =
+  {
+    ProtectedTopicTopicIdArtifactsRoute: ProtectedTopicTopicIdArtifactsRoute,
+  }
+
+const ProtectedTopicTopicIdRouteRouteWithChildren =
+  ProtectedTopicTopicIdRouteRoute._addFileChildren(
+    ProtectedTopicTopicIdRouteRouteChildren,
+  )
+
 interface ProtectedRouteChildren {
   ProtectedSearchRoute: typeof ProtectedSearchRoute
   ProtectedChatThreadIdRouteRoute: typeof ProtectedChatThreadIdRouteRouteWithChildren
+  ProtectedTopicTopicIdRouteRoute: typeof ProtectedTopicTopicIdRouteRouteWithChildren
 }
 
 const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedSearchRoute: ProtectedSearchRoute,
   ProtectedChatThreadIdRouteRoute: ProtectedChatThreadIdRouteRouteWithChildren,
+  ProtectedTopicTopicIdRouteRoute: ProtectedTopicTopicIdRouteRouteWithChildren,
 }
 
 const ProtectedRouteWithChildren = ProtectedRoute._addFileChildren(

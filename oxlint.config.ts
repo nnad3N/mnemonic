@@ -17,6 +17,10 @@ export default defineConfig({
     typeAware: true,
   },
   rules: {
+    "consistent-return": "off",
+    "prefer-await-to-callbacks": "off",
+    "func-names": "off",
+    "prefer-destructuring": "off",
     "arrow-body-style": "off",
     "require-await": "off",
     "sort-keys": "off",
@@ -34,18 +38,7 @@ export default defineConfig({
       "error",
       { checksVoidReturn: { attributes: false } },
     ],
-    "typescript/only-throw-error": [
-      "error",
-      {
-        allow: [
-          {
-            from: "package",
-            name: ["Redirect", "AnyRedirect", "NotFoundError"],
-            package: "@tanstack/router-core",
-          },
-        ],
-      },
-    ],
+    "typescript/only-throw-error": "off",
     "typescript/strict-boolean-expressions": [
       "error",
       { allowNullableBoolean: true, allowNullableString: true },

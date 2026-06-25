@@ -98,7 +98,7 @@ export const SidebarConversationItem = ({
             }}
           >
             <PencilIcon />
-            {m.nav_rename()}
+            {m.common_rename()}
           </ContextMenuItem>
           <ContextMenuItem
             onClick={() => {
@@ -107,7 +107,7 @@ export const SidebarConversationItem = ({
             variant="destructive"
           >
             <Trash2Icon />
-            {m.nav_delete()}
+            {m.common_delete()}
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>

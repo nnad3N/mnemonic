@@ -61,6 +61,41 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
   - Add labels for form inputs
   - Include keyboard event handlers alongside mouse events
   - Use semantic elements (`<button>`, `<nav>`, etc.) instead of divs with roles
+- **Variant styling** — do not add helper functions that map a discriminant to Tailwind class strings (e.g. `getStatusClassName(status)` with a `switch`). Either inline classes in JSX with `cn(..., condition && "class")`, or extract a small component that owns the variant markup:
+
+```tsx
+// Good — inline
+<span
+  className={cn(
+    "size-1.5 rounded-full",
+    status === "ready" && "bg-green-500",
+    status === "failed" && "bg-red-500"
+  )}
+/>;
+
+// Good — component owns the variants
+const ArtifactStatusChip = ({ status }: { status: ArtifactStatus }) => (
+  <Badge variant="outline">
+    <span
+      className={cn(
+        "size-1.5 rounded-full",
+        status === "ready" && "bg-green-500",
+        status === "failed" && "bg-red-500"
+      )}
+    />
+    {label}
+  </Badge>
+);
+
+// Bad — class-string lookup helper
+const getStatusDotClassName = (status: ArtifactStatus) => {
+  switch (status) {
+    case "ready":
+      return "bg-green-500";
+    // ...
+  }
+};
+```
 
 ### Error Handling & Debugging
 
@@ -68,6 +103,7 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
 - Throw `Error` objects with descriptive messages, not strings or other values
 - Use `try-catch` blocks meaningfully - don't catch errors just to rethrow them
 - Prefer early returns over nested conditionals for error cases
+- **Never render raw error messages in client UI** — do not display `error.message`, provider/API payloads, stack traces, or other server-derived text. Show user-safe copy via Paraglide messages or an error-code lookup (see [`src/lib/auth-errors.ts`](src/lib/auth-errors.ts)); log details server-side for debugging
 
 ### Code Organization
 
@@ -130,6 +166,65 @@ function RouteComponent() {
 ```
 
 - Do **not** convert these to `const RouteComponent = () => {}` — the resulting temporal dead zone breaks the route registration.
+
+### Search param updates (`navigate` / `Link`)
+
+When updating search params with a functional updater (`search: (prev) => …`), **never spread `prev`**. Use Immer `produce` instead:
+
+```tsx
+import { produce } from "immer";
+
+void navigate({
+  to: ".",
+  search: (prev) =>
+    produce(prev, (draft) => {
+      draft.page = 1;
+      draft.query = nextQuery;
+    }),
+});
+```
+
+TanStack Router's `search` option is typed loosely — you can return almost any object and TypeScript will not complain. Spreading `{ ...prev, query: nextQuery }` silently survives schema renames (e.g. `query` → `q`) and typos on keys you omit. Mutating through Immer's `draft` is checked against the inferred search type, so renames and removed fields surface as type errors.
+
+- Prefer **`Route.useNavigate()`** / **`Route.Link`** (or `from={Route.fullPath}`) so `prev` is inferred from the route's `validateSearch` schema.
+- Ensure **`Register.router`** uses `typeof router` on a module-level router instance (see [`src/router.tsx`](src/router.tsx)) — not `ReturnType<typeof getRouter>`.
+
+Reference: [`src/routes/_protected.topic.$topicId/artifacts.tsx`](src/routes/_protected.topic.$topicId/artifacts.tsx)
+
+---
+
+## Valibot schemas
+
+Use Valibot for every input boundary: server fn validators, middleware `inputValidator`, route `validateSearch`, env vars, tool/workflow schemas, and form `onDynamic` schemas.
+
+### Pipe constraints
+
+Always compose base types and refinements with **`v.pipe`**. Do not use bare action schemas (`v.nonEmpty()`, `v.minLength()`, `v.integer()`, `v.nanoid()`, etc.) without a preceding base type in the pipe.
+
+```tsx
+// Good
+title: v.pipe(v.string(), v.nonEmpty()),
+page: v.pipe(v.number(), v.integer(), v.minValue(1)),
+sha256: v.pipe(v.string(), v.length(64)),
+
+// Bad
+title: v.nonEmpty(),
+page: v.integer(),
+id: v.string(),
+```
+
+For optional fields, wrap the full pipe: `v.optional(v.pipe(v.string(), v.nonEmpty()), defaultValue)`.
+
+### ID fields
+
+Any schema field named `id` or ending in `Id` (`topicId`, `threadId`, `artifactId`, `userId`, `messageId`, …) must validate as a nanoid:
+
+```tsx
+topicId: v.pipe(v.string(), v.nanoid()),
+messageId: v.optional(v.pipe(v.string(), v.nanoid())),
+```
+
+Reference: [`src/routes/_protected.topic.$topicId/-artifacts-api/list-artifacts.ts`](src/routes/_protected.topic.$topicId/-artifacts-api/list-artifacts.ts), [`src/lib/middleware/assert-thread-access.ts`](src/lib/middleware/assert-thread-access.ts)
 
 ---
 
@@ -220,6 +315,16 @@ Always `preventDefault` + `stopPropagation` and forward to TanStack:
 
 - [`src/routes/_auth/sign-in.tsx`](src/routes/_auth/sign-in.tsx)
 - [`src/routes/_auth/sign-up.tsx`](src/routes/_auth/sign-up.tsx)
+
+---
+
+## Internationalization (Paraglide)
+
+Messages live in [`messages/en.json`](messages/en.json) and [`messages/pl.json`](messages/pl.json). Use Paraglide getters from `@/paraglide/messages` (`m.message_key()`).
+
+- **`common_*` for generic UI copy** — reuse shared keys for words and short phrases that mean the same everywhere (`common_loading`, `common_retry`, `common_try_again`, `common_please_try_again`, `common_cancel`, `common_delete`, `common_search`, `common_rename`, `common_download`, `common_sign_out`, `common_no_results`, status labels, table column headers, etc.). Do **not** create feature-scoped one-offs when a `common_*` key already fits.
+- **Feature-scoped keys** (`chat_*`, `artifacts_*`, `nav_*`, …) are for context-specific copy only: page titles, empty-state descriptions, error explanations, placeholders tied to a screen or domain concept.
+- When adding a string, check `common_*` first before introducing a new key.
 
 ---
 

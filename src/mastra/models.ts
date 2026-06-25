@@ -1,6 +1,27 @@
+import { defaultEmbeddingSettingsMiddleware, wrapEmbeddingModel } from "ai";
+
+import { google } from "@/mastra/google";
+
+export const ARTIFACT_EMBEDDING_DIMENSION = 1536;
+
+const baseEmbedding = google.embedding("gemini-embedding-2");
+
+const embedding = wrapEmbeddingModel({
+  middleware: defaultEmbeddingSettingsMiddleware({
+    settings: {
+      providerOptions: {
+        google: {
+          outputDimensionality: ARTIFACT_EMBEDDING_DIMENSION,
+        },
+      },
+    },
+  }),
+  model: baseEmbedding,
+});
+
 export const models = {
-  embedding: "openai/text-embedding-3-small",
-  mnemonicAgent: "vercel/google/gemini-2.5-flash-lite",
-  observationalMemory: "vercel/google/gemini-2.5-flash-lite",
-  threadTitle: "google/gemini-2.5-flash-lite",
+  embedding,
+  mnemonicAgent: google("gemini-3.1-flash-lite"),
+  observationalMemory: google("gemini-3.1-flash-lite"),
+  threadTitle: google("gemma-4-26b-a4b-it"),
 } as const;

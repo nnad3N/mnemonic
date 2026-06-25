@@ -11,7 +11,7 @@ export const threadAccessMiddleware = createMiddleware({ type: "function" })
   .inputValidator((data) =>
     v.parse(
       v.looseObject({
-        threadId: v.pipe(v.string(), v.nonEmpty()),
+        threadId: v.pipe(v.string(), v.nanoid()),
       }),
       data
     )
@@ -50,7 +50,7 @@ export const topicAccessMiddleware = createMiddleware({ type: "function" })
   .inputValidator((data) =>
     v.parse(
       v.looseObject({
-        topicId: v.pipe(v.string(), v.nonEmpty()),
+        topicId: v.pipe(v.string(), v.nanoid()),
       }),
       data
     )

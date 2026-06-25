@@ -13,7 +13,7 @@ import { getMemoryStore } from "@/mastra/memory";
 export const renameConversation = createServerFn({ method: "POST" })
   .inputValidator(
     v.object({
-      threadId: v.pipe(v.string(), v.nonEmpty()),
+      threadId: v.pipe(v.string(), v.nanoid()),
       title: v.pipe(v.string(), v.nonEmpty()),
     })
   )
@@ -32,7 +32,7 @@ export const renameConversation = createServerFn({ method: "POST" })
 export const renameTopic = createServerFn({ method: "POST" })
   .inputValidator(
     v.object({
-      topicId: v.pipe(v.string(), v.nonEmpty()),
+      topicId: v.pipe(v.string(), v.nanoid()),
       title: v.pipe(v.string(), v.nonEmpty()),
     })
   )

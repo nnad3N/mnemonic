@@ -1,20 +1,20 @@
 import { handleChatStream } from "@mastra/ai-sdk";
+import { RequestContext } from "@mastra/core/request-context";
 import { createFileRoute } from "@tanstack/react-router";
 import { createUIMessageStreamResponse } from "ai";
-import { eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { db } from "@/db";
-import { topic } from "@/db/schema";
 import { applyMessageEdit } from "@/lib/chat/apply-message-edit";
 import { authMiddleware } from "@/lib/middleware/auth-middleware";
 import { mastra } from "@/mastra";
 import { mnemonicAgentId } from "@/mastra/agents/mnemonic-agent";
 import { getAgentMemory, getMemoryStore } from "@/mastra/memory";
+import type { MnemonicRequestContext } from "@/mastra/request-context";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 
 const uiMessageSchema = v.object({
-  id: v.string(),
+  id: v.pipe(v.string(), v.nanoid()),
   role: v.picklist(["system", "user", "assistant"]),
   parts: v.array(v.looseObject({})),
   metadata: v.optional(v.unknown()),
@@ -22,15 +22,15 @@ const uiMessageSchema = v.object({
 
 const chatRequestSchema = v.pipe(
   v.object({
-    threadId: v.pipe(v.string(), v.nonEmpty()),
+    threadId: v.pipe(v.string(), v.nanoid()),
     messages: v.array(uiMessageSchema),
     trigger: v.optional(v.picklist(["submit-message", "regenerate-message"])),
-    runId: v.optional(v.string()),
+    runId: v.optional(v.pipe(v.string(), v.nanoid())),
     resumeData: v.optional(v.record(v.string(), v.unknown())),
-    id: v.optional(v.string()),
-    messageId: v.optional(v.string()),
+    id: v.optional(v.pipe(v.string(), v.nanoid())),
+    messageId: v.optional(v.pipe(v.string(), v.nanoid())),
     metadata: v.optional(v.unknown()),
-    resourceId: v.optional(v.string()),
+    resourceId: v.optional(v.pipe(v.string(), v.nanoid())),
   }),
   v.forward(
     v.check(
@@ -64,23 +64,16 @@ export const Route = createFileRoute("/api/chat")({
           return new Response("Not Found", { status: 404 });
         }
 
-        if (thread.resourceId !== context.user.id) {
-          const ownedTopic = await db.query.topic.findFirst({
-            where: {
-              id: thread.resourceId,
-              userId: context.user.id,
-            },
-            columns: { id: true },
-          });
+        const topic = await db.query.topic.findFirst({
+          where: {
+            id: thread.resourceId,
+            userId: context.user.id,
+          },
+          columns: { id: true },
+        });
 
-          if (!ownedTopic) {
-            return new Response("Not Found", { status: 404 });
-          }
-
-          await db
-            .update(topic)
-            .set({ updatedAt: new Date() })
-            .where(eq(topic.id, thread.resourceId));
+        if (thread.resourceId !== context.user.id && !topic) {
+          return new Response("Not Found", { status: 404 });
         }
 
         if (body.messageId) {
@@ -92,6 +85,13 @@ export const Route = createFileRoute("/api/chat")({
             threadId: body.threadId,
             messageId: body.messageId,
           });
+        }
+
+        const requestContext = new RequestContext<MnemonicRequestContext>();
+        requestContext.set("userId", context.user.id);
+
+        if (topic) {
+          requestContext.set("filter", { topicId: topic.id });
         }
 
         const stream = await handleChatStream<ThreadUIMessage>({
@@ -106,6 +106,7 @@ export const Route = createFileRoute("/api/chat")({
             },
             // oxlint-disable-next-line typescript/no-unsafe-type-assertion
             messages: body.messages as ThreadUIMessage[],
+            requestContext,
           },
           sendReasoning: true,
           version: "v6",

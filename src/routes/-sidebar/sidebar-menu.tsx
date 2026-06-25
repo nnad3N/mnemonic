@@ -63,7 +63,7 @@ export const SidebarHeaderSection = () => {
     },
     onError: () => {
       toast.error(m.nav_new_conversation_error_title(), {
-        description: m.nav_new_conversation_error_description(),
+        description: m.common_please_try_again(),
       });
     },
     onSuccess: async (thread) => {
@@ -88,7 +88,7 @@ export const SidebarHeaderSection = () => {
     },
     onError: () => {
       toast.error(m.nav_new_topic_error_title(), {
-        description: m.nav_new_topic_error_description(),
+        description: m.common_please_try_again(),
       });
     },
     onSuccess: async (thread) => {
@@ -108,7 +108,7 @@ export const SidebarHeaderSection = () => {
             {({ isActive }) => (
               <SidebarMenuButton isActive={isActive}>
                 <SearchIcon />
-                {m.nav_search()}
+                {m.common_search()}
               </SidebarMenuButton>
             )}
           </Link>
@@ -193,7 +193,7 @@ export const SidebarFooterSection = ({ user }: SidebarFooterSectionProps) => {
                   }}
                 >
                   <LogOutIcon />
-                  {m.route_error_sign_out()}
+                  {m.common_sign_out()}
                 </DropdownMenuItem>
               </DropdownMenuGroup>
             </DropdownMenuContent>

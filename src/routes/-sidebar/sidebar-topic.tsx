@@ -1,14 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   ChevronRightIcon,
-  MessageCirclePlusIcon,
+  FileIcon,
   PencilIcon,
+  PlusIcon,
   Trash2Icon,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { Button } from "@/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
@@ -89,7 +91,7 @@ const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
     },
     onError: () => {
       toast.error(m.nav_new_conversation_error_title(), {
-        description: m.nav_new_conversation_error_description(),
+        description: m.common_please_try_again(),
       });
     },
     onSuccess: async (thread) => {
@@ -114,15 +116,31 @@ const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
               }}
             />
           ) : (
-            <ContextMenuTrigger
-              render={<CollapsibleTrigger render={<SidebarMenuButton />} />}
-            >
-              <ChevronRightIcon className="transition-transform group-data-panel-open/topic:rotate-90" />
-
-              <span className="truncate">{topic.title}</span>
-            </ContextMenuTrigger>
+            <div className="flex w-full items-center">
+              <ContextMenuTrigger
+                render={
+                  <CollapsibleTrigger
+                    render={<SidebarMenuButton className="min-w-0 flex-1" />}
+                  />
+                }
+              >
+                <ChevronRightIcon className="transition-transform group-data-panel-open/topic:rotate-90" />
+                <span className="truncate">{topic.title}</span>
+              </ContextMenuTrigger>
+              <Button
+                className="text-sidebar-foreground opacity-0 peer-hover/menu-button:opacity-100 hover:opacity-100"
+                disabled={createConversationMutation.isPending}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  createConversationMutation.mutate();
+                }}
+                size="icon-sm"
+                variant="ghost"
+              >
+                <PlusIcon />
+              </Button>
+            </div>
           )}
-
           <ContextMenuContent>
             <ContextMenuItem
               onClick={() => {
@@ -130,16 +148,18 @@ const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
               }}
             >
               <PencilIcon />
-              {m.nav_rename()}
+              {m.common_rename()}
             </ContextMenuItem>
             <ContextMenuItem
-              disabled={createConversationMutation.isPending}
-              onClick={() => {
-                createConversationMutation.mutate();
-              }}
+              render={
+                <Link
+                  params={{ topicId: topic.id }}
+                  to="/topic/$topicId/artifacts"
+                />
+              }
             >
-              <MessageCirclePlusIcon />
-              {m.nav_create_conversation_in_topic()}
+              <FileIcon />
+              {m.nav_artifacts()}
             </ContextMenuItem>
             <ContextMenuItem
               onClick={() => {
@@ -148,7 +168,7 @@ const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
               variant="destructive"
             >
               <Trash2Icon />
-              {m.nav_delete()}
+              {m.common_delete()}
             </ContextMenuItem>
           </ContextMenuContent>
         </ContextMenu>
