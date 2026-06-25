@@ -17,11 +17,15 @@ Do not use quotation marks.
 Use title case only when it reads naturally.
 Keep it under 8 words.`;
 
+const MAX_TITLE_LENGTH = 255;
+const TITLE_GENERATION_TIMEOUT_MS = 10_000;
+
 const sanitizeTitle = (value: string) => {
   const title = value
-    .trim()
     .replaceAll(/^["'`]+|["'`]+$/g, "")
     .replaceAll(/\s+/g, " ")
+    .trim()
+    .slice(0, MAX_TITLE_LENGTH)
     .trim();
 
   if (title.length > 0) {
@@ -56,10 +60,10 @@ export const createThreadTitle = createServerFn({ method: "POST" })
     }
 
     const { text } = await generateText({
-      maxOutputTokens: 24,
       model: models.threadTitle,
       prompt: data.text,
       system: TITLE_SYSTEM_PROMPT,
+      abortSignal: AbortSignal.timeout(TITLE_GENERATION_TIMEOUT_MS),
     });
 
     const title = sanitizeTitle(text);
