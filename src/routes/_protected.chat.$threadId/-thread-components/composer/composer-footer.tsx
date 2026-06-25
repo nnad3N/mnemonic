@@ -1,4 +1,4 @@
-import { MentionPlugin } from "@platejs/mention/react";
+import { getMentionOnSelectItem } from "@platejs/mention";
 import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { ArrowUpIcon, PaperclipIcon, SquareIcon } from "lucide-react";
 import { nanoid } from "nanoid";
@@ -20,6 +20,8 @@ import { useThreadChat } from "../../-thread-chat-context";
 import type { ThreadInputLocation } from "../../-thread-store";
 import { getThreadEditorId } from "./plate";
 import { getMentionKey } from "./plate-plugins";
+
+const insertMentionItem = getMentionOnSelectItem();
 
 type ComposerFooterProps = {
   threadId: string;
@@ -71,7 +73,7 @@ const UploadButton = ({ location, threadId, topicId }: UploadButtonProps) => {
   const editor = useEditorRef(editorId);
   const isUploading = useIsUploadingArtifact(threadId);
   const { mutate: uploadArtifact } = useUploadArtifact(threadId);
-  const { mutateAsync: findDuplicateArtifacts } = useMutation({
+  const { mutateAsync: findDuplicateArtifacts, isPending } = useMutation({
     mutationFn: async (sha256s: string[]) =>
       findArtifactsBySha256({
         data: { sha256s, topicId },
@@ -81,7 +83,7 @@ const UploadButton = ({ location, threadId, topicId }: UploadButtonProps) => {
   return (
     <Button
       variant="ghost"
-      disabled={isUploading || editor.meta.isFallback}
+      disabled={isUploading || isPending || editor.meta.isFallback}
       onClick={() => inputRef.current?.click()}
       size="icon-sm"
       type="button"
@@ -116,10 +118,9 @@ const UploadButton = ({ location, threadId, topicId }: UploadButtonProps) => {
               uploadArtifact({ topicId, artifactId, file, sha256 });
             }
 
-            editor.getTransforms(MentionPlugin).insert.mention({
+            insertMentionItem(editor, {
               key: getMentionKey({ type: "artifact", value: artifactId }),
-              search: "",
-              value: file.name,
+              text: file.name,
             });
           }
 
