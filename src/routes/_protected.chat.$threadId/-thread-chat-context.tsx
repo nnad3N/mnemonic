@@ -1,5 +1,5 @@
 import { Chat, useChat } from "@ai-sdk/react";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { DefaultChatTransport } from "ai";
 import { panic } from "better-result";
 import { createContext, useContext, useState } from "react";
@@ -7,6 +7,7 @@ import type { PropsWithChildren } from "react";
 
 import { ArtifactsSync } from "../_protected.topic.$topicId/-topic-components/artifacts-sync";
 import { threadQuery } from "./-thread-api/get-thread";
+import { threadKeys } from "./-thread-api/query-keys";
 import type { ThreadUIMessage } from "./-thread-types";
 
 const ThreadChatContext = createContext<Chat<ThreadUIMessage> | null>(null);
@@ -19,12 +20,18 @@ export const ThreadChatProvider = ({
   children,
   threadId,
 }: PropsWithChildren<ThreadChatProviderProps>) => {
+  const queryClient = useQueryClient();
   const { data } = useSuspenseQuery(threadQuery(threadId));
   const [chat] = useState(
     () =>
       new Chat({
         id: threadId,
         messages: data.messages,
+        onFinish: () => {
+          void queryClient.invalidateQueries({
+            queryKey: threadKeys.byId(threadId),
+          });
+        },
         transport: new DefaultChatTransport({
           api: "/api/chat",
           prepareSendMessagesRequest: (options) => ({
