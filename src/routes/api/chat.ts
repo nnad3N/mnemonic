@@ -72,6 +72,10 @@ export const Route = createFileRoute("/api/chat")({
           columns: { id: true },
         });
 
+        if (thread.resourceId !== context.user.id && !topic) {
+          return new Response("Not Found", { status: 404 });
+        }
+
         if (body.messageId) {
           const memory = await getAgentMemory();
 
