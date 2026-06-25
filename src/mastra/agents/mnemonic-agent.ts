@@ -1,6 +1,5 @@
 import { Agent } from "@mastra/core/agent";
 import { Memory } from "@mastra/memory";
-import { gateway } from "ai";
 
 import { models } from "@/mastra/models";
 import { pgVector, postgresStore } from "@/mastra/storage";
@@ -11,7 +10,7 @@ import { getArtifactFromS3Tool } from "@/mastra/tools/get-artifact-from-s3-tool"
 export const mnemonicAgentId = "mnemonic-agent";
 
 export const mnemonicMemory = new Memory({
-  embedder: gateway.embeddingModel(models.embedding),
+  embedder: models.embedding,
   options: {
     observationalMemory: {
       model: models.observationalMemory,

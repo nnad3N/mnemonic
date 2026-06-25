@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
-import { generateText, gateway } from "ai";
+import { generateText } from "ai";
 import * as v from "valibot";
 
 import { threadAccessMiddleware } from "@/lib/middleware/assert-thread-access";
@@ -57,7 +57,7 @@ export const createThreadTitle = createServerFn({ method: "POST" })
 
     const { text } = await generateText({
       maxOutputTokens: 24,
-      model: gateway.languageModel(models.threadTitle),
+      model: models.threadTitle,
       prompt: data.text,
       system: TITLE_SYSTEM_PROMPT,
     });

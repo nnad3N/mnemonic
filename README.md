@@ -68,7 +68,7 @@ Am example chat application built with TanStack Start, TanStack Store, and Claud
 ## .env Updates
 
 ```env
-AI_GATEWAY_API_KEY=your_ai_gateway_api_key
+GOOGLE_GENERATIVE_AI_API_KEY=your_google_generative_ai_api_key
 ```
 
 ## ✨ Features
