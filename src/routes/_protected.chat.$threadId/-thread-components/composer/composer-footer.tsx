@@ -144,6 +144,7 @@ const SendButton = ({ location }: ComposerFooterProps) => {
 
   return (
     <Button
+      className="ml-auto"
       disabled={!canSend}
       onClick={async () => {
         await sendMessage();

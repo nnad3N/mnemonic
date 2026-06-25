@@ -3,6 +3,7 @@ import { isToolUIPart } from "ai";
 import { FileIcon, FileTextIcon, LinkIcon } from "lucide-react";
 import { Streamdown } from "streamdown";
 
+import { isWebSearchAgentToolPart } from "@/lib/ai-sdk/tool-parts";
 import { AssistantReasoningPart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-reasoning-part";
 import { AssistantToolPart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-tool-part";
 import { ThreadMetaLine } from "@/routes/_protected.chat.$threadId/-thread-components/thread-meta-line";
@@ -10,6 +11,8 @@ import type {
   ThreadUIMessage,
   ThreadUIMessagePart,
 } from "@/routes/_protected.chat.$threadId/-thread-types";
+
+import { WebSearchAgentCard } from "./web-search-agent-card";
 
 type AssistantMessageProps = {
   isAnimating?: boolean;
@@ -42,6 +45,10 @@ const AssistantMessagePart = ({
   isAnimating,
   part,
 }: AssistantMessagePartProps) => {
+  if (isWebSearchAgentToolPart(part)) {
+    return <WebSearchAgentCard part={part} />;
+  }
+
   // oxlint-disable-next-line typescript/switch-exhaustiveness-check
   switch (part.type) {
     case "text": {

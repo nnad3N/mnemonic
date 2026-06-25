@@ -24,4 +24,5 @@ export const models = {
   mnemonicAgent: google("gemini-3.1-flash-lite"),
   observationalMemory: google("gemini-3.1-flash-lite"),
   threadTitle: google("gemma-4-26b-a4b-it"),
+  webSearchAgent: google("gemini-3.1-flash-lite"),
 } as const;

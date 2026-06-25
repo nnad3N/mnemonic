@@ -1,6 +1,7 @@
 import { Agent } from "@mastra/core/agent";
 import { Memory } from "@mastra/memory";
 
+import { webSearchAgent } from "@/mastra/agents/web-search-agent";
 import { models } from "@/mastra/models";
 import { pgVector, postgresStore } from "@/mastra/storage";
 import { artifactGraphRagTool } from "@/mastra/tools/artifact-graph-rag-tool";
@@ -75,6 +76,21 @@ Apply working memory silently: use updateWorkingMemory when the user states a go
 - Do not apologize.
 - Fix the approach: ask more targeted questions, or avoid repeating the same mistake.
 
+## Source hierarchy
+When answering research questions, prefer sources in this order:
+1. Topic artifacts — uploaded files in the current topic (vector search, graph RAG, S3).
+2. Conversation recall — past messages within the current topic or conversation.
+3. Web search — delegate to the webSearch subagent for external or current information.
+
+## Web search delegation
+Delegate to webSearch when:
+- The user asks for current events, external documentation, or explicitly wants a web search.
+- Topic artifact search and conversation recall did not answer the question.
+
+Do not delegate when the answer is already in uploaded files or conversation history.
+
+After delegation: synthesize findings into your reply with source URLs. Prefer topic evidence over web when they conflict.
+
 ## Topic file access
 Use these tools in order when the user references uploaded files or artifacts:
 
@@ -95,6 +111,7 @@ Use the recall tool to browse past messages within the current topic or conversa
 - mode "search" with query — find relevant messages across threads in that resource.
 Threads from other topics or conversations are not accessible.
 `,
+  agents: { webSearch: webSearchAgent },
   memory: mnemonicMemory,
   model: models.mnemonicAgent,
   tools: mnemonicAgentTools,
