@@ -3,13 +3,14 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import {
   ChevronRightIcon,
   FileIcon,
-  MessageCirclePlusIcon,
   PencilIcon,
+  PlusIcon,
   Trash2Icon,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { Button } from "@/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
@@ -115,15 +116,31 @@ const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
               }}
             />
           ) : (
-            <ContextMenuTrigger
-              render={<CollapsibleTrigger render={<SidebarMenuButton />} />}
-            >
-              <ChevronRightIcon className="transition-transform group-data-panel-open/topic:rotate-90" />
-
-              <span className="truncate">{topic.title}</span>
-            </ContextMenuTrigger>
+            <div className="flex w-full items-center">
+              <ContextMenuTrigger
+                render={
+                  <CollapsibleTrigger
+                    render={<SidebarMenuButton className="min-w-0 flex-1" />}
+                  />
+                }
+              >
+                <ChevronRightIcon className="transition-transform group-data-panel-open/topic:rotate-90" />
+                <span className="truncate">{topic.title}</span>
+              </ContextMenuTrigger>
+              <Button
+                className="text-sidebar-foreground opacity-0 peer-hover/menu-button:opacity-100 hover:opacity-100"
+                disabled={createConversationMutation.isPending}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  createConversationMutation.mutate();
+                }}
+                size="icon-sm"
+                variant="ghost"
+              >
+                <PlusIcon />
+              </Button>
+            </div>
           )}
-
           <ContextMenuContent>
             <ContextMenuItem
               onClick={() => {
@@ -132,15 +149,6 @@ const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
             >
               <PencilIcon />
               {m.common_rename()}
-            </ContextMenuItem>
-            <ContextMenuItem
-              disabled={createConversationMutation.isPending}
-              onClick={() => {
-                createConversationMutation.mutate();
-              }}
-            >
-              <MessageCirclePlusIcon />
-              {m.nav_create_conversation_in_topic()}
             </ContextMenuItem>
             <ContextMenuItem
               render={
