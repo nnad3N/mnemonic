@@ -31,7 +31,7 @@ const embedding = wrapEmbeddingModel({
 export const models = {
   embedding,
   mnemonicAgent: google("gemini-3.1-flash-lite-preview"),
-  observationalMemory: google("gemini-2.5-flash-lite"),
+  observationalMemory: google("gemini-3.1-flash-lite-preview"),
   threadTitle: google("gemini-2.5-flash-lite"),
   webSearchAgent: google("gemini-3.1-flash-lite"),
 } as const;

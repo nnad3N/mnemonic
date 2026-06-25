@@ -1,7 +1,12 @@
 import type { FileUIPart, SourceDocumentUIPart, SourceUrlUIPart } from "ai";
 import { isToolUIPart } from "ai";
 import { FileIcon, FileTextIcon, LinkIcon } from "lucide-react";
+import { createMathPlugin } from "@streamdown/math";
 import { Streamdown } from "streamdown";
+
+const streamdownPlugins = {
+  math: createMathPlugin({ singleDollarTextMath: true }),
+};
 
 import { isWebSearchAgentToolPart } from "@/lib/ai-sdk/tool-parts";
 import { AssistantReasoningPart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-reasoning-part";
@@ -52,7 +57,11 @@ const AssistantMessagePart = ({
   // oxlint-disable-next-line typescript/switch-exhaustiveness-check
   switch (part.type) {
     case "text": {
-      return <Streamdown isAnimating={isAnimating}>{part.text}</Streamdown>;
+      return (
+        <Streamdown isAnimating={isAnimating} plugins={streamdownPlugins}>
+          {part.text}
+        </Streamdown>
+      );
     }
     case "reasoning": {
       return <AssistantReasoningPart part={part} />;
