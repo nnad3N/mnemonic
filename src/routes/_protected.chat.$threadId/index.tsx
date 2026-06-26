@@ -40,7 +40,7 @@ function RouteComponent() {
         viewportRef={stickToBottom.scrollRef}
       >
         <div
-          className="mx-auto flex w-full max-w-xl min-w-0 flex-col gap-2.5 pb-4"
+          className="mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-2.5 pb-4"
           ref={stickToBottom.contentRef}
         >
           {chat.messages.map((message, index) => (
@@ -60,7 +60,7 @@ function RouteComponent() {
         </div>
       </ScrollArea>
 
-      <div className="relative mx-auto flex w-full max-w-xl justify-center">
+      <div className="relative mx-auto flex w-full max-w-3xl justify-center">
         <ScrollToBottomButton />
         <ThreadComposer location="main" />
       </div>
