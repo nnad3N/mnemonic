@@ -45,9 +45,7 @@ export const ThreadChatProvider = ({
 
   return (
     <ThreadChatContext.Provider value={chat}>
-      {data.topicId && (
-        <ArtifactsSync threadId={threadId} topicId={data.topicId} />
-      )}
+      {data.topicId && <ArtifactsSync topicId={data.topicId} />}
       {children}
     </ThreadChatContext.Provider>
   );

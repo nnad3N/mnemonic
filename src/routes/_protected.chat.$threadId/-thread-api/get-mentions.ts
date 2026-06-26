@@ -102,6 +102,8 @@ export const mentionByIdQuery = ({
   artifactId,
 }: GetMentionByIdParams) =>
   queryOptions({
+    // without this the optimistic update for artifact upload might be discarded
+    refetchOnMount: false,
     queryFn: topicId
       ? async () => {
           return getMentionById({
