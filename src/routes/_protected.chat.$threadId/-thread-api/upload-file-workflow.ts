@@ -10,8 +10,8 @@ import * as v from "valibot";
 
 import { db } from "@/db";
 import { artifact } from "@/db/schema";
+import { isImageMimeType } from "@/lib/file-validation";
 import { getObject, statObject, S3Error } from "@/lib/s3";
-import { isImageMimeType } from "@/lib/supported-files";
 import {
   ARTIFACT_EMBEDDING_DIMENSION,
   ARTIFACT_EMBEDDINGS_INDEX,

@@ -17,6 +17,8 @@ export default defineConfig({
     typeAware: true,
   },
   rules: {
+    "unicorn/prefer-ternary": "off",
+    "unicorn/prefer-set-has": "off",
     "consistent-return": "off",
     "prefer-await-to-callbacks": "off",
     "func-names": "off",

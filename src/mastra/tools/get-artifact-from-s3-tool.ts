@@ -5,9 +5,12 @@ import { Result } from "better-result";
 import * as v from "valibot";
 
 import { db } from "@/db";
-import { LLM_NATIVE_IMAGE_MIME_TYPES } from "@/lib/llm-native-mime-types";
+import {
+  isImageMimeType,
+  isLLMNativeImageMimeType,
+  LLM_NATIVE_IMAGE_MIME_TYPES,
+} from "@/lib/file-validation";
 import { getObject } from "@/lib/s3";
-import { isImageMimeType } from "@/lib/supported-files";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context";
 
 const inputSchema = v.object({
@@ -73,7 +76,7 @@ export const getArtifactFromS3Tool = createTool({
       } satisfies GetArtifactError;
     }
 
-    if (!LLM_NATIVE_IMAGE_MIME_TYPES.includes(artifact.mimeType)) {
+    if (!isLLMNativeImageMimeType(artifact.mimeType)) {
       return {
         type: "error",
         message: `File "${artifact.displayName}" (${artifact.mimeType}) cannot be loaded directly. Use vector or graph search instead.`,

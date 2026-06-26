@@ -8,9 +8,9 @@ import { db } from "@/db";
 import { artifact } from "@/db/schema";
 import type { ArtifactUploadErrorShape } from "@/lib/errors/artifact-upload-error";
 import { ArtifactUploadError } from "@/lib/errors/artifact-upload-error";
+import { validateUploadFile } from "@/lib/file-validation";
 import { threadAccessMiddleware } from "@/lib/middleware/assert-thread-access";
 import { getPresignedPutUrl, S3Error } from "@/lib/s3";
-import { validateUploadFile } from "@/lib/supported-files";
 import { mastra } from "@/mastra";
 
 export const ARTIFACT_UPLOAD_TTL_SECONDS = 60;

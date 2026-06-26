@@ -1,12 +1,8 @@
+import { createMathPlugin } from "@streamdown/math";
 import type { FileUIPart, SourceDocumentUIPart, SourceUrlUIPart } from "ai";
 import { isToolUIPart } from "ai";
 import { FileIcon, FileTextIcon, LinkIcon } from "lucide-react";
-import { createMathPlugin } from "@streamdown/math";
 import { Streamdown } from "streamdown";
-
-const streamdownPlugins = {
-  math: createMathPlugin({ singleDollarTextMath: true }),
-};
 
 import { isWebSearchAgentToolPart } from "@/lib/ai-sdk/tool-parts";
 import { AssistantReasoningPart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-reasoning-part";
@@ -18,6 +14,10 @@ import type {
 } from "@/routes/_protected.chat.$threadId/-thread-types";
 
 import { WebSearchAgentCard } from "./web-search-agent-card";
+
+const streamdownPlugins = {
+  math: createMathPlugin({ singleDollarTextMath: true }),
+};
 
 type AssistantMessageProps = {
   isAnimating?: boolean;

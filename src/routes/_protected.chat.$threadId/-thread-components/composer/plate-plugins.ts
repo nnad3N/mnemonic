@@ -1,7 +1,10 @@
 import type { PluginConfig } from "platejs";
 import { createTPlatePlugin } from "platejs/react";
+import * as v from "valibot";
 
-type MentionKeyType = "artifact" | "selection";
+const mentionTypeSchema = v.picklist(["artifact", "attachment", "selection"]);
+
+type MentionKeyType = v.InferOutput<typeof mentionTypeSchema>;
 
 const MENTION_KEY_TYPE_SEPARATOR = "::";
 
@@ -30,11 +33,13 @@ export const parseMentionKey = (key: unknown): ParseMentionKeyResult => {
 
   const [type, value] = key.split(MENTION_KEY_TYPE_SEPARATOR);
 
-  if (type !== "artifact" && type !== "selection") {
+  const parsedType = v.safeParse(mentionTypeSchema, type);
+
+  if (!parsedType.success) {
     return { type: "unknown", value: key };
   }
 
-  return { type: type as MentionKeyType, value };
+  return { type: parsedType.output, value };
 };
 
 type ThreadComposerKeyboardConfig = PluginConfig<

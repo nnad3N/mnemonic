@@ -1,6 +1,5 @@
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
-import { useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import {
   Plate,
@@ -14,12 +13,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 import { useComposerActions } from "../../-hooks/use-composer-actions";
-import { threadQuery } from "../../-thread-api/get-thread";
 import type { ThreadInputLocation } from "../../../-chat-store";
 import { useChatStore } from "../../../-chat-store";
 import { ComposerFooter } from "./composer-footer";
 import {
-  getThreadEditorPlugins,
+  threadEditorPlugins,
   getThreadEditorId,
   markdownToPlate,
 } from "./plate";
@@ -35,15 +33,11 @@ export const ThreadComposer = ({ location }: ThreadComposerProps) => {
   const threadId = Route.useParams({
     select: (params) => params.threadId,
   });
-  const topicId = useSuspenseQuery({
-    ...threadQuery(threadId),
-    select: (data) => data.topicId,
-  }).data;
   const editorId = getThreadEditorId(threadId, location);
 
   const editor = usePlateEditor({
     id: editorId,
-    plugins: getThreadEditorPlugins(topicId),
+    plugins: threadEditorPlugins,
     autoSelect: "end",
   });
   const isEditorMounted = useEditorMounted(editorId);
@@ -76,8 +70,8 @@ export const ThreadComposer = ({ location }: ThreadComposerProps) => {
       return;
     }
 
-    const { editingState, persistedComposerState } = useChatStore.getState();
-    const persisted = persistedComposerState.get(threadId);
+    const { editingState, composerState } = useChatStore.getState();
+    const persisted = composerState.get(threadId);
 
     if (location === "main" && persisted) {
       editor.tf.setValue(persisted.value);
@@ -113,9 +107,7 @@ export const ThreadComposer = ({ location }: ThreadComposerProps) => {
           editor={editor}
           onChange={({ value }) => {
             if (location === "main") {
-              useChatStore
-                .getState()
-                .setPersistedComposerState(threadId, value);
+              useChatStore.getState().setComposerValue(threadId, value);
             }
           }}
         >

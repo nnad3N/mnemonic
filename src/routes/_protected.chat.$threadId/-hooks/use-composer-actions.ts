@@ -1,4 +1,5 @@
 import { getRouteApi } from "@tanstack/react-router";
+import { convertFileListToFileUIParts } from "ai";
 import { useEditorRef, useEditorSelector } from "platejs/react";
 
 import { useCreateThreadTitle } from "../-thread-api/create-thread-title";
@@ -11,6 +12,25 @@ import type { ThreadInputLocation } from "../../-chat-store";
 import { useChatStore } from "../../-chat-store";
 
 const Route = getRouteApi("/_protected/chat/$threadId");
+
+const getThreadFileParts = async (threadId: string) => {
+  const attachments = useChatStore
+    .getState()
+    .composerState.get(threadId)?.attachments;
+
+  if (!attachments) {
+    return [];
+  }
+
+  const dataTransfer = new DataTransfer();
+  for (const attachment of attachments.values()) {
+    if (attachment.status === "ready") {
+      dataTransfer.items.add(attachment.file);
+    }
+  }
+
+  return convertFileListToFileUIParts(dataTransfer.files);
+};
 
 export const useComposerActions = (location: ThreadInputLocation) => {
   const threadId = Route.useParams({
@@ -34,10 +54,26 @@ export const useComposerActions = (location: ThreadInputLocation) => {
   const createThreadTitleMutation = useCreateThreadTitle();
   const editingState = useChatStore((state) => state.editingState);
   const setEditingState = useChatStore((state) => state.setEditingState);
+  const hasBlockingAttachments = useChatStore((state) => {
+    const attachments = state.composerState.get(threadId)?.attachments;
+
+    if (!attachments) {
+      return false;
+    }
+
+    for (const attachment of attachments.values()) {
+      if (attachment.status !== "ready") {
+        return true;
+      }
+    }
+
+    return false;
+  });
 
   const canSend =
     !editor.meta.isFallback &&
     !isEditorEmpty &&
+    !hasBlockingAttachments &&
     chat.status !== "submitted" &&
     chat.status !== "streaming";
 
@@ -47,9 +83,10 @@ export const useComposerActions = (location: ThreadInputLocation) => {
     }
 
     const text = plateToMarkdown(editor).trim();
+    const files = await getThreadFileParts(threadId);
 
     if (location === "main") {
-      useChatStore.getState().removePersistedComposerState(threadId);
+      useChatStore.getState().removeComposerState(threadId);
     }
     if (location === "edit") {
       setEditingState(null);
@@ -59,8 +96,10 @@ export const useComposerActions = (location: ThreadInputLocation) => {
     editor.tf.focus({ edge: "endEditor" });
 
     createThreadTitleMutation.mutate({ text, threadId });
+
     await chat.sendMessage({
       text,
+      files,
       messageId: location === "edit" ? editingState?.messageId : undefined,
     });
   };
