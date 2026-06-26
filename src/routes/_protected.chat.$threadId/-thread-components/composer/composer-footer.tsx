@@ -17,7 +17,7 @@ import {
 import { findArtifactsBySha256 } from "../../-thread-api/find-artifacts-by-sha256";
 import { threadQuery } from "../../-thread-api/get-thread";
 import { useThreadChat } from "../../-thread-chat-provider";
-import type { ThreadInputLocation } from "../../-thread-store";
+import type { ThreadInputLocation } from "../../../-chat-store";
 import { getThreadEditorId } from "./plate";
 import { getMentionKey } from "./plate-plugins";
 

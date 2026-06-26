@@ -81,7 +81,6 @@ const Autocomplete = ({
     const pointRef = editor.api.pointRef(point);
     insertPointRef.current = pointRef;
 
-    // oxlint-disable-next-line typescript/consistent-return
     return () => {
       if (insertPointRef.current === pointRef) {
         insertPointRef.current = null;

@@ -10,7 +10,7 @@ import type { Value } from "platejs";
 import type { PlateEditor } from "platejs/react";
 import remarkGfm from "remark-gfm";
 
-import type { ThreadInputLocation } from "../../-thread-store";
+import type { ThreadInputLocation } from "../../../-chat-store";
 import {
   ThreadMentionElement,
   ThreadMentionElementStatic,

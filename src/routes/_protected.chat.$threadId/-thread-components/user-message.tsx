@@ -15,7 +15,7 @@ import {
 } from "@/routes/_protected.chat.$threadId/-thread-components/composer/thread-composer";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 
-import { useThreadStore } from "../-thread-store";
+import { useChatStore } from "../../-chat-store";
 
 type UserMessageProps = {
   message: ThreadUIMessage;
@@ -27,8 +27,8 @@ type UserMessageContentProps = {
 };
 
 export const UserMessage = ({ message, index }: UserMessageProps) => {
-  const editingState = useThreadStore((state) => state.editingState);
-  const setEditingState = useThreadStore((state) => state.setEditingState);
+  const editingState = useChatStore((state) => state.editingState);
+  const setEditingState = useChatStore((state) => state.setEditingState);
   const markdown =
     message.parts.find((part) => part.type === "text")?.text ?? "";
   const isEditing = editingState?.messageId === message.id;

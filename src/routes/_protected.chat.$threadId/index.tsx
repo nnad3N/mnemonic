@@ -13,8 +13,8 @@ import { ThreadComposer } from "@/routes/_protected.chat.$threadId/-thread-compo
 import { ThreadError } from "@/routes/_protected.chat.$threadId/-thread-components/thread-error";
 import { ThreadMessage } from "@/routes/_protected.chat.$threadId/-thread-components/thread-message";
 
+import { useChatStore } from "../-chat-store";
 import { useThreadChat } from "./-thread-chat-provider";
-import { useThreadStore } from "./-thread-store";
 
 export const Route = createFileRoute("/_protected/chat/$threadId/")({
   component: RouteComponent,
@@ -28,7 +28,7 @@ function RouteComponent() {
     initial: "instant",
   });
   const editingMessageIndex =
-    useThreadStore((state) => state.editingState?.messageIndex) ?? Infinity;
+    useChatStore((state) => state.editingState?.messageIndex) ?? Infinity;
 
   return (
     <StickToBottom

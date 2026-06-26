@@ -7,8 +7,8 @@ import {
   getThreadEditorId,
   plateToMarkdown,
 } from "../-thread-components/composer/plate";
-import type { ThreadInputLocation } from "../-thread-store";
-import { useThreadStore } from "../-thread-store";
+import type { ThreadInputLocation } from "../../-chat-store";
+import { useChatStore } from "../../-chat-store";
 
 const Route = getRouteApi("/_protected/chat/$threadId");
 
@@ -32,8 +32,8 @@ export const useComposerActions = (location: ThreadInputLocation) => {
 
   const chat = useThreadChat();
   const createThreadTitleMutation = useCreateThreadTitle();
-  const editingState = useThreadStore((state) => state.editingState);
-  const setEditingState = useThreadStore((state) => state.setEditingState);
+  const editingState = useChatStore((state) => state.editingState);
+  const setEditingState = useChatStore((state) => state.setEditingState);
 
   const canSend =
     !editor.meta.isFallback &&
@@ -48,9 +48,13 @@ export const useComposerActions = (location: ThreadInputLocation) => {
 
     const text = plateToMarkdown(editor).trim();
 
+    if (location === "main") {
+      useChatStore.getState().removePersistedComposerState(threadId);
+    }
     if (location === "edit") {
       setEditingState(null);
     }
+
     editor.tf.setValue();
     editor.tf.focus({ edge: "endEditor" });
 

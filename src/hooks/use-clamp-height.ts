@@ -42,7 +42,6 @@ export const useClampHeight = <T extends HTMLElement>({
     observer.observe(element);
     updateClampedState(element);
 
-    // oxlint-disable-next-line typescript/consistent-return
     return () => {
       observer.disconnect();
     };
