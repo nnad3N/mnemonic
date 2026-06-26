@@ -1,13 +1,9 @@
 import {
   DeleteObjectsCommand,
-  GetObjectCommand,
-  HeadObjectCommand,
-  PutObjectCommand,
-  S3Client,
+  S3Client as AwsS3Client,
 } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { ServiceException } from "@smithy/core/client";
 import { Result, TaggedError } from "better-result";
+import { S3Client } from "bun";
 
 import { env } from "@/env";
 
@@ -19,29 +15,30 @@ const S3_RETRY = {
 
 const S3_BATCH_DELETE_MAX_KEYS = 1000;
 
-export class S3Error extends TaggedError("S3Error")<{
-  message: string;
-  status?: number;
-}>() {}
+export class S3Error extends TaggedError("S3Error")<{ message: string }>() {}
 
 const toS3Error = (cause: unknown): S3Error => {
   if (S3Error.is(cause)) {
     return cause;
   }
 
-  if (ServiceException.isInstance(cause)) {
-    return new S3Error({
-      message: cause.message,
-      status: cause.$metadata.httpStatusCode,
-    });
+  if (cause instanceof Error) {
+    return new S3Error({ message: cause.message });
   }
 
-  return new S3Error({
-    message: "Unknown S3 error",
-  });
+  return new S3Error({ message: "Unknown S3 error" });
 };
 
 const client = new S3Client({
+  accessKeyId: env.S3_ACCESS_KEY_ID,
+  secretAccessKey: env.S3_SECRET_ACCESS_KEY,
+  bucket: env.S3_BUCKET,
+  endpoint: env.S3_ENDPOINT,
+  region: env.S3_REGION,
+  virtualHostedStyle: env.S3_FORCE_PATH_STYLE !== "true",
+});
+
+const awsClient = new AwsS3Client({
   credentials: {
     accessKeyId: env.S3_ACCESS_KEY_ID,
     secretAccessKey: env.S3_SECRET_ACCESS_KEY,
@@ -57,131 +54,78 @@ export const getPresignedPutUrl = async (input: {
   expiresIn: number;
   key: string;
 }) =>
-  Result.tryPromise(
-    {
-      try: async () =>
-        getSignedUrl(
-          client,
-          new PutObjectCommand({
-            Bucket: env.S3_BUCKET,
-            ContentLength: input.contentLength,
-            ContentType: input.contentType,
-            Key: input.key,
-          }),
-          { expiresIn: input.expiresIn }
-        ),
-      catch: toS3Error,
-    },
-    { retry: S3_RETRY }
-  );
+  Result.try({
+    try: () =>
+      client.presign(input.key, {
+        expiresIn: input.expiresIn,
+        method: "PUT",
+        type: input.contentType,
+      }),
+    catch: toS3Error,
+  });
 
 export const getPresignedGetUrl = async (input: {
   expiresIn: number;
   key: string;
-  responseContentDisposition?: string;
+  contentDisposition?: string;
 }) =>
+  Result.try({
+    try: () =>
+      client.presign(input.key, {
+        contentDisposition: input.contentDisposition,
+        expiresIn: input.expiresIn,
+      }),
+    catch: toS3Error,
+  });
+
+export const statObject = async (key: string) =>
   Result.tryPromise(
     {
-      try: async () =>
-        getSignedUrl(
-          client,
-          new GetObjectCommand({
-            Bucket: env.S3_BUCKET,
-            Key: input.key,
-            ResponseContentDisposition: input.responseContentDisposition,
-          }),
-          { expiresIn: input.expiresIn }
-        ),
+      try: async () => client.stat(key),
       catch: toS3Error,
     },
     { retry: S3_RETRY }
   );
 
-export const headObject = async (input: { key: string }) => {
-  const result = await Result.tryPromise(
+export const getObject = async (key: string) =>
+  Result.tryPromise(
     {
-      try: async () =>
-        client.send(
-          new HeadObjectCommand({
-            Bucket: env.S3_BUCKET,
-            Key: input.key,
-          })
-        ),
+      try: async () => client.file(key).bytes(),
       catch: toS3Error,
     },
     { retry: S3_RETRY }
   );
 
-  return result.andThen((output) => {
-    const contentLength = output.ContentLength;
-
-    if (contentLength === undefined) {
-      return Result.err(
-        new S3Error({
-          message: "Object exists but Content-Length is missing",
-        })
-      );
-    }
-
-    return Result.ok({ contentLength });
-  });
-};
-
-export const getObject = async (input: { key: string }) => {
-  const result = await Result.tryPromise(
-    {
-      try: async () =>
-        client.send(
-          new GetObjectCommand({
-            Bucket: env.S3_BUCKET,
-            Key: input.key,
-          })
-        ),
-      catch: toS3Error,
-    },
-    { retry: S3_RETRY }
-  );
-
-  if (Result.isError(result)) {
-    return Result.err(result.error);
-  }
-
-  const { Body } = result.value;
-
-  if (Body === undefined) {
-    return Result.err(
-      new S3Error({
-        message: "Object exists but body is missing",
-      })
-    );
-  }
-
-  const bytes = await Body.transformToByteArray();
-
-  return Result.ok(bytes);
-};
-
-const deleteObjectBatch = async (input: { keys: string[] }) =>
+export const deleteObject = async (key: string) =>
   Result.tryPromise(
     {
       try: async () => {
-        const output = await client.send(
+        await client.delete(key);
+      },
+      catch: toS3Error,
+    },
+    { retry: S3_RETRY }
+  );
+
+const deleteObjectBatch = async (keys: string[]) =>
+  Result.tryPromise(
+    {
+      try: async () => {
+        const output = await awsClient.send(
           new DeleteObjectsCommand({
             Bucket: env.S3_BUCKET,
             Delete: {
-              Objects: input.keys.map((Key) => ({ Key })),
+              Objects: keys.map((Key) => ({ Key })),
               Quiet: true,
             },
           })
         );
 
-        const failed = output.Errors ?? [];
+        const error = output.Errors?.at(0);
 
-        if (failed.length > 0) {
-          const first = failed[0];
-
+        if (error) {
           throw new S3Error({
-            message: first?.Message ?? "Batch delete failed",
+            message: error.Message ?? "Batch delete failed",
           });
         }
       },
@@ -207,7 +151,7 @@ export const deleteObjects = async (input: { keys: string[] }) => {
 
   const batchResults = await Promise.all(
     chunkKeys(input.keys, S3_BATCH_DELETE_MAX_KEYS).map(async (keys) =>
-      deleteObjectBatch({ keys })
+      deleteObjectBatch(keys)
     )
   );
   const [, errors] = Result.partition(batchResults);

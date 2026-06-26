@@ -80,7 +80,7 @@ export const getArtifactFromS3Tool = createTool({
       } satisfies GetArtifactError;
     }
 
-    const objectResult = await getObject({ key: artifact.s3Key });
+    const objectResult = await getObject(artifact.s3Key);
 
     if (Result.isError(objectResult)) {
       return {

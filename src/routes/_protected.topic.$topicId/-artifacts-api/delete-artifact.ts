@@ -7,7 +7,7 @@ import * as v from "valibot";
 import { db } from "@/db";
 import { artifact } from "@/db/schema";
 import { topicAccessMiddleware } from "@/lib/middleware/assert-thread-access";
-import { deleteObjects } from "@/lib/s3";
+import { deleteObject } from "@/lib/s3";
 import { ARTIFACT_EMBEDDINGS_INDEX } from "@/mastra/artifact-rag-config";
 import { pgVector } from "@/mastra/storage";
 
@@ -32,7 +32,7 @@ export const deleteArtifact = createServerFn({ method: "POST" })
       throw notFound();
     }
 
-    const s3Result = await deleteObjects({ keys: [artifactRow.s3Key] });
+    const s3Result = await deleteObject(artifactRow.s3Key);
 
     if (Result.isError(s3Result)) {
       throw s3Result.error;

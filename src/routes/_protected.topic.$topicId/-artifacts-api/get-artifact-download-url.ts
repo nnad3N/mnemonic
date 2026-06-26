@@ -33,7 +33,7 @@ export const getArtifactDownloadUrl = createServerFn({ method: "GET" })
     const urlResult = await getPresignedGetUrl({
       expiresIn: ARTIFACT_DOWNLOAD_URL_TTL_SECONDS,
       key: artifactRow.s3Key,
-      responseContentDisposition: `attachment; filename*=UTF-8''${encodeURIComponent(artifactRow.displayName)}`,
+      contentDisposition: `attachment; filename*=UTF-8''${encodeURIComponent(artifactRow.displayName)}`,
     });
 
     if (Result.isError(urlResult)) {
