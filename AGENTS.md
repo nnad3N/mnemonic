@@ -318,6 +318,18 @@ Always `preventDefault` + `stopPropagation` and forward to TanStack:
 
 ---
 
+## AI SDK UI tool parts
+
+Helpers for rendering AI SDK v6 `UIMessage` tool parts live in [`src/lib/ai-sdk/tool-parts.ts`](src/lib/ai-sdk/tool-parts.ts).
+
+- **`getToolPartStatus`** — maps a tool part's `state` to `pending` | `done` | `error`. Reuse this instead of duplicating switch logic in components.
+- **`isVisibleToolPart`** — whether a tool name renders visible UI during streaming (meta-line labels plus custom delegation cards). Use this in streaming placeholder checks.
+- **Subagent stream tool names** — Mastra supervisor `agents: { webSearch }` becomes `agent-webSearch`. Define `WEB_SEARCH_AGENT_TOOL_NAME` in [`web-search-agent.constants.ts`](src/mastra/agents/web-search-agent.constants.ts) (client-safe; no Mastra imports). Import the agent module only on the server.
+
+When adding a new subagent with custom UI, export its `agent-<key>` name from the agent module and extend `isVisibleToolPart`.
+
+---
+
 ## Internationalization (Paraglide)
 
 Messages live in [`messages/en.json`](messages/en.json) and [`messages/pl.json`](messages/pl.json). Use Paraglide getters from `@/paraglide/messages` (`m.message_key()`).

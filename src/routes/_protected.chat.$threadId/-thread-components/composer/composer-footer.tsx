@@ -44,19 +44,21 @@ export const ComposerFooter = ({ threadId, location }: ComposerFooterProps) => {
           threadId={threadId}
         />
       )}
-      {chat.status === "streaming" ? (
-        <Button
-          onClick={async () => {
-            await chat.stop();
-          }}
-          size="icon-xs"
-          type="button"
-        >
-          <SquareIcon />
-        </Button>
-      ) : (
-        <SendButton location={location} threadId={threadId} />
-      )}
+      <div className="ml-auto">
+        {chat.status === "streaming" ? (
+          <Button
+            onClick={async () => {
+              await chat.stop();
+            }}
+            size="icon-xs"
+            type="button"
+          >
+            <SquareIcon />
+          </Button>
+        ) : (
+          <SendButton location={location} threadId={threadId} />
+        )}
+      </div>
     </div>
   );
 };

@@ -1,8 +1,14 @@
 import type { FileUIPart, SourceDocumentUIPart, SourceUrlUIPart } from "ai";
 import { isToolUIPart } from "ai";
 import { FileIcon, FileTextIcon, LinkIcon } from "lucide-react";
+import { createMathPlugin } from "@streamdown/math";
 import { Streamdown } from "streamdown";
 
+const streamdownPlugins = {
+  math: createMathPlugin({ singleDollarTextMath: true }),
+};
+
+import { isWebSearchAgentToolPart } from "@/lib/ai-sdk/tool-parts";
 import { AssistantReasoningPart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-reasoning-part";
 import { AssistantToolPart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-tool-part";
 import { ThreadMetaLine } from "@/routes/_protected.chat.$threadId/-thread-components/thread-meta-line";
@@ -10,6 +16,8 @@ import type {
   ThreadUIMessage,
   ThreadUIMessagePart,
 } from "@/routes/_protected.chat.$threadId/-thread-types";
+
+import { WebSearchAgentCard } from "./web-search-agent-card";
 
 type AssistantMessageProps = {
   isAnimating?: boolean;
@@ -42,10 +50,18 @@ const AssistantMessagePart = ({
   isAnimating,
   part,
 }: AssistantMessagePartProps) => {
+  if (isWebSearchAgentToolPart(part)) {
+    return <WebSearchAgentCard part={part} />;
+  }
+
   // oxlint-disable-next-line typescript/switch-exhaustiveness-check
   switch (part.type) {
     case "text": {
-      return <Streamdown isAnimating={isAnimating}>{part.text}</Streamdown>;
+      return (
+        <Streamdown isAnimating={isAnimating} plugins={streamdownPlugins}>
+          {part.text}
+        </Streamdown>
+      );
     }
     case "reasoning": {
       return <AssistantReasoningPart part={part} />;

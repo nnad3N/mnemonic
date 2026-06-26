@@ -95,8 +95,14 @@ export const Route = createFileRoute("/api/chat")({
         }
 
         const stream = await handleChatStream<ThreadUIMessage>({
-          mastra,
           agentId: mnemonicAgentId,
+          defaultOptions: {
+            delegation: {
+              includeSubAgentToolResultsInModelContext: true,
+            },
+            maxSteps: 10,
+          },
+          mastra,
           params: {
             ...body,
             abortSignal: request.signal,
@@ -109,6 +115,7 @@ export const Route = createFileRoute("/api/chat")({
             requestContext,
           },
           sendReasoning: true,
+          sendSources: true,
           version: "v6",
         });
 

@@ -7,7 +7,7 @@ import { useClampHeight } from "@/hooks/use-clamp-height";
 import { threadQuery } from "@/routes/_protected.chat.$threadId/-thread-api/get-thread";
 import {
   getThreadStaticEditorPlugins,
-  markdownToPlate,
+  markdownToStaticPlate,
 } from "@/routes/_protected.chat.$threadId/-thread-components/composer/plate";
 import {
   ComposerWrapper,
@@ -71,7 +71,7 @@ const UserMessageContent = ({ markdown }: UserMessageContentProps) => {
     () =>
       createStaticEditor({
         plugins: getThreadStaticEditorPlugins(topicId),
-        value: (plate) => markdownToPlate(plate, markdown),
+        value: (plate) => markdownToStaticPlate(plate, markdown),
       }),
     [markdown, topicId]
   );

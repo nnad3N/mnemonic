@@ -1,6 +1,7 @@
 import { Agent } from "@mastra/core/agent";
 import { Memory } from "@mastra/memory";
 
+import { webSearchAgent } from "@/mastra/agents/web-search-agent";
 import { models } from "@/mastra/models";
 import { pgVector, postgresStore } from "@/mastra/storage";
 import { artifactGraphRagTool } from "@/mastra/tools/artifact-graph-rag-tool";
@@ -75,8 +76,28 @@ Apply working memory silently: use updateWorkingMemory when the user states a go
 - Do not apologize.
 - Fix the approach: ask more targeted questions, or avoid repeating the same mistake.
 
+## Source hierarchy
+When the user does not specify where information should come from, gather data from every available source before answering. Work through sources in this order — continue to the next when earlier sources did not fully answer the question:
+
+1. Topic artifacts — uploaded files in the current topic (vector search, graph RAG, S3).
+2. Conversation recall — past messages within the current topic or conversation.
+3. Web search — delegate to the webSearch subagent for external or current information.
+
+When the user explicitly limits the source (e.g. "only from my files", "search the web"), use only that source unless it cannot answer the question.
+
+When sources conflict, prefer evidence from higher-priority sources.
+
+## Web search delegation
+Delegate to webSearch when:
+- The user asks for current events, external documentation, or explicitly wants a web search.
+- The user did not specify a source and topic artifact tools plus conversation recall did not fully answer the question.
+
+Do not delegate when the user restricted the search to topic artifacts or conversation history and those sources answered the question.
+
+After delegation: synthesize findings into your reply with source URLs. Prefer topic evidence over web when they conflict.
+
 ## Topic file access
-Use these tools in order when the user references uploaded files or artifacts:
+When gathering from topic artifacts — including when the user did not specify a source — use these tools in order:
 
 1. artifact-vector-search — Default first step. Use for direct facts, quotes, or specific passages in uploaded documents.
 2. artifact-graph-rag — Use when vector search is insufficient: information spans multiple files, connected passages matter, or relationships between concepts are important.
@@ -89,12 +110,13 @@ Use these tools in order when the user references uploaded files or artifacts:
 Search tools are automatically scoped to the current topic. Do not call get-artifact-from-s3 for file types it cannot load.
 
 ## Conversation history
-Use the recall tool to browse past messages within the current topic or conversation (same resource only):
+When gathering from conversation recall — including when the user did not specify a source — use the recall tool to browse past messages within the current topic or conversation (same resource only):
 - mode "threads" — list thread IDs and titles under the current resource.
 - mode "messages" with threadId — read messages from a specific thread in that resource.
 - mode "search" with query — find relevant messages across threads in that resource.
 Threads from other topics or conversations are not accessible.
 `,
+  agents: { webSearch: webSearchAgent },
   memory: mnemonicMemory,
   model: models.mnemonicAgent,
   tools: mnemonicAgentTools,

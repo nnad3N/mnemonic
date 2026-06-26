@@ -1,6 +1,8 @@
 import type { DynamicToolUIPart, ToolUIPart } from "ai";
 import { getToolName } from "ai";
 
+import { getToolPartStatus } from "@/lib/ai-sdk/tool-parts";
+import type { ToolPartStatus } from "@/lib/ai-sdk/tool-parts";
 import { cn } from "@/lib/utils";
 import { ThreadMetaLine } from "@/routes/_protected.chat.$threadId/-thread-components/thread-meta-line";
 import { getToolLabels } from "@/routes/_protected.chat.$threadId/-thread-components/tool-labels";
@@ -9,31 +11,6 @@ import type { ThreadUITools } from "@/routes/_protected.chat.$threadId/-thread-t
 
 type AssistantToolPartProps = {
   part: DynamicToolUIPart | ToolUIPart<ThreadUITools>;
-};
-
-type ToolPartStatus = "done" | "error" | "pending";
-
-const getToolPartStatus = (
-  part: DynamicToolUIPart | ToolUIPart<ThreadUITools>
-): ToolPartStatus => {
-  switch (part.state) {
-    case "output-error":
-    case "output-denied": {
-      return "error";
-    }
-    case "output-available": {
-      return part.preliminary === true ? "pending" : "done";
-    }
-    case "input-streaming":
-    case "input-available":
-    case "approval-requested":
-    case "approval-responded": {
-      return "pending";
-    }
-    default: {
-      return "pending";
-    }
-  }
 };
 
 const getToolPartLabel = (
