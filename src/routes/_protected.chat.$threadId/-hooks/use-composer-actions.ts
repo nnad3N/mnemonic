@@ -2,7 +2,7 @@ import { getRouteApi } from "@tanstack/react-router";
 import { useEditorRef, useEditorSelector } from "platejs/react";
 
 import { useCreateThreadTitle } from "../-thread-api/create-thread-title";
-import { useThreadChat } from "../-thread-chat-context";
+import { useThreadChat } from "../-thread-chat-provider";
 import {
   getThreadEditorId,
   plateToMarkdown,

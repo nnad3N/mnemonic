@@ -2,7 +2,7 @@ import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { PlateController } from "platejs/react";
 
 import { Spinner } from "@/components/ui/spinner";
-import { ThreadChatProvider } from "@/routes/_protected.chat.$threadId/-thread-chat-context";
+import { ThreadChatProvider } from "@/routes/_protected.chat.$threadId/-thread-chat-provider";
 
 export const Route = createFileRoute("/_protected/chat/$threadId")({
   component: RouteComponent,
