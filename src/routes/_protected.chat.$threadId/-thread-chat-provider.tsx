@@ -3,7 +3,7 @@ import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { DefaultChatTransport } from "ai";
 import { panic } from "better-result";
 import type { PropsWithChildren } from "react";
-import { useContext, useState } from "react";
+import { use, useState } from "react";
 
 import { ArtifactsSync } from "../_protected.topic.$topicId/-topic-components/artifacts-sync";
 import { threadQuery } from "./-thread-api/get-thread";
@@ -54,7 +54,7 @@ export const ThreadChatProvider = ({
 };
 
 export const useThreadChat = () => {
-  const threadChat = useContext(ThreadChatContext);
+  const threadChat = use(ThreadChatContext);
 
   if (!threadChat) {
     panic("useThreadChatContext must be used within ThreadChatProvider");

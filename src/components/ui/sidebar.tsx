@@ -2,6 +2,7 @@
 
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
+import { panic } from "better-result";
 import { cva, type VariantProps } from "class-variance-authority";
 import { PanelLeftIcon } from "lucide-react";
 import * as React from "react";
@@ -45,9 +46,9 @@ type SidebarContextProps = {
 const SidebarContext = React.createContext<SidebarContextProps | null>(null);
 
 function useSidebar() {
-  const context = React.useContext(SidebarContext);
+  const context = React.use(SidebarContext);
   if (!context) {
-    throw new Error("useSidebar must be used within a SidebarProvider.");
+    panic("useSidebar must be used within a SidebarProvider.");
   }
 
   return context;

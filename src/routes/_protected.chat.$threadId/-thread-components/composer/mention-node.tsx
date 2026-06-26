@@ -54,11 +54,15 @@ const useThreadMentionState = (
     ...threadQuery(threadId),
     select: (data) => data.topicId,
   });
-  const { data: mention } = useQuery(
+  const { data: mention, isLoading } = useQuery(
     mentionByIdQuery({ topicId, artifactId: mentionId })
   );
 
-  if (mention?.status === "uploading" || mention?.status === "processing") {
+  if (
+    mention?.status === "uploading" ||
+    mention?.status === "processing" ||
+    isLoading
+  ) {
     return {
       status: "pending",
       type,
