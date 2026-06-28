@@ -23,7 +23,6 @@ import { findArtifactsBySha256 } from "../../-thread-api/find-artifacts-by-sha25
 import { threadQuery } from "../../-thread-api/get-thread";
 import { useThreadChat } from "../../-thread-chat-provider";
 import type { ThreadInputLocation } from "../../../-chat-store";
-import { useChatStore } from "../../../-chat-store";
 import { getThreadEditorId } from "./plate";
 import { getMentionKey } from "./plate-plugins";
 
@@ -131,29 +130,18 @@ const UploadButton = ({ location, threadId }: UploadButtonProps) => {
   const editorId = getThreadEditorId(threadId, location);
   const editor = useEditorRef(editorId);
   const isAttaching = useIsAddingAttachment(threadId);
-  const { mutate: addAttachment } = useAddAttachment(threadId);
+  const { mutate: addAttachment } = useAddAttachment(threadId, location);
 
   return (
     <UploadButtonPrimitive
       editor={editor}
       disabled={isAttaching}
-      onUpload={(fileEntries) => {
-        const existingAttachments = useChatStore
-          .getState()
-          .composerState.get(threadId)?.attachments;
-
+      onUpload={async (fileEntries) => {
         for (const { file, sha256 } of fileEntries) {
-          const existingAttachment = existingAttachments?.find(
-            (attachment) => attachment.sha256 === sha256
-          );
-          const attachmentId = existingAttachment?.id ?? nanoid();
-
-          if (!existingAttachment) {
-            addAttachment({ threadId, attachmentId, file, sha256 });
-          }
+          addAttachment({ file, sha256 });
 
           insertMentionItem(editor, {
-            key: getMentionKey({ type: "attachment", value: attachmentId }),
+            key: getMentionKey({ type: "attachment", value: sha256 }),
             text: file.name,
           });
         }
@@ -165,7 +153,9 @@ const UploadButton = ({ location, threadId }: UploadButtonProps) => {
 type UploadButtonPrimitiveProps = {
   editor: PlateEditor;
   disabled: boolean;
-  onUpload: (data: { file: File; sha256: string }[]) => Promise<void> | void;
+  onUpload: (
+    fileEntries: { file: File; sha256: string }[]
+  ) => Promise<void> | void;
 };
 
 const UPLOAD_ACCEPT = SUPPORTED_MIME_TYPES.join(",");

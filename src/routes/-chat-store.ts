@@ -2,18 +2,30 @@ import type { Value } from "platejs";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 
+import type { ThreadUIMessage } from "./_protected.chat.$threadId/-thread-types";
+
+type ThreadId = string;
+type TopicId = string;
+
 export type ThreadInputLocation = "main" | "edit";
 
-export type ComposerAttachment = {
-  id: string;
-  sha256: string;
-  status: "ready" | "pending" | "failed";
-  file: File;
-};
+export type ThreadAttachment =
+  | {
+      status: "ready" | "pending" | "failed";
+      location: ThreadInputLocation;
+      filename: string;
+      sha256: string;
+      file: File;
+    }
+  | {
+      status: "persisted";
+      location?: never;
+      filename: string;
+      sha256: string;
+    };
 
 type ComposerState = {
   value: Value;
-  attachments: ComposerAttachment[];
 };
 
 type EditingState = {
@@ -23,28 +35,31 @@ type EditingState = {
 };
 
 type State = {
-  composerState: Map<string, ComposerState>;
+  composerState: Map<ThreadId, ComposerState>;
   editingState: EditingState | null;
-  pollingTopicIds: Set<string>;
+  attachments: Map<ThreadId, ThreadAttachment[]>;
+  pollingTopicIds: Set<TopicId>;
 };
 
 type Actions = {
   setEditingState: (data: EditingState | null) => void;
-  setComposerValue: (threadId: string, value: Value) => void;
-  setComposerAttachment: (
-    threadId: string,
-    attachment: ComposerAttachment
+  setComposerValue: (threadId: ThreadId, value: Value) => void;
+  upsertAttachment: (
+    threadId: ThreadId,
+    attachment: Exclude<ThreadAttachment, { status: "persisted" }>
   ) => void;
-  removeComposerAttachment: (threadId: string, attachmentId: string) => void;
-  removeComposerState: (threadId: string) => void;
-  addPollingTopicId: (topicId: string) => void;
-  removePollingTopicId: (topicId: string) => void;
+  removeAttachment: (threadId: ThreadId, sha256: string) => void;
+  hydrateAttachments: (threadId: ThreadId, messages: ThreadUIMessage[]) => void;
+  removeComposerState: (threadId: ThreadId) => void;
+  addPollingTopicId: (topicId: TopicId) => void;
+  removePollingTopicId: (topicId: TopicId) => void;
 };
 
 export const useChatStore = create<State & Actions>()(
   immer((set) => ({
     composerState: new Map(),
     editingState: null,
+    attachments: new Map(),
     pollingTopicIds: new Set(),
     setEditingState: (data) => {
       set((state) => {
@@ -58,7 +73,6 @@ export const useChatStore = create<State & Actions>()(
         if (!composerState) {
           state.composerState.set(threadId, {
             value,
-            attachments: [],
           });
           return;
         }
@@ -66,40 +80,75 @@ export const useChatStore = create<State & Actions>()(
         composerState.value = value;
       });
     },
-    setComposerAttachment: (threadId, attachment) => {
+    upsertAttachment: (threadId, attachment) => {
       set((state) => {
-        const composerState = state.composerState.get(threadId);
+        const attachments = state.attachments.get(threadId);
 
-        if (!composerState) {
-          state.composerState.set(threadId, {
-            value: [],
-            attachments: [attachment],
-          });
+        if (!attachments) {
+          state.attachments.set(threadId, [attachment]);
           return;
         }
 
-        const existingAttachmentIndex = composerState.attachments.findIndex(
+        const attachmentIndex = attachments.findIndex(
           (a) => a.sha256 === attachment.sha256
         );
 
-        if (existingAttachmentIndex === -1) {
-          composerState.attachments.push(attachment);
+        if (attachmentIndex === -1) {
+          attachments.push(attachment);
         } else {
-          composerState.attachments[existingAttachmentIndex] = attachment;
+          attachments[attachmentIndex] = attachment;
         }
       });
     },
-    removeComposerAttachment: (threadId, attachmentId) => {
+    removeAttachment: (threadId, sha256) => {
       set((state) => {
-        const composerState = state.composerState.get(threadId);
+        const attachments = state.attachments.get(threadId);
+        const attachmentIndex =
+          attachments?.findIndex((a) => a.sha256 === sha256) ?? -1;
 
-        if (!composerState) {
+        if (attachmentIndex === -1) {
           return;
         }
 
-        composerState.attachments = composerState.attachments.filter(
-          (a) => a.id !== attachmentId
-        );
+        if (attachments?.[attachmentIndex].status === "persisted") {
+          return;
+        }
+
+        attachments?.splice(attachmentIndex, 1);
+      });
+    },
+    hydrateAttachments: (threadId, messages) => {
+      set((state) => {
+        const attachments: ThreadAttachment[] = [];
+
+        for (const message of messages) {
+          for (const attachment of message.metadata?.attachments ?? []) {
+            attachments.push({
+              status: "persisted",
+              filename: attachment.filename,
+              sha256: attachment.sha256,
+            });
+          }
+        }
+
+        const storedAttachments = state.attachments.get(threadId) ?? [];
+
+        for (const attachment of storedAttachments) {
+          // Skip persisted attachments, some may be orphaned after editing a message
+          if (attachment.status === "persisted") {
+            continue;
+          }
+
+          const isPersisted = attachments.some(
+            (a) => a.sha256 === attachment.sha256
+          );
+
+          if (!isPersisted) {
+            attachments.push(attachment);
+          }
+        }
+
+        state.attachments.set(threadId, attachments);
       });
     },
     removeComposerState: (threadId) => {

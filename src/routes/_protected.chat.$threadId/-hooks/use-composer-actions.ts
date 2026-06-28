@@ -8,28 +8,51 @@ import {
   getThreadEditorId,
   plateToMarkdown,
 } from "../-thread-components/composer/plate";
+import type { ThreadMetadataAttachment } from "../-thread-types";
 import type { ThreadInputLocation } from "../../-chat-store";
 import { useChatStore } from "../../-chat-store";
 
 const Route = getRouteApi("/_protected/chat/$threadId");
 
-const getThreadFileParts = async (threadId: string) => {
-  const attachments = useChatStore
-    .getState()
-    .composerState.get(threadId)?.attachments;
+const getThreadAttachments = async (
+  threadId: string,
+  location: ThreadInputLocation
+) => {
+  const attachments = useChatStore.getState().attachments.get(threadId);
 
   if (!attachments) {
-    return [];
+    return {
+      files: undefined,
+      metadataAttachments: undefined,
+    };
   }
 
-  const dataTransfer = new DataTransfer();
-  for (const attachment of attachments.values()) {
-    if (attachment.status === "ready") {
-      dataTransfer.items.add(attachment.file);
+  const files: File[] = [];
+  const metadataAttachments: ThreadMetadataAttachment[] = [];
+
+  for (const attachment of attachments) {
+    if (attachment.location === location && attachment.status === "ready") {
+      files.push(attachment.file);
+      metadataAttachments.push({
+        filename: attachment.filename,
+        mediaType: attachment.file.type,
+        sha256: attachment.sha256,
+      });
     }
   }
 
-  return convertFileListToFileUIParts(dataTransfer.files);
+  const dataTransfer = new DataTransfer();
+
+  for (const file of files) {
+    dataTransfer.items.add(file);
+  }
+
+  const fileParts = await convertFileListToFileUIParts(dataTransfer.files);
+
+  return {
+    metadataAttachments,
+    files: fileParts,
+  };
 };
 
 export const useComposerActions = (location: ThreadInputLocation) => {
@@ -54,21 +77,18 @@ export const useComposerActions = (location: ThreadInputLocation) => {
   const createThreadTitleMutation = useCreateThreadTitle();
   const editingState = useChatStore((state) => state.editingState);
   const setEditingState = useChatStore((state) => state.setEditingState);
-  const hasBlockingAttachments = useChatStore((state) => {
-    const attachments = state.composerState.get(threadId)?.attachments;
-
-    if (!attachments) {
-      return false;
-    }
-
-    for (const attachment of attachments.values()) {
-      if (attachment.status !== "ready") {
-        return true;
-      }
-    }
-
-    return false;
-  });
+  const removeAttachment = useChatStore((state) => state.removeAttachment);
+  const hasBlockingAttachments = useChatStore(
+    (state) =>
+      state.attachments
+        .get(threadId)
+        ?.some(
+          (attachment) =>
+            (attachment.status === "pending" ||
+              attachment.status === "failed") &&
+            attachment.location === location
+        ) ?? false
+  );
 
   const canSend =
     !editor.meta.isFallback &&
@@ -83,10 +103,17 @@ export const useComposerActions = (location: ThreadInputLocation) => {
     }
 
     const text = plateToMarkdown(editor).trim();
-    const files = await getThreadFileParts(threadId);
 
     if (location === "main") {
       useChatStore.getState().removeComposerState(threadId);
+    }
+    if (location === "edit" && editingState) {
+      useChatStore
+        .getState()
+        .hydrateAttachments(
+          threadId,
+          chat.messages.slice(0, editingState.messageIndex)
+        );
     }
     if (location === "edit") {
       setEditingState(null);
@@ -95,17 +122,35 @@ export const useComposerActions = (location: ThreadInputLocation) => {
     editor.tf.setValue();
     editor.tf.focus({ edge: "endEditor" });
 
-    createThreadTitleMutation.mutate({ text, threadId });
+    if (chat.messages.length < 2) {
+      createThreadTitleMutation.mutate({ text, threadId });
+    }
+
+    const { files, metadataAttachments } = await getThreadAttachments(
+      threadId,
+      location
+    );
 
     await chat.sendMessage({
       text,
       files,
+      metadata: {
+        attachments: metadataAttachments,
+      },
       messageId: location === "edit" ? editingState?.messageId : undefined,
     });
   };
 
   const cancelEditing = () => {
     setEditingState(null);
+
+    const attachments = useChatStore.getState().attachments.get(threadId) ?? [];
+
+    for (const attachment of attachments) {
+      if (attachment.location === "edit") {
+        removeAttachment(threadId, attachment.sha256);
+      }
+    }
   };
 
   const stopStream = async () => {

@@ -7,23 +7,23 @@ import {
   getExtractFileTextData,
 } from "../-thread-api/extract-file-text";
 import { threadMutationKeys } from "../-thread-api/query-keys";
+import type { ThreadInputLocation } from "../../-chat-store";
 import { useChatStore } from "../../-chat-store";
 
-export type AddAttachmentVars = {
-  threadId: string;
-  attachmentId: string;
+type AddAttachmentVars = {
   file: File;
   sha256: string;
 };
 
-export const useAddAttachment = (threadId: string) => {
-  const setComposerAttachment = useChatStore(
-    (state) => state.setComposerAttachment
-  );
+export const useAddAttachment = (
+  threadId: string,
+  location: ThreadInputLocation
+) => {
+  const upsertAttachment = useChatStore((state) => state.upsertAttachment);
 
   return useMutation({
     mutationKey: threadMutationKeys.addAttachment(threadId),
-    mutationFn: async ({ attachmentId, file, sha256 }: AddAttachmentVars) => {
+    mutationFn: async ({ file, sha256 }: AddAttachmentVars) => {
       let fileToAttach = file;
 
       if (!isLLMNativeImageMimeType(file.type)) {
@@ -33,28 +33,29 @@ export const useAddAttachment = (threadId: string) => {
         fileToAttach = new File([text], file.name, { type: "text/plain" });
       }
 
-      setComposerAttachment(threadId, {
-        id: attachmentId,
-        sha256,
+      upsertAttachment(threadId, {
         status: "ready",
+        location,
+        filename: fileToAttach.name,
+        sha256,
         file: fileToAttach,
       });
-
-      return { attachmentId };
     },
-    onMutate: ({ attachmentId, file, sha256 }) => {
-      setComposerAttachment(threadId, {
-        id: attachmentId,
-        sha256,
+    onMutate: ({ file, sha256 }) => {
+      upsertAttachment(threadId, {
         status: "pending",
+        location,
+        filename: file.name,
+        sha256,
         file,
       });
     },
-    onError: (_error, { attachmentId, file, sha256 }) => {
-      setComposerAttachment(threadId, {
-        id: attachmentId,
-        sha256,
+    onError: (_error, { file, sha256 }) => {
+      upsertAttachment(threadId, {
         status: "failed",
+        location,
+        filename: file.name,
+        sha256,
         file,
       });
     },

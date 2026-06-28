@@ -3,8 +3,9 @@ import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { DefaultChatTransport } from "ai";
 import { panic } from "better-result";
 import type { PropsWithChildren } from "react";
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 
+import { useChatStore } from "../-chat-store";
 import { ArtifactsSync } from "../_protected.topic.$topicId/-topic-components/artifacts-sync";
 import { threadQuery } from "./-thread-api/get-thread";
 import { threadKeys } from "./-thread-api/query-keys";
@@ -15,8 +16,8 @@ type ThreadChatProviderProps = {
 };
 
 export const ThreadChatProvider = ({
-  children,
   threadId,
+  children,
 }: PropsWithChildren<ThreadChatProviderProps>) => {
   const queryClient = useQueryClient();
   const { data } = useSuspenseQuery(threadQuery(threadId));
@@ -25,7 +26,9 @@ export const ThreadChatProvider = ({
       new Chat({
         id: threadId,
         messages: data.messages,
-        onFinish: () => {
+        onFinish: ({ messages }) => {
+          useChatStore.getState().hydrateAttachments(threadId, messages);
+
           void queryClient.invalidateQueries({
             queryKey: threadKeys.byId(threadId),
           });
@@ -42,6 +45,10 @@ export const ThreadChatProvider = ({
         }),
       })
   );
+
+  useEffect(() => {
+    useChatStore.getState().hydrateAttachments(threadId, data.messages);
+  }, [data.messages, threadId]);
 
   return (
     <ThreadChatContext.Provider value={chat}>

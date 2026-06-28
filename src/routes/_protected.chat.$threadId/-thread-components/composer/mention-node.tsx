@@ -17,6 +17,7 @@ import { SlateElement } from "platejs/static";
 import type { PropsWithChildren } from "react";
 import { useMemo, useState } from "react";
 import { useDebounce } from "use-debounce";
+import { useShallow } from "zustand/shallow";
 
 import {
   Autocomplete,
@@ -36,7 +37,7 @@ import {
 import { threadQuery } from "../../-thread-api/get-thread";
 import { isMentionPending } from "../../-thread-utils";
 import { useChatStore } from "../../../-chat-store";
-import type { ComposerAttachment } from "../../../-chat-store";
+import type { ThreadAttachment } from "../../../-chat-store";
 import type { MentionValue, ParseMentionKeyResult } from "./plate-plugins";
 import { getMentionKey, parseMentionKey } from "./plate-plugins";
 
@@ -57,20 +58,22 @@ const useThreadMentionState = (
     ...threadQuery(threadId),
     select: (data) => data.topicId,
   });
-  const attachment = useChatStore((state) =>
-    state.composerState
-      .get(threadId)
-      ?.attachments.find((a) => a.id === mentionId)
+  const attachment = useChatStore(
+    useShallow((state) =>
+      state.attachments.get(threadId)?.find((a) => a.sha256 === mentionId)
+    )
   );
-  const isAttachment = attachment !== undefined || type === "attachment";
+
   const { data: mention, isLoading } = useQuery({
     ...mentionByIdQuery({ topicId, artifactId: mentionId }),
     enabled: type === "artifact",
   });
 
-  if (isAttachment) {
+  if (attachment) {
+    const status = attachment.status;
+
     return {
-      status: attachment?.status ?? "ready",
+      status: status === "persisted" ? "ready" : status,
       type,
     };
   }
@@ -164,9 +167,7 @@ export const ThreadMentionElement = (
     from: "/_protected/chat/$threadId",
     select: (params) => params.threadId,
   });
-  const removeComposerAttachment = useChatStore(
-    (state) => state.removeComposerAttachment
-  );
+  const removeAttachment = useChatStore((state) => state.removeAttachment);
   const { value: mentionId } = parseMentionKey(element.key);
 
   return (
@@ -194,7 +195,7 @@ export const ThreadMentionElement = (
               e.preventDefault();
               e.stopPropagation();
               editor.tf.removeNodes({ at: path });
-              removeComposerAttachment(threadId, mentionId);
+              removeAttachment(threadId, mentionId);
               editor.tf.focus();
             }}
             type="button"
@@ -260,9 +261,7 @@ export const ThreadMentionInputElement = (
     ...threadQuery(threadId),
     select: (data) => data.topicId,
   }).data;
-  const attachments = useChatStore(
-    (state) => state.composerState.get(threadId)?.attachments
-  );
+  const attachments = useChatStore((state) => state.attachments.get(threadId));
   const [search, setSearch] = useState("");
   const [debouncedSearch] = useDebounce(search, 100);
   const mentions = useQuery({
@@ -278,26 +277,26 @@ export const ThreadMentionInputElement = (
 
   const items = useMemo(() => {
     const trimmedQuery = debouncedSearch.trim().toLowerCase();
-    let filteredAttachments: ComposerAttachment[] = [];
+    let filteredAttachments: ThreadAttachment[] = [];
 
     if (trimmedQuery.length > 0) {
       filteredAttachments =
         attachments?.filter((attachment) =>
-          attachment.file.name.toLowerCase().includes(trimmedQuery)
+          attachment.filename.toLowerCase().includes(trimmedQuery)
         ) ?? [];
     } else {
       filteredAttachments = attachments ?? [];
     }
 
-    const composerItems = filteredAttachments.map(
-      (artifact): MentionValue => ({
-        key: getMentionKey({ type: "artifact", value: artifact.id }),
-        text: artifact.file.name,
+    const composerAttachments = filteredAttachments.map(
+      (attachment): MentionValue => ({
+        key: getMentionKey({ type: "attachment", value: attachment.sha256 }),
+        text: attachment.filename,
       })
     );
     const mentionsData = mentions.data ?? [];
 
-    return [...composerItems, ...mentionsData];
+    return [...composerAttachments, ...mentionsData];
   }, [attachments, debouncedSearch, mentions.data]);
 
   return (
