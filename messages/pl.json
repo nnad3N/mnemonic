@@ -108,5 +108,6 @@
   "artifacts_load_error_title": "Nie udało się wczytać artefaktów",
   "artifacts_load_error_description": "Nie udało się wczytać artefaktów dla tego tematu. Sprawdź połączenie z internetem i spróbuj ponownie.",
   "artifacts_download_error_title": "Nie udało się pobrać artefaktu",
-  "artifacts_delete_error_title": "Nie udało się usunąć artefaktu"
+  "artifacts_delete_error_title": "Nie udało się usunąć artefaktu",
+  "artifacts_rename_error_title": "Nie udało się zmienić nazwy artefaktu"
 }

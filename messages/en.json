@@ -107,5 +107,6 @@
   "artifacts_load_error_title": "Could not load artifacts",
   "artifacts_load_error_description": "We couldn't load the artifacts for this topic. Check your connection and try again.",
   "artifacts_download_error_title": "Could not download artifact",
-  "artifacts_delete_error_title": "Could not delete artifact"
+  "artifacts_delete_error_title": "Could not delete artifact",
+  "artifacts_rename_error_title": "Could not rename artifact"
 }
