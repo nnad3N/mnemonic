@@ -36,7 +36,6 @@ const sanitizeTitle = (value: string) => {
 };
 
 const createThreadTitleSchema = v.object({
-  threadId: v.pipe(v.string(), v.nanoid()),
   text: v.pipe(v.string(), v.nonEmpty()),
 });
 
@@ -85,11 +84,16 @@ export const createThreadTitle = createServerFn({ method: "POST" })
     };
   });
 
+type CreateThreadTitleVars = {
+  threadId: string;
+  text: string;
+};
+
 export const useCreateThreadTitle = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: v.InferInput<typeof createThreadTitleSchema>) =>
+    mutationFn: async (data: CreateThreadTitleVars) =>
       createThreadTitle({ data }),
     onSuccess: (thread) => {
       if (thread === null) {

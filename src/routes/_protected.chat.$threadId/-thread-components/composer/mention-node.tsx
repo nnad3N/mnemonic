@@ -54,10 +54,6 @@ const useThreadMentionState = (
     from: "/_protected/chat/$threadId",
     select: (params) => params.threadId,
   });
-  const { data: topicId } = useSuspenseQuery({
-    ...threadQuery(threadId),
-    select: (data) => data.topicId,
-  });
   const attachment = useChatStore(
     useShallow((state) =>
       state.attachments.get(threadId)?.find((a) => a.sha256 === mentionId)
@@ -65,7 +61,7 @@ const useThreadMentionState = (
   );
 
   const { data: mention, isLoading } = useQuery({
-    ...mentionByIdQuery({ topicId, artifactId: mentionId }),
+    ...mentionByIdQuery({ artifactId: mentionId }),
     enabled: type === "artifact",
   });
 

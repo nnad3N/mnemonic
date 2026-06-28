@@ -58,7 +58,7 @@ export const ArtifactRow = ({ artifact, topicId }: ArtifactRowProps) => {
   const downloadMutation = useMutation({
     mutationFn: async () =>
       getArtifactDownloadUrl({
-        data: { artifactId: artifact.id, topicId },
+        data: { artifactId: artifact.id },
       }),
     onError: () => {
       toast.error(m.artifacts_download_error_title(), {
@@ -180,7 +180,7 @@ const RenameArtifactField = ({
   const renameMutation = useMutation({
     mutationFn: async (displayName: string) => {
       await renameArtifact({
-        data: { artifactId: artifact.id, displayName, topicId },
+        data: { artifactId: artifact.id, displayName },
       });
     },
     onError: () => {

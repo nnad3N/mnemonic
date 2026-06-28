@@ -7,14 +7,13 @@ import { artifact } from "@/db/schema";
 import { topicAccessMiddleware } from "@/lib/middleware/assert-thread-access";
 
 const findArtifactsBySha256InputSchema = v.object({
-  topicId: v.pipe(v.string(), v.nanoid()),
   sha256s: v.array(v.pipe(v.string(), v.nonEmpty())),
 });
 
 export const findArtifactsBySha256 = createServerFn({ method: "GET" })
   .inputValidator(findArtifactsBySha256InputSchema)
   .middleware([topicAccessMiddleware])
-  .handler(async ({ data }) => {
+  .handler(async ({ context, data }) => {
     return db
       .select({
         id: artifact.id,
@@ -24,7 +23,7 @@ export const findArtifactsBySha256 = createServerFn({ method: "GET" })
       .from(artifact)
       .where(
         and(
-          eq(artifact.topicId, data.topicId),
+          eq(artifact.topicId, context.topic.id),
           inArray(artifact.sha256, data.sha256s)
         )
       );

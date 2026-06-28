@@ -70,7 +70,6 @@ export const createTopicConversation = createServerFn({ method: "POST" })
   .inputValidator(
     v.object({
       title: v.pipe(v.string(), v.nonEmpty()),
-      topicId: v.pipe(v.string(), v.nanoid()),
     })
   )
   .middleware([topicAccessMiddleware])

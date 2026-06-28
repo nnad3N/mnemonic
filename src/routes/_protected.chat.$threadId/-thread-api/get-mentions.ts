@@ -9,7 +9,10 @@ import * as v from "valibot";
 
 import { db } from "@/db";
 import { artifact } from "@/db/schema";
-import { topicAccessMiddleware } from "@/lib/middleware/assert-thread-access";
+import {
+  artifactAccessMiddleware,
+  topicAccessMiddleware,
+} from "@/lib/middleware/assert-thread-access";
 
 import { threadKeys } from "./query-keys";
 
@@ -30,13 +33,12 @@ const buildMentionsWhereClause = (topicId: string, query: string) => {
 
 const getMentionsInputSchema = v.object({
   query: v.optional(v.string(), ""),
-  topicId: v.pipe(v.string(), v.nanoid()),
 });
 
 export const getMentions = createServerFn({ method: "GET" })
   .inputValidator(getMentionsInputSchema)
   .middleware([topicAccessMiddleware])
-  .handler(async ({ data }) => {
+  .handler(async ({ context, data }) => {
     return db
       .select({
         id: artifact.id,
@@ -45,7 +47,7 @@ export const getMentions = createServerFn({ method: "GET" })
         status: artifact.status,
       })
       .from(artifact)
-      .where(buildMentionsWhereClause(data.topicId, data.query))
+      .where(buildMentionsWhereClause(context.topic.id, data.query))
       .orderBy(desc(artifact.createdAt))
       .limit(MENTIONS_QUERY_LIMIT);
   });
@@ -68,48 +70,27 @@ export const mentionsQuery = ({ topicId, query = "" }: MentionsQueryParams) =>
     placeholderData: keepPreviousData,
   });
 
-const getMentionByIdInputSchema = v.object({
-  topicId: v.pipe(v.string(), v.nanoid()),
-  artifactId: v.pipe(v.string(), v.nanoid()),
-});
-
 export const getMentionById = createServerFn({ method: "GET" })
-  .inputValidator(getMentionByIdInputSchema)
-  .middleware([topicAccessMiddleware])
-  .handler(async ({ data }) => {
-    const mention = await db.query.artifact.findFirst({
-      columns: {
-        id: true,
-        displayName: true,
-        status: true,
-      },
-      where: {
-        id: data.artifactId,
-        topicId: data.topicId,
-      },
-    });
-
-    return mention ?? null;
+  .middleware([artifactAccessMiddleware])
+  .handler(async ({ context }) => {
+    return {
+      displayName: context.artifact.displayName,
+      id: context.artifact.id,
+      status: context.artifact.status,
+    };
   });
 
 type GetMentionByIdParams = {
-  topicId?: string;
   artifactId: string;
 };
 
-export const mentionByIdQuery = ({
-  topicId,
-  artifactId,
-}: GetMentionByIdParams) =>
+export const mentionByIdQuery = ({ artifactId }: GetMentionByIdParams) =>
   queryOptions({
     // without this the optimistic update for artifact upload might be discarded
     refetchOnMount: false,
-    queryFn: topicId
-      ? async () => {
-          return getMentionById({
-            data: { topicId, artifactId },
-          });
-        }
-      : skipToken,
-    queryKey: threadKeys.mention({ topicId: topicId ?? "", artifactId }),
+    queryFn: async () =>
+      getMentionById({
+        data: { artifactId },
+      }),
+    queryKey: threadKeys.mention(artifactId),
   });
