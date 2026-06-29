@@ -1,5 +1,8 @@
 import { getRouteApi } from "@tanstack/react-router";
 import { convertFileListToFileUIParts } from "ai";
+import { ElementApi, TextApi } from "platejs";
+import type { Descendant } from "platejs";
+import type { PlateEditor } from "platejs/react";
 import { useEditorRef, useEditorSelector } from "platejs/react";
 
 import { useCreateThreadTitle } from "../-thread-api/create-thread-title";
@@ -13,6 +16,25 @@ import type { ThreadInputLocation } from "../../-chat-store";
 import { useChatStore } from "../../-chat-store";
 
 const Route = getRouteApi("/_protected/chat/$threadId");
+
+const hasComposerContent = (editor: PlateEditor, node: Descendant): boolean => {
+  // editor.api.isEmpty() treats whitespace text as content. We need whitespace
+  // to stay empty, while void nodes still count because they render visible
+  // chips with empty text children.
+  if (TextApi.isText(node)) {
+    return node.text.trim().length > 0;
+  }
+
+  if (!ElementApi.isElement(node)) {
+    return false;
+  }
+
+  if (editor.api.isVoid(node)) {
+    return true;
+  }
+
+  return node.children.some((child) => hasComposerContent(editor, child));
+};
 
 const getThreadAttachments = async (
   threadId: string,
@@ -67,7 +89,7 @@ export const useComposerActions = (location: ThreadInputLocation) => {
         return true;
       }
 
-      return plate.api.string([]).trim() === "";
+      return !plate.children.some((node) => hasComposerContent(plate, node));
     },
     [],
     { id: editorId }

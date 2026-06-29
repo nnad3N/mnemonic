@@ -58,6 +58,10 @@ const insertLinkNode = (
 };
 
 export const getComposerLinkLabel = (url: string) => {
+  if (!URL.canParse(url)) {
+    return url;
+  }
+
   const parsed = new URL(url);
 
   if (parsed.pathname === "/") {
