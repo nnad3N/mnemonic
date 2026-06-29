@@ -17,6 +17,7 @@ import {
   ThreadMentionElementStatic,
   ThreadMentionInputElement,
 } from "./mention-node";
+import { ThreadComposerFilePlugin } from "./plate-plugins/file";
 import { ThreadComposerKeyboardPlugin } from "./plate-plugins/keyboard";
 import { getComposerLinkLabel, ThreadLinkPlugin } from "./plate-plugins/link";
 import { ThreadComposerPastePlugin } from "./plate-plugins/paste";
@@ -64,6 +65,7 @@ export const threadEditorPlugins = [
   MentionInputPlugin.withComponent(ThreadMentionInputElement),
   ThreadLinkPlugin.withComponent(ThreadLinkElement),
   ThreadComposerKeyboardPlugin,
+  ThreadComposerFilePlugin,
   ThreadComposerPastePlugin,
 ];
 

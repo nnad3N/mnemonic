@@ -10,9 +10,11 @@ import {
 import { useEffect, useRef } from "react";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useDragOver } from "@/hooks/use-drag-over";
 import { cn } from "@/lib/utils";
 
 import { useComposerActions } from "../../-hooks/use-composer-actions";
+import { useComposerUpload } from "../../-hooks/use-composer-upload";
 import type { ThreadInputLocation } from "../../../-chat-store";
 import { useChatStore } from "../../../-chat-store";
 import { ComposerFooter } from "./composer-footer";
@@ -21,11 +23,21 @@ import {
   getThreadEditorId,
   markdownToPlate,
 } from "./plate";
+import { ThreadComposerFilePlugin } from "./plate-plugins/file";
 import { ThreadComposerKeyboardPlugin } from "./plate-plugins/keyboard";
+import {
+  insertComposerLink,
+  parseComposerLinkPasteSegments,
+} from "./plate-plugins/link";
 
 type ThreadComposerProps = {
   location: ThreadInputLocation;
 };
+
+const ALLOWED_DROP_TYPES = ["Files", "text/plain"] as const;
+
+const isAllowedDrop = (types: readonly string[]) =>
+  ALLOWED_DROP_TYPES.some((type) => types.includes(type));
 
 const Route = getRouteApi("/_protected/chat/$threadId");
 
@@ -44,7 +56,9 @@ export const ThreadComposer = ({ location }: ThreadComposerProps) => {
 
   const { cancelEditing, sendMessage, stopStream } =
     useComposerActions(location);
+  const { uploadFiles } = useComposerUpload(threadId, location);
   const composerRef = useRef<HTMLDivElement>(null);
+  const { dragOverProps, isDraggingOver, handleDrop } = useDragOver();
 
   useEffect(() => {
     if (location !== "edit") {
@@ -100,8 +114,63 @@ export const ThreadComposer = ({ location }: ThreadComposerProps) => {
     };
   }, [cancelEditing, editor, sendMessage, stopStream]);
 
+  useEffect(() => {
+    if (editor.meta.isFallback) {
+      return;
+    }
+
+    editor.setOption(ThreadComposerFilePlugin, "onUploadFiles", uploadFiles);
+
+    return () => {
+      editor.setOption(ThreadComposerFilePlugin, "onUploadFiles", undefined);
+    };
+  }, [editor, uploadFiles]);
+
   return (
-    <ComposerWrapper className="bg-input/50" ref={composerRef}>
+    <ComposerWrapper
+      className={cn(
+        "bg-input/50 transition-colors",
+        isDraggingOver && "border-ring"
+      )}
+      {...dragOverProps}
+      onDragOverCapture={(e) => {
+        e.preventDefault();
+
+        if (!isAllowedDrop(e.dataTransfer.types) || editor.meta.isFallback) {
+          e.dataTransfer.dropEffect = "none";
+          return;
+        }
+
+        e.dataTransfer.dropEffect = "copy";
+      }}
+      onDropCapture={handleDrop(async (e) => {
+        const files = [...e.dataTransfer.files];
+
+        if (files.length > 0) {
+          await uploadFiles(files);
+          return;
+        }
+
+        const text = e.dataTransfer.getData("text/plain");
+        const segments = parseComposerLinkPasteSegments(text);
+
+        if (!segments) {
+          return;
+        }
+
+        for (const [index, segment] of segments.entries()) {
+          if (segment.type === "text") {
+            editor.tf.insertText(segment.text);
+            continue;
+          }
+
+          insertComposerLink(editor, segment.url.href, {
+            trailingSpace: index === segments.length - 1,
+          });
+        }
+      })}
+      ref={composerRef}
+    >
       <ScrollArea className="*:data-[slot=scroll-area-scrollbar]:translate-x-1.5 *:data-[slot=scroll-area-viewport]:h-auto *:data-[slot=scroll-area-viewport]:max-h-42">
         <Plate
           editor={editor}
@@ -111,10 +180,16 @@ export const ThreadComposer = ({ location }: ThreadComposerProps) => {
             }
           }}
         >
-          <PlateContent className="p-1 outline-none" />
+          <PlateContent
+            onDrop={(e) => {
+              e.preventDefault();
+              return true;
+            }}
+            className="p-1 outline-none"
+          />
         </Plate>
       </ScrollArea>
-      <ComposerFooter location={location} threadId={threadId} />
+      <ComposerFooter location={location} />
     </ComposerWrapper>
   );
 };
