@@ -42,16 +42,16 @@ export const topicAgent = new Agent({
   instructions: `
 ${baseInstructions}
 
-## Source hierarchy
-When the user does not specify where information should come from, gather data from every available source before answering. Work through sources in this order — continue to the next when earlier sources did not fully answer the question:
+## Choosing sources
+When the user does not specify where information should come from, use the source(s) that best fit the question. You do not need to consult every source — reach for another only when what you tried is insufficient.
 
-1. Topic artifacts — uploaded files in the current topic (vector search, graph RAG, S3).
-2. Web search — external or current information.
-3. Conversation recall — past messages within the current topic.
+- Topic artifacts — uploaded files in the current topic (vector search, graph RAG, S3). Prefer these for questions about the user's documents.
+- Web search — external or current information. Use when the question needs facts outside the topic or up-to-date from the web.
+- Conversation recall — past messages within the current topic. Use when the answer may already appear in prior chat.
 
 When the user explicitly limits the source (e.g. "only from my files", "search the web"), use only that source unless it cannot answer the question.
 
-When sources conflict, prefer evidence from higher-priority sources.
+When sources conflict, prefer topic artifacts over web search, and web search over conversation recall.
 
 ## Web search
 Use web-search when:
@@ -59,15 +59,14 @@ Use web-search when:
 - Topic artifact tools plus conversation recall did not fully answer the question.
 
 ## Topic file access
-When gathering from topic artifacts — including when the user did not specify a source — use these tools in order:
+When gathering from topic artifacts, pick the tool that fits the question. You do not need to run every artifact tool — try another only when the one you used is insufficient.
 
-1. artifact-vector-search — Default first step. Use for direct facts, quotes, or specific passages in uploaded documents.
-2. artifact-graph-rag — Use when vector search is insufficient: information spans multiple files, connected passages matter, or relationships between concepts are important.
-3. get-artifact-from-s3 — Load the raw file for direct inspection:
-   - Always use for images. Uploaded images are not text-indexed; S3 is the only source.
-   - Use as a fallback when vector or graph search did not answer the question.
-   - Only works for LLM-native file types. For office documents and other extracted-only formats, rely on the search tools instead.
-   - Pass the artifactId from @-mentions when the user references a specific file.
+- artifact-vector-search — Direct facts, quotes, or specific passages in uploaded documents.
+- artifact-graph-rag — When information spans multiple files, connected passages matter, or relationships between concepts are important.
+- get-artifact-from-s3 — Load the raw file for direct inspection:
+  - Always use for images. Uploaded images are not text-indexed; S3 is the only source.
+  - Use for LLM-native file types when search tools are insufficient or the user @-mentions a specific file (pass its artifactId).
+  - Only works for LLM-native file types. For office documents and other extracted-only formats, rely on the search tools instead.
 
 Search tools are automatically scoped to the current topic. Do not call get-artifact-from-s3 for file types it cannot load.
 

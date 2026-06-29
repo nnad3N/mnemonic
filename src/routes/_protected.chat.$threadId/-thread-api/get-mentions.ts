@@ -1,24 +1,27 @@
-import {
-  keepPreviousData,
-  queryOptions,
-  skipToken,
-} from "@tanstack/react-query";
+import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq, ilike } from "drizzle-orm";
 import * as v from "valibot";
 
 import { db } from "@/db";
-import { artifact } from "@/db/schema";
-import {
-  artifactAccessMiddleware,
-  topicAccessMiddleware,
-} from "@/lib/middleware/assert-thread-access";
+import { artifact, topic } from "@/db/schema";
+import { artifactAccessMiddleware } from "@/lib/middleware/assert-thread-access";
+import { authMiddleware } from "@/lib/middleware/auth-middleware";
+import { getMemoryStore } from "@/mastra/memory";
 
 import { threadKeys } from "./query-keys";
 
 export const MENTIONS_QUERY_LIMIT = 20;
 
-const buildMentionsWhereClause = (topicId: string, query: string) => {
+type MentionType = "artifact" | "thread" | "topic";
+
+type MentionItem = {
+  displayName: string;
+  id: string;
+  type: MentionType;
+};
+
+const buildArtifactMentionsWhereClause = (topicId: string, query: string) => {
   const trimmedQuery = query.trim();
 
   if (trimmedQuery.length === 0) {
@@ -31,42 +34,117 @@ const buildMentionsWhereClause = (topicId: string, query: string) => {
   );
 };
 
+const buildTopicMentionsWhereClause = (userId: string, query: string) => {
+  const trimmedQuery = query.trim();
+
+  if (trimmedQuery.length === 0) {
+    return eq(topic.userId, userId);
+  }
+
+  return and(eq(topic.userId, userId), ilike(topic.title, `%${trimmedQuery}%`));
+};
+
+const titleMatchesQuery = (title: string, query: string) => {
+  const trimmedQuery = query.trim().toLowerCase();
+
+  return (
+    trimmedQuery.length === 0 || title.toLowerCase().includes(trimmedQuery)
+  );
+};
+
 const getMentionsInputSchema = v.object({
+  resourceId: v.pipe(v.string(), v.nonEmpty()),
   query: v.optional(v.string(), ""),
 });
 
 export const getMentions = createServerFn({ method: "GET" })
   .inputValidator(getMentionsInputSchema)
-  .middleware([topicAccessMiddleware])
+  .middleware([authMiddleware])
   .handler(async ({ context, data }) => {
-    return db
+    const ownedTopic = await db.query.topic.findFirst({
+      columns: { id: true },
+      where: {
+        id: data.resourceId,
+        userId: context.user.id,
+      },
+    });
+
+    if (ownedTopic) {
+      const memoryStore = await getMemoryStore();
+      const [artifactMentions, threadsResult] = await Promise.all([
+        db
+          .select({
+            id: artifact.id,
+            displayName: artifact.displayName,
+          })
+          .from(artifact)
+          .where(buildArtifactMentionsWhereClause(ownedTopic.id, data.query))
+          .orderBy(desc(artifact.createdAt))
+          .limit(MENTIONS_QUERY_LIMIT),
+        memoryStore.listThreads({
+          filter: { resourceId: ownedTopic.id },
+          orderBy: { direction: "DESC", field: "updatedAt" },
+          page: 0,
+          perPage: false,
+        }),
+      ]);
+
+      const mentions: MentionItem[] = artifactMentions.map((mention) => ({
+        ...mention,
+        type: "artifact",
+      }));
+
+      for (const thread of threadsResult.threads) {
+        const title = thread.title ?? "";
+
+        if (
+          titleMatchesQuery(title, data.query) &&
+          mentions.length < MENTIONS_QUERY_LIMIT
+        ) {
+          mentions.push({
+            displayName: title,
+            id: thread.id,
+            type: "thread",
+          });
+        }
+      }
+
+      return mentions;
+    }
+
+    const topicMentions = await db
       .select({
-        id: artifact.id,
-        displayName: artifact.displayName,
-        sha256: artifact.sha256,
-        status: artifact.status,
+        id: topic.id,
+        displayName: topic.title,
       })
-      .from(artifact)
-      .where(buildMentionsWhereClause(context.topic.id, data.query))
-      .orderBy(desc(artifact.createdAt))
+      .from(topic)
+      .where(buildTopicMentionsWhereClause(context.user.id, data.query))
+      .orderBy(desc(topic.updatedAt))
       .limit(MENTIONS_QUERY_LIMIT);
+
+    return topicMentions.map(
+      (mention): MentionItem => ({
+        ...mention,
+        type: "topic",
+      })
+    );
   });
 
 export type MentionsQueryParams = {
-  topicId?: string;
+  resourceId: string;
   query?: string;
 };
 
-export const mentionsQuery = ({ topicId, query = "" }: MentionsQueryParams) =>
+export const mentionsQuery = ({
+  resourceId,
+  query = "",
+}: MentionsQueryParams) =>
   queryOptions({
-    queryKey: [...threadKeys.mentions(topicId ?? ""), { query }] as const,
-    queryFn: topicId
-      ? async () => {
-          return getMentions({
-            data: { query, topicId },
-          });
-        }
-      : skipToken,
+    queryKey: [...threadKeys.mentions(resourceId), { query }] as const,
+    queryFn: async () =>
+      getMentions({
+        data: { query, resourceId },
+      }),
     placeholderData: keepPreviousData,
   });
 

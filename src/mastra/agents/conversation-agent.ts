@@ -36,11 +36,12 @@ export const conversationAgent = new Agent({
   instructions: `
 ${baseInstructions}
 
-## Source hierarchy
-When the user does not specify where information should come from, gather data from available sources in this order:
-1. Conversation recall — past messages in the current conversation only.
-2. Web search — current or external information.
-3. Topic delegation — use the topic agent when the user asks to pull information from a topic.
+## Choosing sources
+When the user does not specify where information should come from, use the source(s) that best fit the question. You do not need to consult every source — reach for another only when what you tried is insufficient.
+
+- Conversation recall — past messages in the current conversation only. Prefer this when the answer may already appear in prior chat.
+- Web search — current or external information. Use when the question needs facts outside this conversation or up-to-date from the web.
+- Topic delegation — use the topic agent when the user asks to pull information from a topic, its files, or its prior conversations.
 
 When the user explicitly limits the source, use only that source unless it cannot answer the question.
 

@@ -4,7 +4,8 @@ import { getToolName, isToolUIPart } from "ai";
 import { isKnownToolName } from "@/routes/_protected.chat.$threadId/-thread-components/tool-labels";
 import type { ThreadUIMessagePart } from "@/routes/_protected.chat.$threadId/-thread-types";
 
-const TOPIC_AGENT_TOOL_NAME = "topic-agent";
+/** Mastra supervisor `agents: { topic }` → AI SDK tool name `agent-topic`. */
+const TOPIC_AGENT_TOOL_NAME = "agent-topic";
 
 export type ToolPartStatus = "done" | "error" | "pending";
 
@@ -13,7 +14,7 @@ type ToolPartStatusInput = {
   state: DynamicToolUIPart["state"];
 };
 
-export type TopicAgentToolPart = ToolPartStatusInput;
+export type TopicAgentToolPart = DynamicToolUIPart & ToolPartStatusInput;
 
 export const getToolPartStatus = (
   part: ToolPartStatusInput
@@ -43,10 +44,5 @@ export const isVisibleToolPart = (toolName: string): boolean =>
 
 export const isTopicAgentToolPart = (
   part: ThreadUIMessagePart
-): part is ThreadUIMessagePart & TopicAgentToolPart => {
-  if (part.type === "dynamic-tool") {
-    return part.toolName === TOPIC_AGENT_TOOL_NAME;
-  }
-
-  return isToolUIPart(part) && getToolName(part) === TOPIC_AGENT_TOOL_NAME;
-};
+): part is ThreadUIMessagePart & TopicAgentToolPart =>
+  isToolUIPart(part) && getToolName(part) === TOPIC_AGENT_TOOL_NAME;

@@ -6,6 +6,8 @@ import {
   AlertTriangleIcon,
   FileIcon,
   Loader2Icon,
+  MessageSquareTextIcon,
+  MessagesSquareIcon,
   TextIcon,
   XIcon,
 } from "lucide-react";
@@ -14,7 +16,7 @@ import type { PlateElementProps } from "platejs/react";
 import { PlateElement, useFocused, useSelected } from "platejs/react";
 import type { SlateElementProps } from "platejs/static";
 import { SlateElement } from "platejs/static";
-import type { PropsWithChildren } from "react";
+import type { ComponentType, PropsWithChildren } from "react";
 import { useMemo, useState } from "react";
 import { useDebounce } from "use-debounce";
 import { useShallow } from "zustand/shallow";
@@ -36,14 +38,16 @@ import {
 } from "../../-thread-api/get-mentions";
 import { threadQuery } from "../../-thread-api/get-thread";
 import { isMentionPending } from "../../-thread-utils";
-import { useChatStore } from "../../../-chat-store";
 import type { ThreadAttachment } from "../../../-chat-store";
+import { useChatStore } from "../../../-chat-store";
 import type { MentionValue, ParseMentionKeyResult } from "./plate-plugins";
 import { getMentionKey, parseMentionKey } from "./plate-plugins";
 
+type MentionType = ParseMentionKeyResult["type"];
+
 type ThreadMentionState = {
   status?: "failed" | "pending" | "ready";
-  type: ParseMentionKeyResult["type"];
+  type: MentionType;
 };
 
 const useThreadMentionState = (
@@ -226,23 +230,6 @@ export const ThreadMentionElementStatic = (
   );
 };
 
-type MentionIconProps = {
-  className?: string;
-  mentionState: ThreadMentionState;
-};
-
-const MentionIcon = ({ className, mentionState }: MentionIconProps) => {
-  if (mentionState.status === "failed") {
-    return <AlertTriangleIcon className={className} />;
-  }
-
-  if (mentionState.type === "artifact") {
-    return <FileIcon className={className} />;
-  }
-
-  return <TextIcon className={className} />;
-};
-
 const onSelectItem = getMentionOnSelectItem();
 
 export const ThreadMentionInputElement = (
@@ -253,22 +240,27 @@ export const ThreadMentionInputElement = (
     from: "/_protected/chat/$threadId",
     select: (params) => params.threadId,
   });
-  const topicId = useSuspenseQuery({
+  const resourceId = useSuspenseQuery({
     ...threadQuery(threadId),
-    select: (data) => data.topicId,
+    select: (data) => data.resourceId,
   }).data;
   const attachments = useChatStore((state) => state.attachments.get(threadId));
   const [search, setSearch] = useState("");
   const [debouncedSearch] = useDebounce(search, 100);
   const mentions = useQuery({
-    ...mentionsQuery({ query: debouncedSearch, topicId }),
+    ...mentionsQuery({ query: debouncedSearch, resourceId }),
     select: (data) =>
-      data.map(
-        (mention): MentionValue => ({
-          key: getMentionKey({ type: "artifact", value: mention.id }),
-          text: mention.displayName,
-        })
-      ),
+      data
+        .filter(
+          (mention) => mention.type !== "thread" || mention.id !== threadId
+        )
+        .map(
+          (mention): MentionValue => ({
+            key: getMentionKey({ type: mention.type, value: mention.id }),
+            text: mention.displayName,
+            type: mention.type,
+          })
+        ),
   });
 
   const items = useMemo(() => {
@@ -288,6 +280,7 @@ export const ThreadMentionInputElement = (
       (attachment): MentionValue => ({
         key: getMentionKey({ type: "attachment", value: attachment.sha256 }),
         text: attachment.filename,
+        type: "attachment",
       })
     );
     const mentionsData = mentions.data ?? [];
@@ -318,6 +311,7 @@ export const ThreadMentionInputElement = (
                 }}
                 value={item}
               >
+                <MentionValueIcon type={item.type} />
                 {item.text}
               </AutocompleteItem>
             )}
@@ -327,4 +321,38 @@ export const ThreadMentionInputElement = (
       {props.children}
     </PlateElement>
   );
+};
+
+const mentionIconMap = {
+  artifact: FileIcon,
+  attachment: FileIcon,
+  selection: TextIcon,
+  thread: MessageSquareTextIcon,
+  topic: MessagesSquareIcon,
+  unknown: TextIcon,
+} satisfies Record<MentionType, ComponentType>;
+
+const MentionValueIcon = ({
+  type,
+  className,
+}: {
+  type: MentionType;
+  className?: string;
+}) => {
+  const Icon = mentionIconMap[type];
+
+  return <Icon className={className} />;
+};
+
+type MentionIconProps = {
+  className?: string;
+  mentionState: ThreadMentionState;
+};
+
+const MentionIcon = ({ className, mentionState }: MentionIconProps) => {
+  if (mentionState.status === "failed") {
+    return <AlertTriangleIcon className={className} />;
+  }
+
+  return <MentionValueIcon type={mentionState.type} className={className} />;
 };

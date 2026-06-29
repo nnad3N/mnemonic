@@ -2,7 +2,13 @@ import type { PluginConfig } from "platejs";
 import { createTPlatePlugin } from "platejs/react";
 import * as v from "valibot";
 
-const mentionTypeSchema = v.picklist(["artifact", "attachment", "selection"]);
+const mentionTypeSchema = v.picklist([
+  "artifact",
+  "attachment",
+  "selection",
+  "thread",
+  "topic",
+]);
 
 type MentionKeyType = v.InferOutput<typeof mentionTypeSchema>;
 
@@ -19,6 +25,7 @@ export const getMentionKey = (value: {
 export type MentionValue = {
   key: MentionKey;
   text: string;
+  type: MentionKeyType;
 };
 
 export type ParseMentionKeyResult = {
