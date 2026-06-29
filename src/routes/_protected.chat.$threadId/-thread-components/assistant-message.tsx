@@ -25,7 +25,6 @@ export const AssistantMessage = ({
   isAnimating = false,
   message,
 }: AssistantMessageProps) => {
-  console.log(message.parts);
   return (
     <div className="flex flex-col gap-1">
       {message.parts.map((part, i) => (
