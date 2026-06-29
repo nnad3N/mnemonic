@@ -1,5 +1,5 @@
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import { topicKeys } from "@/routes/_protected.topic.$topicId/-topic-api/query-keys";
 
@@ -15,52 +15,55 @@ type ArtifactsSyncProps = {
 
 export const ArtifactsSync = ({ topicId }: ArtifactsSyncProps) => {
   const queryClient = useQueryClient();
+  const previousPendingArtifactIds = useRef<string[]>([]);
   const isPolling = useChatStore((state) => state.pollingTopicIds.has(topicId));
-  const addPollingTopicId = useChatStore((state) => state.addPollingTopicId);
-  const removePollingTopicId = useChatStore(
-    (state) => state.removePollingTopicId
-  );
   const { data: pendingArtifacts } = useSuspenseQuery({
     queryFn: async () =>
       getPendingArtifacts({
         data: { topicId },
       }),
-    queryKey: [...topicKeys.artifacts(topicId), "pending"] as const,
+    select: (data) => data.map((artifact) => artifact.id),
+    queryKey: [topicId, "pending-artifacts"] as const,
     refetchInterval: isPolling ? POLL_MS : false,
   });
 
   useEffect(() => {
+    const { removePollingTopicId, addPollingTopicId } = useChatStore.getState();
+    const removedArtifactIds = previousPendingArtifactIds.current.filter(
+      (artifactId) => !pendingArtifacts.includes(artifactId)
+    );
+
+    previousPendingArtifactIds.current = pendingArtifacts;
+
     if (pendingArtifacts.length > 0) {
       addPollingTopicId(topicId);
-      return;
+    } else {
+      removePollingTopicId(topicId);
     }
 
-    for (const artifact of pendingArtifacts) {
+    for (const artifactId of removedArtifactIds) {
       void queryClient.invalidateQueries({
-        queryKey: threadKeys.mention(artifact.id),
+        queryKey: threadKeys.mention(artifactId),
       });
     }
 
-    void queryClient.invalidateQueries({
-      queryKey: threadKeys.mentions(topicId),
-    });
+    if (removedArtifactIds.length > 0) {
+      void queryClient.invalidateQueries({
+        queryKey: threadKeys.mentions(topicId),
+      });
 
-    void queryClient.invalidateQueries({
-      queryKey: topicKeys.artifacts(topicId),
-    });
+      void queryClient.invalidateQueries({
+        queryKey: topicKeys.artifacts(topicId),
+      });
+    }
+  }, [queryClient, topicId, pendingArtifacts]);
 
-    removePollingTopicId(topicId);
-
+  useEffect(() => {
     return () => {
-      removePollingTopicId(topicId);
+      previousPendingArtifactIds.current = [];
+      useChatStore.getState().removePollingTopicId(topicId);
     };
-  }, [
-    queryClient,
-    removePollingTopicId,
-    addPollingTopicId,
-    topicId,
-    pendingArtifacts,
-  ]);
+  }, [topicId]);
 
   return null;
 };
