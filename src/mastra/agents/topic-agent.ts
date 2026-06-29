@@ -2,12 +2,12 @@ import { Agent } from "@mastra/core/agent";
 import { Memory } from "@mastra/memory";
 
 import { baseInstructions } from "@/mastra/agents/base-instructions";
-import { google } from "@/mastra/google";
 import { models } from "@/mastra/models";
 import { pgVector, postgresStore } from "@/mastra/storage";
 import { artifactGraphRagTool } from "@/mastra/tools/artifact-graph-rag-tool";
 import { artifactVectorSearchTool } from "@/mastra/tools/artifact-vector-search-tool";
 import { getArtifactFromS3Tool } from "@/mastra/tools/get-artifact-from-s3-tool";
+import { webSearchTool } from "@/mastra/tools/web-search-tool";
 
 export const topicAgentId = "topic-agent";
 
@@ -32,9 +32,7 @@ export const topicAgentTools = {
   "artifact-graph-rag": artifactGraphRagTool,
   "artifact-vector-search": artifactVectorSearchTool,
   "get-artifact-from-s3": getArtifactFromS3Tool,
-  "web-search": google.tools.googleSearch({
-    needsApproval: false,
-  }),
+  "web-search": webSearchTool,
 } as const;
 
 export const topicAgent = new Agent({

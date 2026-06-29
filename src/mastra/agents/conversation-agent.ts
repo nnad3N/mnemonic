@@ -3,9 +3,9 @@ import { Memory } from "@mastra/memory";
 
 import { baseInstructions } from "@/mastra/agents/base-instructions";
 import { topicAgent } from "@/mastra/agents/topic-agent";
-import { google } from "@/mastra/google";
 import { models } from "@/mastra/models";
 import { pgVector, postgresStore } from "@/mastra/storage";
+import { webSearchTool } from "@/mastra/tools/web-search-tool";
 
 export const conversationAgentId = "conversation-agent";
 
@@ -27,9 +27,7 @@ export const conversationMemory = new Memory({
 });
 
 export const conversationAgentTools = {
-  "web-search": google.tools.googleSearch({
-    needsApproval: false,
-  }),
+  "web-search": webSearchTool,
 } as const;
 
 export const conversationAgent = new Agent({

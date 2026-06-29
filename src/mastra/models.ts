@@ -30,8 +30,8 @@ const embedding = wrapEmbeddingModel({
 
 export const models = {
   embedding,
-  conversationAgent: google("gemini-3.5-flash"),
-  topicAgent: google("gemini-3.5-flash"),
-  observationalMemory: google("gemini-3-flash-preview"),
+  conversationAgent: google("gemini-3.1-flash-lite-preview"),
+  topicAgent: google("gemini-3.1-flash-lite-preview"),
+  observationalMemory: google("gemini-3.1-flash-lite-preview"),
   threadTitle: google("gemini-2.5-flash-lite"),
 } as const;

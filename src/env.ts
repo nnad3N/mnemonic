@@ -11,6 +11,7 @@ export const env = createEnv({
   runtimeEnv: { ...import.meta.env, ...process.env },
 
   server: {
+    EXA_API_KEY: v.pipe(v.string(), v.nonEmpty()),
     GOOGLE_GENERATIVE_AI_API_KEY: v.pipe(v.string(), v.nonEmpty()),
     DATABASE_URL: v.pipe(v.string(), v.url()),
     S3_ACCESS_KEY_ID: v.pipe(v.string(), v.nonEmpty()),
