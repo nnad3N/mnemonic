@@ -32,6 +32,7 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
 - Use arrow functions for callbacks and short functions
 - Prefer `for...of` loops over `.forEach()` and indexed `for` loops
 - Use optional chaining (`?.`) and nullish coalescing (`??`) for safer property access
+- Prefer `.at(index)` over bracket indexing (`array[index]`) unless you have already verified the index exists (e.g. after a bounds check or when iterating with a known-valid index)
 - Prefer template literals over string concatenation
 - Use destructuring for object and array assignments
 - Use `const` by default, `let` only when reassignment is needed, never `var`

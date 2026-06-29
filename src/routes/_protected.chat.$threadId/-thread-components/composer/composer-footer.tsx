@@ -24,7 +24,7 @@ import { threadQuery } from "../../-thread-api/get-thread";
 import { useThreadChat } from "../../-thread-chat-provider";
 import type { ThreadInputLocation } from "../../../-chat-store";
 import { getThreadEditorId } from "./plate";
-import { getMentionKey } from "./plate-plugins";
+import { getMentionKey } from "./plate-plugins/mention-key";
 
 const insertMentionItem = getMentionOnSelectItem();
 

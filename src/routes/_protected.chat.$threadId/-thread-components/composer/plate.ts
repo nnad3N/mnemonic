@@ -11,12 +11,15 @@ import type { PlateEditor } from "platejs/react";
 import remarkGfm from "remark-gfm";
 
 import type { ThreadInputLocation } from "../../../-chat-store";
+import { ThreadLinkElement, ThreadLinkElementStatic } from "./link-node";
 import {
   ThreadMentionElement,
   ThreadMentionElementStatic,
   ThreadMentionInputElement,
 } from "./mention-node";
-import { ThreadComposerKeyboardPlugin } from "./plate-plugins";
+import { ThreadComposerKeyboardPlugin } from "./plate-plugins/keyboard";
+import { getComposerLinkLabel, ThreadLinkPlugin } from "./plate-plugins/link";
+import { ThreadComposerPastePlugin } from "./plate-plugins/paste";
 
 const sharedPlugins = [
   BaseBasicBlocksPlugin,
@@ -24,6 +27,22 @@ const sharedPlugins = [
   MarkdownPlugin.configure({
     options: {
       remarkPlugins: [remarkGfm, remarkMention],
+      rules: {
+        a: {
+          serialize: (node) => {
+            return {
+              type: "link",
+              children: [
+                {
+                  type: "text",
+                  value: getComposerLinkLabel(node.url),
+                },
+              ],
+              url: node.url,
+            };
+          },
+        },
+      },
     },
   }),
 ];
@@ -31,6 +50,7 @@ const sharedPlugins = [
 export const threadStaticEditorPlugins = [
   ...sharedPlugins,
   BaseMentionPlugin.withComponent(ThreadMentionElementStatic),
+  ThreadLinkPlugin.withComponent(ThreadLinkElementStatic),
 ];
 
 export const threadEditorPlugins = [
@@ -42,7 +62,9 @@ export const threadEditorPlugins = [
     },
   }).withComponent(ThreadMentionElement),
   MentionInputPlugin.withComponent(ThreadMentionInputElement),
+  ThreadLinkPlugin.withComponent(ThreadLinkElement),
   ThreadComposerKeyboardPlugin,
+  ThreadComposerPastePlugin,
 ];
 
 export const markdownToPlate = (editor: PlateEditor, markdown: string): Value =>

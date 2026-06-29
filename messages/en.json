@@ -98,6 +98,8 @@
   "chat_thread_tool_web_search_done": "Searched the web",
   "chat_thread_tool_web_search_error": "Couldn't search the web",
   "chat_thread_error_unknown": "Unknown error has occurred.",
+  "composer_link_open": "Open",
+  "composer_link_unlink": "Unlink",
   "artifacts_page_title": "Artifacts",
   "artifacts_search_placeholder": "Search artifacts…",
   "artifacts_delete_confirm_title": "Delete artifact?",

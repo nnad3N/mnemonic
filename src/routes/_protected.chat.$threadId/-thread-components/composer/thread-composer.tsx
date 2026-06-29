@@ -21,7 +21,7 @@ import {
   getThreadEditorId,
   markdownToPlate,
 } from "./plate";
-import { ThreadComposerKeyboardPlugin } from "./plate-plugins";
+import { ThreadComposerKeyboardPlugin } from "./plate-plugins/keyboard";
 
 type ThreadComposerProps = {
   location: ThreadInputLocation;

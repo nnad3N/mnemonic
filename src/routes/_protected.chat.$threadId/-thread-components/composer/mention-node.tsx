@@ -1,22 +1,11 @@
-import { useRender } from "@base-ui/react/use-render";
 import { getMentionOnSelectItem } from "@platejs/mention";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
-import {
-  AlertTriangleIcon,
-  FileIcon,
-  Loader2Icon,
-  MessageSquareTextIcon,
-  MessagesSquareIcon,
-  TextIcon,
-  XIcon,
-} from "lucide-react";
 import type { TComboboxInputElement, TMentionElement } from "platejs";
 import type { PlateElementProps } from "platejs/react";
 import { PlateElement, useFocused, useSelected } from "platejs/react";
 import type { SlateElementProps } from "platejs/static";
 import { SlateElement } from "platejs/static";
-import type { ComponentType, PropsWithChildren } from "react";
 import { useMemo, useState } from "react";
 import { useDebounce } from "use-debounce";
 import { useShallow } from "zustand/shallow";
@@ -40,8 +29,19 @@ import { threadQuery } from "../../-thread-api/get-thread";
 import { isMentionPending } from "../../-thread-utils";
 import type { ThreadAttachment } from "../../../-chat-store";
 import { useChatStore } from "../../../-chat-store";
-import type { MentionValue, ParseMentionKeyResult } from "./plate-plugins";
-import { getMentionKey, parseMentionKey } from "./plate-plugins";
+import {
+  MentionContent,
+  MentionLabel,
+  MentionRoot,
+  MentionIcon,
+  MentionRemoveIcon,
+} from "./mention";
+import type { MentionVariant } from "./mention";
+import type {
+  MentionValue,
+  ParseMentionKeyResult,
+} from "./plate-plugins/mention-key";
+import { getMentionKey, parseMentionKey } from "./plate-plugins/mention-key";
 
 type MentionType = ParseMentionKeyResult["type"];
 
@@ -94,67 +94,19 @@ const useThreadMentionState = (
   };
 };
 
-type ThreadMentionRootProps = PropsWithChildren<{
-  className?: string;
-  mentionState: ThreadMentionState;
-  render: useRender.ComponentProps<"span">["render"];
-}>;
+const getMentionVariant = (
+  mentionState: ThreadMentionState
+): MentionVariant => {
+  if (mentionState.status === "failed") {
+    return "error";
+  }
 
-const ThreadMentionRoot = ({
-  render,
-  className,
-  children,
-  mentionState,
-}: ThreadMentionRootProps) =>
-  useRender({
-    render,
-    props: {
-      className: cn(
-        "mx-px inline-block translate-y-0.25 rounded-sm border border-teal-200 bg-teal-100 px-1 py-0.5 align-baseline",
-        mentionState.status === "failed" &&
-          "border-destructive/15 bg-destructive/10",
-        !mentionState.status && "border-gray-300 bg-gray-200/50",
-        className
-      ),
-      children,
-    },
-  });
+  if (!mentionState.status) {
+    return "neutral";
+  }
 
-type ThreadMentionElementContentProps = {
-  mentionState: ThreadMentionState;
-  render: useRender.ComponentProps<"span">["render"];
+  return "teal";
 };
-
-const ThreadMentionElementContent = ({
-  render,
-  children,
-  mentionState,
-}: PropsWithChildren<ThreadMentionElementContentProps>) =>
-  useRender({
-    defaultTagName: "span",
-    render,
-    props: {
-      className: "flex items-center gap-1 text-sm leading-none select-none",
-      children: (
-        <>
-          <div className="relative size-3.25 shrink-0 [&_svg]:size-3.25">
-            {mentionState.status === "pending" ? (
-              <Loader2Icon className="animate-spin" />
-            ) : (
-              <>
-                <MentionIcon
-                  className="absolute inset-0 opacity-100 group-hover:opacity-0"
-                  mentionState={mentionState}
-                />
-                <XIcon className="absolute inset-0 scale-110 opacity-0 group-hover:opacity-100" />
-              </>
-            )}
-          </div>
-          <span className="max-w-48 truncate">{children}</span>
-        </>
-      ),
-    },
-  });
 
 export const ThreadMentionElement = (
   props: PlateElementProps<TMentionElement>
@@ -170,9 +122,11 @@ export const ThreadMentionElement = (
   const removeAttachment = useChatStore((state) => state.removeAttachment);
   const { value: mentionId } = parseMentionKey(element.key);
 
+  const isDisabled = mentionState.status === "pending";
+
   return (
-    <ThreadMentionRoot
-      mentionState={mentionState}
+    <MentionRoot
+      variant={getMentionVariant(mentionState)}
       className={cn(selected && focused && "ring-1 ring-ring")}
       render={(renderProps) => (
         <PlateElement
@@ -185,12 +139,11 @@ export const ThreadMentionElement = (
         />
       )}
     >
-      <ThreadMentionElementContent
-        mentionState={mentionState}
+      <MentionContent
         render={
           <button
-            className="group disabled:opacity-50"
-            disabled={mentionState.status === "pending"}
+            className="disabled:opacity-50"
+            disabled={isDisabled}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -202,10 +155,15 @@ export const ThreadMentionElement = (
           />
         }
       >
-        {props.element.value}
+        {isDisabled ? (
+          <MentionIcon variant={mentionState.type} />
+        ) : (
+          <MentionStateIcon mentionState={mentionState} />
+        )}
+        <MentionLabel>{props.element.value}</MentionLabel>
         {props.children}
-      </ThreadMentionElementContent>
-    </ThreadMentionRoot>
+      </MentionContent>
+    </MentionRoot>
   );
 };
 
@@ -215,18 +173,38 @@ export const ThreadMentionElementStatic = (
   const mentionState = useThreadMentionState(props.element);
 
   return (
-    <ThreadMentionRoot
-      mentionState={mentionState}
+    <MentionRoot
+      variant={getMentionVariant(mentionState)}
       render={(renderProps) => <SlateElement {...props} {...renderProps} />}
     >
-      <ThreadMentionElementContent
-        mentionState={mentionState}
-        render={<span />}
-      >
-        {props.element.value}
+      <MentionContent>
+        <MentionStateIcon mentionState={mentionState} />
+        <MentionLabel>{props.element.value}</MentionLabel>
         {props.children}
-      </ThreadMentionElementContent>
-    </ThreadMentionRoot>
+      </MentionContent>
+    </MentionRoot>
+  );
+};
+
+type MentionStateIconProps = {
+  mentionState: ThreadMentionState;
+};
+
+const MentionStateIcon = ({ mentionState }: MentionStateIconProps) => {
+  return (
+    <div className="relative size-3.25 shrink-0">
+      {mentionState.status === "pending" ? (
+        <MentionIcon variant="pending" className="animate-spin" />
+      ) : (
+        <>
+          <MentionIcon
+            variant={mentionState.type}
+            className="absolute inset-0 opacity-100 group-hover/mention:opacity-0"
+          />
+          <MentionRemoveIcon className="absolute inset-0 opacity-0 group-hover/mention:opacity-100" />
+        </>
+      )}
+    </div>
   );
 };
 
@@ -311,7 +289,7 @@ export const ThreadMentionInputElement = (
                 }}
                 value={item}
               >
-                <MentionValueIcon type={item.type} />
+                <MentionIcon variant={item.type} />
                 {item.text}
               </AutocompleteItem>
             )}
@@ -321,38 +299,4 @@ export const ThreadMentionInputElement = (
       {props.children}
     </PlateElement>
   );
-};
-
-const mentionIconMap = {
-  artifact: FileIcon,
-  attachment: FileIcon,
-  selection: TextIcon,
-  thread: MessageSquareTextIcon,
-  topic: MessagesSquareIcon,
-  unknown: TextIcon,
-} satisfies Record<MentionType, ComponentType>;
-
-const MentionValueIcon = ({
-  type,
-  className,
-}: {
-  type: MentionType;
-  className?: string;
-}) => {
-  const Icon = mentionIconMap[type];
-
-  return <Icon className={className} />;
-};
-
-type MentionIconProps = {
-  className?: string;
-  mentionState: ThreadMentionState;
-};
-
-const MentionIcon = ({ className, mentionState }: MentionIconProps) => {
-  if (mentionState.status === "failed") {
-    return <AlertTriangleIcon className={className} />;
-  }
-
-  return <MentionValueIcon type={mentionState.type} className={className} />;
 };
