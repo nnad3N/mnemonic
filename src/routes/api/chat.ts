@@ -8,7 +8,8 @@ import { db } from "@/db";
 import { applyMessageEdit } from "@/lib/chat/apply-message-edit";
 import { authMiddleware } from "@/lib/middleware/auth-middleware";
 import { mastra } from "@/mastra";
-import { mnemonicAgentId } from "@/mastra/agents/mnemonic-agent";
+import { conversationAgentId } from "@/mastra/agents/conversation-agent";
+import { topicAgentId } from "@/mastra/agents/topic-agent";
 import { getAgentMemory, getMemoryStore } from "@/mastra/memory";
 import type { MnemonicRequestContext } from "@/mastra/request-context";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
@@ -76,8 +77,10 @@ export const Route = createFileRoute("/api/chat")({
           return new Response("Not Found", { status: 404 });
         }
 
+        const agentId = topic ? topicAgentId : conversationAgentId;
+
         if (body.messageId) {
-          const memory = await getAgentMemory();
+          const memory = await getAgentMemory(agentId);
 
           await applyMessageEdit({
             memory,
@@ -95,7 +98,7 @@ export const Route = createFileRoute("/api/chat")({
         }
 
         const stream = await handleChatStream<ThreadUIMessage>({
-          agentId: mnemonicAgentId,
+          agentId,
           defaultOptions: {
             delegation: {
               includeSubAgentToolResultsInModelContext: true,

@@ -1,29 +1,29 @@
 import { getToolPartStatus } from "@/lib/ai-sdk/tool-parts";
 import type {
   ToolPartStatus,
-  WebSearchAgentToolPart,
+  TopicAgentToolPart,
 } from "@/lib/ai-sdk/tool-parts";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { ThreadMetaLine } from "@/routes/_protected.chat.$threadId/-thread-components/thread-meta-line";
 
-type WebSearchAgentCardProps = {
-  part: WebSearchAgentToolPart;
+type TopicAgentPartProps = {
+  part: TopicAgentToolPart;
 };
 
 const getStatusTitle = (status: ToolPartStatus): string => {
   if (status === "error") {
-    return m.chat_thread_tool_web_search_error();
+    return m.chat_thread_tool_topic_agent_error();
   }
 
   if (status === "done") {
-    return m.chat_thread_tool_web_search_done();
+    return m.chat_thread_tool_topic_agent_done();
   }
 
-  return m.chat_thread_tool_web_search_pending();
+  return m.chat_thread_tool_topic_agent_pending();
 };
 
-export const WebSearchAgentCard = ({ part }: WebSearchAgentCardProps) => {
+export const TopicAgentPart = ({ part }: TopicAgentPartProps) => {
   const status = getToolPartStatus(part);
 
   return (

@@ -28,10 +28,10 @@ export const TOOL_LABELS = {
     error: m.chat_thread_tool_recall_error,
     pending: m.chat_thread_tool_recall_pending,
   },
-  updateWorkingMemory: {
-    done: m.chat_thread_tool_save_context_done,
-    error: m.chat_thread_tool_save_context_error,
-    pending: m.chat_thread_tool_save_context_pending,
+  "web-search": {
+    done: m.chat_thread_tool_web_search_done,
+    error: m.chat_thread_tool_web_search_error,
+    pending: m.chat_thread_tool_web_search_pending,
   },
 } satisfies Record<keyof MnemonicUITools, ToolLabels>;
 

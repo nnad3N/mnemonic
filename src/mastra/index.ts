@@ -1,6 +1,7 @@
 import { Mastra } from "@mastra/core";
 
-import { mnemonicAgent } from "@/mastra/agents/mnemonic-agent";
+import { conversationAgent } from "@/mastra/agents/conversation-agent";
+import { topicAgent } from "@/mastra/agents/topic-agent";
 import {
   PG_VECTOR_STORE_NAME,
   pgVector,
@@ -9,7 +10,7 @@ import {
 import { processArtifactWorkflow } from "@/routes/_protected.chat.$threadId/-thread-api/upload-file-workflow";
 
 export const mastra = new Mastra({
-  agents: { mnemonicAgent },
+  agents: { conversationAgent, topicAgent },
   storage: postgresStore,
   vectors: { [PG_VECTOR_STORE_NAME]: pgVector },
   workflows: { "process-artifact": processArtifactWorkflow },

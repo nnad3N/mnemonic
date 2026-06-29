@@ -3,10 +3,15 @@ import type { MemoryStorage } from "@mastra/core/storage";
 import { panic } from "better-result";
 
 import { mastra } from "@/mastra";
-import { mnemonicAgentId } from "@/mastra/agents/mnemonic-agent";
+import type { conversationAgentId } from "@/mastra/agents/conversation-agent";
+import type { topicAgentId } from "@/mastra/agents/topic-agent";
 
-export const getAgentMemory = async (): Promise<MastraMemory> => {
-  const agent = mastra.getAgentById(mnemonicAgentId);
+type AgentWithMemoryId = typeof conversationAgentId | typeof topicAgentId;
+
+export const getAgentMemory = async (
+  agentId: AgentWithMemoryId
+): Promise<MastraMemory> => {
+  const agent = mastra.getAgentById(agentId);
   const memory = await agent.getMemory();
 
   if (memory === undefined) {
