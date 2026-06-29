@@ -18,6 +18,11 @@ export const TOOL_LABELS = {
     error: m.chat_thread_tool_search_files_error,
     pending: m.chat_thread_tool_search_files_pending,
   },
+  "access-topic": {
+    done: m.chat_thread_tool_access_topic_done,
+    error: m.chat_thread_tool_access_topic_error,
+    pending: m.chat_thread_tool_access_topic_pending,
+  },
   "get-artifact-from-s3": {
     done: m.chat_thread_tool_read_file_done,
     error: m.chat_thread_tool_read_file_error,

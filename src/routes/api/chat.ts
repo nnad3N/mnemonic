@@ -100,9 +100,6 @@ export const Route = createFileRoute("/api/chat")({
         const stream = await handleChatStream<ThreadUIMessage>({
           agentId,
           defaultOptions: {
-            delegation: {
-              includeSubAgentToolResultsInModelContext: true,
-            },
             maxSteps: 10,
           },
           mastra,
