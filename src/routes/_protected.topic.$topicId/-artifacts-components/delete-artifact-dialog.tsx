@@ -35,7 +35,7 @@ export const DeleteArtifactDialog = ({
   const deleteMutation = useMutation({
     mutationFn: async () => {
       await deleteArtifact({
-        data: { artifactId: artifact.id, topicId },
+        data: { artifactId: artifact.id },
       });
     },
     onError: () => {

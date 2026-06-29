@@ -10,7 +10,7 @@ import type { Value } from "platejs";
 import type { PlateEditor } from "platejs/react";
 import remarkGfm from "remark-gfm";
 
-import type { ThreadInputLocation } from "../../-thread-store";
+import type { ThreadInputLocation } from "../../../-chat-store";
 import {
   ThreadMentionElement,
   ThreadMentionElementStatic,
@@ -28,25 +28,20 @@ const sharedPlugins = [
   }),
 ];
 
-export const getThreadStaticEditorPlugins = (topicId?: string) => [
+export const threadStaticEditorPlugins = [
   ...sharedPlugins,
-  BaseMentionPlugin.configure({
-    enabled: !!topicId,
-  }).withComponent(ThreadMentionElementStatic),
+  BaseMentionPlugin.withComponent(ThreadMentionElementStatic),
 ];
 
-export const getThreadEditorPlugins = (topicId?: string) => [
+export const threadEditorPlugins = [
   ...sharedPlugins,
   MentionPlugin.configure({
-    enabled: !!topicId,
     options: {
       insertSpaceAfterMention: true,
       triggerPreviousCharPattern: /^$|^[\s"']$/,
     },
   }).withComponent(ThreadMentionElement),
-  MentionInputPlugin.configure({
-    enabled: !!topicId,
-  }).withComponent(ThreadMentionInputElement),
+  MentionInputPlugin.withComponent(ThreadMentionInputElement),
   ThreadComposerKeyboardPlugin,
 ];
 

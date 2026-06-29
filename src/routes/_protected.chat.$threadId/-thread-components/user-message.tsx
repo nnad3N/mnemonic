@@ -1,12 +1,9 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { useParams } from "@tanstack/react-router";
 import { createStaticEditor, PlateStatic } from "platejs/static";
 import { useMemo } from "react";
 
 import { useClampHeight } from "@/hooks/use-clamp-height";
-import { threadQuery } from "@/routes/_protected.chat.$threadId/-thread-api/get-thread";
 import {
-  getThreadStaticEditorPlugins,
+  threadStaticEditorPlugins,
   markdownToStaticPlate,
 } from "@/routes/_protected.chat.$threadId/-thread-components/composer/plate";
 import {
@@ -15,7 +12,7 @@ import {
 } from "@/routes/_protected.chat.$threadId/-thread-components/composer/thread-composer";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 
-import { useThreadStore } from "../-thread-store";
+import { useChatStore } from "../../-chat-store";
 
 type UserMessageProps = {
   message: ThreadUIMessage;
@@ -27,8 +24,8 @@ type UserMessageContentProps = {
 };
 
 export const UserMessage = ({ message, index }: UserMessageProps) => {
-  const editingState = useThreadStore((state) => state.editingState);
-  const setEditingState = useThreadStore((state) => state.setEditingState);
+  const editingState = useChatStore((state) => state.editingState);
+  const setEditingState = useChatStore((state) => state.setEditingState);
   const markdown =
     message.parts.find((part) => part.type === "text")?.text ?? "";
   const isEditing = editingState?.messageId === message.id;
@@ -54,26 +51,17 @@ export const UserMessage = ({ message, index }: UserMessageProps) => {
   );
 };
 const UserMessageContent = ({ markdown }: UserMessageContentProps) => {
-  const threadId = useParams({
-    from: "/_protected/chat/$threadId",
-    select: (params) => params.threadId,
-  });
-  const topicId = useSuspenseQuery({
-    ...threadQuery(threadId),
-    select: (data) => data.topicId,
-  }).data;
   const { isHeightClamped, maxHeight, ref } = useClampHeight<HTMLDivElement>({
     // text-sm line-height
     lineHeight: 1.25 / 0.875,
   });
-
   const editor = useMemo(
     () =>
       createStaticEditor({
-        plugins: getThreadStaticEditorPlugins(topicId),
+        plugins: threadStaticEditorPlugins,
         value: (plate) => markdownToStaticPlate(plate, markdown),
       }),
-    [markdown, topicId]
+    [markdown]
   );
 
   return (

@@ -10,8 +10,8 @@ import * as v from "valibot";
 
 import { db } from "@/db";
 import { artifact } from "@/db/schema";
-import { getObject, headObject, S3Error } from "@/lib/s3";
-import { isImageMimeType } from "@/lib/supported-files";
+import { isImageMimeType } from "@/lib/file-validation";
+import { getObject, statObject, S3Error } from "@/lib/s3";
 import {
   ARTIFACT_EMBEDDING_DIMENSION,
   ARTIFACT_EMBEDDINGS_INDEX,
@@ -68,15 +68,15 @@ const validateArtifactStep = createStep({
       throw new Error("Artifact is not awaiting upload");
     }
 
-    const headResult = await headObject({ key: row.s3Key });
+    const headResult = await statObject(row.s3Key);
 
     if (Result.isError(headResult)) {
       throw headResult.error;
     }
 
-    if (headResult.value.contentLength !== row.sizeBytes) {
+    if (headResult.value.size !== row.sizeBytes) {
       throw new S3Error({
-        message: `Uploaded size ${headResult.value.contentLength} does not match expected ${row.sizeBytes}`,
+        message: `Uploaded size ${headResult.value.size} does not match expected ${row.sizeBytes}`,
       });
     }
 
@@ -111,7 +111,7 @@ const processForRagStep = createStep({
       return { artifactId };
     }
 
-    const objectResult = await getObject({ key: s3Key });
+    const objectResult = await getObject(s3Key);
 
     if (Result.isError(objectResult)) {
       throw objectResult.error;

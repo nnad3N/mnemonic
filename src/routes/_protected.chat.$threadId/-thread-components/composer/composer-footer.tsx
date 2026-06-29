@@ -2,13 +2,18 @@ import { getMentionOnSelectItem } from "@platejs/mention";
 import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { ArrowUpIcon, PaperclipIcon, SquareIcon } from "lucide-react";
 import { nanoid } from "nanoid";
+import type { PlateEditor } from "platejs/react";
 import { useEditorRef } from "platejs/react";
 import { useRef } from "react";
 
 import { Button } from "@/components/ui/button";
+import { SUPPORTED_MIME_TYPES } from "@/lib/file-validation";
 import { hashFileContents } from "@/lib/hash";
-import { FILE_INPUT_ACCEPT } from "@/lib/supported-files";
 
+import {
+  useAddAttachment,
+  useIsAddingAttachment,
+} from "../../-hooks/use-add-attachment";
 import { useComposerActions } from "../../-hooks/use-composer-actions";
 import {
   useIsUploadingArtifact,
@@ -16,8 +21,8 @@ import {
 } from "../../-hooks/use-upload-artifact";
 import { findArtifactsBySha256 } from "../../-thread-api/find-artifacts-by-sha256";
 import { threadQuery } from "../../-thread-api/get-thread";
-import { useThreadChat } from "../../-thread-chat-context";
-import type { ThreadInputLocation } from "../../-thread-store";
+import { useThreadChat } from "../../-thread-chat-provider";
+import type { ThreadInputLocation } from "../../../-chat-store";
 import { getThreadEditorId } from "./plate";
 import { getMentionKey } from "./plate-plugins";
 
@@ -37,12 +42,14 @@ export const ComposerFooter = ({ threadId, location }: ComposerFooterProps) => {
 
   return (
     <div className="flex w-full items-center justify-between">
-      {topicId && (
-        <UploadButton
+      {topicId ? (
+        <TopicUploadButton
           location={location}
           topicId={topicId}
           threadId={threadId}
         />
+      ) : (
+        <UploadButton location={location} threadId={threadId} />
       )}
       <div className="ml-auto">
         {chat.status === "streaming" ? (
@@ -63,14 +70,17 @@ export const ComposerFooter = ({ threadId, location }: ComposerFooterProps) => {
   );
 };
 
-type UploadButtonProps = {
+type TopicUploadButtonProps = {
   location: ThreadInputLocation;
   topicId: string;
   threadId: string;
 };
 
-const UploadButton = ({ location, threadId, topicId }: UploadButtonProps) => {
-  const inputRef = useRef<HTMLInputElement>(null);
+const TopicUploadButton = ({
+  location,
+  threadId,
+  topicId,
+}: TopicUploadButtonProps) => {
   const editorId = getThreadEditorId(threadId, location);
   const editor = useEditorRef(editorId);
   const isUploading = useIsUploadingArtifact(threadId);
@@ -83,15 +93,90 @@ const UploadButton = ({ location, threadId, topicId }: UploadButtonProps) => {
   });
 
   return (
+    <UploadButtonPrimitive
+      editor={editor}
+      disabled={isUploading || isPending}
+      onUpload={async (fileEntries) => {
+        const existingArtifacts = await findDuplicateArtifacts(
+          fileEntries.map((entry) => entry.sha256)
+        );
+
+        for (const { file, sha256 } of fileEntries) {
+          const existingArtifact = existingArtifacts.find(
+            (artifact) => artifact.sha256 === sha256
+          );
+          const artifactId = existingArtifact?.id ?? nanoid();
+
+          if (!existingArtifact || existingArtifact.status === "failed") {
+            uploadArtifact({ topicId, artifactId, file, sha256 });
+          }
+
+          insertMentionItem(editor, {
+            key: getMentionKey({ type: "artifact", value: artifactId }),
+            text: file.name,
+          });
+        }
+      }}
+    />
+  );
+};
+
+type UploadButtonProps = {
+  location: ThreadInputLocation;
+  threadId: string;
+};
+
+const UploadButton = ({ location, threadId }: UploadButtonProps) => {
+  const editorId = getThreadEditorId(threadId, location);
+  const editor = useEditorRef(editorId);
+  const isAttaching = useIsAddingAttachment(threadId);
+  const { mutate: addAttachment } = useAddAttachment(threadId, location);
+
+  return (
+    <UploadButtonPrimitive
+      editor={editor}
+      disabled={isAttaching}
+      onUpload={async (fileEntries) => {
+        for (const { file, sha256 } of fileEntries) {
+          addAttachment({ file, sha256 });
+
+          insertMentionItem(editor, {
+            key: getMentionKey({ type: "attachment", value: sha256 }),
+            text: file.name,
+          });
+        }
+      }}
+    />
+  );
+};
+
+type UploadButtonPrimitiveProps = {
+  editor: PlateEditor;
+  disabled: boolean;
+  onUpload: (
+    fileEntries: { file: File; sha256: string }[]
+  ) => Promise<void> | void;
+};
+
+const UPLOAD_ACCEPT = SUPPORTED_MIME_TYPES.join(",");
+
+const UploadButtonPrimitive = ({
+  editor,
+  disabled,
+  onUpload,
+}: UploadButtonPrimitiveProps) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  return (
     <Button
       variant="ghost"
-      disabled={isUploading || isPending || editor.meta.isFallback}
+      disabled={disabled || editor.meta.isFallback}
       onClick={() => inputRef.current?.click()}
       size="icon-sm"
       type="button"
     >
       <input
-        accept={FILE_INPUT_ACCEPT}
+        accept={UPLOAD_ACCEPT}
         onChange={async (e) => {
           const files = e.target.files;
 
@@ -106,25 +191,7 @@ const UploadButton = ({ location, threadId, topicId }: UploadButtonProps) => {
             }))
           );
 
-          const existingArtifacts = await findDuplicateArtifacts(
-            fileEntries.map((entry) => entry.sha256)
-          );
-
-          for (const { file, sha256 } of fileEntries) {
-            const existingArtifact = existingArtifacts.find(
-              (artifact) => artifact.sha256 === sha256
-            );
-            const artifactId = existingArtifact?.id ?? nanoid();
-
-            if (!existingArtifact || existingArtifact.status === "failed") {
-              uploadArtifact({ topicId, artifactId, file, sha256 });
-            }
-
-            insertMentionItem(editor, {
-              key: getMentionKey({ type: "artifact", value: artifactId }),
-              text: file.name,
-            });
-          }
+          await onUpload(fileEntries);
 
           editor.tf.focus({ edge: "endEditor" });
 

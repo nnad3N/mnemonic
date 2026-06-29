@@ -7,7 +7,6 @@ This project uses **Ultracite**, a zero-config preset that enforces strict code 
 - **Format code**: `bun run format`
 - **Lint and autofix**: `bun run lint`
 - **Format and lint**: `bun run fix`
-- **Check for issues**: `bun run check`
 - **Typecheck only**: `bun run typecheck`
 - **Run tests**: `bun run test`
 - **Build**: `bun run build`
@@ -360,4 +359,4 @@ Oxlint + Oxfmt's linter will catch most issues automatically. Focus your attenti
 
 ---
 
-Most formatting and common issues are automatically fixed by Oxlint + Oxfmt. Run `bun run fix` before committing to ensure formatting compliance, and run `bun run check` before handing off broader changes.
+Most formatting and common issues are automatically fixed by Oxlint + Oxfmt. Run `bun run fix` before committing to ensure formatting compliance, and run `bun run typecheck` plus `bun run build` before handing off broader changes.

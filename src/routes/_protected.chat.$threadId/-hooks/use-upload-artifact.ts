@@ -84,14 +84,13 @@ export const useUploadArtifact = (threadId: string) => {
       await processArtifact({
         data: {
           artifactId,
-          threadId,
         },
       });
 
       return { artifactId };
     },
-    onMutate: async ({ topicId, artifactId, file }) => {
-      const mentionQuery = mentionByIdQuery({ topicId, artifactId });
+    onMutate: async ({ artifactId, file }) => {
+      const mentionQuery = mentionByIdQuery({ artifactId });
 
       await queryClient.cancelQueries({ queryKey: mentionQuery.queryKey });
 
@@ -101,8 +100,8 @@ export const useUploadArtifact = (threadId: string) => {
         status: "uploading" as const,
       }));
     },
-    onError: async (error, { topicId, artifactId }) => {
-      const mentionQuery = mentionByIdQuery({ topicId, artifactId });
+    onError: async (error, { artifactId }) => {
+      const mentionQuery = mentionByIdQuery({ artifactId });
 
       queryClient.setQueryData(mentionQuery.queryKey, (current) =>
         current ? { ...current, status: "failed" as const } : current
@@ -114,7 +113,6 @@ export const useUploadArtifact = (threadId: string) => {
             updateArtifactStatus({
               data: {
                 artifactId,
-                threadId,
                 status: "failed",
               },
             }),
@@ -131,7 +129,7 @@ export const useUploadArtifact = (threadId: string) => {
     onSettled: async (_data, _error, { topicId, artifactId }) => {
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: threadKeys.mention({ topicId, artifactId }),
+          queryKey: threadKeys.mention(artifactId),
         }),
         queryClient.invalidateQueries({
           queryKey: threadKeys.mentions(topicId),

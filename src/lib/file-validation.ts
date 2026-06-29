@@ -4,7 +4,9 @@ import { Result } from "better-result";
 
 import { ArtifactUploadError } from "@/lib/errors/artifact-upload-error";
 
-const SUPPORTED_MIME_TYPES = [
+export type MimeType = `${string}/${string}`;
+
+export const SUPPORTED_MIME_TYPES: MimeType[] = [
   "application/docbook+xml",
   "application/epub+zip",
   "application/gzip",
@@ -139,18 +141,41 @@ const SUPPORTED_MIME_TYPES = [
   "text/yaml",
 ];
 
-const MEBIBYTE = 1024 * 1024;
+export const LLM_NATIVE_IMAGE_MIME_TYPES: MimeType[] = [
+  "application/pdf",
+  "application/json",
+  "text/csv",
+  "text/html",
+  "text/markdown",
+  "text/plain",
+  "text/xml",
+  "text/x-markdown",
+  "text/yaml",
+  "image/apng",
+  "image/bmp",
+  "image/gif",
+  "image/heic",
+  "image/heif",
+  "image/jpeg",
+  "image/jp2",
+  "image/png",
+  "image/svg+xml",
+  "image/tiff",
+  "image/vnd.microsoft.icon",
+  "image/webp",
+  "image/x-icon",
+  "image/x-ms-bmp",
+];
 
-export const UPLOAD_INLINE_MAX_BYTES = 7 * MEBIBYTE;
-export const UPLOAD_PDF_MAX_BYTES = 50 * MEBIBYTE;
-
-export const getMaxUploadBytes = (mimeType: string): number =>
-  mimeType === "application/pdf"
-    ? UPLOAD_PDF_MAX_BYTES
-    : UPLOAD_INLINE_MAX_BYTES;
+export const UPLOAD_MAX_BYTES = 50 * 1024 * 1024;
 
 export const isSupportedMimeType = (mimeType: string): boolean =>
-  SUPPORTED_MIME_TYPES.includes(mimeType);
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+  SUPPORTED_MIME_TYPES.includes(mimeType as MimeType);
+
+export const isLLMNativeImageMimeType = (mimeType: string): boolean =>
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+  LLM_NATIVE_IMAGE_MIME_TYPES.includes(mimeType as MimeType);
 
 export const isImageMimeType = (mimeType: string): boolean =>
   mimeType.startsWith("image/");
@@ -167,9 +192,7 @@ export const validateUploadFile = (input: {
     );
   }
 
-  const maxBytes = getMaxUploadBytes(input.mimeType);
-
-  if (input.sizeBytes > maxBytes) {
+  if (input.sizeBytes > UPLOAD_MAX_BYTES) {
     return Result.err(
       new ArtifactUploadError({
         reason: "file-too-large",
@@ -179,5 +202,3 @@ export const validateUploadFile = (input: {
 
   return Result.ok();
 };
-
-export const FILE_INPUT_ACCEPT = SUPPORTED_MIME_TYPES.join(",");

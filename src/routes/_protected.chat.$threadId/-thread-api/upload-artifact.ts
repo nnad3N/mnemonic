@@ -8,9 +8,12 @@ import { db } from "@/db";
 import { artifact } from "@/db/schema";
 import type { ArtifactUploadErrorShape } from "@/lib/errors/artifact-upload-error";
 import { ArtifactUploadError } from "@/lib/errors/artifact-upload-error";
-import { threadAccessMiddleware } from "@/lib/middleware/assert-thread-access";
+import { validateUploadFile } from "@/lib/file-validation";
+import {
+  artifactAccessMiddleware,
+  threadAccessMiddleware,
+} from "@/lib/middleware/assert-thread-access";
 import { getPresignedPutUrl, S3Error } from "@/lib/s3";
-import { validateUploadFile } from "@/lib/supported-files";
 import { mastra } from "@/mastra";
 
 export const ARTIFACT_UPLOAD_TTL_SECONDS = 60;
@@ -54,7 +57,6 @@ const getPresignedUrlInputSchema = v.object({
   mimeType: v.pipe(v.string(), v.nonEmpty()),
   sha256: v.pipe(v.string(), v.length(64)),
   sizeBytes: v.pipe(v.number(), v.minValue(1)),
-  threadId: v.pipe(v.string(), v.nanoid()),
 });
 
 export const getPresignedUrl = createServerFn({ method: "POST" })
@@ -146,8 +148,6 @@ export const getPresignedUrl = createServerFn({ method: "POST" })
   });
 
 const updateArtifactStatusInputSchema = v.object({
-  artifactId: v.pipe(v.string(), v.nanoid()),
-  threadId: v.pipe(v.string(), v.nanoid()),
   status: v.pipe(
     v.string(),
     v.picklist(["uploading", "processing", "ready", "failed"])
@@ -156,34 +156,23 @@ const updateArtifactStatusInputSchema = v.object({
 
 export const updateArtifactStatus = createServerFn({ method: "POST" })
   .inputValidator(updateArtifactStatusInputSchema)
-  .middleware([threadAccessMiddleware])
-  .handler(async ({ data }) => {
+  .middleware([artifactAccessMiddleware])
+  .handler(async ({ context, data }) => {
     await db
       .update(artifact)
       .set({ status: data.status })
-      .where(eq(artifact.id, data.artifactId));
+      .where(eq(artifact.id, context.artifact.id));
   });
 
-const processArtifactInputSchema = v.object({
-  artifactId: v.pipe(v.string(), v.nanoid()),
-  threadId: v.pipe(v.string(), v.nanoid()),
-});
-
 export const processArtifact = createServerFn({ method: "POST" })
-  .inputValidator(processArtifactInputSchema)
-  .middleware([threadAccessMiddleware])
-  .handler(async ({ context, data }) => {
-    const topicId = await getTopicForUpload({
-      resourceId: context.thread.resourceId,
-      userId: context.user.id,
-    });
-
+  .middleware([artifactAccessMiddleware])
+  .handler(async ({ context }) => {
     const workflow = mastra.getWorkflow("process-artifact");
     const run = await workflow.createRun();
     const result = await run.start({
       inputData: {
-        artifactId: data.artifactId,
-        topicId,
+        artifactId: context.artifact.id,
+        topicId: context.topicId,
       },
     });
 
@@ -195,5 +184,5 @@ export const processArtifact = createServerFn({ method: "POST" })
       throw new Error("Artifact processing did not complete");
     }
 
-    return { artifactId: data.artifactId };
+    return { artifactId: context.artifact.id };
   });

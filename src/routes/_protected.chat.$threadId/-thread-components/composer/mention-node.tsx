@@ -15,8 +15,9 @@ import { PlateElement, useFocused, useSelected } from "platejs/react";
 import type { SlateElementProps } from "platejs/static";
 import { SlateElement } from "platejs/static";
 import type { PropsWithChildren } from "react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useDebounce } from "use-debounce";
+import { useShallow } from "zustand/shallow";
 
 import {
   Autocomplete,
@@ -34,6 +35,9 @@ import {
   mentionsQuery,
 } from "../../-thread-api/get-mentions";
 import { threadQuery } from "../../-thread-api/get-thread";
+import { isMentionPending } from "../../-thread-utils";
+import { useChatStore } from "../../../-chat-store";
+import type { ThreadAttachment } from "../../../-chat-store";
 import type { MentionValue, ParseMentionKeyResult } from "./plate-plugins";
 import { getMentionKey, parseMentionKey } from "./plate-plugins";
 
@@ -50,15 +54,27 @@ const useThreadMentionState = (
     from: "/_protected/chat/$threadId",
     select: (params) => params.threadId,
   });
-  const { data: topicId } = useSuspenseQuery({
-    ...threadQuery(threadId),
-    select: (data) => data.topicId,
-  });
-  const { data: mention } = useQuery(
-    mentionByIdQuery({ topicId, artifactId: mentionId })
+  const attachment = useChatStore(
+    useShallow((state) =>
+      state.attachments.get(threadId)?.find((a) => a.sha256 === mentionId)
+    )
   );
 
-  if (mention?.status === "uploading" || mention?.status === "processing") {
+  const { data: mention, isLoading } = useQuery({
+    ...mentionByIdQuery({ artifactId: mentionId }),
+    enabled: type === "artifact",
+  });
+
+  if (attachment) {
+    const status = attachment.status;
+
+    return {
+      status: status === "persisted" ? "ready" : status,
+      type,
+    };
+  }
+
+  if (isLoading || (mention && isMentionPending(mention))) {
     return {
       status: "pending",
       type,
@@ -66,7 +82,10 @@ const useThreadMentionState = (
   }
 
   return {
-    status: mention?.status,
+    status:
+      mention?.status === "ready" || mention?.status === "failed"
+        ? mention.status
+        : undefined,
     type,
   };
 };
@@ -136,10 +155,16 @@ const ThreadMentionElementContent = ({
 export const ThreadMentionElement = (
   props: PlateElementProps<TMentionElement>
 ) => {
-  const { editor, path } = props;
+  const { editor, path, element } = props;
   const selected = useSelected();
   const focused = useFocused();
-  const mentionState = useThreadMentionState(props.element);
+  const mentionState = useThreadMentionState(element);
+  const threadId = useParams({
+    from: "/_protected/chat/$threadId",
+    select: (params) => params.threadId,
+  });
+  const removeAttachment = useChatStore((state) => state.removeAttachment);
+  const { value: mentionId } = parseMentionKey(element.key);
 
   return (
     <ThreadMentionRoot
@@ -166,6 +191,7 @@ export const ThreadMentionElement = (
               e.preventDefault();
               e.stopPropagation();
               editor.tf.removeNodes({ at: path });
+              removeAttachment(threadId, mentionId);
               editor.tf.focus();
             }}
             type="button"
@@ -231,6 +257,7 @@ export const ThreadMentionInputElement = (
     ...threadQuery(threadId),
     select: (data) => data.topicId,
   }).data;
+  const attachments = useChatStore((state) => state.attachments.get(threadId));
   const [search, setSearch] = useState("");
   const [debouncedSearch] = useDebounce(search, 100);
   const mentions = useQuery({
@@ -244,11 +271,35 @@ export const ThreadMentionInputElement = (
       ),
   });
 
+  const items = useMemo(() => {
+    const trimmedQuery = debouncedSearch.trim().toLowerCase();
+    let filteredAttachments: ThreadAttachment[] = [];
+
+    if (trimmedQuery.length > 0) {
+      filteredAttachments =
+        attachments?.filter((attachment) =>
+          attachment.filename.toLowerCase().includes(trimmedQuery)
+        ) ?? [];
+    } else {
+      filteredAttachments = attachments ?? [];
+    }
+
+    const composerAttachments = filteredAttachments.map(
+      (attachment): MentionValue => ({
+        key: getMentionKey({ type: "attachment", value: attachment.sha256 }),
+        text: attachment.filename,
+      })
+    );
+    const mentionsData = mentions.data ?? [];
+
+    return [...composerAttachments, ...mentionsData];
+  }, [attachments, debouncedSearch, mentions.data]);
+
   return (
     <PlateElement {...props} as="span">
       <Autocomplete
         element={element}
-        items={mentions.data ?? []}
+        items={items}
         setValue={setSearch}
         trigger="@"
         value={search}

@@ -13,7 +13,6 @@ const listArtifactsInputSchema = v.object({
   page: v.pipe(v.number(), v.integer(), v.minValue(1)),
   pageSize: v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100)),
   search: v.optional(v.string(), ""),
-  topicId: v.pipe(v.string(), v.nanoid()),
 });
 
 const buildWhereClause = (topicId: string, search: string) => {
@@ -32,8 +31,8 @@ const buildWhereClause = (topicId: string, search: string) => {
 export const listArtifacts = createServerFn({ method: "GET" })
   .inputValidator(listArtifactsInputSchema)
   .middleware([topicAccessMiddleware])
-  .handler(async ({ data }) => {
-    const whereClause = buildWhereClause(data.topicId, data.search);
+  .handler(async ({ context, data }) => {
+    const whereClause = buildWhereClause(context.topic.id, data.search);
     const offset = (data.page - 1) * data.pageSize;
 
     const [items, totalCount] = await Promise.all([

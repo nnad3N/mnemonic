@@ -1,12 +1,15 @@
-import { useMutation } from "@tanstack/react-query";
+import { revalidateLogic, useForm } from "@tanstack/react-form";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   DownloadIcon,
   EllipsisVerticalIcon,
   FileIcon,
+  PencilIcon,
   Trash2Icon,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import * as v from "valibot";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,6 +19,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { TableCell, TableRow } from "@/components/ui/table";
 import type { ArtifactStatus } from "@/db/schema";
 import { cn } from "@/lib/utils";
@@ -23,6 +27,8 @@ import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
 import { getArtifactDownloadUrl } from "@/routes/_protected.topic.$topicId/-artifacts-api/get-artifact-download-url";
 import type { ArtifactItem } from "@/routes/_protected.topic.$topicId/-artifacts-api/list-artifacts";
+import { renameArtifact } from "@/routes/_protected.topic.$topicId/-artifacts-api/rename-artifact";
+import { topicKeys } from "@/routes/_protected.topic.$topicId/-topic-api/query-keys";
 
 import { DeleteArtifactDialog } from "./delete-artifact-dialog";
 
@@ -47,11 +53,12 @@ const formatArtifactDate = (createdAt: Date) =>
 
 export const ArtifactRow = ({ artifact, topicId }: ArtifactRowProps) => {
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [isRenaming, setIsRenaming] = useState(false);
 
   const downloadMutation = useMutation({
     mutationFn: async () =>
       getArtifactDownloadUrl({
-        data: { artifactId: artifact.id, topicId },
+        data: { artifactId: artifact.id },
       }),
     onError: () => {
       toast.error(m.artifacts_download_error_title(), {
@@ -74,7 +81,24 @@ export const ArtifactRow = ({ artifact, topicId }: ArtifactRowProps) => {
         <TableCell>
           <div className="flex min-w-0 items-center gap-2">
             <FileIcon className="size-4 shrink-0 text-muted-foreground" />
-            <span className="truncate font-medium">{artifact.displayName}</span>
+            {isRenaming ? (
+              <RenameArtifactField
+                artifact={artifact}
+                stopRenaming={() => {
+                  setIsRenaming(false);
+                }}
+                topicId={topicId}
+              />
+            ) : (
+              <span
+                className="truncate font-medium"
+                onDoubleClick={() => {
+                  setIsRenaming(true);
+                }}
+              >
+                {artifact.displayName}
+              </span>
+            )}
           </div>
         </TableCell>
         <TableCell>
@@ -97,6 +121,14 @@ export const ArtifactRow = ({ artifact, topicId }: ArtifactRowProps) => {
               <EllipsisVerticalIcon />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => {
+                  setIsRenaming(true);
+                }}
+              >
+                <PencilIcon />
+                {m.common_rename()}
+              </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={
                   artifact.status !== "ready" || downloadMutation.isPending
@@ -129,6 +161,93 @@ export const ArtifactRow = ({ artifact, topicId }: ArtifactRowProps) => {
         topicId={topicId}
       />
     </>
+  );
+};
+
+type RenameArtifactFieldProps = {
+  artifact: ArtifactItem;
+  stopRenaming: () => void;
+  topicId: string;
+};
+
+const RenameArtifactField = ({
+  artifact,
+  stopRenaming,
+  topicId,
+}: RenameArtifactFieldProps) => {
+  const queryClient = useQueryClient();
+
+  const renameMutation = useMutation({
+    mutationFn: async (displayName: string) => {
+      await renameArtifact({
+        data: { artifactId: artifact.id, displayName },
+      });
+    },
+    onError: () => {
+      toast.error(m.artifacts_rename_error_title(), {
+        description: m.common_please_try_again(),
+      });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: topicKeys.artifacts(topicId),
+      });
+      stopRenaming();
+    },
+  });
+
+  const form = useForm({
+    defaultValues: { displayName: artifact.displayName },
+    onSubmit: async ({ value }) => {
+      const trimmed = value.displayName.trim();
+
+      if (trimmed.length === 0 || trimmed === artifact.displayName.trim()) {
+        stopRenaming();
+        return;
+      }
+
+      renameMutation.mutate(trimmed);
+    },
+    validationLogic: revalidateLogic(),
+    validators: {
+      onDynamic: v.object({
+        displayName: v.string(),
+      }),
+    },
+  });
+
+  return (
+    <form
+      className="min-w-0 flex-1"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        await form.handleSubmit();
+      }}
+    >
+      <form.Field name="displayName">
+        {(field) => (
+          <Input
+            autoFocus
+            disabled={renameMutation.isPending}
+            name={field.name}
+            onBlur={async () => {
+              field.handleBlur();
+              await form.handleSubmit();
+            }}
+            onChange={(e) => {
+              field.handleChange(e.target.value);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                stopRenaming();
+              }
+            }}
+            value={field.state.value}
+          />
+        )}
+      </form.Field>
+    </form>
   );
 };
 

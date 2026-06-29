@@ -16,8 +16,18 @@ export type ThreadUIDataTypes = {
 
 export type ThreadUITools = MnemonicUITools;
 
+export type ThreadMetadataAttachment = {
+  filename: string;
+  mediaType: string;
+  sha256: string;
+};
+
+export type ThreadMessageMetadata = {
+  attachments?: ThreadMetadataAttachment[];
+};
+
 export type ThreadUIMessage = UIMessage<
-  unknown,
+  ThreadMessageMetadata,
   ThreadUIDataTypes,
   ThreadUITools
 >;
