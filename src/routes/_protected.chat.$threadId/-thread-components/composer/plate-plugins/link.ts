@@ -16,11 +16,17 @@ type ThreadLinkPluginConfig = PluginConfig<
   }
 >;
 
-const insertLinkNode = (
-  editor: SlateEditor,
-  type: string,
-  urlString: string
-) => {
+type InsertLinkNodeInput = {
+  editor: SlateEditor;
+  type: string;
+  url: string;
+};
+
+const insertLinkNode = ({
+  editor,
+  type,
+  url: urlString,
+}: InsertLinkNodeInput) => {
   if (!URL.canParse(urlString)) {
     return;
   }
@@ -115,14 +121,20 @@ export const parseComposerLinkPasteSegments = (
   return segments;
 };
 
-export const insertComposerLink = (
-  editor: SlateEditor,
-  url: string,
-  options?: { trailingSpace?: boolean }
-) => {
-  insertLinkNode(editor, KEYS.a, url);
+type InsertComposerLinkInput = {
+  editor: SlateEditor;
+  url: string;
+  trailingSpace?: boolean;
+};
 
-  if (options?.trailingSpace === false) {
+export const insertComposerLink = ({
+  editor,
+  url,
+  trailingSpace = true,
+}: InsertComposerLinkInput) => {
+  insertLinkNode({ editor, type: KEYS.a, url });
+
+  if (!trailingSpace) {
     return;
   }
 
@@ -158,6 +170,8 @@ export const unlinkComposerLink = (
     if (endPoint) {
       editor.tf.select(endPoint);
     }
+
+    editor.tf.focus();
   });
 };
 
@@ -172,6 +186,7 @@ export const removeComposerLink = (
   }
 
   editor.tf.removeNodes({ at });
+  editor.tf.focus();
 };
 
 export const ThreadLinkPlugin = createTSlatePlugin<ThreadLinkPluginConfig>({
@@ -185,7 +200,7 @@ export const ThreadLinkPlugin = createTSlatePlugin<ThreadLinkPluginConfig>({
 }).extendEditorTransforms(({ editor, type }) => ({
   insert: {
     link: ({ url }) => {
-      insertLinkNode(editor, type, url);
+      insertLinkNode({ editor, type, url });
     },
   },
 }));

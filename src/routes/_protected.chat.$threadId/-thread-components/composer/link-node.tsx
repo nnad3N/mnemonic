@@ -40,20 +40,6 @@ export const ThreadLinkElement = (props: ThreadLinkElementProps) => {
   const focused = useFocused();
   const href = element.url;
 
-  const unlinkToText = () => {
-    unlinkComposerLink(editor, element);
-    editor.tf.focus();
-  };
-
-  const removeLink = () => {
-    removeComposerLink(editor, element);
-    editor.tf.focus();
-  };
-
-  const openLink = () => {
-    window.open(href, "_blank", "noopener,noreferrer");
-  };
-
   return (
     <MentionRoot
       variant="neutral"
@@ -90,7 +76,7 @@ export const ThreadLinkElement = (props: ThreadLinkElementProps) => {
             <DropdownMenuItem
               className="min-h-6 gap-1 rounded-full px-1 py-0.5 text-xs"
               onClick={() => {
-                openLink();
+                window.open(href, "_blank", "noopener,noreferrer");
               }}
             >
               <ExternalLinkIcon className="size-3" />
@@ -99,7 +85,7 @@ export const ThreadLinkElement = (props: ThreadLinkElementProps) => {
             <DropdownMenuItem
               className="min-h-6 gap-1 rounded-full px-1 py-0.5 text-xs"
               onClick={() => {
-                unlinkToText();
+                unlinkComposerLink(editor, element);
               }}
             >
               <XIcon className="size-3" />
@@ -109,10 +95,8 @@ export const ThreadLinkElement = (props: ThreadLinkElementProps) => {
         </DropdownMenu>
         <button
           className="absolute top-1/2 left-0 -translate-y-1/2 opacity-0 group-hover/mention:opacity-100"
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            removeLink();
+          onClick={() => {
+            removeComposerLink(editor, element);
           }}
           type="button"
         >

@@ -164,7 +164,9 @@ export const ThreadComposer = ({ location }: ThreadComposerProps) => {
             continue;
           }
 
-          insertComposerLink(editor, segment.url.href, {
+          insertComposerLink({
+            editor,
+            url: segment.url.href,
             trailingSpace: index === segments.length - 1,
           });
         }
