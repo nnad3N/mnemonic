@@ -1,5 +1,5 @@
 import { useRender } from "@base-ui/react/use-render";
-import { ChevronsUpIcon } from "lucide-react";
+import { ChevronsDownUpIcon } from "lucide-react";
 import type { ComponentProps, ReactElement } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -13,9 +13,10 @@ type SidebarMenuButtonType =
   | typeof SidebarMenuButton
   | typeof SidebarMenuSubButton;
 
-type SidebarMoreRender =
-  | ReactElement<ComponentProps<SidebarMenuButtonType>, SidebarMenuButtonType>
-  | SidebarMenuButtonType;
+type SidebarMoreRender = ReactElement<
+  ComponentProps<SidebarMenuButtonType>,
+  SidebarMenuButtonType
+>;
 
 type SidebarMoreProps = {
   render: SidebarMoreRender;
@@ -54,7 +55,7 @@ export const SidebarMore = ({
           title={m.common_collapse()}
           variant="ghost"
         >
-          <ChevronsUpIcon />
+          <ChevronsDownUpIcon />
         </Button>
       )}
     </div>

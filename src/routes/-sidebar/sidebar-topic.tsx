@@ -8,8 +8,8 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import {
   ChevronRightIcon,
   FileIcon,
+  MessageSquarePlusIcon,
   PencilIcon,
-  PlusIcon,
   Trash2Icon,
 } from "lucide-react";
 import { useState } from "react";
@@ -23,8 +23,8 @@ import {
 } from "@/components/ui/collapsible";
 import {
   ContextMenu,
-  ContextMenuItem,
   ContextMenuContent,
+  ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import {
@@ -79,7 +79,7 @@ export const SidebarTopics = () => {
           {topics.isSuccess && (topics.hasNextPage || hasMultiplePages) && (
             <SidebarMenuItem>
               <SidebarMore
-                render={SidebarMenuButton}
+                render={<SidebarMenuButton />}
                 disabled={topics.isFetchingNextPage || !topics.hasNextPage}
                 onCollapse={() => {
                   queryClient.setQueryData(
@@ -204,7 +204,7 @@ const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
                 size="icon-sm"
                 variant="ghost"
               >
-                <PlusIcon />
+                <MessageSquarePlusIcon />
               </Button>
             </div>
           )}
@@ -248,7 +248,8 @@ const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
                   renderButton={(isActive) => (
                     <SidebarMenuSubButton
                       isActive={isActive}
-                      render={<button className="w-full" />}
+                      className="w-full data-active:font-medium"
+                      render={<button />}
                     />
                   )}
                   thread={thread}

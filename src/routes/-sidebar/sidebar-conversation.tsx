@@ -61,7 +61,7 @@ export const SidebarConversations = () => {
             (conversations.hasNextPage || hasMultiplePages) && (
               <SidebarMenuItem>
                 <SidebarMore
-                  render={SidebarMenuButton}
+                  render={<SidebarMenuButton />}
                   disabled={
                     conversations.isFetchingNextPage ||
                     !conversations.hasNextPage

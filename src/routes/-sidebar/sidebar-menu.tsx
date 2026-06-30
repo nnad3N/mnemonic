@@ -181,8 +181,8 @@ export const SidebarFooterSection = ({ user }: SidebarFooterSectionProps) => {
             </DropdownMenuTrigger>
             <DropdownMenuContent
               className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-              side={isMobile ? "bottom" : "right"}
-              align="end"
+              side={isMobile ? "bottom" : "top"}
+              align={isMobile ? "end" : "center"}
               sideOffset={4}
             >
               <DropdownMenuGroup>
