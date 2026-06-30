@@ -1,12 +1,17 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { generateText } from "ai";
+import { produce } from "immer";
 import * as v from "valibot";
 
 import { threadAccessMiddleware } from "@/lib/middleware/assert-thread-access";
 import { getMemoryStore } from "@/mastra/memory";
 import { models } from "@/mastra/models";
-import { sidebarDataQuery } from "@/routes/_protected.chat.$threadId/-thread-api/sidebar-data";
+import {
+  sidebarConversationsQuery,
+  sidebarTopicThreadsQuery,
+  sidebarTopicsQuery,
+} from "@/routes/_protected.chat.$threadId/-thread-api/sidebar-data";
 
 const TITLE_SYSTEM_PROMPT = `
 Generate a concise thread title that describes the conversation topic or intent.
@@ -74,6 +79,7 @@ export const createThreadTitle = createServerFn({ method: "POST" })
 type CreateThreadTitleVars = {
   threadId: string;
   text: string;
+  topicId?: string;
 };
 
 export const useCreateThreadTitle = () => {
@@ -82,40 +88,77 @@ export const useCreateThreadTitle = () => {
   return useMutation({
     mutationFn: async (data: CreateThreadTitleVars) =>
       createThreadTitle({ data }),
-    onSuccess: (thread) => {
+    onSuccess: (thread, vars) => {
       if (thread === null) {
         return;
       }
 
-      queryClient.setQueryData(sidebarDataQuery.queryKey, (sidebarData) => {
-        if (sidebarData === undefined) {
-          return sidebarData;
-        }
+      const conversationsQueryOptions = sidebarConversationsQuery();
 
-        return {
-          conversations: sidebarData.conversations.map((conversation) =>
-            conversation.id === thread.id
-              ? {
-                  ...conversation,
-                  title: thread.title,
-                  updatedAt: thread.updatedAt,
+      queryClient.setQueryData(conversationsQueryOptions.queryKey, (current) =>
+        produce(current, (draft) => {
+          if (draft === undefined) {
+            return;
+          }
+
+          for (const page of draft.pages) {
+            for (const item of page.items) {
+              if (item.id === thread.id) {
+                item.title = thread.title;
+                item.updatedAt = thread.updatedAt;
+              }
+            }
+          }
+        })
+      );
+
+      if (!vars.topicId) {
+        return;
+      }
+
+      const topicsQueryOptions = sidebarTopicsQuery();
+
+      queryClient.setQueryData(topicsQueryOptions.queryKey, (current) =>
+        produce(current, (draft) => {
+          if (draft === undefined) {
+            return;
+          }
+
+          for (const page of draft.pages) {
+            for (const topic of page.items) {
+              if (topic.id !== vars.topicId) {
+                continue;
+              }
+
+              for (const topicThread of topic.threads) {
+                if (topicThread.id === thread.id) {
+                  topicThread.title = thread.title;
+                  topicThread.updatedAt = thread.updatedAt;
                 }
-              : conversation
-          ),
-          topics: sidebarData.topics.map((topic) => ({
-            ...topic,
-            threads: topic.threads.map((topicThread) =>
-              topicThread.id === thread.id
-                ? {
-                    ...topicThread,
-                    title: thread.title,
-                    updatedAt: thread.updatedAt,
-                  }
-                : topicThread
-            ),
-          })),
-        };
-      });
+              }
+            }
+          }
+        })
+      );
+
+      const topicThreadsQueryOptions = sidebarTopicThreadsQuery(vars.topicId);
+
+      queryClient.setQueryData(topicThreadsQueryOptions.queryKey, (current) =>
+        produce(current, (draft) => {
+          if (draft === undefined) {
+            return;
+          }
+
+          for (const topicThreadPage of draft.pages) {
+            for (const topicThread of topicThreadPage.items) {
+              if (topicThread.id === thread.id) {
+                topicThread.title = thread.title;
+                topicThread.updatedAt = thread.updatedAt;
+              }
+            }
+          }
+        })
+      );
     },
     onError: (error: unknown) => {
       console.error(error);

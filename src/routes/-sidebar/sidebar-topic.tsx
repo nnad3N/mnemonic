@@ -1,10 +1,15 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  infiniteQueryOptions,
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   ChevronRightIcon,
   FileIcon,
+  MessageSquarePlusIcon,
   PencilIcon,
-  PlusIcon,
   Trash2Icon,
 } from "lucide-react";
 import { useState } from "react";
@@ -18,8 +23,8 @@ import {
 } from "@/components/ui/collapsible";
 import {
   ContextMenu,
-  ContextMenuItem,
   ContextMenuContent,
+  ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import {
@@ -35,32 +40,68 @@ import {
 } from "@/components/ui/sidebar";
 import { m } from "@/paraglide/messages";
 
+import { useChatStore } from "../-chat-store";
 import { createTopicConversation } from "../_protected.chat.$threadId/-thread-api/create-thread";
 import { threadKeys } from "../_protected.chat.$threadId/-thread-api/query-keys";
-import { sidebarDataQuery } from "../_protected.chat.$threadId/-thread-api/sidebar-data";
+import {
+  sidebarTopicsQuery,
+  sidebarTopicThreadsQuery,
+} from "../_protected.chat.$threadId/-thread-api/sidebar-data";
 import type { SidebarTopic } from "../_protected.chat.$threadId/-thread-api/types";
 import { DeleteTopicDialog, RenameTopicField } from "./sidebar-context-menu";
 import { SidebarConversationItem } from "./sidebar-conversation";
 import { SidebarGroupEmpty } from "./sidebar-empty";
+import { SidebarMore } from "./sidebar-more";
 import { SidebarTopicsSkeleton } from "./sidebar-skeleton";
 
 export const SidebarTopics = () => {
-  const { data, isSuccess } = useQuery(sidebarDataQuery);
+  const queryClient = useQueryClient();
+  const topicsQueryOptions = sidebarTopicsQuery();
+  const topics = useInfiniteQuery(topicsQueryOptions);
+  const topicItems = topics.data?.pages.flatMap((page) => page.items) ?? [];
+  const hasMultiplePages = (topics.data?.pages.length ?? 0) > 1;
 
   return (
     <SidebarGroup>
       <SidebarGroupLabel>{m.nav_topics()}</SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
-          {isSuccess ? (
-            data.topics.map((topic) => (
+          {topics.isSuccess ? (
+            topicItems.map((topic) => (
               <SidebarTopicItem key={topic.id} topic={topic} />
             ))
           ) : (
             <SidebarTopicsSkeleton count={2} />
           )}
-          {isSuccess && data.topics.length === 0 && (
+          {topics.isSuccess && topicItems.length === 0 && (
             <SidebarGroupEmpty>{m.nav_no_topics()}</SidebarGroupEmpty>
+          )}
+          {topics.isSuccess && (topics.hasNextPage || hasMultiplePages) && (
+            <SidebarMenuItem>
+              <SidebarMore
+                render={<SidebarMenuButton />}
+                disabled={topics.isFetchingNextPage || !topics.hasNextPage}
+                onCollapse={() => {
+                  queryClient.setQueryData(
+                    topicsQueryOptions.queryKey,
+                    (current) => {
+                      if (!current) {
+                        return current;
+                      }
+
+                      return {
+                        pageParams: current.pageParams.slice(0, 1),
+                        pages: current.pages.slice(0, 1),
+                      };
+                    }
+                  );
+                }}
+                onMore={async () => {
+                  await topics.fetchNextPage();
+                }}
+                showCollapse={hasMultiplePages}
+              />
+            </SidebarMenuItem>
           )}
         </SidebarMenu>
       </SidebarGroupContent>
@@ -77,6 +118,26 @@ const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const isOpen = useChatStore(
+    (state) => !state.collapsedTopicIds.includes(topic.id)
+  );
+  const setTopicCollapsed = useChatStore((state) => state.setTopicCollapsed);
+  const topicThreadsQueryOptions = infiniteQueryOptions({
+    ...sidebarTopicThreadsQuery(topic.id),
+    initialData: {
+      pageParams: [0],
+      pages: [
+        {
+          hasMore: topic.hasMoreThreads,
+          items: topic.threads,
+          nextPage: topic.nextThreadsPage,
+        },
+      ],
+    },
+  });
+  const topicThreads = useInfiniteQuery(topicThreadsQueryOptions);
+  const threadItems = topicThreads.data.pages.flatMap((page) => page.items);
+  const hasMultipleThreadPages = topicThreads.data.pages.length > 1;
 
   const createConversationMutation = useMutation({
     mutationFn: async () => {
@@ -105,7 +166,13 @@ const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
 
   return (
     <SidebarMenuItem>
-      <Collapsible className="group/topic" defaultOpen>
+      <Collapsible
+        className="group/topic"
+        onOpenChange={(open) => {
+          setTopicCollapsed(topic.id, !open);
+        }}
+        open={isOpen}
+      >
         <ContextMenu>
           {isRenaming ? (
             <RenameTopicField
@@ -137,7 +204,7 @@ const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
                 size="icon-sm"
                 variant="ghost"
               >
-                <PlusIcon />
+                <MessageSquarePlusIcon />
               </Button>
             </div>
           )}
@@ -175,19 +242,53 @@ const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
 
         <CollapsibleContent>
           <SidebarMenuSub>
-            {topic.threads.map((thread) => (
+            {threadItems.map((thread) => (
               <SidebarMenuSubItem key={thread.id}>
                 <SidebarConversationItem
                   renderButton={(isActive) => (
                     <SidebarMenuSubButton
                       isActive={isActive}
-                      render={<button className="w-full" />}
+                      className="w-full data-active:font-medium"
+                      render={<button />}
                     />
                   )}
                   thread={thread}
                 />
               </SidebarMenuSubItem>
             ))}
+            {(topicThreads.hasNextPage || hasMultipleThreadPages) && (
+              <SidebarMenuSubItem>
+                <SidebarMore
+                  render={
+                    <SidebarMenuSubButton
+                      render={<button className="w-full" />}
+                    />
+                  }
+                  disabled={
+                    topicThreads.isFetchingNextPage || !topicThreads.hasNextPage
+                  }
+                  onCollapse={() => {
+                    queryClient.setQueryData(
+                      topicThreadsQueryOptions.queryKey,
+                      (current) => {
+                        if (!current) {
+                          return current;
+                        }
+
+                        return {
+                          pageParams: current.pageParams.slice(0, 1),
+                          pages: current.pages.slice(0, 1),
+                        };
+                      }
+                    );
+                  }}
+                  onMore={async () => {
+                    await topicThreads.fetchNextPage();
+                  }}
+                  showCollapse={hasMultipleThreadPages}
+                />
+              </SidebarMenuSubItem>
+            )}
           </SidebarMenuSub>
         </CollapsibleContent>
       </Collapsible>

@@ -43,6 +43,7 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
 - Use `async/await` syntax instead of promise chains for better readability
 - Handle errors appropriately in async code with try-catch blocks
 - Don't use async functions as Promise executors
+- In event handlers that call promise-returning functions, make the handler `async` and `await` the promise. Do not discard promises with `void` when the handler can be async.
 
 ### React & JSX
 
@@ -97,6 +98,15 @@ const getStatusDotClassName = (status: ArtifactStatus) => {
 };
 ```
 
+### TanStack Query
+
+- Define reusable `queryOptions(...)` / `infiniteQueryOptions(...)` builders for queries, and pass those option objects to `useQuery` / `useInfiniteQuery`.
+- Do not pass explicit generics to `useQuery`, `useInfiniteQuery`, `queryOptions`, or `infiniteQueryOptions`. Let TypeScript infer the types from the query function and options.
+- Do not pass explicit generics to `queryClient.setQueryData`. Use the query options' `queryKey` so TypeScript can infer the cached data shape.
+- When updating query data, prefer Immer `produce` for nested updates instead of spread-heavy object reconstruction.
+- Do not destructure and rename several fields from `useQuery` / `useInfiniteQuery` results. Keep the query result object intact, but do not add a `Query` suffix just because it came from a query hook. Use the domain noun, e.g. `const threads = useInfiniteQuery(...)`, then read `threads.data`, `threads.fetchNextPage`, `threads.isFetchingNextPage`, etc.
+- If a component only needs `data` from a query hook, destructure that one field and name it after the domain value, e.g. `const { data: topicId } = useSuspenseQuery(...)`.
+
 ### Error Handling & Debugging
 
 - Remove `console.log`, `debugger`, and `alert` statements from production code
@@ -112,6 +122,7 @@ const getStatusDotClassName = (status: ArtifactStatus) => {
 - Use early returns to reduce nesting
 - Prefer simple conditionals over nested ternary operators
 - Group related code together and separate concerns
+- Do not export types, constants, functions, or components unless another module needs to import them. Keep module-local implementation details unexported.
 - **Do not create new files unless necessary** — prefer editing an existing module when the change fits there (a local `const`, a helper in the same file, an export on an existing module). Only add a file when the code is reused across modules, the existing file is already too large, or the user explicitly asks for a new file. Example: a subagent tool name used only in [`tool-parts.ts`](src/lib/ai-sdk/tool-parts.ts) belongs as an inline constant in that file, not in a new `*.constants.ts`.
 
 ### Security
