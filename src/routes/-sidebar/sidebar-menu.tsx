@@ -2,9 +2,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   ChevronsUpDownIcon,
-  GitBranchPlusIcon,
   LogOutIcon,
-  MessageCirclePlusIcon,
+  MessageSquareTextIcon,
+  MessagesSquareIcon,
   SearchIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -121,7 +121,7 @@ export const SidebarHeaderSection = () => {
             }}
             tooltip={m.nav_new_conversation()}
           >
-            <MessageCirclePlusIcon />
+            <MessageSquareTextIcon />
             {m.nav_new_conversation()}
           </SidebarMenuButton>
         </SidebarMenuItem>
@@ -133,7 +133,7 @@ export const SidebarHeaderSection = () => {
             }}
             tooltip={m.nav_new_topic()}
           >
-            <GitBranchPlusIcon />
+            <MessagesSquareIcon />
             {m.nav_new_topic()}
           </SidebarMenuButton>
         </SidebarMenuItem>

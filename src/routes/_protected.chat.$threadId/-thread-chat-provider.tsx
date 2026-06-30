@@ -33,6 +33,9 @@ export const ThreadChatProvider = ({
             queryKey: threadKeys.byId(threadId),
           });
         },
+        onError: (error) => {
+          console.error(error);
+        },
         transport: new DefaultChatTransport({
           api: "/api/chat",
           prepareSendMessagesRequest: (options) => ({

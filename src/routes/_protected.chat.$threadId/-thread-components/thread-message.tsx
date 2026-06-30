@@ -1,10 +1,10 @@
 import type { ChatStatus } from "ai";
 import { getToolName, isToolUIPart } from "ai";
 
-import { isVisibleToolPart } from "@/lib/ai-sdk/tool-parts";
 import { m } from "@/paraglide/messages";
 import { AssistantMessage } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-message";
 import { ThreadMetaLine } from "@/routes/_protected.chat.$threadId/-thread-components/thread-meta-line";
+import { isKnownToolName } from "@/routes/_protected.chat.$threadId/-thread-components/tool-labels";
 import { UserMessage } from "@/routes/_protected.chat.$threadId/-thread-components/user-message";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 
@@ -37,7 +37,7 @@ const isWithoutVisibleParts = ({
     (part) =>
       part.type === "reasoning" ||
       part.type === "text" ||
-      (isToolUIPart(part) && isVisibleToolPart(getToolName(part)))
+      (isToolUIPart(part) && isKnownToolName(getToolName(part)))
   );
 };
 

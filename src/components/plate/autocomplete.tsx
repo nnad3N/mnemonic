@@ -9,7 +9,7 @@ import { useComposedRef, useEditorRef } from "platejs/react";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
-import type { MentionValue } from "@/routes/_protected.chat.$threadId/-thread-components/composer/plate-plugins";
+import type { MentionValue } from "@/routes/_protected.chat.$threadId/-thread-components/composer/plate-plugins/mention-key";
 
 type AutocompleteContextValue = {
   value: string;

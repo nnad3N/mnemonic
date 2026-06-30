@@ -32,6 +32,7 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
 - Use arrow functions for callbacks and short functions
 - Prefer `for...of` loops over `.forEach()` and indexed `for` loops
 - Use optional chaining (`?.`) and nullish coalescing (`??`) for safer property access
+- Prefer `.at(index)` over bracket indexing (`array[index]`) unless you have already verified the index exists (e.g. after a bounds check or when iterating with a known-valid index)
 - Prefer template literals over string concatenation
 - Use destructuring for object and array assignments
 - Use `const` by default, `let` only when reassignment is needed, never `var`
@@ -111,6 +112,7 @@ const getStatusDotClassName = (status: ArtifactStatus) => {
 - Use early returns to reduce nesting
 - Prefer simple conditionals over nested ternary operators
 - Group related code together and separate concerns
+- **Do not create new files unless necessary** — prefer editing an existing module when the change fits there (a local `const`, a helper in the same file, an export on an existing module). Only add a file when the code is reused across modules, the existing file is already too large, or the user explicitly asks for a new file. Example: a subagent tool name used only in [`tool-parts.ts`](src/lib/ai-sdk/tool-parts.ts) belongs as an inline constant in that file, not in a new `*.constants.ts`.
 
 ### Security
 
@@ -323,9 +325,9 @@ Helpers for rendering AI SDK v6 `UIMessage` tool parts live in [`src/lib/ai-sdk/
 
 - **`getToolPartStatus`** — maps a tool part's `state` to `pending` | `done` | `error`. Reuse this instead of duplicating switch logic in components.
 - **`isVisibleToolPart`** — whether a tool name renders visible UI during streaming (meta-line labels plus custom delegation cards). Use this in streaming placeholder checks.
-- **Subagent stream tool names** — Mastra supervisor `agents: { webSearch }` becomes `agent-webSearch`. Define `WEB_SEARCH_AGENT_TOOL_NAME` in [`web-search-agent.constants.ts`](src/mastra/agents/web-search-agent.constants.ts) (client-safe; no Mastra imports). Import the agent module only on the server.
+- **Subagent stream tool names** — Mastra supervisor `agents: { webSearch }` becomes `agent-webSearch`. Add subagent tool-name constants inline in [`tool-parts.ts`](src/lib/ai-sdk/tool-parts.ts).
 
-When adding a new subagent with custom UI, export its `agent-<key>` name from the agent module and extend `isVisibleToolPart`.
+When adding a new subagent with custom UI, add its `agent-<key>` name to `tool-parts.ts` and extend `isVisibleToolPart`.
 
 ---
 

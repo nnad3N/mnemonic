@@ -16,7 +16,7 @@ import { pgVector } from "@/mastra/storage";
 export const deleteConversation = createServerFn({ method: "POST" })
   .middleware([threadAccessMiddleware])
   .handler(async ({ context }) => {
-    const memory = await getAgentMemory();
+    const memory = await getAgentMemory("conversation-agent");
     await memory.deleteThread(context.thread.id);
 
     return { id: context.thread.id };
@@ -49,7 +49,7 @@ export const deleteTopic = createServerFn({ method: "POST" })
 
     const [memoryStore, memory] = await Promise.all([
       getMemoryStore(),
-      getAgentMemory(),
+      getAgentMemory("topic-agent"),
     ]);
     const { threads } = await memoryStore.listThreads({
       filter: { resourceId: topicId },

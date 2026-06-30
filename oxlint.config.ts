@@ -17,6 +17,7 @@ export default defineConfig({
     typeAware: true,
   },
   rules: {
+    "unicorn/prefer-spread": "off",
     "unicorn/prefer-ternary": "off",
     "unicorn/prefer-set-has": "off",
     "consistent-return": "off",

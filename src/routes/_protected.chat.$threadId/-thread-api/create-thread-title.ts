@@ -44,19 +44,6 @@ export const createThreadTitle = createServerFn({ method: "POST" })
   .middleware([threadAccessMiddleware])
   .handler(async ({ context, data }) => {
     const memoryStore = await getMemoryStore();
-    const { messages } = await memoryStore.listMessages({
-      page: 0,
-      perPage: 1,
-      threadId: context.thread.id,
-    });
-
-    const userMessages = messages
-      .slice(0, 10)
-      .filter((message) => message.role === "user");
-
-    if (userMessages.length > 1) {
-      return null;
-    }
 
     const { text } = await generateText({
       model: models.threadTitle,
@@ -131,7 +118,7 @@ export const useCreateThreadTitle = () => {
       });
     },
     onError: (error: unknown) => {
-      console.error("error", error);
+      console.error(error);
     },
   });
 };
