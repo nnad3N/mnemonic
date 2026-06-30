@@ -1,3 +1,4 @@
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { convertFileListToFileUIParts } from "ai";
 import { ElementApi, TextApi } from "platejs";
@@ -6,6 +7,7 @@ import type { PlateEditor } from "platejs/react";
 import { useEditorRef, useEditorSelector } from "platejs/react";
 
 import { useCreateThreadTitle } from "../-thread-api/create-thread-title";
+import { threadQuery } from "../-thread-api/get-thread";
 import { useThreadChat } from "../-thread-chat-provider";
 import {
   getThreadEditorId,
@@ -96,6 +98,10 @@ export const useComposerActions = (location: ThreadInputLocation) => {
   );
 
   const chat = useThreadChat();
+  const { data: topicId } = useSuspenseQuery({
+    ...threadQuery(threadId),
+    select: (data) => data.topicId,
+  });
   const createThreadTitleMutation = useCreateThreadTitle();
   const editingState = useChatStore((state) => state.editingState);
   const setEditingState = useChatStore((state) => state.setEditingState);
@@ -145,7 +151,11 @@ export const useComposerActions = (location: ThreadInputLocation) => {
     editor.tf.focus({ edge: "endEditor" });
 
     if (chat.messages.length < 2) {
-      createThreadTitleMutation.mutate({ text, threadId });
+      createThreadTitleMutation.mutate({
+        text,
+        threadId,
+        topicId,
+      });
     }
 
     const { files, metadataAttachments } = await getThreadAttachments(

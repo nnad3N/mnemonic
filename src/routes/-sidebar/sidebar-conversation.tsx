@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { PencilIcon, Trash2Icon } from "lucide-react";
 import { useState } from "react";
@@ -20,22 +20,28 @@ import {
 } from "@/components/ui/sidebar";
 import { m } from "@/paraglide/messages";
 
-import { sidebarDataQuery } from "../_protected.chat.$threadId/-thread-api/sidebar-data";
+import { sidebarConversationsQuery } from "../_protected.chat.$threadId/-thread-api/sidebar-data";
 import type { SidebarThread } from "../_protected.chat.$threadId/-thread-api/types";
 import { DeleteThreadDialog, RenameField } from "./sidebar-context-menu";
 import { SidebarGroupEmpty } from "./sidebar-empty";
+import { SidebarMore } from "./sidebar-more";
 import { SidebarConversationsSkeleton } from "./sidebar-skeleton";
 
 export const SidebarConversations = () => {
-  const { data, isSuccess } = useQuery(sidebarDataQuery);
+  const queryClient = useQueryClient();
+  const conversationsQueryOptions = sidebarConversationsQuery();
+  const conversations = useInfiniteQuery(conversationsQueryOptions);
+  const conversationItems =
+    conversations.data?.pages.flatMap((page) => page.items) ?? [];
+  const hasMultiplePages = (conversations.data?.pages.length ?? 0) > 1;
 
   return (
     <SidebarGroup>
       <SidebarGroupLabel>{m.nav_recent_conversations()}</SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
-          {isSuccess ? (
-            data.conversations.map((thread) => (
+          {conversations.isSuccess ? (
+            conversationItems.map((thread) => (
               <SidebarMenuItem key={thread.id}>
                 <SidebarConversationItem
                   renderButton={(isActive) => (
@@ -48,9 +54,40 @@ export const SidebarConversations = () => {
           ) : (
             <SidebarConversationsSkeleton count={4} />
           )}
-          {isSuccess && data.conversations.length === 0 && (
+          {conversations.isSuccess && conversationItems.length === 0 && (
             <SidebarGroupEmpty>{m.nav_no_conversations()}</SidebarGroupEmpty>
           )}
+          {conversations.isSuccess &&
+            (conversations.hasNextPage || hasMultiplePages) && (
+              <SidebarMenuItem>
+                <SidebarMore
+                  render={SidebarMenuButton}
+                  disabled={
+                    conversations.isFetchingNextPage ||
+                    !conversations.hasNextPage
+                  }
+                  onCollapse={() => {
+                    queryClient.setQueryData(
+                      conversationsQueryOptions.queryKey,
+                      (current) => {
+                        if (!current) {
+                          return current;
+                        }
+
+                        return {
+                          pageParams: current.pageParams.slice(0, 1),
+                          pages: current.pages.slice(0, 1),
+                        };
+                      }
+                    );
+                  }}
+                  onMore={async () => {
+                    await conversations.fetchNextPage();
+                  }}
+                  showCollapse={hasMultiplePages}
+                />
+              </SidebarMenuItem>
+            )}
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>

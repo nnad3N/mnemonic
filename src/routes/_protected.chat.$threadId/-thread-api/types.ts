@@ -5,7 +5,9 @@ export type SidebarThread = {
 };
 
 export type SidebarTopic = {
+  hasMoreThreads: boolean;
   id: string;
+  nextThreadsPage: number | null;
   title: string;
   threads: SidebarThread[];
 };
