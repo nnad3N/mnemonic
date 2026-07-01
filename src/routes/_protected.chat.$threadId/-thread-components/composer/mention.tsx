@@ -82,7 +82,15 @@ type MentionIconProps = {
 export const MentionIcon = ({ className, variant }: MentionIconProps) => {
   const Icon = mentionIconMap[variant];
 
-  return <Icon className={cn("size-3.25 shrink-0", className)} />;
+  return (
+    <Icon
+      className={cn(
+        "size-3.25 shrink-0",
+        variant === "pending" && "animate-spin",
+        className
+      )}
+    />
+  );
 };
 
 export const MentionRemoveIcon = ({ className }: { className?: string }) => {

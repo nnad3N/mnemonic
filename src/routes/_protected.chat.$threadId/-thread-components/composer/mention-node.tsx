@@ -26,7 +26,7 @@ import {
   mentionsQuery,
 } from "../../-thread-api/get-mentions";
 import { threadQuery } from "../../-thread-api/get-thread";
-import { isMentionPending } from "../../-thread-utils";
+import type { MentionQueryType } from "../../-thread-api/query-keys";
 import type { ThreadAttachment } from "../../../-chat-store";
 import { useChatStore } from "../../../-chat-store";
 import {
@@ -43,65 +43,15 @@ import type {
 } from "./plate-plugins/mention-key";
 import { getMentionKey, parseMentionKey } from "./plate-plugins/mention-key";
 
+type MentionStatus = "failed" | "pending" | "ready" | undefined;
 type MentionType = ParseMentionKeyResult["type"];
 
-type ThreadMentionState = {
-  status?: "failed" | "pending" | "ready";
-  type: MentionType;
-};
-
-const useThreadMentionState = (
-  element: TMentionElement
-): ThreadMentionState => {
-  const { type, value: mentionId } = parseMentionKey(element.key);
-  const threadId = useParams({
-    from: "/_protected/chat/$threadId",
-    select: (params) => params.threadId,
-  });
-  const attachment = useChatStore(
-    useShallow((state) =>
-      state.attachments.get(threadId)?.find((a) => a.sha256 === mentionId)
-    )
-  );
-
-  const { data: mention, isLoading } = useQuery({
-    ...mentionByIdQuery({ artifactId: mentionId }),
-    enabled: type === "artifact",
-  });
-
-  if (attachment) {
-    const status = attachment.status;
-
-    return {
-      status: status === "persisted" ? "ready" : status,
-      type,
-    };
-  }
-
-  if (isLoading || (mention && isMentionPending(mention))) {
-    return {
-      status: "pending",
-      type,
-    };
-  }
-
-  return {
-    status:
-      mention?.status === "ready" || mention?.status === "failed"
-        ? mention.status
-        : undefined,
-    type,
-  };
-};
-
-const getMentionVariant = (
-  mentionState: ThreadMentionState
-): MentionVariant => {
-  if (mentionState.status === "failed") {
+const getMentionVariant = (status: MentionStatus): MentionVariant => {
+  if (status === "failed") {
     return "error";
   }
 
-  if (!mentionState.status) {
+  if (!status) {
     return "neutral";
   }
 
@@ -111,22 +61,147 @@ const getMentionVariant = (
 export const ThreadMentionElement = (
   props: PlateElementProps<TMentionElement>
 ) => {
-  const { editor, path, element } = props;
+  const { type, value: mentionId } = parseMentionKey(props.element.key);
+
+  if (type === "attachment" || type === "selection" || type === "unknown") {
+    return (
+      <ThreadLocalMentionElement
+        {...props}
+        mentionId={mentionId}
+        mentionType={type}
+      />
+    );
+  }
+
+  return (
+    <ThreadDatabaseMentionElement
+      {...props}
+      mentionId={mentionId}
+      mentionType={type}
+    />
+  );
+};
+
+type ThreadDatabaseMentionElementProps = PlateElementProps<TMentionElement> & {
+  mentionId: string;
+  mentionType: MentionQueryType;
+};
+
+const ThreadDatabaseMentionElement = ({
+  mentionId,
+  mentionType,
+  ...props
+}: ThreadDatabaseMentionElementProps) => {
+  const mention = useQuery(
+    mentionByIdQuery({
+      id: mentionId,
+      type: mentionType,
+    })
+  );
+
+  const mentionStatus = useMemo((): MentionStatus => {
+    if (mention.isLoading) {
+      return "ready";
+    }
+
+    if (!mention.isSuccess) {
+      return "failed";
+    }
+
+    if (!mention.data) {
+      return undefined;
+    }
+
+    const status = mention.data.status;
+
+    if (status === "processing" || status === "uploading") {
+      return "pending";
+    }
+
+    return status;
+  }, [mention]);
+
+  return (
+    <ThreadMentionElementContent
+      {...props}
+      mentionId={mentionId}
+      mentionType={mentionType}
+      mentionStatus={mentionStatus}
+    />
+  );
+};
+
+type ThreadLocalMentionElementProps = PlateElementProps<TMentionElement> & {
+  mentionId: string;
+  mentionType: Exclude<MentionType, MentionQueryType>;
+};
+
+const ThreadLocalMentionElement = ({
+  mentionId,
+  mentionType,
+  ...props
+}: ThreadLocalMentionElementProps) => {
+  const threadId = useParams({
+    from: "/_protected/chat/$threadId",
+    select: (params) => params.threadId,
+  });
+  const attachment = useChatStore(
+    useShallow((state) =>
+      state.attachments.get(threadId)?.find((a) => a.sha256 === mentionId)
+    )
+  );
+  const mentionStatus = useMemo((): MentionStatus => {
+    if (mentionType === "selection") {
+      return "ready";
+    }
+
+    if (mentionType !== "attachment" || !attachment) {
+      return undefined;
+    }
+
+    if (attachment.status === "persisted") {
+      return "ready";
+    }
+
+    return attachment.status;
+  }, [attachment, mentionType]);
+
+  return (
+    <ThreadMentionElementContent
+      {...props}
+      mentionId={mentionId}
+      mentionType={mentionType}
+      mentionStatus={mentionStatus}
+    />
+  );
+};
+
+type ThreadMentionElementContentProps = PlateElementProps<TMentionElement> & {
+  mentionId: string;
+  mentionType: MentionType;
+  mentionStatus: MentionStatus;
+};
+
+const ThreadMentionElementContent = ({
+  mentionId,
+  mentionType,
+  mentionStatus,
+  ...props
+}: ThreadMentionElementContentProps) => {
+  const { editor, path } = props;
   const selected = useSelected();
   const focused = useFocused();
-  const mentionState = useThreadMentionState(element);
   const threadId = useParams({
     from: "/_protected/chat/$threadId",
     select: (params) => params.threadId,
   });
   const removeAttachment = useChatStore((state) => state.removeAttachment);
-  const { value: mentionId } = parseMentionKey(element.key);
 
-  const isDisabled = mentionState.status === "pending";
+  const isDisabled = mentionStatus === "pending";
 
   return (
     <MentionRoot
-      variant={getMentionVariant(mentionState)}
+      variant={getMentionVariant(mentionStatus)}
       className={cn(selected && focused && "ring-1 ring-ring")}
       render={(renderProps) => (
         <PlateElement
@@ -156,20 +231,14 @@ export const ThreadMentionElement = (
         }
       >
         {isDisabled ? (
-          <MentionIcon variant={mentionState.type} />
+          <MentionIcon variant={mentionStatus} />
         ) : (
           <div className="relative size-3.25 shrink-0">
-            {mentionState.status === "pending" ? (
-              <MentionIcon variant="pending" className="animate-spin" />
-            ) : (
-              <>
-                <MentionIcon
-                  variant={mentionState.type}
-                  className="absolute inset-0 opacity-100 group-hover/mention:opacity-0"
-                />
-                <MentionRemoveIcon className="absolute inset-0 opacity-0 group-hover/mention:opacity-100" />
-              </>
-            )}
+            <MentionIcon
+              variant={mentionType}
+              className="absolute inset-0 opacity-100 group-hover/mention:opacity-0"
+            />
+            <MentionRemoveIcon className="absolute inset-0 opacity-0 group-hover/mention:opacity-100" />
           </div>
         )}
         <MentionLabel>{props.element.value}</MentionLabel>

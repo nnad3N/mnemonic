@@ -43,7 +43,7 @@ export const ArtifactsSync = ({ topicId }: ArtifactsSyncProps) => {
 
     for (const artifactId of removedArtifactIds) {
       void queryClient.invalidateQueries({
-        queryKey: threadKeys.mention(artifactId),
+        queryKey: threadKeys.mention("artifact", artifactId),
       });
     }
 
