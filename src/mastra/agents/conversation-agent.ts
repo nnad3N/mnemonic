@@ -1,7 +1,10 @@
 import { Agent } from "@mastra/core/agent";
 import { Memory } from "@mastra/memory";
 
-import { baseInstructions } from "@/mastra/agents/base-instructions";
+import {
+  baseInstructions,
+  sharedSourceInstructions,
+} from "@/mastra/agents/base-instructions";
 import { models } from "@/mastra/models";
 import { pgVector, postgresStore } from "@/mastra/storage";
 import { accessTopicTool } from "@/mastra/tools/access-topic-tool";
@@ -36,20 +39,15 @@ export const conversationAgent = new Agent({
   instructions: `
 ${baseInstructions}
 
-## Choosing sources
-When the user does not specify where information should come from, use the source(s) that best fit the question. You do not need to consult every source — reach for another only when what you tried is insufficient.
+${sharedSourceInstructions}
 
-- Conversation recall — past messages in the current conversation only. Prefer this when the answer may already appear in prior chat.
-- Web search — current or external information. Use when the question needs facts outside this conversation or up-to-date from the web.
-- Access topic — use access-topic when the user asks to pull information from a topic, its files, or its prior conversations.
-
-When the user explicitly limits the source, use only that source unless it cannot answer the question.
+Available sources:
+- Conversation recall: past messages in the current conversation only. Prefer this when the answer may already appear in prior chat.
+- Web search: current or external information. Use when the question needs facts outside this conversation or up-to-date information from the web.
+- Access topic: topic artifacts and topic-scoped conversation history. Use when the user asks for information from a topic, topic files, topic artifacts, or prior topic conversations.
 
 ## Access topic
-Use access-topic when:
-- The user asks for information from a topic, topic files, topic artifacts, or prior topic conversations.
-- Conversation recall and web search are not the right source because the answer should come from topic-owned context.
-
+Use access-topic only when the topic is clear. If the user asks about a topic but no topic can be identified, ask which topic to use.
 
 ## Web search
 Use web-search when:

@@ -14,13 +14,15 @@ import {
 } from "@/routes/_protected.chat.$threadId/-thread-api/sidebar-data";
 
 const TITLE_SYSTEM_PROMPT = `
-Generate a concise thread title that describes the conversation topic or intent.
-Always produce a descriptive title — never repeat or lightly rephrase the user's message.
-For greetings or small talk, summarize the kind of exchange (e.g. "hello" → Greeting, "how are you" → Checking In).
-Return only the title.
-Do not use quotation marks.
-Use title case only when it reads naturally.
-Keep it under 8 words.`;
+You generate concise thread titles for a conversation sidebar.
+
+Rules:
+- Return only one title.
+- Use 2 to 7 words unless a one-word title is clearly best.
+- Describe the topic or intent; do not simply repeat or lightly rephrase the user's message.
+- For greetings or small talk, summarize the exchange type, such as Greeting or Checking In.
+- Use natural title case, without quotation marks or trailing punctuation.
+- Avoid vague titles like Help, Question, or New Chat.`;
 
 const MAX_TITLE_LENGTH = 255;
 const TITLE_GENERATION_TIMEOUT_MS = 10_000;

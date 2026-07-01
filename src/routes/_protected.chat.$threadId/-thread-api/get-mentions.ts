@@ -5,20 +5,18 @@ import * as v from "valibot";
 
 import { db } from "@/db";
 import { artifact, topic } from "@/db/schema";
-import { artifactAccessMiddleware } from "@/lib/middleware/assert-thread-access";
 import { authMiddleware } from "@/lib/middleware/auth-middleware";
 import { getMemoryStore } from "@/mastra/memory";
 
+import type { MentionQueryType } from "./query-keys";
 import { threadKeys } from "./query-keys";
 
 export const MENTIONS_QUERY_LIMIT = 20;
 
-type MentionType = "artifact" | "thread" | "topic";
-
 type MentionItem = {
   displayName: string;
   id: string;
-  type: MentionType;
+  type: MentionQueryType;
 };
 
 const buildArtifactMentionsWhereClause = (topicId: string, query: string) => {
@@ -55,6 +53,11 @@ const titleMatchesQuery = (title: string, query: string) => {
 const getMentionsInputSchema = v.object({
   resourceId: v.pipe(v.string(), v.nonEmpty()),
   query: v.optional(v.string(), ""),
+});
+
+const getMentionByIdInputSchema = v.object({
+  id: v.pipe(v.string(), v.nanoid()),
+  type: v.picklist(["artifact", "thread", "topic"]),
 });
 
 export const getMentions = createServerFn({ method: "GET" })
@@ -149,26 +152,96 @@ export const mentionsQuery = ({
   });
 
 export const getMentionById = createServerFn({ method: "GET" })
-  .middleware([artifactAccessMiddleware])
-  .handler(async ({ context }) => {
-    return {
-      displayName: context.artifact.displayName,
-      id: context.artifact.id,
-      status: context.artifact.status,
-    };
+  .inputValidator(getMentionByIdInputSchema)
+  .middleware([authMiddleware])
+  .handler(async ({ context, data }) => {
+    switch (data.type) {
+      case "artifact": {
+        const ownedArtifact = await db.query.artifact.findFirst({
+          columns: {
+            displayName: true,
+            id: true,
+            status: true,
+          },
+          where: {
+            id: data.id,
+            userId: context.user.id,
+          },
+        });
+
+        return ownedArtifact
+          ? {
+              displayName: ownedArtifact.displayName,
+              id: ownedArtifact.id,
+              status: ownedArtifact.status,
+            }
+          : null;
+      }
+      case "topic": {
+        const ownedTopic = await db.query.topic.findFirst({
+          columns: {
+            id: true,
+            title: true,
+          },
+          where: {
+            id: data.id,
+            userId: context.user.id,
+          },
+        });
+
+        return ownedTopic
+          ? {
+              displayName: ownedTopic.title,
+              id: ownedTopic.id,
+              status: "ready" as const,
+            }
+          : null;
+      }
+      case "thread": {
+        const memoryStore = await getMemoryStore();
+        const thread = await memoryStore.getThreadById({ threadId: data.id });
+
+        if (thread === null) {
+          return null;
+        }
+
+        if (thread.resourceId !== context.user.id) {
+          const ownedTopic = await db.query.topic.findFirst({
+            columns: { id: true },
+            where: {
+              id: thread.resourceId,
+              userId: context.user.id,
+            },
+          });
+
+          if (!ownedTopic) {
+            return null;
+          }
+        }
+
+        return {
+          displayName: thread.title ?? "",
+          id: thread.id,
+          status: "ready" as const,
+        };
+      }
+      default:
+        return null;
+    }
   });
 
 type GetMentionByIdParams = {
-  artifactId: string;
+  id: string;
+  type: MentionQueryType;
 };
 
-export const mentionByIdQuery = ({ artifactId }: GetMentionByIdParams) =>
+export const mentionByIdQuery = ({ id, type }: GetMentionByIdParams) =>
   queryOptions({
     // without this the optimistic update for artifact upload might be discarded
     refetchOnMount: false,
     queryFn: async () =>
       getMentionById({
-        data: { artifactId },
+        data: { id, type },
       }),
-    queryKey: threadKeys.mention(artifactId),
+    queryKey: threadKeys.mention(type, id),
   });

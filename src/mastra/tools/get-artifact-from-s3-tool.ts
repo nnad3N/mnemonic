@@ -45,11 +45,11 @@ export const getArtifactFromS3Tool = createTool({
   outputSchema: toStandardJsonSchema(outputSchema),
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
   description: [
-    "Load a raw uploaded artifact from storage for direct multimodal inspection.",
-    "Use for images (not text-indexed) or as a fallback when artifact-vector-search and artifact-graph-rag did not answer.",
-    "Do NOT use for office documents or other extracted-only uploads — use the search tools instead.",
+    "Load one supported raw uploaded artifact from the current topic for direct multimodal inspection.",
+    "Use for images, which are not text-indexed, or when the user @-mentions a specific supported image artifact.",
+    "Do not use for office documents, PDFs, or other extracted-only uploads; use artifact-vector-search or artifact-graph-rag for those.",
     `Supported MIME types: ${LLM_NATIVE_IMAGE_MIME_TYPES.join(", ")}.`,
-    "Input: artifactId from @-mentions or prior tool results.",
+    "Input artifactId must come from an artifact @-mention or prior tool result.",
   ].join(" "),
   execute: async ({ artifactId }, context) => {
     const topicId = context.requestContext?.get("filter")?.topicId;
@@ -88,7 +88,7 @@ export const getArtifactFromS3Tool = createTool({
     if (Result.isError(objectResult)) {
       return {
         type: "error",
-        message: objectResult.error.message,
+        message: "Artifact could not be loaded.",
       } satisfies GetArtifactError;
     }
 
