@@ -158,7 +158,19 @@ export const ThreadMentionElement = (
         {isDisabled ? (
           <MentionIcon variant={mentionState.type} />
         ) : (
-          <MentionStateIcon mentionState={mentionState} />
+          <div className="relative size-3.25 shrink-0">
+            {mentionState.status === "pending" ? (
+              <MentionIcon variant="pending" className="animate-spin" />
+            ) : (
+              <>
+                <MentionIcon
+                  variant={mentionState.type}
+                  className="absolute inset-0 opacity-100 group-hover/mention:opacity-0"
+                />
+                <MentionRemoveIcon className="absolute inset-0 opacity-0 group-hover/mention:opacity-100" />
+              </>
+            )}
+          </div>
         )}
         <MentionLabel>{props.element.value}</MentionLabel>
         {props.children}
@@ -170,41 +182,19 @@ export const ThreadMentionElement = (
 export const ThreadMentionElementStatic = (
   props: SlateElementProps<TMentionElement>
 ) => {
-  const mentionState = useThreadMentionState(props.element);
+  const mention = parseMentionKey(props.element.key);
 
   return (
     <MentionRoot
-      variant={getMentionVariant(mentionState)}
+      variant="teal"
       render={(renderProps) => <SlateElement {...props} {...renderProps} />}
     >
       <MentionContent>
-        <MentionStateIcon mentionState={mentionState} />
+        <MentionIcon variant={mention.type} />
         <MentionLabel>{props.element.value}</MentionLabel>
         {props.children}
       </MentionContent>
     </MentionRoot>
-  );
-};
-
-type MentionStateIconProps = {
-  mentionState: ThreadMentionState;
-};
-
-const MentionStateIcon = ({ mentionState }: MentionStateIconProps) => {
-  return (
-    <div className="relative size-3.25 shrink-0">
-      {mentionState.status === "pending" ? (
-        <MentionIcon variant="pending" className="animate-spin" />
-      ) : (
-        <>
-          <MentionIcon
-            variant={mentionState.type}
-            className="absolute inset-0 opacity-100 group-hover/mention:opacity-0"
-          />
-          <MentionRemoveIcon className="absolute inset-0 opacity-0 group-hover/mention:opacity-100" />
-        </>
-      )}
-    </div>
   );
 };
 
