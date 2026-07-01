@@ -225,8 +225,9 @@ export const getMentionById = createServerFn({ method: "GET" })
           status: "ready" as const,
         };
       }
-      default:
+      default: {
         return null;
+      }
     }
   });
 

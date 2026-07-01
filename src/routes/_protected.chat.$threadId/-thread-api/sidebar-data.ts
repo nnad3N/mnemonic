@@ -197,7 +197,7 @@ export const sidebarTopicsQuery = () =>
       }),
     getNextPageParam: (lastPage, _pages, lastPageParam) => {
       if (!lastPage.hasMore) {
-        return undefined;
+        return;
       }
 
       return lastPageParam + 1;

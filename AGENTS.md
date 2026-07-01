@@ -9,7 +9,6 @@ This project uses **Ultracite**, a zero-config preset that enforces strict code 
 - **Format and lint**: `bun run fix`
 - **Typecheck only**: `bun run typecheck`
 - **Run tests**: `bun run test`
-- **Build**: `bun run build`
 
 Oxlint + Oxfmt (the underlying engine) provides robust linting and formatting. Most issues are automatically fixable.
 
@@ -63,6 +62,7 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
   - Include keyboard event handlers alongside mouse events
   - Use semantic elements (`<button>`, `<nav>`, etc.) instead of divs with roles
 - **Variant styling** — do not add helper functions that map a discriminant to Tailwind class strings (e.g. `getStatusClassName(status)` with a `switch`). Either inline classes in JSX with `cn(..., condition && "class")`, or extract a small component that owns the variant markup:
+- Keep static Tailwind class strings inline in JSX unless extracting a small component or using `cn(...)` materially improves conditional readability. Do not create local constants whose only purpose is to hold a reusable Tailwind class string for one file.
 
 ```tsx
 // Good — inline
@@ -372,4 +372,4 @@ Oxlint + Oxfmt's linter will catch most issues automatically. Focus your attenti
 
 ---
 
-Most formatting and common issues are automatically fixed by Oxlint + Oxfmt. Run `bun run fix` before committing to ensure formatting compliance, and run `bun run typecheck` plus `bun run build` before handing off broader changes.
+Most formatting and common issues are automatically fixed by Oxlint + Oxfmt. Run `bun run typecheck`, `bun run lint`, and `bun run format` before handing off changes. Do not run `bun run build` just to validate agent work unless the user explicitly asks for a build.
