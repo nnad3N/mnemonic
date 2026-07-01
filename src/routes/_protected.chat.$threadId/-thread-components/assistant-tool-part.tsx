@@ -40,7 +40,7 @@ export const AssistantToolPart = ({ part }: AssistantToolPartProps) => {
   return (
     <ThreadMetaLine
       className={cn(
-        part.state === "input-streaming" && "shimmer",
+        status === "pending" && "shimmer",
         status === "error" && "text-destructive"
       )}
     >
