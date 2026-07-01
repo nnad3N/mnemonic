@@ -1,0 +1,4 @@
+interface:
+  display_name: "Change System Prompt"
+  short_description: "Refactor durable agent instructions"
+  default_prompt: "Use $change-system-prompt to revise an agent system prompt without changing product behavior."

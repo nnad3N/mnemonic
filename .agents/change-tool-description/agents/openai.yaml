@@ -1,0 +1,4 @@
+interface:
+  display_name: "Change Tool Description"
+  short_description: "Improve AI tool schemas and descriptions"
+  default_prompt: "Use $change-tool-description to improve a tool description and schema for reliable model use."

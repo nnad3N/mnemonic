@@ -1,7 +1,10 @@
 import { Agent } from "@mastra/core/agent";
 import { Memory } from "@mastra/memory";
 
-import { baseInstructions } from "@/mastra/agents/base-instructions";
+import {
+  baseInstructions,
+  sharedSourceInstructions,
+} from "@/mastra/agents/base-instructions";
 import { models } from "@/mastra/models";
 import { pgVector, postgresStore } from "@/mastra/storage";
 import { artifactGraphRagTool } from "@/mastra/tools/artifact-graph-rag-tool";
@@ -42,14 +45,12 @@ export const topicAgent = new Agent({
   instructions: `
 ${baseInstructions}
 
-## Choosing sources
-When the user does not specify where information should come from, use the source(s) that best fit the question. You do not need to consult every source — reach for another only when what you tried is insufficient.
+${sharedSourceInstructions}
 
-- Topic artifacts — uploaded files in the current topic (vector search, graph RAG, S3). Prefer these for questions about the user's documents.
-- Web search — external or current information. Use when the question needs facts outside the topic or up-to-date from the web.
-- Conversation recall — past messages within the current topic. Use when the answer may already appear in prior chat.
-
-When the user explicitly limits the source (e.g. "only from my files", "search the web"), use only that source unless it cannot answer the question.
+Available sources:
+- Topic artifacts: uploaded files in the current topic. Prefer these for questions about the user's documents.
+- Web search: external or current information. Use when the question needs facts outside the topic or up-to-date information from the web.
+- Conversation recall: past messages within the current topic. Use when the answer may already appear in prior chat.
 
 When sources conflict, prefer topic artifacts over web search, and web search over conversation recall.
 
@@ -59,16 +60,13 @@ Use web-search when:
 - Topic artifact tools plus conversation recall did not fully answer the question.
 
 ## Topic file access
-When gathering from topic artifacts, pick the tool that fits the question. You do not need to run every artifact tool — try another only when the one you used is insufficient.
+When gathering from topic artifacts, pick the tool that fits the question. You do not need to run every artifact tool.
 
 - artifact-vector-search — Direct facts, quotes, or specific passages in uploaded documents.
 - artifact-graph-rag — When information spans multiple files, connected passages matter, or relationships between concepts are important.
-- get-artifact-from-s3 — Load the raw file for direct inspection:
-  - Always use for images. Uploaded images are not text-indexed; S3 is the only source.
-  - Use for LLM-native file types when search tools are insufficient or the user @-mentions a specific file (pass its artifactId).
-  - Only works for LLM-native file types. For office documents and other extracted-only formats, rely on the search tools instead.
+- get-artifact-from-s3 — Raw file inspection for images, or fallback direct inspection when search tools are insufficient.
 
-Search tools are automatically scoped to the current topic. Do not call get-artifact-from-s3 for file types it cannot load.
+Search tools are automatically scoped to the current topic. Tool descriptions own exact input requirements and file-type limits.
 
 ## Conversation history
 Use recall to browse past messages within the current topic:

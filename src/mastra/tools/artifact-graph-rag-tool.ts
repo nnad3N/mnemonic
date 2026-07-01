@@ -10,11 +10,11 @@ import { PG_VECTOR_STORE_NAME } from "../storage";
 
 export const artifactGraphRagTool = createGraphRAGTool({
   description: [
-    "Graph-based search over text-indexed uploads in the current topic.",
-    "Use when artifact-vector-search is insufficient: answers span multiple files, connected passages matter, or relationships between concepts are important.",
-    "Do NOT use for images or raw file inspection — use get-artifact-from-s3 for those.",
-    "Try artifact-vector-search first unless the question clearly requires cross-document connections.",
-    "Input: queryText with the user's question or search terms.",
+    "Graph-based retrieval over text-indexed uploads in the current topic.",
+    "Use when the answer likely depends on relationships, connected passages, or evidence spread across multiple uploaded files.",
+    "Prefer artifact-vector-search first for direct facts, quotes, or specific passages unless the question clearly requires cross-document connections.",
+    "Do not use for images, binary inspection, or loading a raw file; use get-artifact-from-s3 for supported image inspection.",
+    "Input queryText should contain the user's question or targeted search terms. Results are scoped to the current topic.",
   ].join(" "),
   enableFilter: true,
   graphOptions: {

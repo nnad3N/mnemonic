@@ -24,10 +24,11 @@ export const accessTopicTool = createTool({
   outputSchema: toStandardJsonSchema(outputSchema),
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
   description: [
-    "Query a topic's artifacts and conversation history via the topic agent.",
-    "Use when the user wants information from a specific topic, its files, or prior topic conversations.",
-    "Pass topicId as the topic's ID only — when the user @-mentions a topic, the mention key is topic::{ID}; pass just {ID}, not the prefix, title, thread ID, or artifact ID.",
-    "If the topic to use is unclear, ask the user before calling.",
+    "Ask the topic agent to answer from one specific topic's artifacts and topic-scoped conversation history.",
+    "Use when the user names, @-mentions, or otherwise clearly identifies a topic and wants information from that topic, its files, or prior topic conversations.",
+    "Do not use for general web research, the current standalone conversation, or an unclear topic; ask which topic to use before calling.",
+    "Input topicId must be the bare topic ID. For a mention key like topic::{ID}, pass only {ID}, not the prefix, title, thread ID, or artifact ID.",
+    "Returns a synthesized answer from the topic agent, not raw file contents.",
   ].join(" "),
   execute: async ({ topicId, prompt }, context) => {
     const userId = context.requestContext?.get("userId");
