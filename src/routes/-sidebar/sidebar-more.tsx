@@ -3,7 +3,7 @@ import { ChevronsDownUpIcon } from "lucide-react";
 import type { ComponentProps, ReactElement } from "react";
 
 import { Button } from "@/components/ui/button";
-import {
+import type {
   SidebarMenuButton,
   SidebarMenuSubButton,
 } from "@/components/ui/sidebar";
