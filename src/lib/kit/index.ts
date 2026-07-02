@@ -1,66 +1,92 @@
-import { Result, TaggedError } from "better-result";
-import type { Err, Result as ResultType } from "better-result";
+import { matchError, Result, TaggedError } from "better-result";
+import type {
+  Err,
+  Result as ResultType,
+  TaggedErrorInstance,
+} from "better-result";
 
 import type {
-  AnyResult,
-  BrandedMergedKit,
+  BrandedKits,
   KitModule,
   KitAction,
   KitAsyncBody,
   KitGeneratorBody,
-  MergedKit,
-  MergedKitValue,
+  MatchErrorHandlers,
+  Kits,
+  UniqueKitNames,
 } from "./utils";
 
-export type { MergedKit } from "./utils";
+export type { Kits } from "./utils";
 
 export class ServerFnError extends TaggedError("ServerFnError")<{
   message: string;
   status: "unauthorized" | "server-error";
 }>() {}
 
-export const defineKit = <TValue extends Record<string, unknown>>(
-  kit: TValue
-): KitModule & TValue => kit;
+export const defineKit = <const TName extends string, TValue>(
+  name: TName,
+  value: TValue
+): KitModule<TName, TValue> => [name, value];
 
 export const mergeKits = <TKits extends readonly KitModule[]>(
-  ...kits: TKits
-): MergedKit<TKits> => {
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-  const merged = {} as MergedKitValue<TKits>;
+  ...kits: TKits & UniqueKitNames<TKits>
+): Kits<TKits> => {
+  const merged: Record<string, unknown> = {};
 
-  for (const kit of kits) {
-    Object.assign(merged, kit);
+  for (const [name, value] of kits) {
+    merged[name] = value;
   }
 
-  return merged;
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+  return merged as Kits<TKits>;
 };
 
+const kitGen =
+  <
+    TKits extends BrandedKits,
+    TInput,
+    TYield extends Err<never, unknown>,
+    TResult extends ResultType<unknown, unknown>,
+  >(
+    body: KitGeneratorBody<TKits, TInput, TYield, TResult>
+  ): KitAction<TKits, TInput, TResult, TYield> =>
+  async (context: TKits, input: TInput) =>
+    Result.gen(() => body(context, input));
+
+function kitServerFn<
+  TKits extends BrandedKits,
+  TInput,
+  TValue,
+  TKitError extends TaggedErrorInstance<string, unknown>,
+>(
+  action: KitAsyncBody<TKits, TInput, ResultType<TValue, TKitError>>,
+  handlers: MatchErrorHandlers<TKitError, ServerFnError>
+): (context: TKits, input: TInput) => Promise<TValue>;
+
+function kitServerFn<TKits extends BrandedKits, TInput, TValue>(
+  action: KitAsyncBody<TKits, TInput, ResultType<TValue, ServerFnError>>
+): (context: TKits, input: TInput) => Promise<TValue>;
+
+function kitServerFn<
+  TKits extends BrandedKits,
+  TInput,
+  TValue,
+  TError extends TaggedErrorInstance<string, unknown>,
+>(
+  action: KitAsyncBody<TKits, TInput, ResultType<TValue, TError>>,
+  handlers?: MatchErrorHandlers<TError, ServerFnError>
+) {
+  return async (context: TKits, input: TInput): Promise<TValue> => {
+    const result = await action(context, input);
+    const mapped = handlers
+      ? result.mapError((error) => matchError(error, handlers))
+      : result;
+
+    return mapped.unwrap();
+  };
+}
+
 export const Kit = {
-  gen:
-    <
-      TMergedKit extends BrandedMergedKit,
-      TInput,
-      TYield extends Err<never, unknown>,
-      TResult extends AnyResult,
-    >(
-      body: KitGeneratorBody<TMergedKit, TInput, TYield, TResult>
-    ): KitAction<TMergedKit, TInput, TResult, TYield> =>
-    async (context: TMergedKit, input: TInput) =>
-      Result.gen(() => body(context, input)),
-
-  serverFn:
-    <
-      TMergedKit extends BrandedMergedKit,
-      TInput,
-      TValue,
-      TError extends ServerFnError,
-    >(
-      action: KitAsyncBody<TMergedKit, TInput, ResultType<TValue, TError>>
-    ) =>
-    async (context: TMergedKit, input: TInput): Promise<TValue> => {
-      const result = await action(context, input).then((r) => r.unwrap());
-
-      return result;
-    },
+  gen: kitGen,
+  serverFn: kitServerFn,
 };

@@ -24,6 +24,7 @@ export default defineConfig({
     "unicorn/prefer-set-has": "off",
     "consistent-return": "off",
     "prefer-await-to-callbacks": "off",
+    "promise/prefer-await-to-then": "off",
     "func-names": "off",
     "prefer-destructuring": "off",
     "arrow-body-style": "off",

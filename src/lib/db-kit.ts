@@ -17,12 +17,13 @@ const toDatabaseError = (cause: unknown): DatabaseError =>
       cause instanceof Error ? cause.message : "Database operation failed",
   });
 
-export const dbService = defineKit({
-  db: async <TValue>(operation: (db: DrizzleDb) => Promise<TValue>) =>
+export const dbKit = defineKit(
+  "db",
+  async <TValue>(operation: (db: DrizzleDb) => Promise<TValue>) =>
     Result.tryPromise({
       try: async () => operation(drizzleDb),
       catch: toDatabaseError,
-    }),
-});
+    })
+);
 
-export type DbService = typeof dbService;
+export type DbKit = typeof dbKit;

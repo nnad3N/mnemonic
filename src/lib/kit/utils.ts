@@ -3,45 +3,71 @@ import type {
   InferErr,
   InferOk,
   Result as ResultType,
+  TaggedErrorInstance,
 } from "better-result";
 
-declare const KitBrand: unique symbol;
+export type KitModule<
+  TName extends string = string,
+  TValue = unknown,
+> = readonly [name: TName, value: TValue];
 
-export type KitModule = Record<string, unknown> & {
-  readonly [KitBrand]?: unknown;
+declare const KitsBrand: unique symbol;
+
+type KitContextBrand = {
+  readonly [KitsBrand]?: unknown;
 };
 
-declare const MergedKitBrand: unique symbol;
+export type Kits<TKits extends readonly KitModule[]> = KitsValue<
+  TKits[number]
+> &
+  KitContextBrand;
 
-export type MergedKit<TKits extends readonly KitModule[]> =
-  MergedKitValue<TKits> & {
-    readonly [MergedKitBrand]?: TKits;
-  };
+export type KitsValue<TKit extends KitModule> = {
+  [TName in TKit[0]]: Extract<TKit, KitModule<TName>>[1];
+};
 
-type UnionToIntersection<TUnion> = (
-  TUnion extends unknown ? (value: TUnion) => void : never
-) extends (value: infer TIntersection) => void
-  ? TIntersection
-  : never;
+type HasKitName<
+  TKits extends readonly KitModule[],
+  TName extends string,
+> = TKits extends readonly [
+  infer TFirst extends KitModule,
+  ...infer TRest extends readonly KitModule[],
+]
+  ? TFirst[0] extends TName
+    ? true
+    : HasKitName<TRest, TName>
+  : false;
 
-export type MergedKitValue<TKits extends readonly KitModule[]> =
-  UnionToIntersection<TKits[number]> & KitModule;
+type HasDuplicateKitNames<TKits extends readonly KitModule[]> =
+  TKits extends readonly [
+    infer TFirst extends KitModule,
+    ...infer TRest extends readonly KitModule[],
+  ]
+    ? HasKitName<TRest, TFirst[0]> extends true
+      ? true
+      : HasDuplicateKitNames<TRest>
+    : false;
 
-export type BrandedMergedKit = MergedKit<readonly KitModule[]>;
+type DuplicateKitNameError = {
+  readonly duplicateKitNameError: "Kit names must be unique";
+};
+
+export type UniqueKitNames<TKits extends readonly KitModule[]> =
+  HasDuplicateKitNames<TKits> extends true ? DuplicateKitNameError : unknown;
+
+export type BrandedKits = Kits<readonly KitModule[]>;
 
 export type InferYieldErr<Y> = Y extends Err<never, infer E> ? E : never;
 
-export type AnyResult = ResultType<unknown, unknown>;
-
 export type KitGenerator<
-  TResult extends AnyResult,
+  TResult extends ResultType<unknown, unknown>,
   TYield extends Err<never, unknown>,
 > = AsyncGenerator<TYield, TResult, unknown>;
 
 export type KitAction<
   TMergedKit,
   TInput,
-  TResult extends AnyResult,
+  TResult extends ResultType<unknown, unknown>,
   TYield extends Err<never, unknown>,
 > = (
   context: TMergedKit,
@@ -51,14 +77,21 @@ export type KitAction<
 >;
 
 export type KitGeneratorBody<
-  TMergedKit extends BrandedMergedKit,
+  TMergedKit extends BrandedKits,
   TInput,
   TYield extends Err<never, unknown>,
-  TResult extends AnyResult,
+  TResult extends ResultType<unknown, unknown>,
 > = (context: TMergedKit, input: TInput) => KitGenerator<TResult, TYield>;
 
 export type KitAsyncBody<
-  TMergedKit extends BrandedMergedKit,
+  TMergedKit extends BrandedKits,
   TInput,
-  TResult extends AnyResult,
+  TResult extends ResultType<unknown, unknown>,
 > = (context: TMergedKit, input: TInput) => Promise<TResult>;
+
+export type MatchErrorHandlers<
+  TError extends TaggedErrorInstance<string, unknown>,
+  TMappedError,
+> = {
+  [K in TError["_tag"]]: (error: Extract<TError, { _tag: K }>) => TMappedError;
+};
