@@ -13,40 +13,40 @@ import {
 import { Button } from "@/components/ui/button";
 import { m } from "@/paraglide/messages";
 import { threadKeys } from "@/routes/_protected.chat.$threadId/-thread-api/query-keys";
-import { deleteResource } from "@/routes/_protected.topic.$topicId/-resources-api/delete-resource";
-import type { ResourceItem } from "@/routes/_protected.topic.$topicId/-resources-api/list-resources";
+import { deleteFile } from "@/routes/_protected.topic.$topicId/-files-api/delete-file";
+import type { FileItem } from "@/routes/_protected.topic.$topicId/-files-api/list-files";
 import { topicKeys } from "@/routes/_protected.topic.$topicId/-topic-api/query-keys";
 
-type DeleteResourceDialogProps = {
+type DeleteFileDialogProps = {
   topicId: string;
-  resource: ResourceItem;
+  file: FileItem;
   onOpenChange: (open: boolean) => void;
   open: boolean;
 };
 
-export const DeleteResourceDialog = ({
-  resource,
+export const DeleteFileDialog = ({
+  file,
   onOpenChange,
   open,
   topicId,
-}: DeleteResourceDialogProps) => {
+}: DeleteFileDialogProps) => {
   const queryClient = useQueryClient();
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      await deleteResource({
-        data: { resourceId: resource.id },
+      await deleteFile({
+        data: { fileId: file.id },
       });
     },
     onError: () => {
-      toast.error(m.resources_delete_error_title(), {
+      toast.error(m.files_delete_error_title(), {
         description: m.common_please_try_again(),
       });
     },
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: topicKeys.resources(topicId),
+          queryKey: topicKeys.files(topicId),
         }),
         queryClient.invalidateQueries({
           queryKey: threadKeys.mentions(topicId),
@@ -60,12 +60,10 @@ export const DeleteResourceDialog = ({
     <AlertDialog onOpenChange={onOpenChange} open={open}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>
-            {m.resources_delete_confirm_title()}
-          </AlertDialogTitle>
+          <AlertDialogTitle>{m.files_delete_confirm_title()}</AlertDialogTitle>
           <AlertDialogDescription>
-            {m.resources_delete_confirm_description({
-              name: resource.displayName,
+            {m.files_delete_confirm_description({
+              name: file.displayName,
             })}
           </AlertDialogDescription>
         </AlertDialogHeader>

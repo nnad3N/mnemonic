@@ -21,23 +21,23 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { TableCell, TableRow } from "@/components/ui/table";
-import type { ResourceStatus } from "@/db/schema";
+import type { FileStatus } from "@/db/schema";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
-import { getResourceDownloadUrl } from "@/routes/_protected.topic.$topicId/-resources-api/get-resource-download-url";
-import type { ResourceItem } from "@/routes/_protected.topic.$topicId/-resources-api/list-resources";
-import { renameResource } from "@/routes/_protected.topic.$topicId/-resources-api/rename-resource";
+import { getFileDownloadUrl } from "@/routes/_protected.topic.$topicId/-files-api/get-file-download-url";
+import type { FileItem } from "@/routes/_protected.topic.$topicId/-files-api/list-files";
+import { renameFile } from "@/routes/_protected.topic.$topicId/-files-api/rename-file";
 import { topicKeys } from "@/routes/_protected.topic.$topicId/-topic-api/query-keys";
 
-import { DeleteResourceDialog } from "./delete-resource-dialog";
+import { DeleteFileDialog } from "./delete-file-dialog";
 
-type ResourceRowProps = {
-  resource: ResourceItem;
+type FileRowProps = {
+  file: FileItem;
   topicId: string;
 };
 
-const formatResourceSize = (sizeBytes: number) =>
+const formatFileSize = (sizeBytes: number) =>
   new Intl.NumberFormat(getLocale(), {
     maximumFractionDigits: 1,
     style: "unit",
@@ -45,23 +45,23 @@ const formatResourceSize = (sizeBytes: number) =>
     unitDisplay: "narrow",
   }).format(sizeBytes / 1024);
 
-const formatResourceDate = (createdAt: Date) =>
+const formatFileDate = (createdAt: Date) =>
   new Intl.DateTimeFormat(getLocale(), {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(createdAt));
 
-export const ResourceRow = ({ resource, topicId }: ResourceRowProps) => {
+export const FileRow = ({ file, topicId }: FileRowProps) => {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
 
   const downloadMutation = useMutation({
     mutationFn: async () =>
-      getResourceDownloadUrl({
-        data: { resourceId: resource.id },
+      getFileDownloadUrl({
+        data: { fileId: file.id },
       }),
     onError: () => {
-      toast.error(m.resources_download_error_title(), {
+      toast.error(m.files_download_error_title(), {
         description: m.common_please_try_again(),
       });
     },
@@ -69,7 +69,7 @@ export const ResourceRow = ({ resource, topicId }: ResourceRowProps) => {
       const anchor = document.createElement("a");
       anchor.href = url;
       anchor.rel = "noopener";
-      anchor.download = resource.displayName;
+      anchor.download = file.displayName;
       anchor.click();
       anchor.remove();
     },
@@ -77,13 +77,13 @@ export const ResourceRow = ({ resource, topicId }: ResourceRowProps) => {
 
   return (
     <>
-      <TableRow className="group/resource-row">
+      <TableRow className="group/file-row">
         <TableCell>
           <div className="flex min-w-0 items-center gap-2">
             <FileIcon className="size-4 shrink-0 text-muted-foreground" />
             {isRenaming ? (
-              <RenameResourceField
-                resource={resource}
+              <RenameFileField
+                file={file}
                 stopRenaming={() => {
                   setIsRenaming(false);
                 }}
@@ -96,23 +96,23 @@ export const ResourceRow = ({ resource, topicId }: ResourceRowProps) => {
                   setIsRenaming(true);
                 }}
               >
-                {resource.displayName}
+                {file.displayName}
               </span>
             )}
           </div>
         </TableCell>
         <TableCell>
-          <ResourceStatusChip status={resource.status} />
+          <FileStatusChip status={file.status} />
         </TableCell>
-        <TableCell>{formatResourceSize(resource.sizeBytes)}</TableCell>
-        <TableCell>{formatResourceDate(resource.createdAt)}</TableCell>
+        <TableCell>{formatFileSize(file.sizeBytes)}</TableCell>
+        <TableCell>{formatFileDate(file.createdAt)}</TableCell>
         <TableCell className="p-0 text-right">
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
                 <Button
                   aria-label={m.common_actions()}
-                  className="opacity-0 group-hover/resource-row:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100"
+                  className="opacity-0 group-hover/file-row:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100"
                   size="icon-sm"
                   variant="ghost"
                 />
@@ -130,9 +130,7 @@ export const ResourceRow = ({ resource, topicId }: ResourceRowProps) => {
                 {m.common_rename()}
               </DropdownMenuItem>
               <DropdownMenuItem
-                disabled={
-                  resource.status !== "ready" || downloadMutation.isPending
-                }
+                disabled={file.status !== "ready" || downloadMutation.isPending}
                 onClick={() => {
                   downloadMutation.mutate();
                 }}
@@ -154,8 +152,8 @@ export const ResourceRow = ({ resource, topicId }: ResourceRowProps) => {
         </TableCell>
       </TableRow>
 
-      <DeleteResourceDialog
-        resource={resource}
+      <DeleteFileDialog
+        file={file}
         onOpenChange={setDeleteOpen}
         open={deleteOpen}
         topicId={topicId}
@@ -164,44 +162,44 @@ export const ResourceRow = ({ resource, topicId }: ResourceRowProps) => {
   );
 };
 
-type RenameResourceFieldProps = {
-  resource: ResourceItem;
+type RenameFileFieldProps = {
+  file: FileItem;
   stopRenaming: () => void;
   topicId: string;
 };
 
-const RenameResourceField = ({
-  resource,
+const RenameFileField = ({
+  file,
   stopRenaming,
   topicId,
-}: RenameResourceFieldProps) => {
+}: RenameFileFieldProps) => {
   const queryClient = useQueryClient();
 
   const renameMutation = useMutation({
     mutationFn: async (displayName: string) => {
-      await renameResource({
-        data: { resourceId: resource.id, displayName },
+      await renameFile({
+        data: { fileId: file.id, displayName },
       });
     },
     onError: () => {
-      toast.error(m.resources_rename_error_title(), {
+      toast.error(m.files_rename_error_title(), {
         description: m.common_please_try_again(),
       });
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: topicKeys.resources(topicId),
+        queryKey: topicKeys.files(topicId),
       });
       stopRenaming();
     },
   });
 
   const form = useForm({
-    defaultValues: { displayName: resource.displayName },
+    defaultValues: { displayName: file.displayName },
     onSubmit: async ({ value }) => {
       const trimmed = value.displayName.trim();
 
-      if (trimmed.length === 0 || trimmed === resource.displayName.trim()) {
+      if (trimmed.length === 0 || trimmed === file.displayName.trim()) {
         stopRenaming();
         return;
       }
@@ -251,7 +249,7 @@ const RenameResourceField = ({
   );
 };
 
-const getStatusLabel = (status: ResourceStatus) => {
+const getStatusLabel = (status: FileStatus) => {
   // oxlint-disable-next-line default-case
   switch (status) {
     case "uploading": {
@@ -269,7 +267,7 @@ const getStatusLabel = (status: ResourceStatus) => {
   }
 };
 
-const ResourceStatusChip = ({ status }: { status: ResourceStatus }) => {
+const FileStatusChip = ({ status }: { status: FileStatus }) => {
   const label = getStatusLabel(status);
 
   return (

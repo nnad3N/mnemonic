@@ -31,20 +31,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { m } from "@/paraglide/messages";
-import { resourcesQuery } from "@/routes/_protected.topic.$topicId/-resources-api/list-resources";
-import { ResourceRow } from "@/routes/_protected.topic.$topicId/-resources-components/resource-row";
-import { ResourceSearch } from "@/routes/_protected.topic.$topicId/-resources-components/resource-search";
+import { filesQuery } from "@/routes/_protected.topic.$topicId/-files-api/list-files";
+import { FileRow } from "@/routes/_protected.topic.$topicId/-files-components/file-row";
+import { FileSearch } from "@/routes/_protected.topic.$topicId/-files-components/file-search";
 
 const PAGE_SIZE = 20;
 
-const resourcesSearchSchema = v.object({
+const filesSearchSchema = v.object({
   page: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
   q: v.optional(v.string(), ""),
 });
 
-export const Route = createFileRoute("/_protected/topic/$topicId/resources")({
+export const Route = createFileRoute("/_protected/topic/$topicId/files")({
   component: RouteComponent,
-  validateSearch: resourcesSearchSchema,
+  validateSearch: filesSearchSchema,
 });
 
 const MAX_VISIBLE_PAGES = 7;
@@ -79,7 +79,7 @@ function RouteComponent() {
   const [debouncedQuery] = useDebounce(q, 300);
 
   const { data, isError, isLoading, isSuccess, refetch } = useQuery(
-    resourcesQuery({
+    filesQuery({
       page,
       pageSize: PAGE_SIZE,
       search: debouncedQuery,
@@ -96,7 +96,7 @@ function RouteComponent() {
 
   return (
     <div className="flex w-full flex-col gap-4">
-      <ResourceSearch
+      <FileSearch
         onChange={(nextQuery) => {
           void navigate({
             replace: true,
@@ -141,17 +141,17 @@ function RouteComponent() {
               ))}
 
             {isError && (
-              <ResourcesStaticTableRow colSpan={columns.length}>
+              <FilesStaticTableRow colSpan={columns.length}>
                 <Empty>
                   <EmptyHeader>
                     <EmptyMedia variant="icon">
                       <AlertCircleIcon className="text-destructive" />
                     </EmptyMedia>
                     <EmptyTitle className="text-destructive">
-                      {m.resources_load_error_title()}
+                      {m.files_load_error_title()}
                     </EmptyTitle>
                     <EmptyDescription>
-                      {m.resources_load_error_description()}
+                      {m.files_load_error_description()}
                     </EmptyDescription>
                   </EmptyHeader>
                   <EmptyContent>
@@ -165,30 +165,26 @@ function RouteComponent() {
                     </Button>
                   </EmptyContent>
                 </Empty>
-              </ResourcesStaticTableRow>
+              </FilesStaticTableRow>
             )}
 
             {isSuccess && totalCount === 0 && (
-              <ResourcesStaticTableRow colSpan={columns.length}>
+              <FilesStaticTableRow colSpan={columns.length}>
                 <Empty>
                   <EmptyHeader>
                     <EmptyTitle>
                       {debouncedQuery.trim().length > 0
-                        ? m.resources_no_results()
-                        : m.resources_empty()}
+                        ? m.files_no_results()
+                        : m.files_empty()}
                     </EmptyTitle>
                   </EmptyHeader>
                 </Empty>
-              </ResourcesStaticTableRow>
+              </FilesStaticTableRow>
             )}
 
             {isSuccess &&
-              items.map((resource) => (
-                <ResourceRow
-                  resource={resource}
-                  key={resource.id}
-                  topicId={topicId}
-                />
+              items.map((fileItem) => (
+                <FileRow file={fileItem} key={fileItem.id} topicId={topicId} />
               ))}
           </TableBody>
         </Table>
@@ -227,7 +223,7 @@ function RouteComponent() {
   );
 }
 
-const ResourcesStaticTableRow = ({
+const FilesStaticTableRow = ({
   children,
   colSpan,
 }: PropsWithChildren<{ colSpan: number }>) => (

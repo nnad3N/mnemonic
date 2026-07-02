@@ -7,9 +7,9 @@ import {
 } from "@/mastra/agents/base-instructions";
 import { models } from "@/mastra/models";
 import { pgVector, postgresStore } from "@/mastra/storage";
-import { getResourceFromS3Tool } from "@/mastra/tools/get-resource-from-s3-tool";
-import { resourceGraphRagTool } from "@/mastra/tools/resource-graph-rag-tool";
-import { resourceVectorSearchTool } from "@/mastra/tools/resource-vector-search-tool";
+import { fileGraphRagTool } from "@/mastra/tools/file-graph-rag-tool";
+import { fileVectorSearchTool } from "@/mastra/tools/file-vector-search-tool";
+import { getFileFromS3Tool } from "@/mastra/tools/get-file-from-s3-tool";
 import { webSearchTool } from "@/mastra/tools/web-search-tool";
 
 export const topicAgentId = "topic-agent";
@@ -32,15 +32,15 @@ export const topicMemory = new Memory({
 });
 
 export const topicAgentTools = {
-  resourceGraphRag: resourceGraphRagTool,
-  resourceVectorSearch: resourceVectorSearchTool,
-  getResourceFromS3: getResourceFromS3Tool,
+  fileGraphRag: fileGraphRagTool,
+  fileVectorSearch: fileVectorSearchTool,
+  getFileFromS3: getFileFromS3Tool,
   webSearch: webSearchTool,
 } as const;
 
 export const topicAgent = new Agent({
   description:
-    "Uses current topic resources, topic-scoped conversation recall, raw topic file access, and web search to answer topic-specific questions.",
+    "Uses current topic files, topic-scoped conversation recall, raw topic file access, and web search to answer topic-specific questions.",
   id: topicAgentId,
   instructions: `
 ${baseInstructions}
@@ -48,23 +48,23 @@ ${baseInstructions}
 ${sharedSourceInstructions}
 
 Available sources:
-- Topic resources: uploaded files in the current topic. Prefer these for questions about the user's documents.
+- Topic files: uploaded files in the current topic. Prefer these for questions about the user's documents.
 - Web search: external or current information. Use when the question needs facts outside the topic or up-to-date information from the web.
 - Conversation recall: past messages within the current topic. Use when the answer may already appear in prior chat.
 
-When sources conflict, prefer topic resources over web search, and web search over conversation recall.
+When sources conflict, prefer topic files over web search, and web search over conversation recall.
 
 ## Web search
 Use webSearch when:
 - The user asks for current events, external documentation, or explicitly wants a web search.
-- Topic resource tools plus conversation recall did not fully answer the question.
+- Topic file tools plus conversation recall did not fully answer the question.
 
 ## Topic file access
-When gathering from topic resources, pick the tool that fits the question. You do not need to run every resource tool.
+When gathering from topic files, pick the tool that fits the question. You do not need to run every file tool.
 
-- resourceVectorSearch — Direct facts, quotes, or specific passages in uploaded documents.
-- resourceGraphRag — When information spans multiple files, connected passages matter, or relationships between concepts are important.
-- getResourceFromS3 — Raw file inspection for images, or fallback direct inspection when search tools are insufficient.
+- fileVectorSearch — Direct facts, quotes, or specific passages in uploaded documents.
+- fileGraphRag — When information spans multiple files, connected passages matter, or relationships between concepts are important.
+- getFileFromS3 — Raw file inspection for images, or fallback direct inspection when search tools are insufficient.
 
 Search tools are automatically scoped to the current topic. Tool descriptions own exact input requirements and file-type limits.
 

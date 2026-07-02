@@ -4,7 +4,7 @@ import { and, desc, eq, ilike } from "drizzle-orm";
 import * as v from "valibot";
 
 import { db } from "@/db";
-import { resource, topic } from "@/db/schema";
+import { file, topic } from "@/db/schema";
 import { authMiddleware } from "@/lib/middleware/auth-middleware";
 import type { SafeId } from "@/lib/safe-id";
 import { rawId, toSafeId } from "@/lib/safe-id";
@@ -21,19 +21,19 @@ type MentionItem = {
   type: MentionQueryType;
 };
 
-const buildResourceMentionsWhereClause = (
+const buildFileMentionsWhereClause = (
   topicId: SafeId<"topic">,
   query: string
 ) => {
   const trimmedQuery = query.trim();
 
   if (trimmedQuery.length === 0) {
-    return eq(resource.topicId, topicId);
+    return eq(file.topicId, topicId);
   }
 
   return and(
-    eq(resource.topicId, topicId),
-    ilike(resource.displayName, `%${trimmedQuery}%`)
+    eq(file.topicId, topicId),
+    ilike(file.displayName, `%${trimmedQuery}%`)
   );
 };
 
@@ -65,7 +65,7 @@ const getMentionsInputSchema = v.object({
 
 const getMentionByIdInputSchema = v.object({
   id: v.pipe(v.string(), v.nanoid()),
-  type: v.picklist(["resource", "thread", "topic"]),
+  type: v.picklist(["file", "thread", "topic"]),
 });
 
 export const getMentions = createServerFn({ method: "GET" })
@@ -83,15 +83,15 @@ export const getMentions = createServerFn({ method: "GET" })
 
     if (ownedTopic) {
       const memoryStore = await getMemoryStore();
-      const [resourceMentions, threadsResult] = await Promise.all([
+      const [fileMentions, threadsResult] = await Promise.all([
         db
           .select({
-            id: resource.id,
-            displayName: resource.displayName,
+            id: file.id,
+            displayName: file.displayName,
           })
-          .from(resource)
-          .where(buildResourceMentionsWhereClause(ownedTopic.id, data.query))
-          .orderBy(desc(resource.createdAt))
+          .from(file)
+          .where(buildFileMentionsWhereClause(ownedTopic.id, data.query))
+          .orderBy(desc(file.createdAt))
           .limit(MENTIONS_QUERY_LIMIT),
         memoryStore.listThreads({
           filter: { resourceId: ownedTopic.id },
@@ -101,9 +101,9 @@ export const getMentions = createServerFn({ method: "GET" })
         }),
       ]);
 
-      const mentions: MentionItem[] = resourceMentions.map((mention) => ({
+      const mentions: MentionItem[] = fileMentions.map((mention) => ({
         ...mention,
-        type: "resource",
+        type: "file",
       }));
 
       for (const thread of threadsResult.threads) {
@@ -165,8 +165,8 @@ export const getMentionById = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .handler(async ({ context, data }) => {
     switch (data.type) {
-      case "resource": {
-        const ownedResource = await db.query.resource.findFirst({
+      case "file": {
+        const ownedFile = await db.query.file.findFirst({
           columns: {
             displayName: true,
             id: true,
@@ -174,16 +174,16 @@ export const getMentionById = createServerFn({ method: "GET" })
           },
           where: {
             // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId check.
-            id: toSafeId<"resource">(data.id),
+            id: toSafeId<"file">(data.id),
             userId: context.user.id,
           },
         });
 
-        return ownedResource
+        return ownedFile
           ? {
-              displayName: ownedResource.displayName,
-              id: rawId(ownedResource.id),
-              status: ownedResource.status,
+              displayName: ownedFile.displayName,
+              id: rawId(ownedFile.id),
+              status: ownedFile.status,
             }
           : null;
       }
@@ -250,7 +250,7 @@ type GetMentionByIdParams = {
 
 export const mentionByIdQuery = ({ id, type }: GetMentionByIdParams) =>
   queryOptions({
-    // without this the optimistic update for resource upload might be discarded
+    // without this the optimistic update for file upload might be discarded
     refetchOnMount: false,
     queryFn: async () =>
       getMentionById({

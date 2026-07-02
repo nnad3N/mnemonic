@@ -6,16 +6,13 @@ import { useCallback } from "react";
 
 import { hashFileContents } from "@/lib/hash";
 
-import { findResourcesBySha256 } from "../-thread-api/find-resources-by-sha256";
+import { findFilesBySha256 } from "../-thread-api/find-files-by-sha256";
 import { threadQuery } from "../-thread-api/get-thread";
 import { getThreadEditorId } from "../-thread-components/composer/plate";
 import { getMentionKey } from "../-thread-components/composer/plate-plugins/mention-key";
 import type { ThreadInputLocation } from "../../-chat-store";
 import { useAddAttachment, useIsAddingAttachment } from "./use-add-attachment";
-import {
-  useIsUploadingResource,
-  useUploadResource,
-} from "./use-upload-resource";
+import { useIsUploadingFile, useUploadFile } from "./use-upload-file";
 
 const insertMentionItem = getMentionOnSelectItem();
 
@@ -30,17 +27,17 @@ export const useComposerUpload = (
     select: (data) => data.topicId,
   });
 
-  const isUploading = useIsUploadingResource(threadId);
+  const isUploading = useIsUploadingFile(threadId);
   const isAttaching = useIsAddingAttachment(threadId);
-  const { mutate: uploadResource } = useUploadResource(threadId);
+  const { mutate: uploadFile } = useUploadFile(threadId);
   const { mutate: addAttachment } = useAddAttachment(threadId, location);
-  const { mutateAsync: findDuplicateResources, isPending } = useMutation({
+  const { mutateAsync: findDuplicateFiles, isPending } = useMutation({
     mutationFn: async (sha256s: string[]) => {
       if (!topicId) {
         return [];
       }
 
-      return findResourcesBySha256({
+      return findFilesBySha256({
         data: { sha256s, topicId },
       });
     },
@@ -64,22 +61,22 @@ export const useComposerUpload = (
       );
 
       if (topicId) {
-        const existingResources = await findDuplicateResources(
+        const existingFiles = await findDuplicateFiles(
           fileEntries.map((entry) => entry.sha256)
         );
 
         for (const { file, sha256 } of fileEntries) {
-          const existingResource = existingResources.find(
-            (resource) => resource.sha256 === sha256
+          const existingFile = existingFiles.find(
+            (fileItem) => fileItem.sha256 === sha256
           );
-          const resourceId = existingResource?.id ?? nanoid();
+          const fileId = existingFile?.id ?? nanoid();
 
-          if (!existingResource || existingResource.status === "failed") {
-            uploadResource({ topicId, resourceId, file, sha256 });
+          if (!existingFile || existingFile.status === "failed") {
+            uploadFile({ topicId, fileId, file, sha256 });
           }
 
           insertMentionItem(editor, {
-            key: getMentionKey({ type: "resource", value: resourceId }),
+            key: getMentionKey({ type: "file", value: fileId }),
             text: file.name,
           });
         }
@@ -96,14 +93,7 @@ export const useComposerUpload = (
 
       editor.tf.focus({ edge: "endEditor" });
     },
-    [
-      addAttachment,
-      canUpload,
-      editor,
-      findDuplicateResources,
-      topicId,
-      uploadResource,
-    ]
+    [addAttachment, canUpload, editor, findDuplicateFiles, topicId, uploadFile]
   );
 
   return { canUpload, uploadFiles };

@@ -1,16 +1,16 @@
 import { TaggedError } from "better-result";
 
-type ResourceUploadErrorReason =
+type FileUploadErrorReason =
   | "s3-error"
   | "file-too-large"
   | "unsupported-mime-type";
 
-export type ResourceUploadErrorShape = {
+export type FileUploadErrorShape = {
   message?: string;
-  reason: ResourceUploadErrorReason;
+  reason: FileUploadErrorReason;
 };
 
-const ResourceUploadErrorMessage = (args: ResourceUploadErrorShape) => {
+const FileUploadErrorMessage = (args: FileUploadErrorShape) => {
   // oxlint-disable-next-line typescript/switch-exhaustiveness-check
   switch (args.reason) {
     case "unsupported-mime-type": {
@@ -25,13 +25,13 @@ const ResourceUploadErrorMessage = (args: ResourceUploadErrorShape) => {
   }
 };
 
-export class ResourceUploadError extends TaggedError(
-  "ResourceUploadError"
-)<ResourceUploadErrorShape>() {
-  constructor(args: ResourceUploadErrorShape) {
+export class FileUploadError extends TaggedError(
+  "FileUploadError"
+)<FileUploadErrorShape>() {
+  constructor(args: FileUploadErrorShape) {
     super({
       ...args,
-      message: args.message ?? ResourceUploadErrorMessage(args),
+      message: args.message ?? FileUploadErrorMessage(args),
     });
   }
 }

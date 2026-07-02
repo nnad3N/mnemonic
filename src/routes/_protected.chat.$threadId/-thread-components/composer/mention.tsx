@@ -64,7 +64,7 @@ export const MentionContent = ({
 };
 
 const mentionIconMap = {
-  resource: FileIcon,
+  file: FileIcon,
   attachment: FileIcon,
   selection: TextIcon,
   thread: MessageSquareTextIcon,

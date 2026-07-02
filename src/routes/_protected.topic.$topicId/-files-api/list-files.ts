@@ -4,13 +4,13 @@ import { and, desc, eq, ilike } from "drizzle-orm";
 import * as v from "valibot";
 
 import { db } from "@/db";
-import { resource } from "@/db/schema";
-import type { ResourceStatus } from "@/db/schema";
+import { file } from "@/db/schema";
+import type { FileStatus } from "@/db/schema";
 import { topicAccessMiddleware } from "@/lib/middleware/assert-thread-access";
 import type { SafeId } from "@/lib/safe-id";
 import { topicKeys } from "@/routes/_protected.topic.$topicId/-topic-api/query-keys";
 
-const listResourcesInputSchema = v.object({
+const listFilesInputSchema = v.object({
   page: v.pipe(v.number(), v.integer(), v.minValue(1)),
   pageSize: v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100)),
   search: v.optional(v.string(), ""),
@@ -20,17 +20,17 @@ const buildWhereClause = (topicId: SafeId<"topic">, search: string) => {
   const trimmedSearch = search.trim();
 
   if (trimmedSearch.length === 0) {
-    return eq(resource.topicId, topicId);
+    return eq(file.topicId, topicId);
   }
 
   return and(
-    eq(resource.topicId, topicId),
-    ilike(resource.displayName, `%${trimmedSearch}%`)
+    eq(file.topicId, topicId),
+    ilike(file.displayName, `%${trimmedSearch}%`)
   );
 };
 
-export const listResources = createServerFn({ method: "GET" })
-  .inputValidator(listResourcesInputSchema)
+export const listFiles = createServerFn({ method: "GET" })
+  .inputValidator(listFilesInputSchema)
   .middleware([topicAccessMiddleware])
   .handler(async ({ context, data }) => {
     const whereClause = buildWhereClause(context.topic.id, data.search);
@@ -39,19 +39,19 @@ export const listResources = createServerFn({ method: "GET" })
     const [items, totalCount] = await Promise.all([
       db
         .select({
-          createdAt: resource.createdAt,
-          displayName: resource.displayName,
-          id: resource.id,
-          mimeType: resource.mimeType,
-          sizeBytes: resource.sizeBytes,
-          status: resource.status,
+          createdAt: file.createdAt,
+          displayName: file.displayName,
+          id: file.id,
+          mimeType: file.mimeType,
+          sizeBytes: file.sizeBytes,
+          status: file.status,
         })
-        .from(resource)
+        .from(file)
         .where(whereClause)
-        .orderBy(desc(resource.createdAt))
+        .orderBy(desc(file.createdAt))
         .limit(data.pageSize)
         .offset(offset),
-      db.$count(resource, whereClause),
+      db.$count(file, whereClause),
     ]);
 
     return {
@@ -60,38 +60,38 @@ export const listResources = createServerFn({ method: "GET" })
     };
   });
 
-export type ResourceItem = {
+export type FileItem = {
   createdAt: Date;
   displayName: string;
   id: string;
   mimeType: string;
   sizeBytes: number;
-  status: ResourceStatus;
+  status: FileStatus;
 };
 
-export type ListResourcesResult = {
-  items: ResourceItem[];
+export type ListFilesResult = {
+  items: FileItem[];
   totalCount: number;
 };
 
-export type ResourcesQueryParams = {
+export type FilesQueryParams = {
   page: number;
   pageSize: number;
   search: string;
   topicId: string;
 };
 
-export const resourcesQuery = ({
+export const filesQuery = ({
   page,
   pageSize,
   search,
   topicId,
-}: ResourcesQueryParams) =>
+}: FilesQueryParams) =>
   queryOptions({
     queryFn: async () =>
-      listResources({
+      listFiles({
         data: { page, pageSize, search, topicId },
       }),
-    queryKey: [...topicKeys.resources(topicId), { page, pageSize, search }],
+    queryKey: [...topicKeys.files(topicId), { page, pageSize, search }],
     placeholderData: keepPreviousData,
   });

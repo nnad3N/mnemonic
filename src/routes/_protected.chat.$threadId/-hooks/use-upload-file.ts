@@ -5,36 +5,36 @@ import {
 } from "@tanstack/react-query";
 import { Result } from "better-result";
 
-import type { ResourceUploadErrorShape } from "@/lib/errors/resource-upload-error";
-import { ResourceUploadError } from "@/lib/errors/resource-upload-error";
+import type { FileUploadErrorShape } from "@/lib/errors/file-upload-error";
+import { FileUploadError } from "@/lib/errors/file-upload-error";
 
 import { mentionByIdQuery } from "../-thread-api/get-mentions";
 import { threadKeys, threadMutationKeys } from "../-thread-api/query-keys";
 import {
   getPresignedUrl,
-  processResource,
-  updateResourceStatus,
-} from "../-thread-api/upload-resource";
-import type { GetPresignedUrlOk } from "../-thread-api/upload-resource";
+  processFile,
+  updateFileStatus,
+} from "../-thread-api/upload-file";
+import type { GetPresignedUrlOk } from "../-thread-api/upload-file";
 
-export type UploadResourceVars = {
+export type UploadFileVars = {
   topicId: string;
   file: File;
-  resourceId: string;
+  fileId: string;
   sha256: string;
 };
 
-export const useUploadResource = (threadId: string) => {
+export const useUploadFile = (threadId: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
     retry: 3,
-    mutationKey: threadMutationKeys.uploadResource(threadId),
-    mutationFn: async ({ file, resourceId, sha256 }: UploadResourceVars) => {
+    mutationKey: threadMutationKeys.uploadFile(threadId),
+    mutationFn: async ({ file, fileId, sha256 }: UploadFileVars) => {
       const serialized = await getPresignedUrl({
         data: {
           displayName: file.name,
-          resourceId,
+          fileId,
           mimeType: file.type,
           sha256,
           sizeBytes: file.size,
@@ -44,7 +44,7 @@ export const useUploadResource = (threadId: string) => {
 
       const result = Result.deserialize<
         GetPresignedUrlOk,
-        ResourceUploadErrorShape
+        FileUploadErrorShape
       >(serialized);
 
       if (Result.isError(result)) {
@@ -52,7 +52,7 @@ export const useUploadResource = (threadId: string) => {
       }
 
       if (result.value.type === "skipped") {
-        return { resourceId };
+        return { fileId };
       }
 
       const presignedUrl = result.value.presignedUrl;
@@ -68,57 +68,57 @@ export const useUploadResource = (threadId: string) => {
       );
 
       if (Result.isError(uploadResult)) {
-        throw new ResourceUploadError({
+        throw new FileUploadError({
           reason: "s3-error",
           message: uploadResult.error.message,
         });
       }
 
       if (!uploadResult.value.ok) {
-        throw new ResourceUploadError({
+        throw new FileUploadError({
           reason: "s3-error",
           message: `Upload failed with status ${uploadResult.value.status}`,
         });
       }
 
-      await processResource({
+      await processFile({
         data: {
-          resourceId,
+          fileId,
         },
       });
 
-      return { resourceId };
+      return { fileId };
     },
-    onMutate: async ({ resourceId, file }) => {
+    onMutate: async ({ fileId, file }) => {
       const mentionQuery = mentionByIdQuery({
-        type: "resource",
-        id: resourceId,
+        type: "file",
+        id: fileId,
       });
 
       await queryClient.cancelQueries({ queryKey: mentionQuery.queryKey });
 
       queryClient.setQueryData(mentionQuery.queryKey, () => ({
-        id: resourceId,
+        id: fileId,
         displayName: file.name,
         status: "uploading" as const,
       }));
     },
-    onError: async (error, { resourceId }) => {
+    onError: async (error, { fileId }) => {
       const mentionQuery = mentionByIdQuery({
-        type: "resource",
-        id: resourceId,
+        type: "file",
+        id: fileId,
       });
 
       queryClient.setQueryData(mentionQuery.queryKey, (current) =>
         current ? { ...current, status: "failed" as const } : current
       );
 
-      if (ResourceUploadError.is(error) && error.reason === "s3-error") {
+      if (FileUploadError.is(error) && error.reason === "s3-error") {
         await Result.tryPromise(
           async () =>
-            updateResourceStatus({
+            updateFileStatus({
               data: {
-                resourceId,
+                fileId,
                 status: "failed",
               },
             }),
@@ -132,10 +132,10 @@ export const useUploadResource = (threadId: string) => {
         );
       }
     },
-    onSettled: async (_data, _error, { topicId, resourceId }) => {
+    onSettled: async (_data, _error, { topicId, fileId }) => {
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: threadKeys.mention("resource", resourceId),
+          queryKey: threadKeys.mention("file", fileId),
         }),
         queryClient.invalidateQueries({
           queryKey: threadKeys.mentions(topicId),
@@ -145,7 +145,7 @@ export const useUploadResource = (threadId: string) => {
   });
 };
 
-export const useIsUploadingResource = (threadId: string) =>
+export const useIsUploadingFile = (threadId: string) =>
   useIsMutating({
-    mutationKey: threadMutationKeys.uploadResource(threadId),
+    mutationKey: threadMutationKeys.uploadFile(threadId),
   }) > 0;

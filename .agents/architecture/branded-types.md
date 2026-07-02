@@ -1,6 +1,6 @@
 # Branded Backend IDs
 
-This app uses branded IDs to make backend database code harder to mix up. A `SafeId<"topic">`, `SafeId<"resource">`, or `SafeId<"user">` is still a string at runtime, but TypeScript treats each tag as a different kind of ID.
+This app uses branded IDs to make backend database code harder to mix up. A `SafeId<"topic">`, `SafeId<"file">`, or `SafeId<"user">` is still a string at runtime, but TypeScript treats each tag as a different kind of ID.
 
 The goal is not runtime validation. The goal is to make Drizzle calls explicit about which app-owned ID type they are using.
 
@@ -10,9 +10,9 @@ The goal is not runtime validation. The goal is to make Drizzle calls explicit a
 - App-owned Drizzle IDs are branded in `src/db/schema.ts`.
 - `topic.id` is `SafeId<"topic">`.
 - `topic.userId` is `SafeId<"user">`.
-- `resource.id` is `SafeId<"resource">`.
-- `resource.userId` is `SafeId<"user">`.
-- `resource.topicId` is `SafeId<"topic">`.
+- `file.id` is `SafeId<"file">`.
+- `file.userId` is `SafeId<"user">`.
+- `file.topicId` is `SafeId<"topic">`.
 
 Do not brand Better Auth tables in `src/db/auth-schema.ts`. Better Auth owns that schema. Brand the authenticated `user.id` only after Better Auth returns the session in backend context.
 
@@ -70,12 +70,14 @@ Only use `rawId` when TypeScript shows that a branded ID is crossing into a raw-
 
 Mastra request context is set by server code before agent, tool, or workflow execution. Keep JSON schemas as raw nanoid strings, then brand request-context values when they are used with branded Drizzle columns.
 
-If a tool uses a resource ID from tool input together with a trusted topic ID from request context, brand the resource ID only for that scoped lookup.
+If a tool uses a file ID from tool input together with a trusted topic ID from request context, brand the file ID only for that scoped lookup.
 
 ## Do Not
 
 - Do not use branded IDs on the frontend.
 - Do not change server function inputs from `v.string()` nanoids to branded types.
 - Do not brand Better Auth schema columns.
-- Do not destructure an input field only to pass it into `toSafeId`; use `toSafeId(inputData.resourceId)` so the trust boundary stays visible.
+- Do not destructure an input field only to pass it into `toSafeId`; use `toSafeId(inputData.fileId)` so the trust boundary stays visible.
 - Do not silence `toSafeId` without a short reason.
+
+Note: Mastra thread scope uses `thread.resourceId` and memory APIs use `resource` / `resourceId` — those are Mastra identifiers, not uploaded-file IDs.

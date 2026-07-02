@@ -3,14 +3,14 @@ import { Result } from "better-result";
 import { eq } from "drizzle-orm";
 
 import { db } from "@/db";
-import { resource, topic } from "@/db/schema";
+import { file, topic } from "@/db/schema";
 import {
   threadAccessMiddleware,
   topicAccessMiddleware,
 } from "@/lib/middleware/assert-thread-access";
 import { deleteObjects } from "@/lib/s3";
+import { FILE_EMBEDDINGS_INDEX } from "@/mastra/file-rag-config";
 import { getAgentMemory, getMemoryStore } from "@/mastra/memory";
-import { RESOURCE_EMBEDDINGS_INDEX } from "@/mastra/resource-rag-config";
 import { pgVector } from "@/mastra/storage";
 
 export const deleteConversation = createServerFn({ method: "POST" })
@@ -27,13 +27,13 @@ export const deleteTopic = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const topicId = context.topic.id;
 
-    const resources = await db.query.resource.findMany({
+    const files = await db.query.file.findMany({
       where: { topicId },
       columns: { s3Key: true },
     });
 
     const s3Result = await deleteObjects({
-      keys: resources.map((row) => row.s3Key),
+      keys: files.map((row) => row.s3Key),
     });
 
     if (Result.isError(s3Result)) {
@@ -41,11 +41,11 @@ export const deleteTopic = createServerFn({ method: "POST" })
     }
 
     await pgVector.deleteVectors({
-      indexName: RESOURCE_EMBEDDINGS_INDEX,
+      indexName: FILE_EMBEDDINGS_INDEX,
       filter: { topicId },
     });
 
-    await db.delete(resource).where(eq(resource.topicId, topicId));
+    await db.delete(file).where(eq(file.topicId, topicId));
 
     const [memoryStore, memory] = await Promise.all([
       getMemoryStore(),

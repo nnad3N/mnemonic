@@ -3,64 +3,64 @@ import { useEffect, useRef } from "react";
 
 import { topicKeys } from "@/routes/_protected.topic.$topicId/-topic-api/query-keys";
 
-import { getPendingResources } from "../-resources-api/get-pending-resources";
+import { getPendingFiles } from "../-files-api/get-pending-files";
 import { useChatStore } from "../../-chat-store";
 import { threadKeys } from "../../_protected.chat.$threadId/-thread-api/query-keys";
 
 const POLL_MS = 2000;
 
-type ResourcesSyncProps = {
+type FilesSyncProps = {
   topicId: string;
 };
 
-export const ResourcesSync = ({ topicId }: ResourcesSyncProps) => {
+export const FilesSync = ({ topicId }: FilesSyncProps) => {
   const queryClient = useQueryClient();
-  const previousPendingResourceIds = useRef<string[]>([]);
+  const previousPendingFileIds = useRef<string[]>([]);
   const isPolling = useChatStore((state) => state.pollingTopicIds.has(topicId));
-  const { data: pendingResources } = useSuspenseQuery({
+  const { data: pendingFiles } = useSuspenseQuery({
     queryFn: async () =>
-      getPendingResources({
+      getPendingFiles({
         data: { topicId },
       }),
-    select: (data) => data.map((resource) => resource.id),
-    queryKey: [topicId, "pending-resources"] as const,
+    select: (data) => data.map((fileItem) => fileItem.id),
+    queryKey: [topicId, "pending-files"] as const,
     refetchInterval: isPolling ? POLL_MS : false,
   });
 
   useEffect(() => {
     const { removePollingTopicId, addPollingTopicId } = useChatStore.getState();
-    const removedResourceIds = previousPendingResourceIds.current.filter(
-      (resourceId) => !pendingResources.includes(resourceId)
+    const removedFileIds = previousPendingFileIds.current.filter(
+      (fileId) => !pendingFiles.includes(fileId)
     );
 
-    previousPendingResourceIds.current = pendingResources;
+    previousPendingFileIds.current = pendingFiles;
 
-    if (pendingResources.length > 0) {
+    if (pendingFiles.length > 0) {
       addPollingTopicId(topicId);
     } else {
       removePollingTopicId(topicId);
     }
 
-    for (const resourceId of removedResourceIds) {
+    for (const fileId of removedFileIds) {
       void queryClient.invalidateQueries({
-        queryKey: threadKeys.mention("resource", resourceId),
+        queryKey: threadKeys.mention("file", fileId),
       });
     }
 
-    if (removedResourceIds.length > 0) {
+    if (removedFileIds.length > 0) {
       void queryClient.invalidateQueries({
         queryKey: threadKeys.mentions(topicId),
       });
 
       void queryClient.invalidateQueries({
-        queryKey: topicKeys.resources(topicId),
+        queryKey: topicKeys.files(topicId),
       });
     }
-  }, [queryClient, topicId, pendingResources]);
+  }, [queryClient, topicId, pendingFiles]);
 
   useEffect(() => {
     return () => {
-      previousPendingResourceIds.current = [];
+      previousPendingFileIds.current = [];
       useChatStore.getState().removePollingTopicId(topicId);
     };
   }, [topicId]);

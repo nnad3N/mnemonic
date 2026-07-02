@@ -6,7 +6,7 @@ import type { PropsWithChildren } from "react";
 import { use, useEffect, useState } from "react";
 
 import { useChatStore } from "../-chat-store";
-import { ResourcesSync } from "../_protected.topic.$topicId/-topic-components/resources-sync";
+import { FilesSync } from "../_protected.topic.$topicId/-topic-components/files-sync";
 import { threadQuery } from "./-thread-api/get-thread";
 import { threadKeys } from "./-thread-api/query-keys";
 import { ThreadChatContext } from "./-thread-chat-context";
@@ -55,7 +55,7 @@ export const ThreadChatProvider = ({
 
   return (
     <ThreadChatContext.Provider value={chat}>
-      {data.topicId && <ResourcesSync topicId={data.topicId} />}
+      {data.topicId && <FilesSync topicId={data.topicId} />}
       {children}
     </ThreadChatContext.Provider>
   );

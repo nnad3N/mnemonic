@@ -15,12 +15,12 @@ import { toSafeId } from "@/lib/safe-id";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context";
 
 const inputSchema = v.object({
-  resourceId: v.pipe(v.string(), v.nanoid()),
+  fileId: v.pipe(v.string(), v.nanoid()),
 });
 
 const successOutputSchema = v.object({
   type: v.literal("success"),
-  resourceId: v.pipe(v.string(), v.nanoid()),
+  fileId: v.pipe(v.string(), v.nanoid()),
   data: v.pipe(v.string(), v.nonEmpty()),
   displayName: v.pipe(v.string(), v.nonEmpty()),
   mimeType: v.pipe(v.string(), v.nonEmpty()),
@@ -37,32 +37,32 @@ const outputSchema = v.variant("type", [
   errorOutputSchema,
 ]);
 
-type GetResourceSuccess = v.InferOutput<typeof successOutputSchema>;
-type GetResourceError = v.InferOutput<typeof errorOutputSchema>;
+type GetFileSuccess = v.InferOutput<typeof successOutputSchema>;
+type GetFileError = v.InferOutput<typeof errorOutputSchema>;
 
-export const getResourceFromS3Tool = createTool({
-  id: "get-resource-from-s3",
+export const getFileFromS3Tool = createTool({
+  id: "get-file-from-s3",
   inputSchema: toStandardJsonSchema(inputSchema),
   outputSchema: toStandardJsonSchema(outputSchema),
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
   description: [
-    "Load one supported raw uploaded resource from the current topic for direct multimodal inspection.",
-    "Use for images, which are not text-indexed, or when the user @-mentions a specific supported image resource.",
-    "Do not use for office documents, PDFs, or other extracted-only uploads; use resourceVectorSearch or resourceGraphRag for those.",
+    "Load one supported raw uploaded file from the current topic for direct multimodal inspection.",
+    "Use for images, which are not text-indexed, or when the user @-mentions a specific supported image file.",
+    "Do not use for office documents, PDFs, or other extracted-only uploads; use fileVectorSearch or fileGraphRag for those.",
     `Supported MIME types: ${LLM_NATIVE_IMAGE_MIME_TYPES.join(", ")}.`,
-    "Input resourceId must come from an resource @-mention or prior tool result.",
+    "Input fileId must come from a file @-mention or prior tool result.",
   ].join(" "),
-  execute: async ({ resourceId }, context) => {
+  execute: async ({ fileId }, context) => {
     const topicId = context.requestContext?.get("filter")?.topicId;
 
     if (!topicId) {
       return {
         type: "error",
-        message: "Resource not found.",
-      } satisfies GetResourceError;
+        message: "File not found.",
+      } satisfies GetFileError;
     }
 
-    const resource = await db.query.resource.findFirst({
+    const row = await db.query.file.findFirst({
       columns: {
         displayName: true,
         id: true,
@@ -73,42 +73,42 @@ export const getResourceFromS3Tool = createTool({
       },
       where: {
         // oxlint-disable-next-line eslint-js/no-restricted-syntax -- scoped by trusted topic.
-        id: toSafeId<"resource">(resourceId),
+        id: toSafeId<"file">(fileId),
         topicId,
       },
     });
 
-    if (!resource || resource.status !== "ready") {
+    if (!row || row.status !== "ready") {
       return {
         type: "error",
-        message: "Resource not found.",
-      } satisfies GetResourceError;
+        message: "File not found.",
+      } satisfies GetFileError;
     }
 
-    if (!isLLMNativeImageMimeType(resource.mimeType)) {
+    if (!isLLMNativeImageMimeType(row.mimeType)) {
       return {
         type: "error",
-        message: `File "${resource.displayName}" (${resource.mimeType}) cannot be loaded directly. Use vector or graph search instead.`,
-      } satisfies GetResourceError;
+        message: `File "${row.displayName}" (${row.mimeType}) cannot be loaded directly. Use vector or graph search instead.`,
+      } satisfies GetFileError;
     }
 
-    const objectResult = await getObject(resource.s3Key);
+    const objectResult = await getObject(row.s3Key);
 
     if (Result.isError(objectResult)) {
       return {
         type: "error",
-        message: "Resource could not be loaded.",
-      } satisfies GetResourceError;
+        message: "File could not be loaded.",
+      } satisfies GetFileError;
     }
 
     return {
       type: "success",
-      resourceId: resource.id,
+      fileId: row.id,
       data: Buffer.from(objectResult.value).toString("base64"),
-      displayName: resource.displayName,
-      mimeType: resource.mimeType,
-      sizeBytes: resource.sizeBytes,
-    } satisfies GetResourceSuccess;
+      displayName: row.displayName,
+      mimeType: row.mimeType,
+      sizeBytes: row.sizeBytes,
+    } satisfies GetFileSuccess;
   },
   toModelOutput: (output): ToolResultOutput => {
     if (output.type === "error") {

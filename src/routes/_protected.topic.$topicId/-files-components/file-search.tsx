@@ -8,12 +8,12 @@ import {
 } from "@/components/ui/input-group";
 import { m } from "@/paraglide/messages";
 
-type ResourceSearchProps = {
+type FileSearchProps = {
   onChange: (value: string) => void;
   value: string;
 };
 
-export const ResourceSearch = ({ onChange, value }: ResourceSearchProps) => (
+export const FileSearch = ({ onChange, value }: FileSearchProps) => (
   <InputGroup>
     <InputGroupAddon align="inline-start">
       <SearchIcon />
@@ -22,7 +22,7 @@ export const ResourceSearch = ({ onChange, value }: ResourceSearchProps) => (
       onChange={(event) => {
         onChange(event.target.value);
       }}
-      placeholder={m.resources_search_placeholder()}
+      placeholder={m.files_search_placeholder()}
       value={value}
     />
     {value.length > 0 && (

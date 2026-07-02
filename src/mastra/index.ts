@@ -7,11 +7,11 @@ import {
   pgVector,
   postgresStore,
 } from "@/mastra/storage";
-import { processResourceWorkflow } from "@/routes/_protected.chat.$threadId/-thread-api/upload-file-workflow";
+import { processFileWorkflow } from "@/routes/_protected.chat.$threadId/-thread-api/upload-file-workflow";
 
 export const mastra = new Mastra({
   agents: { conversationAgent, topicAgent },
   storage: postgresStore,
   vectors: { [PG_VECTOR_STORE_NAME]: pgVector },
-  workflows: { "process-resource": processResourceWorkflow },
+  workflows: { "process-file": processFileWorkflow },
 });

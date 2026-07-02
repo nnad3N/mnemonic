@@ -83,20 +83,18 @@ export const topicAccessMiddleware = createMiddleware({ type: "function" })
     });
   });
 
-const resourceAccessInputSchema = v.looseObject({
-  resourceId: v.pipe(v.string(), v.nanoid()),
+const fileAccessInputSchema = v.looseObject({
+  fileId: v.pipe(v.string(), v.nanoid()),
 });
 
-type ResourceAccessInputSchema = v.InferOutput<
-  typeof resourceAccessInputSchema
->;
+type FileAccessInputSchema = v.InferOutput<typeof fileAccessInputSchema>;
 
-export const resourceAccessMiddleware = createMiddleware({ type: "function" })
+export const fileAccessMiddleware = createMiddleware({ type: "function" })
   .middleware([authMiddleware])
-  .inputValidator((data: ResourceAccessInputSchema) => data as unknown)
+  .inputValidator((data: FileAccessInputSchema) => data as unknown)
   .server(async ({ context, data, next }) => {
-    const { resourceId } = v.parse(resourceAccessInputSchema, data);
-    const ownedResource = await db.query.resource.findFirst({
+    const { fileId } = v.parse(fileAccessInputSchema, data);
+    const ownedFile = await db.query.file.findFirst({
       columns: {
         displayName: true,
         id: true,
@@ -106,19 +104,19 @@ export const resourceAccessMiddleware = createMiddleware({ type: "function" })
       },
       where: {
         // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId check.
-        id: toSafeId<"resource">(resourceId),
+        id: toSafeId<"file">(fileId),
         userId: context.user.id,
       },
     });
 
-    if (!ownedResource) {
+    if (!ownedFile) {
       throw notFound();
     }
 
     return next({
       context: {
-        resource: ownedResource,
-        topicId: ownedResource.topicId,
+        file: ownedFile,
+        topicId: ownedFile.topicId,
       },
     });
   });

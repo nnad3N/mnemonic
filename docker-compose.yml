@@ -44,7 +44,7 @@ services:
       until mc alias set rustfs http://rustfs:9000 rustfsadmin rustfsadmin; do
         sleep 1;
       done;
-      mc mb --ignore-existing rustfs/mnemonic-resources;
+      mc mb --ignore-existing rustfs/mnemonic-files;
       "
     restart: "no"
 

@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid";
 import * as v from "valibot";
 
-export type SafeIdTag = "user" | "topic" | "resource";
+export type SafeIdTag = "user" | "topic" | "file";
 
 declare const SafeIdBrand: unique symbol;
 

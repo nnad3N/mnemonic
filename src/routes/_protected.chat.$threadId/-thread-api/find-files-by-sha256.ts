@@ -3,28 +3,28 @@ import { and, eq, inArray } from "drizzle-orm";
 import * as v from "valibot";
 
 import { db } from "@/db";
-import { resource } from "@/db/schema";
+import { file } from "@/db/schema";
 import { topicAccessMiddleware } from "@/lib/middleware/assert-thread-access";
 
-const findResourcesBySha256InputSchema = v.object({
+const findFilesBySha256InputSchema = v.object({
   sha256s: v.array(v.pipe(v.string(), v.nonEmpty())),
 });
 
-export const findResourcesBySha256 = createServerFn({ method: "GET" })
-  .inputValidator(findResourcesBySha256InputSchema)
+export const findFilesBySha256 = createServerFn({ method: "GET" })
+  .inputValidator(findFilesBySha256InputSchema)
   .middleware([topicAccessMiddleware])
   .handler(async ({ context, data }) => {
     return db
       .select({
-        id: resource.id,
-        sha256: resource.sha256,
-        status: resource.status,
+        id: file.id,
+        sha256: file.sha256,
+        status: file.status,
       })
-      .from(resource)
+      .from(file)
       .where(
         and(
-          eq(resource.topicId, context.topic.id),
-          inArray(resource.sha256, data.sha256s)
+          eq(file.topicId, context.topic.id),
+          inArray(file.sha256, data.sha256s)
         )
       );
   });

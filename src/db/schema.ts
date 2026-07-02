@@ -12,7 +12,7 @@ import { nanoid } from "nanoid";
 import { user } from "@/db/auth-schema";
 import type { SafeId } from "@/lib/safe-id";
 
-export type ResourceStatus = "uploading" | "processing" | "ready" | "failed";
+export type FileStatus = "uploading" | "processing" | "ready" | "failed";
 
 export const topic = pgTable("topic", {
   id: varchar("id", { length: 21 })
@@ -33,11 +33,11 @@ export const topic = pgTable("topic", {
     .defaultNow(),
 });
 
-export const resource = pgTable(
-  "resource",
+export const file = pgTable(
+  "file",
   {
     id: varchar("id", { length: 21 })
-      .$type<SafeId<"resource">>()
+      .$type<SafeId<"file">>()
       .primaryKey()
       .$defaultFn(() => nanoid()),
     userId: text("user_id")
@@ -57,7 +57,7 @@ export const resource = pgTable(
     s3Key: text("s3_key").notNull(),
 
     status: varchar("status", { length: 32 })
-      .$type<ResourceStatus>()
+      .$type<FileStatus>()
       .notNull()
       .default("uploading"),
 
@@ -68,25 +68,22 @@ export const resource = pgTable(
       .defaultNow(),
   },
   (table) => [
-    uniqueIndex("resource_topic_sha256_unique").on(table.topicId, table.sha256),
+    uniqueIndex("file_topic_sha256_unique").on(table.topicId, table.sha256),
   ]
 );
 
-export const appRelations = defineRelationsPart(
-  { resource, topic, user },
-  (r) => ({
-    resource: {
-      topic: r.one.topic({
-        from: r.resource.topicId,
-        to: r.topic.id,
-      }),
-    },
-    topic: {
-      resources: r.many.resource(),
-      user: r.one.user({
-        from: r.topic.userId,
-        to: r.user.id,
-      }),
-    },
-  })
-);
+export const appRelations = defineRelationsPart({ file, topic, user }, (r) => ({
+  file: {
+    topic: r.one.topic({
+      from: r.file.topicId,
+      to: r.topic.id,
+    }),
+  },
+  topic: {
+    files: r.many.file(),
+    user: r.one.user({
+      from: r.topic.userId,
+      to: r.user.id,
+    }),
+  },
+}));
