@@ -18,6 +18,8 @@ Oxlint + Oxfmt (the underlying engine) provides robust linting and formatting. M
 
 Write code that is **accessible, performant, type-safe, and maintainable**. Focus on clarity and explicit intent over brevity.
 
+Architecture notes for agents live in [`.agents/architecture`](.agents/architecture). Read the relevant note before changing a documented cross-cutting pattern, such as branded backend IDs.
+
 ### Type Safety & Explicitness
 
 - Use explicit types for function parameters and return values when they enhance clarity
@@ -25,6 +27,7 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
 - Use const assertions (`as const`) for immutable values and literal types
 - Leverage TypeScript's type narrowing instead of type assertions
 - Use meaningful variable names instead of magic numbers - extract constants with descriptive names
+- When branding, validating, or otherwise narrowing a property from a structured input object, pass the property directly from its source object (e.g. `toSafeId(inputData.resourceId)`) instead of destructuring it first solely to pass into the narrowing helper. Keep the original trust boundary visible at the call site.
 
 ### Modern JavaScript/TypeScript
 

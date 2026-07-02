@@ -5,6 +5,7 @@ import vitest from "ultracite/oxlint/vitest";
 
 export default defineConfig({
   extends: [core, react, vitest],
+  jsPlugins: [{ name: "eslint-js", specifier: "oxlint-plugin-eslint" }],
   ignorePatterns: [
     "**/.nx/**",
     "**/snap/**",
@@ -29,6 +30,14 @@ export default defineConfig({
     "require-await": "off",
     "sort-keys": "off",
     "import/no-commonjs": "error",
+    "eslint-js/no-restricted-syntax": [
+      "error",
+      {
+        selector: "CallExpression[callee.name='toSafeId']",
+        message:
+          "toSafeId is only allowed at validated backend boundaries; add an inline oxlint disable with a reason when branding raw IDs for Drizzle.",
+      },
+    ],
     "no-use-before-define": "allow",
     "typescript/ban-ts-comment": [
       "error",

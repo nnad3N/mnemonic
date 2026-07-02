@@ -5,6 +5,7 @@ import type { TsrSerializable } from "@tanstack/router-core";
 
 import { db } from "@/db";
 import { threadAccessMiddleware } from "@/lib/middleware/assert-thread-access";
+import { toSafeId } from "@/lib/safe-id";
 import { getMemoryStore } from "@/mastra/memory";
 import { threadKeys } from "@/routes/_protected.chat.$threadId/-thread-api/query-keys";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
@@ -22,7 +23,8 @@ export const getThread = createServerFn({ method: "GET" })
     const topic = await db.query.topic.findFirst({
       columns: { id: true },
       where: {
-        id: context.thread.resourceId,
+        // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId check.
+        id: toSafeId<"topic">(context.thread.resourceId),
         userId: context.user.id,
       },
     });

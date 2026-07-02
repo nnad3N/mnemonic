@@ -5,13 +5,14 @@ import { MDocument } from "@mastra/rag";
 import { toStandardJsonSchema } from "@valibot/to-json-schema";
 import { embedMany } from "ai";
 import { Result } from "better-result";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { db } from "@/db";
 import { resource } from "@/db/schema";
 import { isImageMimeType } from "@/lib/file-validation";
 import { getObject, statObject, S3Error } from "@/lib/s3";
+import { safeId, toSafeId } from "@/lib/safe-id";
 import {
   RESOURCE_EMBEDDING_DIMENSION,
   RESOURCE_EMBEDDINGS_INDEX,
@@ -22,20 +23,15 @@ import { pgVector } from "@/mastra/storage";
 const workflowInputSchema = v.object({
   resourceId: v.pipe(v.string(), v.nanoid()),
   topicId: v.pipe(v.string(), v.nanoid()),
+  userId: v.pipe(v.string(), v.nanoid()),
 });
 
-type WorkflowInputSchema = v.InferInput<typeof workflowInputSchema>;
-
 const validatedResourceSchema = v.object({
-  resourceId: v.pipe(v.string(), v.nanoid()),
+  topicId: safeId<"topic">(),
+  resourceId: safeId<"resource">(),
   displayName: v.pipe(v.string(), v.nonEmpty()),
   mimeType: v.pipe(v.string(), v.nonEmpty()),
   s3Key: v.pipe(v.string(), v.nonEmpty()),
-  topicId: v.pipe(v.string(), v.nanoid()),
-});
-
-const workflowOutputSchema = v.object({
-  resourceId: v.pipe(v.string(), v.nanoid()),
 });
 
 const validateResourceStep = createStep({
@@ -43,16 +39,19 @@ const validateResourceStep = createStep({
   inputSchema: toStandardJsonSchema(workflowInputSchema),
   outputSchema: toStandardJsonSchema(validatedResourceSchema),
   execute: async ({ inputData }) => {
-    const { resourceId, topicId } = inputData;
-
     const row = await db.query.resource.findFirst({
       where: {
-        id: resourceId,
-        topicId,
+        // oxlint-disable-next-line eslint-js/no-restricted-syntax -- ownership check.
+        id: toSafeId<"resource">(inputData.resourceId),
+        // oxlint-disable-next-line eslint-js/no-restricted-syntax -- ownership check.
+        topicId: toSafeId<"topic">(inputData.topicId),
+        // oxlint-disable-next-line eslint-js/no-restricted-syntax -- ownership check.
+        userId: toSafeId<"user">(inputData.userId),
       },
       columns: {
-        displayName: true,
         id: true,
+        topicId: true,
+        displayName: true,
         mimeType: true,
         s3Key: true,
         sizeBytes: true,
@@ -86,13 +85,17 @@ const validateResourceStep = createStep({
       .where(eq(resource.id, row.id));
 
     return {
+      topicId: row.topicId,
       resourceId: row.id,
       displayName: row.displayName,
       mimeType: row.mimeType,
       s3Key: row.s3Key,
-      topicId,
     };
   },
+});
+
+const workflowOutputSchema = v.object({
+  resourceId: v.pipe(v.string(), v.nanoid()),
 });
 
 const processForRagStep = createStep({
@@ -100,13 +103,13 @@ const processForRagStep = createStep({
   inputSchema: toStandardJsonSchema(validatedResourceSchema),
   outputSchema: toStandardJsonSchema(workflowOutputSchema),
   execute: async ({ inputData }) => {
-    const { resourceId, displayName, mimeType, s3Key, topicId } = inputData;
+    const { displayName, mimeType, resourceId, s3Key, topicId } = inputData;
 
     if (isImageMimeType(mimeType)) {
       await db
         .update(resource)
         .set({ status: "ready" })
-        .where(eq(resource.id, resourceId));
+        .where(and(eq(resource.id, resourceId)));
 
       return { resourceId };
     }
@@ -133,7 +136,7 @@ const processForRagStep = createStep({
       await db
         .update(resource)
         .set({ status: "ready" })
-        .where(eq(resource.id, resourceId));
+        .where(and(eq(resource.id, resourceId)));
 
       return { resourceId };
     }
@@ -165,7 +168,7 @@ const processForRagStep = createStep({
     await db
       .update(resource)
       .set({ status: "ready" })
-      .where(eq(resource.id, resourceId));
+      .where(and(eq(resource.id, resourceId)));
 
     return { resourceId };
   },
@@ -176,13 +179,19 @@ export const processResourceWorkflow = createWorkflow({
   inputSchema: toStandardJsonSchema(workflowInputSchema),
   options: {
     onError: async ({ getInitData }) => {
-      // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-      const { resourceId } = getInitData() as WorkflowInputSchema;
+      const inputData = v.parse(workflowInputSchema, getInitData());
 
       await db
         .update(resource)
         .set({ status: "failed" })
-        .where(eq(resource.id, resourceId));
+        .where(
+          and(
+            // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId check.
+            eq(resource.id, toSafeId<"resource">(inputData.resourceId)),
+            // oxlint-disable-next-line eslint-js/no-restricted-syntax
+            eq(resource.userId, toSafeId<"user">(inputData.userId))
+          )
+        );
     },
   },
   outputSchema: toStandardJsonSchema(workflowOutputSchema),

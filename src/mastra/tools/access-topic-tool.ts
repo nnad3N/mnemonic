@@ -5,6 +5,7 @@ import { nanoid } from "nanoid";
 import * as v from "valibot";
 
 import { db } from "@/db";
+import { toSafeId } from "@/lib/safe-id";
 import { topicAgent } from "@/mastra/agents/topic-agent";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context";
 import type { MnemonicRequestContext } from "@/mastra/request-context";
@@ -38,9 +39,10 @@ export const accessTopicTool = createTool({
     }
 
     const ownedTopic = await db.query.topic.findFirst({
-      columns: { id: true },
+      columns: { id: true, userId: true },
       where: {
-        id: topicId,
+        // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId check.
+        id: toSafeId<"topic">(topicId),
         userId,
       },
     });
@@ -50,7 +52,8 @@ export const accessTopicTool = createTool({
     }
 
     const topicRequestContext = new RequestContext<MnemonicRequestContext>();
-    topicRequestContext.set("userId", userId);
+
+    topicRequestContext.set("userId", ownedTopic.userId);
     topicRequestContext.set("filter", { topicId: ownedTopic.id });
 
     const result = await topicAgent.generate(prompt, {

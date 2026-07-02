@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { topic } from "@/db/schema";
 import { topicAccessMiddleware } from "@/lib/middleware/assert-thread-access";
 import { authMiddleware } from "@/lib/middleware/auth-middleware";
+import { createSafeId } from "@/lib/safe-id";
 import { getMemoryStore } from "@/mastra/memory";
 
 export const createConversation = createServerFn({ method: "POST" })
@@ -42,7 +43,7 @@ export const createTopic = createServerFn({ method: "POST" })
   )
   .middleware([authMiddleware])
   .handler(async ({ context, data }) => {
-    const topicId = nanoid();
+    const topicId = createSafeId<"topic">();
     await db.insert(topic).values({
       id: topicId,
       userId: context.user.id,

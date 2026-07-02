@@ -6,6 +6,8 @@ import * as v from "valibot";
 import { db } from "@/db";
 import { resource, topic } from "@/db/schema";
 import { authMiddleware } from "@/lib/middleware/auth-middleware";
+import type { SafeId } from "@/lib/safe-id";
+import { rawId, toSafeId } from "@/lib/safe-id";
 import { getMemoryStore } from "@/mastra/memory";
 
 import type { MentionQueryType } from "./query-keys";
@@ -19,7 +21,10 @@ type MentionItem = {
   type: MentionQueryType;
 };
 
-const buildResourceMentionsWhereClause = (topicId: string, query: string) => {
+const buildResourceMentionsWhereClause = (
+  topicId: SafeId<"topic">,
+  query: string
+) => {
   const trimmedQuery = query.trim();
 
   if (trimmedQuery.length === 0) {
@@ -32,7 +37,10 @@ const buildResourceMentionsWhereClause = (topicId: string, query: string) => {
   );
 };
 
-const buildTopicMentionsWhereClause = (userId: string, query: string) => {
+const buildTopicMentionsWhereClause = (
+  userId: SafeId<"user">,
+  query: string
+) => {
   const trimmedQuery = query.trim();
 
   if (trimmedQuery.length === 0) {
@@ -67,7 +75,8 @@ export const getMentions = createServerFn({ method: "GET" })
     const ownedTopic = await db.query.topic.findFirst({
       columns: { id: true },
       where: {
-        id: data.resourceId,
+        // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId check.
+        id: toSafeId<"topic">(data.resourceId),
         userId: context.user.id,
       },
     });
@@ -164,7 +173,8 @@ export const getMentionById = createServerFn({ method: "GET" })
             status: true,
           },
           where: {
-            id: data.id,
+            // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId check.
+            id: toSafeId<"resource">(data.id),
             userId: context.user.id,
           },
         });
@@ -172,7 +182,7 @@ export const getMentionById = createServerFn({ method: "GET" })
         return ownedResource
           ? {
               displayName: ownedResource.displayName,
-              id: ownedResource.id,
+              id: rawId(ownedResource.id),
               status: ownedResource.status,
             }
           : null;
@@ -184,7 +194,8 @@ export const getMentionById = createServerFn({ method: "GET" })
             title: true,
           },
           where: {
-            id: data.id,
+            // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId check.
+            id: toSafeId<"topic">(data.id),
             userId: context.user.id,
           },
         });
@@ -192,7 +203,7 @@ export const getMentionById = createServerFn({ method: "GET" })
         return ownedTopic
           ? {
               displayName: ownedTopic.title,
-              id: ownedTopic.id,
+              id: rawId(ownedTopic.id),
               status: "ready" as const,
             }
           : null;
@@ -209,7 +220,8 @@ export const getMentionById = createServerFn({ method: "GET" })
           const ownedTopic = await db.query.topic.findFirst({
             columns: { id: true },
             where: {
-              id: thread.resourceId,
+              // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId check.
+              id: toSafeId<"topic">(thread.resourceId),
               userId: context.user.id,
             },
           });

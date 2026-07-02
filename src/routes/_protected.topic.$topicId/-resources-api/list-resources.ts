@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { resource } from "@/db/schema";
 import type { ResourceStatus } from "@/db/schema";
 import { topicAccessMiddleware } from "@/lib/middleware/assert-thread-access";
+import type { SafeId } from "@/lib/safe-id";
 import { topicKeys } from "@/routes/_protected.topic.$topicId/-topic-api/query-keys";
 
 const listResourcesInputSchema = v.object({
@@ -15,7 +16,7 @@ const listResourcesInputSchema = v.object({
   search: v.optional(v.string(), ""),
 });
 
-const buildWhereClause = (topicId: string, search: string) => {
+const buildWhereClause = (topicId: SafeId<"topic">, search: string) => {
   const trimmedSearch = search.trim();
 
   if (trimmedSearch.length === 0) {

@@ -4,6 +4,7 @@ import * as v from "valibot";
 
 import { db } from "@/db";
 import { authMiddleware } from "@/lib/middleware/auth-middleware";
+import { toSafeId } from "@/lib/safe-id";
 import { getMemoryStore } from "@/mastra/memory";
 
 const threadAccessInputSchema = v.looseObject({
@@ -32,7 +33,8 @@ export const threadAccessMiddleware = createMiddleware({ type: "function" })
     if (thread.resourceId !== context.user.id) {
       const ownedTopic = await db.query.topic.findFirst({
         where: {
-          id: thread.resourceId,
+          // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId check.
+          id: toSafeId<"topic">(thread.resourceId),
           userId: context.user.id,
         },
         columns: { id: true },
@@ -63,7 +65,8 @@ export const topicAccessMiddleware = createMiddleware({ type: "function" })
     const { topicId } = v.parse(topicAccessInputSchema, data);
     const ownedTopic = await db.query.topic.findFirst({
       where: {
-        id: topicId,
+        // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId check.
+        id: toSafeId<"topic">(topicId),
         userId: context.user.id,
       },
       columns: { id: true },
@@ -102,7 +105,8 @@ export const resourceAccessMiddleware = createMiddleware({ type: "function" })
         topicId: true,
       },
       where: {
-        id: resourceId,
+        // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId check.
+        id: toSafeId<"resource">(resourceId),
         userId: context.user.id,
       },
     });

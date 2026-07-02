@@ -7,6 +7,7 @@ import * as v from "valibot";
 import { db } from "@/db";
 import { applyMessageEdit } from "@/lib/chat/apply-message-edit";
 import { authMiddleware } from "@/lib/middleware/auth-middleware";
+import { toSafeId } from "@/lib/safe-id";
 import { mastra } from "@/mastra";
 import { conversationAgentId } from "@/mastra/agents/conversation-agent";
 import { topicAgentId } from "@/mastra/agents/topic-agent";
@@ -67,7 +68,8 @@ export const Route = createFileRoute("/api/chat")({
 
         const topic = await db.query.topic.findFirst({
           where: {
-            id: thread.resourceId,
+            // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId check.
+            id: toSafeId<"topic">(thread.resourceId),
             userId: context.user.id,
           },
           columns: { id: true },

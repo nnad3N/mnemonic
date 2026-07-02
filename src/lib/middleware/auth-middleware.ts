@@ -1,6 +1,7 @@
 import { createMiddleware } from "@tanstack/react-start";
 
 import { auth } from "@/lib/better-auth/auth";
+import { toSafeId } from "@/lib/safe-id";
 
 export const authMiddleware = createMiddleware().server(
   async ({ next, request }) => {
@@ -15,7 +16,11 @@ export const authMiddleware = createMiddleware().server(
     return next({
       context: {
         session: authSession.session,
-        user: authSession.user,
+        user: {
+          ...authSession.user,
+          // oxlint-disable-next-line eslint-js/no-restricted-syntax -- trusted auth session.
+          id: toSafeId<"user">(authSession.user.id),
+        },
       },
     });
   }

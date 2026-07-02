@@ -14,6 +14,7 @@ import {
   threadAccessMiddleware,
 } from "@/lib/middleware/assert-thread-access";
 import { getPresignedPutUrl, S3Error } from "@/lib/s3";
+import { toSafeId } from "@/lib/safe-id";
 import { mastra } from "@/mastra";
 
 export const RESOURCE_UPLOAD_TTL_SECONDS = 60;
@@ -30,8 +31,10 @@ const getTopicForUpload = async ({
   const ownedTopic = await db.query.topic.findFirst({
     columns: { id: true },
     where: {
-      id: resourceId,
-      userId,
+      // oxlint-disable-next-line eslint-js/no-restricted-syntax -- ownership check.
+      id: toSafeId<"topic">(resourceId),
+      // oxlint-disable-next-line eslint-js/no-restricted-syntax -- ownership check.
+      userId: toSafeId<"user">(userId),
     },
   });
 
@@ -76,6 +79,7 @@ export const getPresignedUrl = createServerFn({ method: "POST" })
 
       const resourceKey = await db.transaction(async (tx) => {
         const existing = await tx.query.resource.findFirst({
+          columns: { id: true, s3Key: true, status: true },
           where: {
             sha256: data.sha256,
             topicId,
@@ -98,7 +102,8 @@ export const getPresignedUrl = createServerFn({ method: "POST" })
         const s3Key = `${context.user.id}/${topicId}/${data.resourceId}`;
 
         await tx.insert(resource).values({
-          id: data.resourceId,
+          // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId write.
+          id: toSafeId<"resource">(data.resourceId),
           userId: context.user.id,
           topicId,
           displayName: data.displayName,
@@ -173,6 +178,7 @@ export const processResource = createServerFn({ method: "POST" })
       inputData: {
         resourceId: context.resource.id,
         topicId: context.topicId,
+        userId: context.user.id,
       },
     });
 

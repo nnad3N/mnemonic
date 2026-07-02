@@ -10,14 +10,17 @@ import {
 import { nanoid } from "nanoid";
 
 import { user } from "@/db/auth-schema";
+import type { SafeId } from "@/lib/safe-id";
 
 export type ResourceStatus = "uploading" | "processing" | "ready" | "failed";
 
 export const topic = pgTable("topic", {
   id: varchar("id", { length: 21 })
+    .$type<SafeId<"topic">>()
     .primaryKey()
     .$defaultFn(() => nanoid()),
   userId: text("user_id")
+    .$type<SafeId<"user">>()
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
 
@@ -34,12 +37,15 @@ export const resource = pgTable(
   "resource",
   {
     id: varchar("id", { length: 21 })
+      .$type<SafeId<"resource">>()
       .primaryKey()
       .$defaultFn(() => nanoid()),
     userId: text("user_id")
+      .$type<SafeId<"user">>()
       .notNull()
       .references(() => user.id, { onDelete: "restrict" }),
     topicId: varchar("topic_id", { length: 21 })
+      .$type<SafeId<"topic">>()
       .notNull()
       .references(() => topic.id, { onDelete: "restrict" }),
 

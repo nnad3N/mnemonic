@@ -11,6 +11,7 @@ import {
   LLM_NATIVE_IMAGE_MIME_TYPES,
 } from "@/lib/file-validation";
 import { getObject } from "@/lib/s3";
+import { toSafeId } from "@/lib/safe-id";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context";
 
 const inputSchema = v.object({
@@ -54,6 +55,13 @@ export const getResourceFromS3Tool = createTool({
   execute: async ({ resourceId }, context) => {
     const topicId = context.requestContext?.get("filter")?.topicId;
 
+    if (!topicId) {
+      return {
+        type: "error",
+        message: "Resource not found.",
+      } satisfies GetResourceError;
+    }
+
     const resource = await db.query.resource.findFirst({
       columns: {
         displayName: true,
@@ -64,7 +72,8 @@ export const getResourceFromS3Tool = createTool({
         status: true,
       },
       where: {
-        id: resourceId,
+        // oxlint-disable-next-line eslint-js/no-restricted-syntax -- scoped by trusted topic.
+        id: toSafeId<"resource">(resourceId),
         topicId,
       },
     });
