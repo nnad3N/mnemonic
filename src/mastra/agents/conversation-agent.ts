@@ -30,8 +30,8 @@ export const conversationMemory = new Memory({
 });
 
 export const conversationAgentTools = {
-  "access-topic": accessTopicTool,
-  "web-search": webSearchTool,
+  accessTopic: accessTopicTool,
+  webSearch: webSearchTool,
 } as const;
 
 export const conversationAgent = new Agent({
@@ -47,10 +47,10 @@ Available sources:
 - Access topic: topic resources and topic-scoped conversation history. Use when the user asks for information from a topic, topic files, topic resources, or prior topic conversations.
 
 ## Access topic
-Use access-topic only when the topic is clear. If the user asks about a topic but no topic can be identified, ask which topic to use.
+Use accessTopic only when the topic is clear. If the user asks about a topic but no topic can be identified, ask which topic to use.
 
 ## Web search
-Use web-search when:
+Use webSearch when:
 - The user asks for current events, external documentation, or explicitly wants a web search.
 - Conversation recall did not fully answer the question and topic context is not required.
 

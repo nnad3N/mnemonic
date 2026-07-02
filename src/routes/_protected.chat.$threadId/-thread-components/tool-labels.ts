@@ -8,22 +8,22 @@ export type ToolLabels = {
 };
 
 export const TOOL_LABELS = {
-  "resource-graph-rag": {
+  resourceGraphRag: {
     done: m.chat_thread_tool_search_connections_done,
     error: m.chat_thread_tool_search_connections_error,
     pending: m.chat_thread_tool_search_connections_pending,
   },
-  "resource-vector-search": {
+  resourceVectorSearch: {
     done: m.chat_thread_tool_search_files_done,
     error: m.chat_thread_tool_search_files_error,
     pending: m.chat_thread_tool_search_files_pending,
   },
-  "access-topic": {
+  accessTopic: {
     done: m.chat_thread_tool_access_topic_done,
     error: m.chat_thread_tool_access_topic_error,
     pending: m.chat_thread_tool_access_topic_pending,
   },
-  "get-resource-from-s3": {
+  getResourceFromS3: {
     done: m.chat_thread_tool_read_file_done,
     error: m.chat_thread_tool_read_file_error,
     pending: m.chat_thread_tool_read_file_pending,
@@ -33,7 +33,7 @@ export const TOOL_LABELS = {
     error: m.chat_thread_tool_recall_error,
     pending: m.chat_thread_tool_recall_pending,
   },
-  "web-search": {
+  webSearch: {
     done: m.chat_thread_tool_web_search_done,
     error: m.chat_thread_tool_web_search_error,
     pending: m.chat_thread_tool_web_search_pending,

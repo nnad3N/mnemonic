@@ -32,10 +32,10 @@ export const topicMemory = new Memory({
 });
 
 export const topicAgentTools = {
-  "resource-graph-rag": resourceGraphRagTool,
-  "resource-vector-search": resourceVectorSearchTool,
-  "get-resource-from-s3": getResourceFromS3Tool,
-  "web-search": webSearchTool,
+  resourceGraphRag: resourceGraphRagTool,
+  resourceVectorSearch: resourceVectorSearchTool,
+  getResourceFromS3: getResourceFromS3Tool,
+  webSearch: webSearchTool,
 } as const;
 
 export const topicAgent = new Agent({
@@ -55,16 +55,16 @@ Available sources:
 When sources conflict, prefer topic resources over web search, and web search over conversation recall.
 
 ## Web search
-Use web-search when:
+Use webSearch when:
 - The user asks for current events, external documentation, or explicitly wants a web search.
 - Topic resource tools plus conversation recall did not fully answer the question.
 
 ## Topic file access
 When gathering from topic resources, pick the tool that fits the question. You do not need to run every resource tool.
 
-- resource-vector-search — Direct facts, quotes, or specific passages in uploaded documents.
-- resource-graph-rag — When information spans multiple files, connected passages matter, or relationships between concepts are important.
-- get-resource-from-s3 — Raw file inspection for images, or fallback direct inspection when search tools are insufficient.
+- resourceVectorSearch — Direct facts, quotes, or specific passages in uploaded documents.
+- resourceGraphRag — When information spans multiple files, connected passages matter, or relationships between concepts are important.
+- getResourceFromS3 — Raw file inspection for images, or fallback direct inspection when search tools are insufficient.
 
 Search tools are automatically scoped to the current topic. Tool descriptions own exact input requirements and file-type limits.
 

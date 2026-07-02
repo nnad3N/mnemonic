@@ -11,8 +11,8 @@ export const resourceVectorSearchTool = createVectorQueryTool({
   description: [
     "Semantic search over extracted text from uploads in the current topic.",
     "Use first for direct facts, quotes, definitions, dates, or specific passages in indexed PDFs, office documents, and other text-extracted files.",
-    "Do not use for images or raw binary inspection; use get-resource-from-s3 for supported image inspection.",
-    "If results are too narrow or the answer spans multiple files, try resource-graph-rag next.",
+    "Do not use for images or raw binary inspection; use getResourceFromS3 for supported image inspection.",
+    "If results are too narrow or the answer spans multiple files, try resourceGraphRag next.",
     "Input queryText should contain the user's question or targeted search terms. Results are scoped to the current topic and may be partial excerpts, not complete documents.",
   ].join(" "),
   enableFilter: true,

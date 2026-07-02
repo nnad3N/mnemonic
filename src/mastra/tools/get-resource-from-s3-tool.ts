@@ -48,7 +48,7 @@ export const getResourceFromS3Tool = createTool({
   description: [
     "Load one supported raw uploaded resource from the current topic for direct multimodal inspection.",
     "Use for images, which are not text-indexed, or when the user @-mentions a specific supported image resource.",
-    "Do not use for office documents, PDFs, or other extracted-only uploads; use resource-vector-search or resource-graph-rag for those.",
+    "Do not use for office documents, PDFs, or other extracted-only uploads; use resourceVectorSearch or resourceGraphRag for those.",
     `Supported MIME types: ${LLM_NATIVE_IMAGE_MIME_TYPES.join(", ")}.`,
     "Input resourceId must come from an resource @-mention or prior tool result.",
   ].join(" "),
