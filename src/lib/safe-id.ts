@@ -3,8 +3,10 @@ import * as v from "valibot";
 
 export type SafeIdTag = "user" | "topic" | "resource";
 
+declare const SafeIdBrand: unique symbol;
+
 export type SafeId<Tag extends SafeIdTag> = string & {
-  readonly __safeId: Tag;
+  readonly [SafeIdBrand]: Tag;
   readonly eq?: never;
 };
 
