@@ -221,12 +221,12 @@ const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
               render={
                 <Link
                   params={{ topicId: topic.id }}
-                  to="/topic/$topicId/artifacts"
+                  to="/topic/$topicId/resources"
                 />
               }
             >
               <FileIcon />
-              {m.nav_artifacts()}
+              {m.nav_resources()}
             </ContextMenuItem>
             <ContextMenuItem
               onClick={() => {

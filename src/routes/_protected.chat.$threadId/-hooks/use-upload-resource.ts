@@ -5,36 +5,36 @@ import {
 } from "@tanstack/react-query";
 import { Result } from "better-result";
 
-import type { ArtifactUploadErrorShape } from "@/lib/errors/artifact-upload-error";
-import { ArtifactUploadError } from "@/lib/errors/artifact-upload-error";
+import type { ResourceUploadErrorShape } from "@/lib/errors/resource-upload-error";
+import { ResourceUploadError } from "@/lib/errors/resource-upload-error";
 
 import { mentionByIdQuery } from "../-thread-api/get-mentions";
 import { threadKeys, threadMutationKeys } from "../-thread-api/query-keys";
 import {
   getPresignedUrl,
-  processArtifact,
-  updateArtifactStatus,
-} from "../-thread-api/upload-artifact";
-import type { GetPresignedUrlOk } from "../-thread-api/upload-artifact";
+  processResource,
+  updateResourceStatus,
+} from "../-thread-api/upload-resource";
+import type { GetPresignedUrlOk } from "../-thread-api/upload-resource";
 
-export type UploadArtifactVars = {
+export type UploadResourceVars = {
   topicId: string;
   file: File;
-  artifactId: string;
+  resourceId: string;
   sha256: string;
 };
 
-export const useUploadArtifact = (threadId: string) => {
+export const useUploadResource = (threadId: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
     retry: 3,
-    mutationKey: threadMutationKeys.uploadArtifact(threadId),
-    mutationFn: async ({ file, artifactId, sha256 }: UploadArtifactVars) => {
+    mutationKey: threadMutationKeys.uploadResource(threadId),
+    mutationFn: async ({ file, resourceId, sha256 }: UploadResourceVars) => {
       const serialized = await getPresignedUrl({
         data: {
           displayName: file.name,
-          artifactId,
+          resourceId,
           mimeType: file.type,
           sha256,
           sizeBytes: file.size,
@@ -44,7 +44,7 @@ export const useUploadArtifact = (threadId: string) => {
 
       const result = Result.deserialize<
         GetPresignedUrlOk,
-        ArtifactUploadErrorShape
+        ResourceUploadErrorShape
       >(serialized);
 
       if (Result.isError(result)) {
@@ -52,7 +52,7 @@ export const useUploadArtifact = (threadId: string) => {
       }
 
       if (result.value.type === "skipped") {
-        return { artifactId };
+        return { resourceId };
       }
 
       const presignedUrl = result.value.presignedUrl;
@@ -68,57 +68,57 @@ export const useUploadArtifact = (threadId: string) => {
       );
 
       if (Result.isError(uploadResult)) {
-        throw new ArtifactUploadError({
+        throw new ResourceUploadError({
           reason: "s3-error",
           message: uploadResult.error.message,
         });
       }
 
       if (!uploadResult.value.ok) {
-        throw new ArtifactUploadError({
+        throw new ResourceUploadError({
           reason: "s3-error",
           message: `Upload failed with status ${uploadResult.value.status}`,
         });
       }
 
-      await processArtifact({
+      await processResource({
         data: {
-          artifactId,
+          resourceId,
         },
       });
 
-      return { artifactId };
+      return { resourceId };
     },
-    onMutate: async ({ artifactId, file }) => {
+    onMutate: async ({ resourceId, file }) => {
       const mentionQuery = mentionByIdQuery({
-        type: "artifact",
-        id: artifactId,
+        type: "resource",
+        id: resourceId,
       });
 
       await queryClient.cancelQueries({ queryKey: mentionQuery.queryKey });
 
       queryClient.setQueryData(mentionQuery.queryKey, () => ({
-        id: artifactId,
+        id: resourceId,
         displayName: file.name,
         status: "uploading" as const,
       }));
     },
-    onError: async (error, { artifactId }) => {
+    onError: async (error, { resourceId }) => {
       const mentionQuery = mentionByIdQuery({
-        type: "artifact",
-        id: artifactId,
+        type: "resource",
+        id: resourceId,
       });
 
       queryClient.setQueryData(mentionQuery.queryKey, (current) =>
         current ? { ...current, status: "failed" as const } : current
       );
 
-      if (ArtifactUploadError.is(error) && error.reason === "s3-error") {
+      if (ResourceUploadError.is(error) && error.reason === "s3-error") {
         await Result.tryPromise(
           async () =>
-            updateArtifactStatus({
+            updateResourceStatus({
               data: {
-                artifactId,
+                resourceId,
                 status: "failed",
               },
             }),
@@ -132,10 +132,10 @@ export const useUploadArtifact = (threadId: string) => {
         );
       }
     },
-    onSettled: async (_data, _error, { topicId, artifactId }) => {
+    onSettled: async (_data, _error, { topicId, resourceId }) => {
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: threadKeys.mention("artifact", artifactId),
+          queryKey: threadKeys.mention("resource", resourceId),
         }),
         queryClient.invalidateQueries({
           queryKey: threadKeys.mentions(topicId),
@@ -145,7 +145,7 @@ export const useUploadArtifact = (threadId: string) => {
   });
 };
 
-export const useIsUploadingArtifact = (threadId: string) =>
+export const useIsUploadingResource = (threadId: string) =>
   useIsMutating({
-    mutationKey: threadMutationKeys.uploadArtifact(threadId),
+    mutationKey: threadMutationKeys.uploadResource(threadId),
   }) > 0;

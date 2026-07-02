@@ -24,10 +24,10 @@ export const accessTopicTool = createTool({
   outputSchema: toStandardJsonSchema(outputSchema),
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
   description: [
-    "Ask the topic agent to answer from one specific topic's artifacts and topic-scoped conversation history.",
+    "Ask the topic agent to answer from one specific topic's resources and topic-scoped conversation history.",
     "Use when the user names, @-mentions, or otherwise clearly identifies a topic and wants information from that topic, its files, or prior topic conversations.",
     "Do not use for general web research, the current standalone conversation, or an unclear topic; ask which topic to use before calling.",
-    "Input topicId must be the bare topic ID. For a mention key like topic::{ID}, pass only {ID}, not the prefix, title, thread ID, or artifact ID.",
+    "Input topicId must be the bare topic ID. For a mention key like topic::{ID}, pass only {ID}, not the prefix, title, thread ID, or resource ID.",
     "Returns a synthesized answer from the topic agent, not raw file contents.",
   ].join(" "),
   execute: async ({ topicId, prompt }, context) => {

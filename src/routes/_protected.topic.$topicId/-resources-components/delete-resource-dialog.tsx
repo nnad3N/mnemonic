@@ -13,40 +13,40 @@ import {
 import { Button } from "@/components/ui/button";
 import { m } from "@/paraglide/messages";
 import { threadKeys } from "@/routes/_protected.chat.$threadId/-thread-api/query-keys";
-import { deleteArtifact } from "@/routes/_protected.topic.$topicId/-artifacts-api/delete-artifact";
-import type { ArtifactItem } from "@/routes/_protected.topic.$topicId/-artifacts-api/list-artifacts";
+import { deleteResource } from "@/routes/_protected.topic.$topicId/-resources-api/delete-resource";
+import type { ResourceItem } from "@/routes/_protected.topic.$topicId/-resources-api/list-resources";
 import { topicKeys } from "@/routes/_protected.topic.$topicId/-topic-api/query-keys";
 
-type DeleteArtifactDialogProps = {
+type DeleteResourceDialogProps = {
   topicId: string;
-  artifact: ArtifactItem;
+  resource: ResourceItem;
   onOpenChange: (open: boolean) => void;
   open: boolean;
 };
 
-export const DeleteArtifactDialog = ({
-  artifact,
+export const DeleteResourceDialog = ({
+  resource,
   onOpenChange,
   open,
   topicId,
-}: DeleteArtifactDialogProps) => {
+}: DeleteResourceDialogProps) => {
   const queryClient = useQueryClient();
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      await deleteArtifact({
-        data: { artifactId: artifact.id },
+      await deleteResource({
+        data: { resourceId: resource.id },
       });
     },
     onError: () => {
-      toast.error(m.artifacts_delete_error_title(), {
+      toast.error(m.resources_delete_error_title(), {
         description: m.common_please_try_again(),
       });
     },
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: topicKeys.artifacts(topicId),
+          queryKey: topicKeys.resources(topicId),
         }),
         queryClient.invalidateQueries({
           queryKey: threadKeys.mentions(topicId),
@@ -61,11 +61,11 @@ export const DeleteArtifactDialog = ({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            {m.artifacts_delete_confirm_title()}
+            {m.resources_delete_confirm_title()}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            {m.artifacts_delete_confirm_description({
-              name: artifact.displayName,
+            {m.resources_delete_confirm_description({
+              name: resource.displayName,
             })}
           </AlertDialogDescription>
         </AlertDialogHeader>

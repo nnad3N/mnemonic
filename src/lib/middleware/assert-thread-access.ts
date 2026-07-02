@@ -80,20 +80,20 @@ export const topicAccessMiddleware = createMiddleware({ type: "function" })
     });
   });
 
-const artifactAccessInputSchema = v.looseObject({
-  artifactId: v.pipe(v.string(), v.nanoid()),
+const resourceAccessInputSchema = v.looseObject({
+  resourceId: v.pipe(v.string(), v.nanoid()),
 });
 
-type ArtifactAccessInputSchema = v.InferOutput<
-  typeof artifactAccessInputSchema
+type ResourceAccessInputSchema = v.InferOutput<
+  typeof resourceAccessInputSchema
 >;
 
-export const artifactAccessMiddleware = createMiddleware({ type: "function" })
+export const resourceAccessMiddleware = createMiddleware({ type: "function" })
   .middleware([authMiddleware])
-  .inputValidator((data: ArtifactAccessInputSchema) => data as unknown)
+  .inputValidator((data: ResourceAccessInputSchema) => data as unknown)
   .server(async ({ context, data, next }) => {
-    const { artifactId } = v.parse(artifactAccessInputSchema, data);
-    const ownedArtifact = await db.query.artifact.findFirst({
+    const { resourceId } = v.parse(resourceAccessInputSchema, data);
+    const ownedResource = await db.query.resource.findFirst({
       columns: {
         displayName: true,
         id: true,
@@ -102,19 +102,19 @@ export const artifactAccessMiddleware = createMiddleware({ type: "function" })
         topicId: true,
       },
       where: {
-        id: artifactId,
+        id: resourceId,
         userId: context.user.id,
       },
     });
 
-    if (!ownedArtifact) {
+    if (!ownedResource) {
       throw notFound();
     }
 
     return next({
       context: {
-        artifact: ownedArtifact,
-        topicId: ownedArtifact.topicId,
+        resource: ownedResource,
+        topicId: ownedResource.topicId,
       },
     });
   });

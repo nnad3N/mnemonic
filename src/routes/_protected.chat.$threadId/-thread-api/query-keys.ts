@@ -1,4 +1,4 @@
-export type MentionQueryType = "artifact" | "thread" | "topic";
+export type MentionQueryType = "resource" | "thread" | "topic";
 
 export const threadKeys = {
   all: ["threads"] as const,
@@ -17,8 +17,8 @@ export const threadKeys = {
 
 export const threadMutationKeys = {
   all: ["thread-mutation"] as const,
-  uploadArtifact: (threadId: string) =>
-    [...threadMutationKeys.all, "upload-artifact", threadId] as const,
+  uploadResource: (threadId: string) =>
+    [...threadMutationKeys.all, "upload-resource", threadId] as const,
   addAttachment: (threadId: string) =>
     [...threadMutationKeys.all, "add-attachment", threadId] as const,
 };

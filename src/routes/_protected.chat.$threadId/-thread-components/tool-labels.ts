@@ -8,12 +8,12 @@ export type ToolLabels = {
 };
 
 export const TOOL_LABELS = {
-  "artifact-graph-rag": {
+  "resource-graph-rag": {
     done: m.chat_thread_tool_search_connections_done,
     error: m.chat_thread_tool_search_connections_error,
     pending: m.chat_thread_tool_search_connections_pending,
   },
-  "artifact-vector-search": {
+  "resource-vector-search": {
     done: m.chat_thread_tool_search_files_done,
     error: m.chat_thread_tool_search_files_error,
     pending: m.chat_thread_tool_search_files_pending,
@@ -23,7 +23,7 @@ export const TOOL_LABELS = {
     error: m.chat_thread_tool_access_topic_error,
     pending: m.chat_thread_tool_access_topic_pending,
   },
-  "get-artifact-from-s3": {
+  "get-resource-from-s3": {
     done: m.chat_thread_tool_read_file_done,
     error: m.chat_thread_tool_read_file_error,
     pending: m.chat_thread_tool_read_file_pending,

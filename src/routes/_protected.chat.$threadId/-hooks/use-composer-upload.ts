@@ -6,16 +6,16 @@ import { useCallback } from "react";
 
 import { hashFileContents } from "@/lib/hash";
 
-import { findArtifactsBySha256 } from "../-thread-api/find-artifacts-by-sha256";
+import { findResourcesBySha256 } from "../-thread-api/find-resources-by-sha256";
 import { threadQuery } from "../-thread-api/get-thread";
 import { getThreadEditorId } from "../-thread-components/composer/plate";
 import { getMentionKey } from "../-thread-components/composer/plate-plugins/mention-key";
 import type { ThreadInputLocation } from "../../-chat-store";
 import { useAddAttachment, useIsAddingAttachment } from "./use-add-attachment";
 import {
-  useIsUploadingArtifact,
-  useUploadArtifact,
-} from "./use-upload-artifact";
+  useIsUploadingResource,
+  useUploadResource,
+} from "./use-upload-resource";
 
 const insertMentionItem = getMentionOnSelectItem();
 
@@ -30,17 +30,17 @@ export const useComposerUpload = (
     select: (data) => data.topicId,
   });
 
-  const isUploading = useIsUploadingArtifact(threadId);
+  const isUploading = useIsUploadingResource(threadId);
   const isAttaching = useIsAddingAttachment(threadId);
-  const { mutate: uploadArtifact } = useUploadArtifact(threadId);
+  const { mutate: uploadResource } = useUploadResource(threadId);
   const { mutate: addAttachment } = useAddAttachment(threadId, location);
-  const { mutateAsync: findDuplicateArtifacts, isPending } = useMutation({
+  const { mutateAsync: findDuplicateResources, isPending } = useMutation({
     mutationFn: async (sha256s: string[]) => {
       if (!topicId) {
         return [];
       }
 
-      return findArtifactsBySha256({
+      return findResourcesBySha256({
         data: { sha256s, topicId },
       });
     },
@@ -64,22 +64,22 @@ export const useComposerUpload = (
       );
 
       if (topicId) {
-        const existingArtifacts = await findDuplicateArtifacts(
+        const existingResources = await findDuplicateResources(
           fileEntries.map((entry) => entry.sha256)
         );
 
         for (const { file, sha256 } of fileEntries) {
-          const existingArtifact = existingArtifacts.find(
-            (artifact) => artifact.sha256 === sha256
+          const existingResource = existingResources.find(
+            (resource) => resource.sha256 === sha256
           );
-          const artifactId = existingArtifact?.id ?? nanoid();
+          const resourceId = existingResource?.id ?? nanoid();
 
-          if (!existingArtifact || existingArtifact.status === "failed") {
-            uploadArtifact({ topicId, artifactId, file, sha256 });
+          if (!existingResource || existingResource.status === "failed") {
+            uploadResource({ topicId, resourceId, file, sha256 });
           }
 
           insertMentionItem(editor, {
-            key: getMentionKey({ type: "artifact", value: artifactId }),
+            key: getMentionKey({ type: "resource", value: resourceId }),
             text: file.name,
           });
         }
@@ -100,9 +100,9 @@ export const useComposerUpload = (
       addAttachment,
       canUpload,
       editor,
-      findDuplicateArtifacts,
+      findDuplicateResources,
       topicId,
-      uploadArtifact,
+      uploadResource,
     ]
   );
 

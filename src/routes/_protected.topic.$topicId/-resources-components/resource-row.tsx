@@ -21,23 +21,23 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { TableCell, TableRow } from "@/components/ui/table";
-import type { ArtifactStatus } from "@/db/schema";
+import type { ResourceStatus } from "@/db/schema";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
-import { getArtifactDownloadUrl } from "@/routes/_protected.topic.$topicId/-artifacts-api/get-artifact-download-url";
-import type { ArtifactItem } from "@/routes/_protected.topic.$topicId/-artifacts-api/list-artifacts";
-import { renameArtifact } from "@/routes/_protected.topic.$topicId/-artifacts-api/rename-artifact";
+import { getResourceDownloadUrl } from "@/routes/_protected.topic.$topicId/-resources-api/get-resource-download-url";
+import type { ResourceItem } from "@/routes/_protected.topic.$topicId/-resources-api/list-resources";
+import { renameResource } from "@/routes/_protected.topic.$topicId/-resources-api/rename-resource";
 import { topicKeys } from "@/routes/_protected.topic.$topicId/-topic-api/query-keys";
 
-import { DeleteArtifactDialog } from "./delete-artifact-dialog";
+import { DeleteResourceDialog } from "./delete-resource-dialog";
 
-type ArtifactRowProps = {
-  artifact: ArtifactItem;
+type ResourceRowProps = {
+  resource: ResourceItem;
   topicId: string;
 };
 
-const formatArtifactSize = (sizeBytes: number) =>
+const formatResourceSize = (sizeBytes: number) =>
   new Intl.NumberFormat(getLocale(), {
     maximumFractionDigits: 1,
     style: "unit",
@@ -45,23 +45,23 @@ const formatArtifactSize = (sizeBytes: number) =>
     unitDisplay: "narrow",
   }).format(sizeBytes / 1024);
 
-const formatArtifactDate = (createdAt: Date) =>
+const formatResourceDate = (createdAt: Date) =>
   new Intl.DateTimeFormat(getLocale(), {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(createdAt));
 
-export const ArtifactRow = ({ artifact, topicId }: ArtifactRowProps) => {
+export const ResourceRow = ({ resource, topicId }: ResourceRowProps) => {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
 
   const downloadMutation = useMutation({
     mutationFn: async () =>
-      getArtifactDownloadUrl({
-        data: { artifactId: artifact.id },
+      getResourceDownloadUrl({
+        data: { resourceId: resource.id },
       }),
     onError: () => {
-      toast.error(m.artifacts_download_error_title(), {
+      toast.error(m.resources_download_error_title(), {
         description: m.common_please_try_again(),
       });
     },
@@ -69,7 +69,7 @@ export const ArtifactRow = ({ artifact, topicId }: ArtifactRowProps) => {
       const anchor = document.createElement("a");
       anchor.href = url;
       anchor.rel = "noopener";
-      anchor.download = artifact.displayName;
+      anchor.download = resource.displayName;
       anchor.click();
       anchor.remove();
     },
@@ -77,13 +77,13 @@ export const ArtifactRow = ({ artifact, topicId }: ArtifactRowProps) => {
 
   return (
     <>
-      <TableRow className="group/artifact-row">
+      <TableRow className="group/resource-row">
         <TableCell>
           <div className="flex min-w-0 items-center gap-2">
             <FileIcon className="size-4 shrink-0 text-muted-foreground" />
             {isRenaming ? (
-              <RenameArtifactField
-                artifact={artifact}
+              <RenameResourceField
+                resource={resource}
                 stopRenaming={() => {
                   setIsRenaming(false);
                 }}
@@ -96,23 +96,23 @@ export const ArtifactRow = ({ artifact, topicId }: ArtifactRowProps) => {
                   setIsRenaming(true);
                 }}
               >
-                {artifact.displayName}
+                {resource.displayName}
               </span>
             )}
           </div>
         </TableCell>
         <TableCell>
-          <ArtifactStatusChip status={artifact.status} />
+          <ResourceStatusChip status={resource.status} />
         </TableCell>
-        <TableCell>{formatArtifactSize(artifact.sizeBytes)}</TableCell>
-        <TableCell>{formatArtifactDate(artifact.createdAt)}</TableCell>
+        <TableCell>{formatResourceSize(resource.sizeBytes)}</TableCell>
+        <TableCell>{formatResourceDate(resource.createdAt)}</TableCell>
         <TableCell className="p-0 text-right">
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
                 <Button
                   aria-label={m.common_actions()}
-                  className="opacity-0 group-hover/artifact-row:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100"
+                  className="opacity-0 group-hover/resource-row:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100"
                   size="icon-sm"
                   variant="ghost"
                 />
@@ -131,7 +131,7 @@ export const ArtifactRow = ({ artifact, topicId }: ArtifactRowProps) => {
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={
-                  artifact.status !== "ready" || downloadMutation.isPending
+                  resource.status !== "ready" || downloadMutation.isPending
                 }
                 onClick={() => {
                   downloadMutation.mutate();
@@ -154,8 +154,8 @@ export const ArtifactRow = ({ artifact, topicId }: ArtifactRowProps) => {
         </TableCell>
       </TableRow>
 
-      <DeleteArtifactDialog
-        artifact={artifact}
+      <DeleteResourceDialog
+        resource={resource}
         onOpenChange={setDeleteOpen}
         open={deleteOpen}
         topicId={topicId}
@@ -164,44 +164,44 @@ export const ArtifactRow = ({ artifact, topicId }: ArtifactRowProps) => {
   );
 };
 
-type RenameArtifactFieldProps = {
-  artifact: ArtifactItem;
+type RenameResourceFieldProps = {
+  resource: ResourceItem;
   stopRenaming: () => void;
   topicId: string;
 };
 
-const RenameArtifactField = ({
-  artifact,
+const RenameResourceField = ({
+  resource,
   stopRenaming,
   topicId,
-}: RenameArtifactFieldProps) => {
+}: RenameResourceFieldProps) => {
   const queryClient = useQueryClient();
 
   const renameMutation = useMutation({
     mutationFn: async (displayName: string) => {
-      await renameArtifact({
-        data: { artifactId: artifact.id, displayName },
+      await renameResource({
+        data: { resourceId: resource.id, displayName },
       });
     },
     onError: () => {
-      toast.error(m.artifacts_rename_error_title(), {
+      toast.error(m.resources_rename_error_title(), {
         description: m.common_please_try_again(),
       });
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: topicKeys.artifacts(topicId),
+        queryKey: topicKeys.resources(topicId),
       });
       stopRenaming();
     },
   });
 
   const form = useForm({
-    defaultValues: { displayName: artifact.displayName },
+    defaultValues: { displayName: resource.displayName },
     onSubmit: async ({ value }) => {
       const trimmed = value.displayName.trim();
 
-      if (trimmed.length === 0 || trimmed === artifact.displayName.trim()) {
+      if (trimmed.length === 0 || trimmed === resource.displayName.trim()) {
         stopRenaming();
         return;
       }
@@ -251,7 +251,7 @@ const RenameArtifactField = ({
   );
 };
 
-const getStatusLabel = (status: ArtifactStatus) => {
+const getStatusLabel = (status: ResourceStatus) => {
   // oxlint-disable-next-line default-case
   switch (status) {
     case "uploading": {
@@ -269,7 +269,7 @@ const getStatusLabel = (status: ArtifactStatus) => {
   }
 };
 
-const ArtifactStatusChip = ({ status }: { status: ArtifactStatus }) => {
+const ResourceStatusChip = ({ status }: { status: ResourceStatus }) => {
   const label = getStatusLabel(status);
 
   return (

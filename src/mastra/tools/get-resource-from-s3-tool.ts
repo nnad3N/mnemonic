@@ -14,12 +14,12 @@ import { getObject } from "@/lib/s3";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context";
 
 const inputSchema = v.object({
-  artifactId: v.pipe(v.string(), v.nanoid()),
+  resourceId: v.pipe(v.string(), v.nanoid()),
 });
 
 const successOutputSchema = v.object({
   type: v.literal("success"),
-  artifactId: v.pipe(v.string(), v.nanoid()),
+  resourceId: v.pipe(v.string(), v.nanoid()),
   data: v.pipe(v.string(), v.nonEmpty()),
   displayName: v.pipe(v.string(), v.nonEmpty()),
   mimeType: v.pipe(v.string(), v.nonEmpty()),
@@ -36,25 +36,25 @@ const outputSchema = v.variant("type", [
   errorOutputSchema,
 ]);
 
-type GetArtifactSuccess = v.InferOutput<typeof successOutputSchema>;
-type GetArtifactError = v.InferOutput<typeof errorOutputSchema>;
+type GetResourceSuccess = v.InferOutput<typeof successOutputSchema>;
+type GetResourceError = v.InferOutput<typeof errorOutputSchema>;
 
-export const getArtifactFromS3Tool = createTool({
-  id: "get-artifact-from-s3",
+export const getResourceFromS3Tool = createTool({
+  id: "get-resource-from-s3",
   inputSchema: toStandardJsonSchema(inputSchema),
   outputSchema: toStandardJsonSchema(outputSchema),
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
   description: [
-    "Load one supported raw uploaded artifact from the current topic for direct multimodal inspection.",
-    "Use for images, which are not text-indexed, or when the user @-mentions a specific supported image artifact.",
-    "Do not use for office documents, PDFs, or other extracted-only uploads; use artifact-vector-search or artifact-graph-rag for those.",
+    "Load one supported raw uploaded resource from the current topic for direct multimodal inspection.",
+    "Use for images, which are not text-indexed, or when the user @-mentions a specific supported image resource.",
+    "Do not use for office documents, PDFs, or other extracted-only uploads; use resource-vector-search or resource-graph-rag for those.",
     `Supported MIME types: ${LLM_NATIVE_IMAGE_MIME_TYPES.join(", ")}.`,
-    "Input artifactId must come from an artifact @-mention or prior tool result.",
+    "Input resourceId must come from an resource @-mention or prior tool result.",
   ].join(" "),
-  execute: async ({ artifactId }, context) => {
+  execute: async ({ resourceId }, context) => {
     const topicId = context.requestContext?.get("filter")?.topicId;
 
-    const artifact = await db.query.artifact.findFirst({
+    const resource = await db.query.resource.findFirst({
       columns: {
         displayName: true,
         id: true,
@@ -64,42 +64,42 @@ export const getArtifactFromS3Tool = createTool({
         status: true,
       },
       where: {
-        id: artifactId,
+        id: resourceId,
         topicId,
       },
     });
 
-    if (!artifact || artifact.status !== "ready") {
+    if (!resource || resource.status !== "ready") {
       return {
         type: "error",
-        message: "Artifact not found.",
-      } satisfies GetArtifactError;
+        message: "Resource not found.",
+      } satisfies GetResourceError;
     }
 
-    if (!isLLMNativeImageMimeType(artifact.mimeType)) {
+    if (!isLLMNativeImageMimeType(resource.mimeType)) {
       return {
         type: "error",
-        message: `File "${artifact.displayName}" (${artifact.mimeType}) cannot be loaded directly. Use vector or graph search instead.`,
-      } satisfies GetArtifactError;
+        message: `File "${resource.displayName}" (${resource.mimeType}) cannot be loaded directly. Use vector or graph search instead.`,
+      } satisfies GetResourceError;
     }
 
-    const objectResult = await getObject(artifact.s3Key);
+    const objectResult = await getObject(resource.s3Key);
 
     if (Result.isError(objectResult)) {
       return {
         type: "error",
-        message: "Artifact could not be loaded.",
-      } satisfies GetArtifactError;
+        message: "Resource could not be loaded.",
+      } satisfies GetResourceError;
     }
 
     return {
       type: "success",
-      artifactId: artifact.id,
+      resourceId: resource.id,
       data: Buffer.from(objectResult.value).toString("base64"),
-      displayName: artifact.displayName,
-      mimeType: artifact.mimeType,
-      sizeBytes: artifact.sizeBytes,
-    } satisfies GetArtifactSuccess;
+      displayName: resource.displayName,
+      mimeType: resource.mimeType,
+      sizeBytes: resource.sizeBytes,
+    } satisfies GetResourceSuccess;
   },
   toModelOutput: (output): ToolResultOutput => {
     if (output.type === "error") {

@@ -44,7 +44,7 @@ ${sharedSourceInstructions}
 Available sources:
 - Conversation recall: past messages in the current conversation only. Prefer this when the answer may already appear in prior chat.
 - Web search: current or external information. Use when the question needs facts outside this conversation or up-to-date information from the web.
-- Access topic: topic artifacts and topic-scoped conversation history. Use when the user asks for information from a topic, topic files, topic artifacts, or prior topic conversations.
+- Access topic: topic resources and topic-scoped conversation history. Use when the user asks for information from a topic, topic files, topic resources, or prior topic conversations.
 
 ## Access topic
 Use access-topic only when the topic is clear. If the user asks about a topic but no topic can be identified, ask which topic to use.

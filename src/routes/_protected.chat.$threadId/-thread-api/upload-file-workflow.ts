@@ -9,25 +9,25 @@ import { eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { db } from "@/db";
-import { artifact } from "@/db/schema";
+import { resource } from "@/db/schema";
 import { isImageMimeType } from "@/lib/file-validation";
 import { getObject, statObject, S3Error } from "@/lib/s3";
 import {
-  ARTIFACT_EMBEDDING_DIMENSION,
-  ARTIFACT_EMBEDDINGS_INDEX,
-  artifactEmbeddingModel,
-} from "@/mastra/artifact-rag-config";
+  RESOURCE_EMBEDDING_DIMENSION,
+  RESOURCE_EMBEDDINGS_INDEX,
+  resourceEmbeddingModel,
+} from "@/mastra/resource-rag-config";
 import { pgVector } from "@/mastra/storage";
 
 const workflowInputSchema = v.object({
-  artifactId: v.pipe(v.string(), v.nanoid()),
+  resourceId: v.pipe(v.string(), v.nanoid()),
   topicId: v.pipe(v.string(), v.nanoid()),
 });
 
 type WorkflowInputSchema = v.InferInput<typeof workflowInputSchema>;
 
-const validatedArtifactSchema = v.object({
-  artifactId: v.pipe(v.string(), v.nanoid()),
+const validatedResourceSchema = v.object({
+  resourceId: v.pipe(v.string(), v.nanoid()),
   displayName: v.pipe(v.string(), v.nonEmpty()),
   mimeType: v.pipe(v.string(), v.nonEmpty()),
   s3Key: v.pipe(v.string(), v.nonEmpty()),
@@ -35,19 +35,19 @@ const validatedArtifactSchema = v.object({
 });
 
 const workflowOutputSchema = v.object({
-  artifactId: v.pipe(v.string(), v.nanoid()),
+  resourceId: v.pipe(v.string(), v.nanoid()),
 });
 
-const validateArtifactStep = createStep({
-  id: "validate-artifact",
+const validateResourceStep = createStep({
+  id: "validate-resource",
   inputSchema: toStandardJsonSchema(workflowInputSchema),
-  outputSchema: toStandardJsonSchema(validatedArtifactSchema),
+  outputSchema: toStandardJsonSchema(validatedResourceSchema),
   execute: async ({ inputData }) => {
-    const { artifactId, topicId } = inputData;
+    const { resourceId, topicId } = inputData;
 
-    const row = await db.query.artifact.findFirst({
+    const row = await db.query.resource.findFirst({
       where: {
-        id: artifactId,
+        id: resourceId,
         topicId,
       },
       columns: {
@@ -61,11 +61,11 @@ const validateArtifactStep = createStep({
     });
 
     if (row === undefined) {
-      throw new Error("Artifact not found");
+      throw new Error("Resource not found");
     }
 
     if (row.status !== "uploading") {
-      throw new Error("Artifact is not awaiting upload");
+      throw new Error("Resource is not awaiting upload");
     }
 
     const headResult = await statObject(row.s3Key);
@@ -81,12 +81,12 @@ const validateArtifactStep = createStep({
     }
 
     await db
-      .update(artifact)
+      .update(resource)
       .set({ status: "processing" })
-      .where(eq(artifact.id, row.id));
+      .where(eq(resource.id, row.id));
 
     return {
-      artifactId: row.id,
+      resourceId: row.id,
       displayName: row.displayName,
       mimeType: row.mimeType,
       s3Key: row.s3Key,
@@ -97,18 +97,18 @@ const validateArtifactStep = createStep({
 
 const processForRagStep = createStep({
   id: "process-for-rag",
-  inputSchema: toStandardJsonSchema(validatedArtifactSchema),
+  inputSchema: toStandardJsonSchema(validatedResourceSchema),
   outputSchema: toStandardJsonSchema(workflowOutputSchema),
   execute: async ({ inputData }) => {
-    const { artifactId, displayName, mimeType, s3Key, topicId } = inputData;
+    const { resourceId, displayName, mimeType, s3Key, topicId } = inputData;
 
     if (isImageMimeType(mimeType)) {
       await db
-        .update(artifact)
+        .update(resource)
         .set({ status: "ready" })
-        .where(eq(artifact.id, artifactId));
+        .where(eq(resource.id, resourceId));
 
-      return { artifactId };
+      return { resourceId };
     }
 
     const objectResult = await getObject(s3Key);
@@ -131,30 +131,30 @@ const processForRagStep = createStep({
 
     if (chunks.length === 0) {
       await db
-        .update(artifact)
+        .update(resource)
         .set({ status: "ready" })
-        .where(eq(artifact.id, artifactId));
+        .where(eq(resource.id, resourceId));
 
-      return { artifactId };
+      return { resourceId };
     }
 
     const { embeddings } = await embedMany({
-      model: artifactEmbeddingModel,
+      model: resourceEmbeddingModel,
       values: chunks.map((chunk) => chunk.text),
     });
 
     await pgVector.createIndex({
-      dimension: ARTIFACT_EMBEDDING_DIMENSION,
-      indexName: ARTIFACT_EMBEDDINGS_INDEX,
-      metadataIndexes: ["topicId", "artifactId"],
+      dimension: RESOURCE_EMBEDDING_DIMENSION,
+      indexName: RESOURCE_EMBEDDINGS_INDEX,
+      metadataIndexes: ["topicId", "resourceId"],
     });
 
     await pgVector.upsert({
-      ids: chunks.map((_, index) => `${artifactId}:${index}`),
-      indexName: ARTIFACT_EMBEDDINGS_INDEX,
+      ids: chunks.map((_, index) => `${resourceId}:${index}`),
+      indexName: RESOURCE_EMBEDDINGS_INDEX,
       metadata: chunks.map((chunk, index) => ({
         topicId,
-        artifactId,
+        resourceId,
         chunkIndex: index,
         displayName,
         text: chunk.text,
@@ -163,30 +163,30 @@ const processForRagStep = createStep({
     });
 
     await db
-      .update(artifact)
+      .update(resource)
       .set({ status: "ready" })
-      .where(eq(artifact.id, artifactId));
+      .where(eq(resource.id, resourceId));
 
-    return { artifactId };
+    return { resourceId };
   },
 });
 
-export const processArtifactWorkflow = createWorkflow({
-  id: "process-artifact",
+export const processResourceWorkflow = createWorkflow({
+  id: "process-resource",
   inputSchema: toStandardJsonSchema(workflowInputSchema),
   options: {
     onError: async ({ getInitData }) => {
       // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-      const { artifactId } = getInitData() as WorkflowInputSchema;
+      const { resourceId } = getInitData() as WorkflowInputSchema;
 
       await db
-        .update(artifact)
+        .update(resource)
         .set({ status: "failed" })
-        .where(eq(artifact.id, artifactId));
+        .where(eq(resource.id, resourceId));
     },
   },
   outputSchema: toStandardJsonSchema(workflowOutputSchema),
 })
-  .then(validateArtifactStep)
+  .then(validateResourceStep)
   .then(processForRagStep)
   .commit();

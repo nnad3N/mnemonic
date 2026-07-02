@@ -5,18 +5,18 @@ import { eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { db } from "@/db";
-import { artifact } from "@/db/schema";
-import type { ArtifactUploadErrorShape } from "@/lib/errors/artifact-upload-error";
-import { ArtifactUploadError } from "@/lib/errors/artifact-upload-error";
+import { resource } from "@/db/schema";
+import type { ResourceUploadErrorShape } from "@/lib/errors/resource-upload-error";
+import { ResourceUploadError } from "@/lib/errors/resource-upload-error";
 import { validateUploadFile } from "@/lib/file-validation";
 import {
-  artifactAccessMiddleware,
+  resourceAccessMiddleware,
   threadAccessMiddleware,
 } from "@/lib/middleware/assert-thread-access";
 import { getPresignedPutUrl, S3Error } from "@/lib/s3";
 import { mastra } from "@/mastra";
 
-export const ARTIFACT_UPLOAD_TTL_SECONDS = 60;
+export const RESOURCE_UPLOAD_TTL_SECONDS = 60;
 
 type GetTopicForUploadProps = {
   resourceId: string;
@@ -48,12 +48,12 @@ export type GetPresignedUrlOk =
 
 export type GetPresignedUrlResult = SerializedResult<
   GetPresignedUrlOk,
-  ArtifactUploadErrorShape
+  ResourceUploadErrorShape
 >;
 
 const getPresignedUrlInputSchema = v.object({
   displayName: v.pipe(v.string(), v.nonEmpty()),
-  artifactId: v.pipe(v.string(), v.nanoid()),
+  resourceId: v.pipe(v.string(), v.nanoid()),
   mimeType: v.pipe(v.string(), v.nonEmpty()),
   sha256: v.pipe(v.string(), v.length(64)),
   sizeBytes: v.pipe(v.number(), v.minValue(1)),
@@ -74,8 +74,8 @@ export const getPresignedUrl = createServerFn({ method: "POST" })
         userId: context.user.id,
       });
 
-      const artifactKey = await db.transaction(async (tx) => {
-        const existing = await tx.query.artifact.findFirst({
+      const resourceKey = await db.transaction(async (tx) => {
+        const existing = await tx.query.resource.findFirst({
           where: {
             sha256: data.sha256,
             topicId,
@@ -88,17 +88,17 @@ export const getPresignedUrl = createServerFn({ method: "POST" })
 
         if (existing) {
           await tx
-            .update(artifact)
+            .update(resource)
             .set({ status: "uploading" })
-            .where(eq(artifact.id, existing.id));
+            .where(eq(resource.id, existing.id));
 
           return existing.s3Key;
         }
 
-        const s3Key = `${context.user.id}/${topicId}/${data.artifactId}`;
+        const s3Key = `${context.user.id}/${topicId}/${data.resourceId}`;
 
-        await tx.insert(artifact).values({
-          id: data.artifactId,
+        await tx.insert(resource).values({
+          id: data.resourceId,
           userId: context.user.id,
           topicId,
           displayName: data.displayName,
@@ -112,7 +112,7 @@ export const getPresignedUrl = createServerFn({ method: "POST" })
         return s3Key;
       });
 
-      if (!artifactKey) {
+      if (!resourceKey) {
         return Result.ok({
           type: "skipped" as const,
         });
@@ -122,8 +122,8 @@ export const getPresignedUrl = createServerFn({ method: "POST" })
         getPresignedPutUrl({
           contentLength: data.sizeBytes,
           contentType: data.mimeType,
-          expiresIn: ARTIFACT_UPLOAD_TTL_SECONDS,
-          key: artifactKey,
+          expiresIn: RESOURCE_UPLOAD_TTL_SECONDS,
+          key: resourceKey,
         })
       );
 
@@ -136,7 +136,7 @@ export const getPresignedUrl = createServerFn({ method: "POST" })
     return Result.serialize(
       result.mapError((error) => {
         if (S3Error.is(error)) {
-          return new ArtifactUploadError({
+          return new ResourceUploadError({
             reason: "s3-error",
             message: error.message,
           });
@@ -147,31 +147,31 @@ export const getPresignedUrl = createServerFn({ method: "POST" })
     );
   });
 
-const updateArtifactStatusInputSchema = v.object({
+const updateResourceStatusInputSchema = v.object({
   status: v.pipe(
     v.string(),
     v.picklist(["uploading", "processing", "ready", "failed"])
   ),
 });
 
-export const updateArtifactStatus = createServerFn({ method: "POST" })
-  .inputValidator(updateArtifactStatusInputSchema)
-  .middleware([artifactAccessMiddleware])
+export const updateResourceStatus = createServerFn({ method: "POST" })
+  .inputValidator(updateResourceStatusInputSchema)
+  .middleware([resourceAccessMiddleware])
   .handler(async ({ context, data }) => {
     await db
-      .update(artifact)
+      .update(resource)
       .set({ status: data.status })
-      .where(eq(artifact.id, context.artifact.id));
+      .where(eq(resource.id, context.resource.id));
   });
 
-export const processArtifact = createServerFn({ method: "POST" })
-  .middleware([artifactAccessMiddleware])
+export const processResource = createServerFn({ method: "POST" })
+  .middleware([resourceAccessMiddleware])
   .handler(async ({ context }) => {
-    const workflow = mastra.getWorkflow("process-artifact");
+    const workflow = mastra.getWorkflow("process-resource");
     const run = await workflow.createRun();
     const result = await run.start({
       inputData: {
-        artifactId: context.artifact.id,
+        resourceId: context.resource.id,
         topicId: context.topicId,
       },
     });
@@ -181,8 +181,8 @@ export const processArtifact = createServerFn({ method: "POST" })
     }
 
     if (result.status !== "success") {
-      throw new Error("Artifact processing did not complete");
+      throw new Error("Resource processing did not complete");
     }
 
-    return { artifactId: context.artifact.id };
+    return { resourceId: context.resource.id };
   });

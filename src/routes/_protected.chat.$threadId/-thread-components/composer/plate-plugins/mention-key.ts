@@ -3,7 +3,7 @@ import * as v from "valibot";
 const MENTION_KEY_TYPE_SEPARATOR = "::";
 
 const mentionTypeSchema = v.picklist([
-  "artifact",
+  "resource",
   "attachment",
   "selection",
   "thread",

@@ -8,12 +8,12 @@ import {
 } from "@/components/ui/input-group";
 import { m } from "@/paraglide/messages";
 
-type ArtifactSearchProps = {
+type ResourceSearchProps = {
   onChange: (value: string) => void;
   value: string;
 };
 
-export const ArtifactSearch = ({ onChange, value }: ArtifactSearchProps) => (
+export const ResourceSearch = ({ onChange, value }: ResourceSearchProps) => (
   <InputGroup>
     <InputGroupAddon align="inline-start">
       <SearchIcon />
@@ -22,7 +22,7 @@ export const ArtifactSearch = ({ onChange, value }: ArtifactSearchProps) => (
       onChange={(event) => {
         onChange(event.target.value);
       }}
-      placeholder={m.artifacts_search_placeholder()}
+      placeholder={m.resources_search_placeholder()}
       value={value}
     />
     {value.length > 0 && (

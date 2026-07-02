@@ -4,7 +4,7 @@ import { and, desc, eq, ilike } from "drizzle-orm";
 import * as v from "valibot";
 
 import { db } from "@/db";
-import { artifact, topic } from "@/db/schema";
+import { resource, topic } from "@/db/schema";
 import { authMiddleware } from "@/lib/middleware/auth-middleware";
 import { getMemoryStore } from "@/mastra/memory";
 
@@ -19,16 +19,16 @@ type MentionItem = {
   type: MentionQueryType;
 };
 
-const buildArtifactMentionsWhereClause = (topicId: string, query: string) => {
+const buildResourceMentionsWhereClause = (topicId: string, query: string) => {
   const trimmedQuery = query.trim();
 
   if (trimmedQuery.length === 0) {
-    return eq(artifact.topicId, topicId);
+    return eq(resource.topicId, topicId);
   }
 
   return and(
-    eq(artifact.topicId, topicId),
-    ilike(artifact.displayName, `%${trimmedQuery}%`)
+    eq(resource.topicId, topicId),
+    ilike(resource.displayName, `%${trimmedQuery}%`)
   );
 };
 
@@ -57,7 +57,7 @@ const getMentionsInputSchema = v.object({
 
 const getMentionByIdInputSchema = v.object({
   id: v.pipe(v.string(), v.nanoid()),
-  type: v.picklist(["artifact", "thread", "topic"]),
+  type: v.picklist(["resource", "thread", "topic"]),
 });
 
 export const getMentions = createServerFn({ method: "GET" })
@@ -74,15 +74,15 @@ export const getMentions = createServerFn({ method: "GET" })
 
     if (ownedTopic) {
       const memoryStore = await getMemoryStore();
-      const [artifactMentions, threadsResult] = await Promise.all([
+      const [resourceMentions, threadsResult] = await Promise.all([
         db
           .select({
-            id: artifact.id,
-            displayName: artifact.displayName,
+            id: resource.id,
+            displayName: resource.displayName,
           })
-          .from(artifact)
-          .where(buildArtifactMentionsWhereClause(ownedTopic.id, data.query))
-          .orderBy(desc(artifact.createdAt))
+          .from(resource)
+          .where(buildResourceMentionsWhereClause(ownedTopic.id, data.query))
+          .orderBy(desc(resource.createdAt))
           .limit(MENTIONS_QUERY_LIMIT),
         memoryStore.listThreads({
           filter: { resourceId: ownedTopic.id },
@@ -92,9 +92,9 @@ export const getMentions = createServerFn({ method: "GET" })
         }),
       ]);
 
-      const mentions: MentionItem[] = artifactMentions.map((mention) => ({
+      const mentions: MentionItem[] = resourceMentions.map((mention) => ({
         ...mention,
-        type: "artifact",
+        type: "resource",
       }));
 
       for (const thread of threadsResult.threads) {
@@ -156,8 +156,8 @@ export const getMentionById = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .handler(async ({ context, data }) => {
     switch (data.type) {
-      case "artifact": {
-        const ownedArtifact = await db.query.artifact.findFirst({
+      case "resource": {
+        const ownedResource = await db.query.resource.findFirst({
           columns: {
             displayName: true,
             id: true,
@@ -169,11 +169,11 @@ export const getMentionById = createServerFn({ method: "GET" })
           },
         });
 
-        return ownedArtifact
+        return ownedResource
           ? {
-              displayName: ownedArtifact.displayName,
-              id: ownedArtifact.id,
-              status: ownedArtifact.status,
+              displayName: ownedResource.displayName,
+              id: ownedResource.id,
+              status: ownedResource.status,
             }
           : null;
       }
@@ -238,7 +238,7 @@ type GetMentionByIdParams = {
 
 export const mentionByIdQuery = ({ id, type }: GetMentionByIdParams) =>
   queryOptions({
-    // without this the optimistic update for artifact upload might be discarded
+    // without this the optimistic update for resource upload might be discarded
     refetchOnMount: false,
     queryFn: async () =>
       getMentionById({

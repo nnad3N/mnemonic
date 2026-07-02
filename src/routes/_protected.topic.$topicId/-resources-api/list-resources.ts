@@ -4,12 +4,12 @@ import { and, desc, eq, ilike } from "drizzle-orm";
 import * as v from "valibot";
 
 import { db } from "@/db";
-import { artifact } from "@/db/schema";
-import type { ArtifactStatus } from "@/db/schema";
+import { resource } from "@/db/schema";
+import type { ResourceStatus } from "@/db/schema";
 import { topicAccessMiddleware } from "@/lib/middleware/assert-thread-access";
 import { topicKeys } from "@/routes/_protected.topic.$topicId/-topic-api/query-keys";
 
-const listArtifactsInputSchema = v.object({
+const listResourcesInputSchema = v.object({
   page: v.pipe(v.number(), v.integer(), v.minValue(1)),
   pageSize: v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100)),
   search: v.optional(v.string(), ""),
@@ -19,17 +19,17 @@ const buildWhereClause = (topicId: string, search: string) => {
   const trimmedSearch = search.trim();
 
   if (trimmedSearch.length === 0) {
-    return eq(artifact.topicId, topicId);
+    return eq(resource.topicId, topicId);
   }
 
   return and(
-    eq(artifact.topicId, topicId),
-    ilike(artifact.displayName, `%${trimmedSearch}%`)
+    eq(resource.topicId, topicId),
+    ilike(resource.displayName, `%${trimmedSearch}%`)
   );
 };
 
-export const listArtifacts = createServerFn({ method: "GET" })
-  .inputValidator(listArtifactsInputSchema)
+export const listResources = createServerFn({ method: "GET" })
+  .inputValidator(listResourcesInputSchema)
   .middleware([topicAccessMiddleware])
   .handler(async ({ context, data }) => {
     const whereClause = buildWhereClause(context.topic.id, data.search);
@@ -38,19 +38,19 @@ export const listArtifacts = createServerFn({ method: "GET" })
     const [items, totalCount] = await Promise.all([
       db
         .select({
-          createdAt: artifact.createdAt,
-          displayName: artifact.displayName,
-          id: artifact.id,
-          mimeType: artifact.mimeType,
-          sizeBytes: artifact.sizeBytes,
-          status: artifact.status,
+          createdAt: resource.createdAt,
+          displayName: resource.displayName,
+          id: resource.id,
+          mimeType: resource.mimeType,
+          sizeBytes: resource.sizeBytes,
+          status: resource.status,
         })
-        .from(artifact)
+        .from(resource)
         .where(whereClause)
-        .orderBy(desc(artifact.createdAt))
+        .orderBy(desc(resource.createdAt))
         .limit(data.pageSize)
         .offset(offset),
-      db.$count(artifact, whereClause),
+      db.$count(resource, whereClause),
     ]);
 
     return {
@@ -59,38 +59,38 @@ export const listArtifacts = createServerFn({ method: "GET" })
     };
   });
 
-export type ArtifactItem = {
+export type ResourceItem = {
   createdAt: Date;
   displayName: string;
   id: string;
   mimeType: string;
   sizeBytes: number;
-  status: ArtifactStatus;
+  status: ResourceStatus;
 };
 
-export type ListArtifactsResult = {
-  items: ArtifactItem[];
+export type ListResourcesResult = {
+  items: ResourceItem[];
   totalCount: number;
 };
 
-export type ArtifactsQueryParams = {
+export type ResourcesQueryParams = {
   page: number;
   pageSize: number;
   search: string;
   topicId: string;
 };
 
-export const artifactsQuery = ({
+export const resourcesQuery = ({
   page,
   pageSize,
   search,
   topicId,
-}: ArtifactsQueryParams) =>
+}: ResourcesQueryParams) =>
   queryOptions({
     queryFn: async () =>
-      listArtifacts({
+      listResources({
         data: { page, pageSize, search, topicId },
       }),
-    queryKey: [...topicKeys.artifacts(topicId), { page, pageSize, search }],
+    queryKey: [...topicKeys.resources(topicId), { page, pageSize, search }],
     placeholderData: keepPreviousData,
   });

@@ -31,20 +31,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { m } from "@/paraglide/messages";
-import { artifactsQuery } from "@/routes/_protected.topic.$topicId/-artifacts-api/list-artifacts";
-import { ArtifactRow } from "@/routes/_protected.topic.$topicId/-artifacts-components/artifact-row";
-import { ArtifactSearch } from "@/routes/_protected.topic.$topicId/-artifacts-components/artifact-search";
+import { resourcesQuery } from "@/routes/_protected.topic.$topicId/-resources-api/list-resources";
+import { ResourceRow } from "@/routes/_protected.topic.$topicId/-resources-components/resource-row";
+import { ResourceSearch } from "@/routes/_protected.topic.$topicId/-resources-components/resource-search";
 
 const PAGE_SIZE = 20;
 
-const artifactsSearchSchema = v.object({
+const resourcesSearchSchema = v.object({
   page: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
   q: v.optional(v.string(), ""),
 });
 
-export const Route = createFileRoute("/_protected/topic/$topicId/artifacts")({
+export const Route = createFileRoute("/_protected/topic/$topicId/resources")({
   component: RouteComponent,
-  validateSearch: artifactsSearchSchema,
+  validateSearch: resourcesSearchSchema,
 });
 
 const MAX_VISIBLE_PAGES = 7;
@@ -79,7 +79,7 @@ function RouteComponent() {
   const [debouncedQuery] = useDebounce(q, 300);
 
   const { data, isError, isLoading, isSuccess, refetch } = useQuery(
-    artifactsQuery({
+    resourcesQuery({
       page,
       pageSize: PAGE_SIZE,
       search: debouncedQuery,
@@ -96,7 +96,7 @@ function RouteComponent() {
 
   return (
     <div className="flex w-full flex-col gap-4">
-      <ArtifactSearch
+      <ResourceSearch
         onChange={(nextQuery) => {
           void navigate({
             replace: true,
@@ -141,17 +141,17 @@ function RouteComponent() {
               ))}
 
             {isError && (
-              <ArtifactsStaticTableRow colSpan={columns.length}>
+              <ResourcesStaticTableRow colSpan={columns.length}>
                 <Empty>
                   <EmptyHeader>
                     <EmptyMedia variant="icon">
                       <AlertCircleIcon className="text-destructive" />
                     </EmptyMedia>
                     <EmptyTitle className="text-destructive">
-                      {m.artifacts_load_error_title()}
+                      {m.resources_load_error_title()}
                     </EmptyTitle>
                     <EmptyDescription>
-                      {m.artifacts_load_error_description()}
+                      {m.resources_load_error_description()}
                     </EmptyDescription>
                   </EmptyHeader>
                   <EmptyContent>
@@ -165,28 +165,28 @@ function RouteComponent() {
                     </Button>
                   </EmptyContent>
                 </Empty>
-              </ArtifactsStaticTableRow>
+              </ResourcesStaticTableRow>
             )}
 
             {isSuccess && totalCount === 0 && (
-              <ArtifactsStaticTableRow colSpan={columns.length}>
+              <ResourcesStaticTableRow colSpan={columns.length}>
                 <Empty>
                   <EmptyHeader>
                     <EmptyTitle>
                       {debouncedQuery.trim().length > 0
-                        ? m.artifacts_no_results()
-                        : m.artifacts_empty()}
+                        ? m.resources_no_results()
+                        : m.resources_empty()}
                     </EmptyTitle>
                   </EmptyHeader>
                 </Empty>
-              </ArtifactsStaticTableRow>
+              </ResourcesStaticTableRow>
             )}
 
             {isSuccess &&
-              items.map((artifact) => (
-                <ArtifactRow
-                  artifact={artifact}
-                  key={artifact.id}
+              items.map((resource) => (
+                <ResourceRow
+                  resource={resource}
+                  key={resource.id}
                   topicId={topicId}
                 />
               ))}
@@ -227,7 +227,7 @@ function RouteComponent() {
   );
 }
 
-const ArtifactsStaticTableRow = ({
+const ResourcesStaticTableRow = ({
   children,
   colSpan,
 }: PropsWithChildren<{ colSpan: number }>) => (

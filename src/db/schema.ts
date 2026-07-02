@@ -11,7 +11,7 @@ import { nanoid } from "nanoid";
 
 import { user } from "@/db/auth-schema";
 
-export type ArtifactStatus = "uploading" | "processing" | "ready" | "failed";
+export type ResourceStatus = "uploading" | "processing" | "ready" | "failed";
 
 export const topic = pgTable("topic", {
   id: varchar("id", { length: 21 })
@@ -30,8 +30,8 @@ export const topic = pgTable("topic", {
     .defaultNow(),
 });
 
-export const artifact = pgTable(
-  "artifact",
+export const resource = pgTable(
+  "resource",
   {
     id: varchar("id", { length: 21 })
       .primaryKey()
@@ -51,7 +51,7 @@ export const artifact = pgTable(
     s3Key: text("s3_key").notNull(),
 
     status: varchar("status", { length: 32 })
-      .$type<ArtifactStatus>()
+      .$type<ResourceStatus>()
       .notNull()
       .default("uploading"),
 
@@ -62,21 +62,21 @@ export const artifact = pgTable(
       .defaultNow(),
   },
   (table) => [
-    uniqueIndex("artifact_topic_sha256_unique").on(table.topicId, table.sha256),
+    uniqueIndex("resource_topic_sha256_unique").on(table.topicId, table.sha256),
   ]
 );
 
 export const appRelations = defineRelationsPart(
-  { artifact, topic, user },
+  { resource, topic, user },
   (r) => ({
-    artifact: {
+    resource: {
       topic: r.one.topic({
-        from: r.artifact.topicId,
+        from: r.resource.topicId,
         to: r.topic.id,
       }),
     },
     topic: {
-      artifacts: r.many.artifact(),
+      resources: r.many.resource(),
       user: r.one.user({
         from: r.topic.userId,
         to: r.user.id,

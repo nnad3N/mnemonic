@@ -2,7 +2,7 @@
 
 import { Result } from "better-result";
 
-import { ArtifactUploadError } from "@/lib/errors/artifact-upload-error";
+import { ResourceUploadError } from "@/lib/errors/resource-upload-error";
 
 export type MimeType = `${string}/${string}`;
 
@@ -186,7 +186,7 @@ export const validateUploadFile = (input: {
 }) => {
   if (!isSupportedMimeType(input.mimeType)) {
     return Result.err(
-      new ArtifactUploadError({
+      new ResourceUploadError({
         reason: "unsupported-mime-type",
       })
     );
@@ -194,7 +194,7 @@ export const validateUploadFile = (input: {
 
   if (input.sizeBytes > UPLOAD_MAX_BYTES) {
     return Result.err(
-      new ArtifactUploadError({
+      new ResourceUploadError({
         reason: "file-too-large",
       })
     );

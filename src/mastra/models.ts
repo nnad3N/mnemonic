@@ -2,7 +2,7 @@ import { defaultEmbeddingSettingsMiddleware, wrapEmbeddingModel } from "ai";
 
 import { google } from "@/mastra/google";
 
-export const ARTIFACT_EMBEDDING_DIMENSION = 1536;
+export const RESOURCE_EMBEDDING_DIMENSION = 1536;
 
 /** Google batchEmbedContents accepts at most 100 requests per call. */
 const GEMINI_BATCH_EMBED_LIMIT = 100;
@@ -15,7 +15,7 @@ const embedding = wrapEmbeddingModel({
       settings: {
         providerOptions: {
           google: {
-            outputDimensionality: ARTIFACT_EMBEDDING_DIMENSION,
+            outputDimensionality: RESOURCE_EMBEDDING_DIMENSION,
           },
         },
       },

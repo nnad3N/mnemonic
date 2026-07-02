@@ -270,7 +270,7 @@ const TopicResult = ({ topic }: TopicResultProps) => (
     <Link
       className="flex items-center gap-3 px-3 py-1 transition-colors hover:bg-muted"
       params={{ topicId: topic.id }}
-      to="/topic/$topicId/artifacts"
+      to="/topic/$topicId/resources"
     >
       <SearchResultContent
         icon={<MessagesSquareIcon className="size-4.5" />}

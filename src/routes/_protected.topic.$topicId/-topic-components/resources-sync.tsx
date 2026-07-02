@@ -3,64 +3,64 @@ import { useEffect, useRef } from "react";
 
 import { topicKeys } from "@/routes/_protected.topic.$topicId/-topic-api/query-keys";
 
-import { getPendingArtifacts } from "../-artifacts-api/get-pending-artifacts";
+import { getPendingResources } from "../-resources-api/get-pending-resources";
 import { useChatStore } from "../../-chat-store";
 import { threadKeys } from "../../_protected.chat.$threadId/-thread-api/query-keys";
 
 const POLL_MS = 2000;
 
-type ArtifactsSyncProps = {
+type ResourcesSyncProps = {
   topicId: string;
 };
 
-export const ArtifactsSync = ({ topicId }: ArtifactsSyncProps) => {
+export const ResourcesSync = ({ topicId }: ResourcesSyncProps) => {
   const queryClient = useQueryClient();
-  const previousPendingArtifactIds = useRef<string[]>([]);
+  const previousPendingResourceIds = useRef<string[]>([]);
   const isPolling = useChatStore((state) => state.pollingTopicIds.has(topicId));
-  const { data: pendingArtifacts } = useSuspenseQuery({
+  const { data: pendingResources } = useSuspenseQuery({
     queryFn: async () =>
-      getPendingArtifacts({
+      getPendingResources({
         data: { topicId },
       }),
-    select: (data) => data.map((artifact) => artifact.id),
-    queryKey: [topicId, "pending-artifacts"] as const,
+    select: (data) => data.map((resource) => resource.id),
+    queryKey: [topicId, "pending-resources"] as const,
     refetchInterval: isPolling ? POLL_MS : false,
   });
 
   useEffect(() => {
     const { removePollingTopicId, addPollingTopicId } = useChatStore.getState();
-    const removedArtifactIds = previousPendingArtifactIds.current.filter(
-      (artifactId) => !pendingArtifacts.includes(artifactId)
+    const removedResourceIds = previousPendingResourceIds.current.filter(
+      (resourceId) => !pendingResources.includes(resourceId)
     );
 
-    previousPendingArtifactIds.current = pendingArtifacts;
+    previousPendingResourceIds.current = pendingResources;
 
-    if (pendingArtifacts.length > 0) {
+    if (pendingResources.length > 0) {
       addPollingTopicId(topicId);
     } else {
       removePollingTopicId(topicId);
     }
 
-    for (const artifactId of removedArtifactIds) {
+    for (const resourceId of removedResourceIds) {
       void queryClient.invalidateQueries({
-        queryKey: threadKeys.mention("artifact", artifactId),
+        queryKey: threadKeys.mention("resource", resourceId),
       });
     }
 
-    if (removedArtifactIds.length > 0) {
+    if (removedResourceIds.length > 0) {
       void queryClient.invalidateQueries({
         queryKey: threadKeys.mentions(topicId),
       });
 
       void queryClient.invalidateQueries({
-        queryKey: topicKeys.artifacts(topicId),
+        queryKey: topicKeys.resources(topicId),
       });
     }
-  }, [queryClient, topicId, pendingArtifacts]);
+  }, [queryClient, topicId, pendingResources]);
 
   useEffect(() => {
     return () => {
-      previousPendingArtifactIds.current = [];
+      previousPendingResourceIds.current = [];
       useChatStore.getState().removePollingTopicId(topicId);
     };
   }, [topicId]);

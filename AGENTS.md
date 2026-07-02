@@ -75,7 +75,7 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
 />;
 
 // Good — component owns the variants
-const ArtifactStatusChip = ({ status }: { status: ArtifactStatus }) => (
+const ResourceStatusChip = ({ status }: { status: ResourceStatus }) => (
   <Badge variant="outline">
     <span
       className={cn(
@@ -89,7 +89,7 @@ const ArtifactStatusChip = ({ status }: { status: ArtifactStatus }) => (
 );
 
 // Bad — class-string lookup helper
-const getStatusDotClassName = (status: ArtifactStatus) => {
+const getStatusDotClassName = (status: ResourceStatus) => {
   switch (status) {
     case "ready":
       return "bg-green-500";
@@ -201,7 +201,7 @@ TanStack Router's `search` option is typed loosely — you can return almost any
 - Prefer **`Route.useNavigate()`** / **`Route.Link`** (or `from={Route.fullPath}`) so `prev` is inferred from the route's `validateSearch` schema.
 - Ensure **`Register.router`** uses `typeof router` on a module-level router instance (see [`src/router.tsx`](src/router.tsx)) — not `ReturnType<typeof getRouter>`.
 
-Reference: [`src/routes/_protected.topic.$topicId/artifacts.tsx`](src/routes/_protected.topic.$topicId/artifacts.tsx)
+Reference: [`src/routes/_protected.topic.$topicId/resources.tsx`](src/routes/_protected.topic.$topicId/resources.tsx)
 
 ---
 
@@ -229,14 +229,14 @@ For optional fields, wrap the full pipe: `v.optional(v.pipe(v.string(), v.nonEmp
 
 ### ID fields
 
-Any schema field named `id` or ending in `Id` (`topicId`, `threadId`, `artifactId`, `userId`, `messageId`, …) must validate as a nanoid:
+Any schema field named `id` or ending in `Id` (`topicId`, `threadId`, `resourceId`, `userId`, `messageId`, …) must validate as a nanoid:
 
 ```tsx
 topicId: v.pipe(v.string(), v.nanoid()),
 messageId: v.optional(v.pipe(v.string(), v.nanoid())),
 ```
 
-Reference: [`src/routes/_protected.topic.$topicId/-artifacts-api/list-artifacts.ts`](src/routes/_protected.topic.$topicId/-artifacts-api/list-artifacts.ts), [`src/lib/middleware/assert-thread-access.ts`](src/lib/middleware/assert-thread-access.ts)
+Reference: [`src/routes/_protected.topic.$topicId/-resources-api/list-resources.ts`](src/routes/_protected.topic.$topicId/-resources-api/list-resources.ts), [`src/lib/middleware/assert-thread-access.ts`](src/lib/middleware/assert-thread-access.ts)
 
 ---
 
@@ -347,7 +347,7 @@ When adding a new subagent with custom UI, add its `agent-<key>` name to `tool-p
 Messages live in [`messages/en.json`](messages/en.json) and [`messages/pl.json`](messages/pl.json). Use Paraglide getters from `@/paraglide/messages` (`m.message_key()`).
 
 - **`common_*` for generic UI copy** — reuse shared keys for words and short phrases that mean the same everywhere (`common_loading`, `common_retry`, `common_try_again`, `common_please_try_again`, `common_cancel`, `common_delete`, `common_search`, `common_rename`, `common_download`, `common_sign_out`, `common_no_results`, status labels, table column headers, etc.). Do **not** create feature-scoped one-offs when a `common_*` key already fits.
-- **Feature-scoped keys** (`chat_*`, `artifacts_*`, `nav_*`, …) are for context-specific copy only: page titles, empty-state descriptions, error explanations, placeholders tied to a screen or domain concept.
+- **Feature-scoped keys** (`chat_*`, `resources_*`, `nav_*`, …) are for context-specific copy only: page titles, empty-state descriptions, error explanations, placeholders tied to a screen or domain concept.
 - When adding a string, check `common_*` first before introducing a new key.
 
 ---
