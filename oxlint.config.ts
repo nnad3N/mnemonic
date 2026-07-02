@@ -26,6 +26,7 @@ export default defineConfig({
     "prefer-await-to-callbacks": "off",
     "promise/prefer-await-to-then": "off",
     "func-names": "off",
+    "max-classes-per-file": "off",
     "prefer-destructuring": "off",
     "arrow-body-style": "off",
     "require-await": "off",

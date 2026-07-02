@@ -6,23 +6,20 @@ import type {
   TaggedErrorInstance,
 } from "better-result";
 
+declare const KitBrand: unique symbol;
+
 export type KitModule<
   TName extends string = string,
   TValue = unknown,
-> = readonly [name: TName, value: TValue];
-
-declare const KitsBrand: unique symbol;
-
-type KitContextBrand = {
-  readonly [KitsBrand]?: unknown;
+> = readonly [name: TName, value: TValue] & {
+  readonly [KitBrand]: unknown;
 };
 
-export type Kits<TKits extends readonly KitModule[]> = KitsValue<
+export type Kits<TKits extends readonly KitModule[]> = KitsRecord<
   TKits[number]
-> &
-  KitContextBrand;
+>;
 
-export type KitsValue<TKit extends KitModule> = {
+type KitsRecord<TKit extends KitModule> = {
   [TName in TKit[0]]: Extract<TKit, KitModule<TName>>[1];
 };
 
@@ -55,7 +52,7 @@ type DuplicateKitNameError = {
 export type UniqueKitNames<TKits extends readonly KitModule[]> =
   HasDuplicateKitNames<TKits> extends true ? DuplicateKitNameError : unknown;
 
-export type BrandedKits = Kits<readonly KitModule[]>;
+export type AnyKits = Kits<readonly KitModule[]>;
 
 export type InferYieldErr<Y> = Y extends Err<never, infer E> ? E : never;
 
@@ -65,29 +62,29 @@ export type KitGenerator<
 > = AsyncGenerator<TYield, TResult, unknown>;
 
 export type KitAction<
-  TMergedKit,
+  TKit,
   TInput,
   TResult extends ResultType<unknown, unknown>,
   TYield extends Err<never, unknown>,
 > = (
-  context: TMergedKit,
+  context: TKit,
   input: TInput
 ) => Promise<
   ResultType<InferOk<TResult>, InferYieldErr<TYield> | InferErr<TResult>>
 >;
 
-export type KitGeneratorBody<
-  TMergedKit extends BrandedKits,
+export type KitGeneratorAction<
+  TKit extends AnyKits,
   TInput,
   TYield extends Err<never, unknown>,
   TResult extends ResultType<unknown, unknown>,
-> = (context: TMergedKit, input: TInput) => KitGenerator<TResult, TYield>;
+> = (context: TKit, input: TInput) => KitGenerator<TResult, TYield>;
 
-export type KitAsyncBody<
-  TMergedKit extends BrandedKits,
+export type KitAsyncAction<
+  TKit extends AnyKits,
   TInput,
   TResult extends ResultType<unknown, unknown>,
-> = (context: TMergedKit, input: TInput) => Promise<TResult>;
+> = (context: TKit, input: TInput) => Promise<TResult>;
 
 export type MatchErrorHandlers<
   TError extends TaggedErrorInstance<string, unknown>,

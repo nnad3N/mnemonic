@@ -1,7 +1,7 @@
 import type { MemoryStorage } from "@mastra/core/storage";
 import { Result, TaggedError } from "better-result";
 
-import { defineKit } from "@/lib/kit";
+import { Kit } from "@/lib/kit";
 import { getMemoryStore } from "@/mastra/memory";
 
 export class MemoryError extends TaggedError("MemoryError")<{
@@ -15,7 +15,7 @@ const toMemoryError = (cause: unknown): MemoryError =>
     message: cause instanceof Error ? cause.message : "Memory operation failed",
   });
 
-export const memoryKit = defineKit(
+export const memoryKit = Kit.define(
   "memory",
   async <TValue>(operation: (memory: MemoryStorage) => Promise<TValue>) =>
     Result.tryPromise({

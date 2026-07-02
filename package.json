@@ -9,7 +9,7 @@
     "dev": "bunx --bun vite dev --port 3000",
     "build": "bunx --bun vite build",
     "preview": "bunx --bun vite preview",
-    "test": "vitest run",
+    "test": "TMPDIR=/tmp vitest run --config vitest.config.ts --typecheck --typecheck.checker tsgo",
     "typecheck": "tsgo --noEmit",
     "lint": "oxlint --fix",
     "format": "oxfmt",

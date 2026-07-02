@@ -8,7 +8,7 @@ import * as v from "valibot";
 import { topic } from "@/db/schema";
 import { dbKit } from "@/lib/db-kit";
 import type { DbKit } from "@/lib/db-kit";
-import { Kit, mergeKits, ServerFnError } from "@/lib/kit";
+import { Kit, toServerFnError } from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit";
 import type { MemoryKit } from "@/lib/memory-kit";
@@ -62,7 +62,7 @@ const searchItemsFn = Kit.gen(async function* (
   const hasQuery = query.length > 0;
 
   const [recentTopicsResult, standaloneThreadsResult] = await Promise.all([
-    ctx.db((db) =>
+    ctx.db.run((db) =>
       db
         .select({
           id: topic.id,
@@ -149,7 +149,7 @@ const searchInputSchema = v.object({
   query: v.optional(v.string(), ""),
 });
 
-const searchKit = mergeKits(dbKit, memoryKit);
+const searchKit = Kit.merge(dbKit, memoryKit);
 
 export const searchItems = createServerFn({ method: "GET" })
   .inputValidator(searchInputSchema)
@@ -157,15 +157,8 @@ export const searchItems = createServerFn({ method: "GET" })
   .handler(async ({ context, data }) =>
     Kit.serverFn(searchItemsFn, {
       DatabaseError: () =>
-        new ServerFnError({
-          message: "Something went wrong",
-          status: "server-error",
-        }),
-      MemoryError: () =>
-        new ServerFnError({
-          message: "Something went wrong",
-          status: "server-error",
-        }),
+        toServerFnError.serverError("Database search failed"),
+      MemoryError: () => toServerFnError.serverError("Memory search failed"),
     })(searchKit, {
       query: data.query.trim(),
       userId: context.user.id,

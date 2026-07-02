@@ -1,28 +1,30 @@
 # Kit Services
 
-This app is prototyping a small `Kit` pattern for testable backend logic. A
-kit module is a named capability tuple, such as the database kit. A merged kit
-is the combined kit object created with `mergeKits(...)`.
+`Kit` is the backend pattern for testable application logic. A kit module is a
+named capability tuple, such as the database kit. A merged kit is the combined
+kit object created with `Kit.merge(...)`.
 
 ## Naming
 
 - Kits provide named capabilities, for example `dbKit` from `src/lib/db-kit.ts`.
-- `MergedKit` is the combined kit object created with `mergeKits(...)`.
+- `Kits<[...]>` is the combined kit object type created by kit tuples.
+- `Kit.merge(...)` creates the live combined kit object.
 - `Kit.gen(...)` defines result-returning application logic.
 - `Kit.serverFn(...)` adapts a kit function at the server boundary.
 
 ## Kit Modules
 
 Kit files live under `src/lib/` and define named tuple modules with
-`defineKit(name, value)`. The value should expose bare `Result.tryPromise` — do
+`Kit.define(name, value)`. The value should expose bare `Result.tryPromise` — do
 **not** wrap with `Result.await` inside the kit:
 
-- `db-kit.ts` — `defineKit("db", operationHandler)`
-- `memory-kit.ts` — `defineKit("memory", operationHandler)`
+- `db-kit.ts` — `Kit.define("db", operationHandler)`
+- `memory-kit.ts` — `Kit.define("memory", operationHandler)`
 
-After `mergeKits(dbKit, memoryKit)`, callers use the merged context:
+After `Kit.merge(dbKit, memoryKit)`, callers use the merged context:
 
-- `ctx.db(operation)` → `Promise<Result<T, DatabaseError>>`
+- `ctx.db.run(operation)` → `Promise<Result<T, DatabaseError>>`
+- `ctx.db.transaction(operation)` → `Promise<Result<T, DatabaseError>>`
 - `ctx.memory(operation)` → `Promise<Result<T, MemoryError>>`
 
 ## Dependency Direction
@@ -38,7 +40,7 @@ ops:
 
 ```text
 const topic = yield* Result.await(
-  ctx.db((db) =>
+  ctx.db.run((db) =>
     db.query.topic.findFirst({
       where: { id: input.topicId },
     })
@@ -51,7 +53,7 @@ For parallel independent ops, use `Promise.all` on kit calls (each returns
 
 ```ts
 const [topicsResult, threadsResult] = await Promise.all([
-  ctx.db((db) => db.select(...)),
+  ctx.db.run((db) => db.select(...)),
   ctx.memory((memory) => memory.listThreads(...)),
 ]);
 
@@ -59,23 +61,56 @@ const topics = yield* topicsResult;
 const threads = yield* threadsResult;
 ```
 
+## Server Function File Shape
+
+Follow the ordering used by
+[`src/routes/_protected.search/-search-api.ts`](../../src/routes/_protected.search/-search-api.ts):
+
+1. Imports: external packages first, then app modules. Import kit values and
+   their exported kit types separately, for example `dbKit` plus `type DbKit`.
+2. Constants: limits and other module-local tuning values near the top.
+3. Pure helpers: small local functions used by the kit action, before the
+   exported DTO types when they are implementation details.
+4. Exported result DTO types: response shapes consumed by the route/client.
+5. Internal input and context types: name the action input after the use case,
+   for example `SearchItemsInput`, and define the kit context as
+   `type SearchKit = Kits<[DbKit, MemoryKit]>`.
+6. Kit action: define the application logic with `Kit.gen(...)`. Destructure
+   input in the parameter list when it improves readability.
+7. Server input schema: put the Valibot `inputValidator` schema after the kit
+   action, close to the `createServerFn` that uses it.
+8. Live kit composition: create the live context with `Kit.merge(...)` after
+   the schema and before the exported server function.
+9. Exported server function: adapt the kit action with `Kit.serverFn(...)`,
+   map every possible kit/domain error to `ServerFnError`, and pass the live
+   kit plus boundary-normalized input.
+10. Client query helpers: put query input types and `queryOptions(...)`
+    builders after the server function.
+
+Action input types should contain already-normalized boundary values. For
+example, authenticated users arrive as `SafeId<"user">`, while route/search
+data is trimmed or defaulted at the server boundary before calling the kit
+action. Result DTOs should be plain serializable shapes with strings for dates.
+
 ## Application Logic + Server Boundary
 
 Define domain logic with `Kit.gen`, then adapt at the server boundary with
 `Kit.serverFn`. Pass an optional second argument — an exhaustive `matchError`
-handler map — to map kit errors to `ServerFnError`. No shared mapper helper.
+handler map — to map kit errors to `ServerFnError`. Keep the exhaustive map at
+the call site; shared helpers such as `toServerFnError.serverError(...)` should
+only construct the mapped error.
 
 Reference: [`src/routes/_protected.search/-search-api.ts`](../../src/routes/_protected.search/-search-api.ts)
 
 ```ts
-const searchKit = mergeKits(dbKit, memoryKit);
+const searchKit = Kit.merge(dbKit, memoryKit);
 
 const searchItemsFn = Kit.gen(async function* (
-  ctx: Kits<[typeof dbKit, typeof memoryKit]>,
-  input: { userId: string; query: string }
+  ctx: Kits<[DbKit, MemoryKit]>,
+  { query, userId }: SearchItemsInput
 ) {
   const [topicsResult, threadsResult] = await Promise.all([
-    ctx.db((db) => db.select(...)),
+    ctx.db.run((db) => db.select(...)),
     ctx.memory((memory) => memory.listThreads(...)),
   ]);
 
@@ -86,16 +121,8 @@ const searchItemsFn = Kit.gen(async function* (
 });
 
 const searchItemsServerFn = Kit.serverFn(searchItemsFn, {
-  DatabaseError: () =>
-    new ServerFnError({
-      message: "Something went wrong",
-      status: "server-error",
-    }),
-  MemoryError: () =>
-    new ServerFnError({
-      message: "Something went wrong",
-      status: "server-error",
-    }),
+  DatabaseError: () => toServerFnError.serverError("Database search failed"),
+  MemoryError: () => toServerFnError.serverError("Memory search failed"),
 });
 
 export const searchItems = createServerFn({ method: "GET" })
@@ -115,8 +142,3 @@ omitted, the action must already return `Result<T, ServerFnError>`. Handlers
 call the `Kit.serverFn` adapter only — never `.unwrap()` directly.
 
 Use `status: "unauthorized"` in `ServerFnError` when mapping auth failures.
-
-## Current Status
-
-This is a prototype pattern. Do not refactor existing routes, middleware, or API
-modules into this pattern unless that refactor is explicitly requested.
