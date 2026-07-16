@@ -9,10 +9,7 @@ class TypeTestError extends TaggedError("TypeTestError")<{
   message: string;
 }>() {}
 
-type OtherTypeTestError = TaggedErrorInstance<
-  "OtherTypeTestError",
-  { message: string }
->;
+type OtherTypeTestError = TaggedErrorInstance<"OtherTypeTestError", { message: string }>;
 
 const numberKit = Kit.define("number", {
   double: (value: number) => Result.ok(value * 2),
@@ -49,10 +46,7 @@ test("Kit.createContext rejects duplicate kit names", () => {
 });
 
 test("KitModule rejects unbranded tuples", () => {
-  const plainKit = [
-    "number",
-    { double: (value: number) => Result.ok(value) },
-  ] as const;
+  const plainKit = ["number", { double: (value: number) => Result.ok(value) }] as const;
 
   // @ts-expect-error kit modules must be created with defineKit
   assertType<KitModule>(plainKit);
@@ -67,7 +61,7 @@ test("KitModule rejects unbranded tuples", () => {
 test("Kit.serverFn infers custom error handler keys", () => {
   const action = async (
     _ctx: TestCtx,
-    _input: undefined
+    _input: undefined,
   ): Promise<ResultType<string, TypeTestError | OtherTypeTestError>> =>
     Promise.resolve(Result.err(new TypeTestError({ message: "failed" })));
 
@@ -100,7 +94,7 @@ test("Kit.serverFn accepts ServerFnError actions without handlers", () => {
       new ServerFnError({
         message: "already mapped",
         status: "server-error",
-      })
+      }),
     );
 
     return Result.ok();
@@ -114,15 +108,15 @@ test("Kit.serverFn accepts ServerFnError actions without handlers", () => {
 test("Kit.serverFn skips ServerFnError handler keys for mixed unions", () => {
   const action = async (
     _ctx: TestCtx,
-    _input: undefined
+    _input: undefined,
   ): Promise<ResultType<string, TypeTestError | ServerFnError>> =>
     Promise.resolve(
       Result.err(
         new ServerFnError({
           message: "already mapped",
           status: "server-error",
-        })
-      )
+        }),
+      ),
     );
 
   expectTypeOf(
@@ -132,6 +126,6 @@ test("Kit.serverFn skips ServerFnError handler keys for mixed unions", () => {
           message: error.message,
           status: "server-error",
         }),
-    })
+    }),
   ).toEqualTypeOf<(context: TestCtx, input: undefined) => Promise<string>>();
 });

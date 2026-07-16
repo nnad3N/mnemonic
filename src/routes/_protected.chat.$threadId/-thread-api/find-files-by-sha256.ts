@@ -21,10 +21,5 @@ export const findFilesBySha256 = createServerFn({ method: "GET" })
         status: file.status,
       })
       .from(file)
-      .where(
-        and(
-          eq(file.topicId, context.topic.id),
-          inArray(file.sha256, data.sha256s)
-        )
-      );
+      .where(and(eq(file.topicId, context.topic.id), inArray(file.sha256, data.sha256s)));
   });

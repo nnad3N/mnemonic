@@ -21,10 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
-import {
-  mentionByIdQuery,
-  mentionsQuery,
-} from "../../-thread-api/get-mentions";
+import { mentionByIdQuery, mentionsQuery } from "../../-thread-api/get-mentions";
 import { threadQuery } from "../../-thread-api/get-thread";
 import type { MentionQueryType } from "../../-thread-api/query-keys";
 import type { ThreadAttachment } from "../../../-chat-store";
@@ -37,10 +34,7 @@ import {
   MentionRemoveIcon,
 } from "./mention";
 import type { MentionVariant } from "./mention";
-import type {
-  MentionValue,
-  ParseMentionKeyResult,
-} from "./plate-plugins/mention-key";
+import type { MentionValue, ParseMentionKeyResult } from "./plate-plugins/mention-key";
 import { getMentionKey, parseMentionKey } from "./plate-plugins/mention-key";
 
 type MentionStatus = "failed" | "pending" | "ready" | undefined;
@@ -58,28 +52,14 @@ const getMentionVariant = (status: MentionStatus): MentionVariant => {
   return "teal";
 };
 
-export const ThreadMentionElement = (
-  props: PlateElementProps<TMentionElement>
-) => {
+export const ThreadMentionElement = (props: PlateElementProps<TMentionElement>) => {
   const { type, value: mentionId } = parseMentionKey(props.element.key);
 
   if (type === "attachment" || type === "selection" || type === "unknown") {
-    return (
-      <ThreadLocalMentionElement
-        {...props}
-        mentionId={mentionId}
-        mentionType={type}
-      />
-    );
+    return <ThreadLocalMentionElement {...props} mentionId={mentionId} mentionType={type} />;
   }
 
-  return (
-    <ThreadDatabaseMentionElement
-      {...props}
-      mentionId={mentionId}
-      mentionType={type}
-    />
-  );
+  return <ThreadDatabaseMentionElement {...props} mentionId={mentionId} mentionType={type} />;
 };
 
 type ThreadDatabaseMentionElementProps = PlateElementProps<TMentionElement> & {
@@ -96,7 +76,7 @@ const ThreadDatabaseMentionElement = ({
     mentionByIdQuery({
       id: mentionId,
       type: mentionType,
-    })
+    }),
   );
 
   const mentionStatus = useMemo((): MentionStatus => {
@@ -146,9 +126,7 @@ const ThreadLocalMentionElement = ({
     select: (params) => params.threadId,
   });
   const attachment = useChatStore(
-    useShallow((state) =>
-      state.attachments.get(threadId)?.find((a) => a.sha256 === mentionId)
-    )
+    useShallow((state) => state.attachments.get(threadId)?.find((a) => a.sha256 === mentionId)),
   );
   const mentionStatus = useMemo((): MentionStatus => {
     if (mentionType === "selection") {
@@ -248,9 +226,7 @@ const ThreadMentionElementContent = ({
   );
 };
 
-export const ThreadMentionElementStatic = (
-  props: SlateElementProps<TMentionElement>
-) => {
+export const ThreadMentionElementStatic = (props: SlateElementProps<TMentionElement>) => {
   const mention = parseMentionKey(props.element.key);
 
   return (
@@ -269,9 +245,7 @@ export const ThreadMentionElementStatic = (
 
 const onSelectItem = getMentionOnSelectItem();
 
-export const ThreadMentionInputElement = (
-  props: PlateElementProps<TComboboxInputElement>
-) => {
+export const ThreadMentionInputElement = (props: PlateElementProps<TComboboxInputElement>) => {
   const { editor, element } = props;
   const threadId = useParams({
     from: "/_protected/chat/$threadId",
@@ -288,15 +262,13 @@ export const ThreadMentionInputElement = (
     ...mentionsQuery({ query: debouncedSearch, resourceId }),
     select: (data) =>
       data
-        .filter(
-          (mention) => mention.type !== "thread" || mention.id !== threadId
-        )
+        .filter((mention) => mention.type !== "thread" || mention.id !== threadId)
         .map(
           (mention): MentionValue => ({
             key: getMentionKey({ type: mention.type, value: mention.id }),
             text: mention.displayName,
             type: mention.type,
-          })
+          }),
         ),
   });
 
@@ -307,7 +279,7 @@ export const ThreadMentionInputElement = (
     if (trimmedQuery.length > 0) {
       filteredAttachments =
         attachments?.filter((attachment) =>
-          attachment.filename.toLowerCase().includes(trimmedQuery)
+          attachment.filename.toLowerCase().includes(trimmedQuery),
         ) ?? [];
     } else {
       filteredAttachments = attachments ?? [];
@@ -318,7 +290,7 @@ export const ThreadMentionInputElement = (
         key: getMentionKey({ type: "attachment", value: attachment.sha256 }),
         text: attachment.filename,
         type: "attachment",
-      })
+      }),
     );
     const mentionsData = mentions.data ?? [];
 
@@ -327,13 +299,7 @@ export const ThreadMentionInputElement = (
 
   return (
     <PlateElement {...props} as="span">
-      <Autocomplete
-        element={element}
-        items={items}
-        setValue={setSearch}
-        trigger="@"
-        value={search}
-      >
+      <Autocomplete element={element} items={items} setValue={setSearch} trigger="@" value={search}>
         <AutocompleteInput />
         <AutocompleteContent side="top">
           <AutocompleteEmpty>

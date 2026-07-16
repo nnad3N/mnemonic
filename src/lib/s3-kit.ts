@@ -80,16 +80,10 @@ type DeleteObjectsInput = {
 
 export type S3Api = {
   deleteObject: (key: string) => Promise<ResultType<void, S3Error>>;
-  deleteObjects: (
-    input: DeleteObjectsInput
-  ) => Promise<ResultType<void, S3Error>>;
+  deleteObjects: (input: DeleteObjectsInput) => Promise<ResultType<void, S3Error>>;
   getObject: (key: string) => Promise<ResultType<Uint8Array, S3Error>>;
-  getPresignedGetUrl: (
-    input: PresignedGetUrlInput
-  ) => Promise<ResultType<string, S3Error>>;
-  getPresignedPutUrl: (
-    input: PresignedPutUrlInput
-  ) => Promise<ResultType<string, S3Error>>;
+  getPresignedGetUrl: (input: PresignedGetUrlInput) => Promise<ResultType<string, S3Error>>;
+  getPresignedPutUrl: (input: PresignedPutUrlInput) => Promise<ResultType<string, S3Error>>;
   statObject: (key: string) => Promise<ResultType<{ size: number }, S3Error>>;
 };
 
@@ -106,7 +100,7 @@ const getPresignedPutUrl = async (input: PresignedPutUrlInput) =>
           ContentType: input.contentType,
           Key: input.key,
         }),
-        { expiresIn: input.expiresIn }
+        { expiresIn: input.expiresIn },
       ),
     catch: toS3Error,
   });
@@ -121,7 +115,7 @@ const getPresignedGetUrl = async (input: PresignedGetUrlInput) =>
           Key: input.key,
           ResponseContentDisposition: input.contentDisposition,
         }),
-        { expiresIn: input.expiresIn }
+        { expiresIn: input.expiresIn },
       ),
     catch: toS3Error,
   });
@@ -134,7 +128,7 @@ const statObject = async (key: string) =>
           new HeadObjectCommand({
             Bucket: env.S3_BUCKET,
             Key: key,
-          })
+          }),
         );
 
         if (output.ContentLength === undefined) {
@@ -150,7 +144,7 @@ const statObject = async (key: string) =>
       },
       catch: toS3Error,
     },
-    { retry: S3_RETRY }
+    { retry: S3_RETRY },
   );
 
 const getObject = async (key: string) =>
@@ -161,7 +155,7 @@ const getObject = async (key: string) =>
           new GetObjectCommand({
             Bucket: env.S3_BUCKET,
             Key: key,
-          })
+          }),
         );
 
         if (!output.Body) {
@@ -177,7 +171,7 @@ const getObject = async (key: string) =>
       },
       catch: toS3Error,
     },
-    { retry: S3_RETRY }
+    { retry: S3_RETRY },
   );
 
 const deleteObject = async (key: string) =>
@@ -188,12 +182,12 @@ const deleteObject = async (key: string) =>
           new DeleteObjectCommand({
             Bucket: env.S3_BUCKET,
             Key: key,
-          })
+          }),
         );
       },
       catch: toS3Error,
     },
-    { retry: S3_RETRY }
+    { retry: S3_RETRY },
   );
 
 const deleteObjectBatch = async (keys: string[]) =>
@@ -207,7 +201,7 @@ const deleteObjectBatch = async (keys: string[]) =>
               Objects: keys.map((Key) => ({ Key })),
               Quiet: true,
             },
-          })
+          }),
         );
 
         const error = output.Errors?.at(0);
@@ -224,7 +218,7 @@ const deleteObjectBatch = async (keys: string[]) =>
       },
       catch: toS3Error,
     },
-    { retry: S3_RETRY }
+    { retry: S3_RETRY },
   );
 
 const chunkKeys = (keys: string[], size: number) => {
@@ -243,9 +237,7 @@ const deleteObjects = async (input: DeleteObjectsInput) => {
   }
 
   const batchResults = await Promise.all(
-    chunkKeys(input.keys, S3_BATCH_DELETE_MAX_KEYS).map(async (keys) =>
-      deleteObjectBatch(keys)
-    )
+    chunkKeys(input.keys, S3_BATCH_DELETE_MAX_KEYS).map(async (keys) => deleteObjectBatch(keys)),
   );
   const [, errors] = Result.partition(batchResults);
   const firstError = errors.at(0);

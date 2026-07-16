@@ -23,10 +23,7 @@ const buildWhereClause = (topicId: SafeId<"topic">, search: string) => {
     return eq(file.topicId, topicId);
   }
 
-  return and(
-    eq(file.topicId, topicId),
-    ilike(file.displayName, `%${trimmedSearch}%`)
-  );
+  return and(eq(file.topicId, topicId), ilike(file.displayName, `%${trimmedSearch}%`));
 };
 
 export const listFiles = createServerFn({ method: "GET" })
@@ -81,12 +78,7 @@ export type FilesQueryParams = {
   topicId: string;
 };
 
-export const filesQuery = ({
-  page,
-  pageSize,
-  search,
-  topicId,
-}: FilesQueryParams) =>
+export const filesQuery = ({ page, pageSize, search, topicId }: FilesQueryParams) =>
   queryOptions({
     queryFn: async () =>
       listFiles({

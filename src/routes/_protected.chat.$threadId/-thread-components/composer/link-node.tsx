@@ -21,11 +21,7 @@ import {
   MentionRemoveIcon,
   MentionRoot,
 } from "./mention";
-import {
-  getComposerLinkLabel,
-  removeComposerLink,
-  unlinkComposerLink,
-} from "./plate-plugins/link";
+import { getComposerLinkLabel, removeComposerLink, unlinkComposerLink } from "./plate-plugins/link";
 
 type TLinkElement = TElement & {
   type: "a";
@@ -58,14 +54,9 @@ export const ThreadLinkElement = (props: ThreadLinkElementProps) => {
       <MentionContent>
         <DropdownMenu>
           <DropdownMenuTrigger
-            render={
-              <button className="flex items-center gap-1" type="button" />
-            }
+            render={<button className="flex items-center gap-1" type="button" />}
           >
-            <MentionIcon
-              variant="link"
-              className="opacity-100 group-hover/mention:opacity-0"
-            />
+            <MentionIcon variant="link" className="opacity-100 group-hover/mention:opacity-0" />
             <MentionLabel>{getComposerLinkLabel(href)}</MentionLabel>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -108,9 +99,7 @@ export const ThreadLinkElement = (props: ThreadLinkElementProps) => {
   );
 };
 
-export const ThreadLinkElementStatic = (
-  props: SlateElementProps<TLinkElement>
-) => {
+export const ThreadLinkElementStatic = (props: SlateElementProps<TLinkElement>) => {
   const href = props.element.url;
 
   return (

@@ -17,9 +17,7 @@ export const useClampHeight = <T extends HTMLElement>({
   useEffect(() => {
     const element = ref.current;
 
-    if (!element) {
-      return;
-    }
+    if (!element) return;
 
     const updateClampedState = (target: Element) => {
       const maxHeightPx = maxHeight * 16;
@@ -32,9 +30,7 @@ export const useClampHeight = <T extends HTMLElement>({
     const observer = new ResizeObserver((entries) => {
       const entry = entries.at(0);
 
-      if (!entry) {
-        return;
-      }
+      if (!entry) return;
 
       updateClampedState(entry.target);
     });

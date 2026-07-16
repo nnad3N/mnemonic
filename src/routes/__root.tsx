@@ -71,9 +71,7 @@ export const useAuthSessionQuery = (): void => {
   const { data, error, isPending, isRefetching } = authClient.useSession();
 
   useEffect(() => {
-    if (isPending || isRefetching) {
-      return;
-    }
+    if (isPending || isRefetching) return;
 
     queryClient.setQueryData(authKeys.session(), { data, error });
     void router.invalidate();

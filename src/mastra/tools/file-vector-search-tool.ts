@@ -1,9 +1,6 @@
 import { createVectorQueryTool } from "@mastra/rag";
 
-import {
-  FILE_EMBEDDINGS_INDEX,
-  fileEmbeddingModel,
-} from "@/mastra/file-rag-config";
+import { FILE_EMBEDDINGS_INDEX, fileEmbeddingModel } from "@/mastra/file-rag-config";
 
 import { PG_VECTOR_STORE_NAME } from "../storage";
 

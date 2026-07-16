@@ -16,6 +16,7 @@ export default defineConfig({
   },
   categories: {
     correctness: "error",
+    suspicious: "warn",
   },
   overrides: [
     {
@@ -27,8 +28,10 @@ export default defineConfig({
     },
   ],
   rules: {
+    "typescript/consistent-return": "off",
+    "no-shadow": "off",
+    "react/react-in-jsx-scope": "off",
     "jsx-a11y/no-autofocus": "off",
-
     "import/no-commonjs": "error",
     "eslint-js/no-restricted-syntax": [
       "error",

@@ -11,8 +11,7 @@ export const getPendingFiles = createServerFn({ method: "GET" })
   .middleware([topicAccessMiddleware])
   .handler(async ({ context }) => {
     const uploadCutoff = new Date(
-      Temporal.Now.instant().subtract({ seconds: FILE_UPLOAD_TTL_SECONDS })
-        .epochMilliseconds
+      Temporal.Now.instant().subtract({ seconds: FILE_UPLOAD_TTL_SECONDS }).epochMilliseconds,
     );
 
     await db
@@ -22,8 +21,8 @@ export const getPendingFiles = createServerFn({ method: "GET" })
         and(
           eq(file.topicId, context.topic.id),
           eq(file.status, "uploading"),
-          lt(file.updatedAt, uploadCutoff)
-        )
+          lt(file.updatedAt, uploadCutoff),
+        ),
       );
 
     const pendingFiles = await db
@@ -32,10 +31,7 @@ export const getPendingFiles = createServerFn({ method: "GET" })
       })
       .from(file)
       .where(
-        and(
-          eq(file.topicId, context.topic.id),
-          inArray(file.status, ["uploading", "processing"])
-        )
+        and(eq(file.topicId, context.topic.id), inArray(file.status, ["uploading", "processing"])),
       );
 
     return pendingFiles.map((pendingFile) => ({

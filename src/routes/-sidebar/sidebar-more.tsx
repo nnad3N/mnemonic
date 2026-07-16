@@ -3,20 +3,12 @@ import { ChevronsDownUpIcon } from "lucide-react";
 import type { ComponentProps, ReactElement } from "react";
 
 import { Button } from "@/components/ui/button";
-import type {
-  SidebarMenuButton,
-  SidebarMenuSubButton,
-} from "@/components/ui/sidebar";
+import type { SidebarMenuButton, SidebarMenuSubButton } from "@/components/ui/sidebar";
 import { m } from "@/paraglide/messages";
 
-type SidebarMenuButtonType =
-  | typeof SidebarMenuButton
-  | typeof SidebarMenuSubButton;
+type SidebarMenuButtonType = typeof SidebarMenuButton | typeof SidebarMenuSubButton;
 
-type SidebarMoreRender = ReactElement<
-  ComponentProps<SidebarMenuButtonType>,
-  SidebarMenuButtonType
->;
+type SidebarMoreRender = ReactElement<ComponentProps<SidebarMenuButtonType>, SidebarMenuButtonType>;
 
 type SidebarMoreProps = {
   render: SidebarMoreRender;

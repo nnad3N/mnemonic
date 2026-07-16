@@ -22,14 +22,10 @@ const SEARCH_TOPIC_THREAD_SCAN_LIMIT = 100;
 const titleMatchesQuery = (title: string, query: string) => {
   const trimmedQuery = query.trim().toLowerCase();
 
-  return (
-    trimmedQuery.length === 0 || title.toLowerCase().includes(trimmedQuery)
-  );
+  return trimmedQuery.length === 0 || title.toLowerCase().includes(trimmedQuery);
 };
 
-const toConversationResult = (
-  thread: StorageThreadType
-): SearchConversationResult => ({
+const toConversationResult = (thread: StorageThreadType): SearchConversationResult => ({
   id: thread.id,
   title: thread.title ?? "",
   updatedAt: thread.updatedAt.toISOString(),
@@ -57,7 +53,7 @@ type SearchCtx = Kits<[DbKit, MemoryKit]>;
 
 const searchItemsFn = Kit.gen(async function* (
   ctx: SearchCtx,
-  { query, userId }: SearchItemsInput
+  { query, userId }: SearchItemsInput,
 ) {
   const hasQuery = query.length > 0;
 
@@ -72,7 +68,7 @@ const searchItemsFn = Kit.gen(async function* (
         .from(topic)
         .where(eq(topic.userId, userId))
         .orderBy(desc(topic.updatedAt))
-        .limit(SEARCH_TOPIC_LIMIT)
+        .limit(SEARCH_TOPIC_LIMIT),
     ),
     ctx.memory.listThreads({
       filter: { resourceId: userId },
@@ -96,11 +92,9 @@ const searchItemsFn = Kit.gen(async function* (
         filter: { resourceId: recentTopic.id },
         orderBy: { direction: "DESC", field: "updatedAt" },
         page: 0,
-        perPage: hasQuery
-          ? SEARCH_TOPIC_THREAD_SCAN_LIMIT
-          : SEARCH_THREAD_LIMIT,
-      })
-    )
+        perPage: hasQuery ? SEARCH_TOPIC_THREAD_SCAN_LIMIT : SEARCH_THREAD_LIMIT,
+      }),
+    ),
   );
 
   const topicResults: SearchTopicResult[] = [];
@@ -111,9 +105,7 @@ const searchItemsFn = Kit.gen(async function* (
 
     const matchingThreads = topicMatchesQuery
       ? listed.threads
-      : listed.threads.filter((thread) =>
-          titleMatchesQuery(thread.title ?? "", query)
-        );
+      : listed.threads.filter((thread) => titleMatchesQuery(thread.title ?? "", query));
 
     if (hasQuery && !(topicMatchesQuery || matchingThreads.length > 0)) {
       continue;
@@ -132,8 +124,8 @@ const searchItemsFn = Kit.gen(async function* (
   conversations.sort((a, b) =>
     Temporal.Instant.compare(
       Temporal.Instant.from(a.updatedAt),
-      Temporal.Instant.from(b.updatedAt)
-    )
+      Temporal.Instant.from(b.updatedAt),
+    ),
   );
 
   return Result.ok({
@@ -153,13 +145,12 @@ export const searchItems = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .handler(async ({ context, data }) =>
     Kit.serverFn(searchItemsFn, {
-      DatabaseError: () =>
-        toServerFnError.serverError("Database search failed"),
+      DatabaseError: () => toServerFnError.serverError("Database search failed"),
       MemoryError: () => toServerFnError.serverError("Memory search failed"),
     })(searchCtx, {
       query: data.query.trim(),
       userId: context.user.id,
-    })
+    }),
   );
 
 export type SearchQueryInput = {

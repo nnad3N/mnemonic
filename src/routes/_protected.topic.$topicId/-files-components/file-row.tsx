@@ -1,12 +1,6 @@
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  DownloadIcon,
-  EllipsisVerticalIcon,
-  FileIcon,
-  PencilIcon,
-  Trash2Icon,
-} from "lucide-react";
+import { DownloadIcon, EllipsisVerticalIcon, FileIcon, PencilIcon, Trash2Icon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import * as v from "valibot";
@@ -168,11 +162,7 @@ type RenameFileFieldProps = {
   topicId: string;
 };
 
-const RenameFileField = ({
-  file,
-  stopRenaming,
-  topicId,
-}: RenameFileFieldProps) => {
+const RenameFileField = ({ file, stopRenaming, topicId }: RenameFileFieldProps) => {
   const queryClient = useQueryClient();
 
   const renameMutation = useMutation({
@@ -278,7 +268,7 @@ const FileStatusChip = ({ status }: { status: FileStatus }) => {
           status === "ready" && "bg-green-500",
           status === "failed" && "bg-red-500",
           status === "uploading" && "bg-yellow-500",
-          status === "processing" && "bg-blue-500"
+          status === "processing" && "bg-blue-500",
         )}
       />
       {label}

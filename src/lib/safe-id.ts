@@ -10,8 +10,7 @@ export type SafeId<Tag extends SafeIdTag> = string & {
   readonly eq?: never;
 };
 
-export const rawId = <Tag extends SafeIdTag>(value: SafeId<Tag>): string =>
-  value;
+export const rawId = <Tag extends SafeIdTag>(value: SafeId<Tag>): string => value;
 
 export const toSafeId = <Tag extends SafeIdTag>(value: string): SafeId<Tag> =>
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion

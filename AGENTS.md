@@ -38,6 +38,7 @@ Architecture notes for agents live in [`.agents/architecture`](.agents/architect
 - Prefer template literals over string concatenation
 - Use destructuring for object and array assignments
 - Use `const` by default, `let` only when reassignment is needed, never `var`
+- Bare early returns are more readable as a one-liner without braces: `if (condition) return;`. Always use curly braces when returning a value: `if (condition) { return value; }`
 
 ### Async & Promises
 
@@ -73,7 +74,7 @@ Architecture notes for agents live in [`.agents/architecture`](.agents/architect
   className={cn(
     "size-1.5 rounded-full",
     status === "ready" && "bg-green-500",
-    status === "failed" && "bg-red-500"
+    status === "failed" && "bg-red-500",
   )}
 />;
 
@@ -84,7 +85,7 @@ const FileStatusChip = ({ status }: { status: FileStatus }) => (
       className={cn(
         "size-1.5 rounded-full",
         status === "ready" && "bg-green-500",
-        status === "failed" && "bg-red-500"
+        status === "failed" && "bg-red-500",
       )}
     />
     {label}
@@ -242,7 +243,7 @@ const schema = v.object({
   email: v.pipe(
     v.string(),
     v.nonEmpty(m.auth_validation_required()),
-    v.email(m.auth_validation_email_invalid())
+    v.email(m.auth_validation_email_invalid()),
   ),
 });
 ```
@@ -281,9 +282,7 @@ const formErrors = useStore(form.store, (s) => toFormErrors(s.fieldMeta));
 Subscribe narrowly to drive the submit button:
 
 ```tsx
-<form.Subscribe
-  selector={(s) => ({ canSubmit: s.canSubmit, isSubmitting: s.isSubmitting })}
->
+<form.Subscribe selector={(s) => ({ canSubmit: s.canSubmit, isSubmitting: s.isSubmitting })}>
   {({ canSubmit, isSubmitting }) => (
     <Button disabled={!canSubmit} loading={isSubmitting} type="submit">
       {m.auth_sign_in_submit()}

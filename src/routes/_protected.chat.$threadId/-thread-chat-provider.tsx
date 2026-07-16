@@ -46,7 +46,7 @@ export const ThreadChatProvider = ({
             },
           }),
         }),
-      })
+      }),
   );
 
   useEffect(() => {

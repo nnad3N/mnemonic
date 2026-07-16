@@ -45,24 +45,17 @@ const deleteExpiredStandaloneConversations = async (userId: string) => {
     (thread) =>
       Temporal.Instant.compare(
         Temporal.Instant.fromEpochMilliseconds(thread.updatedAt.getTime()),
-        expiresBefore
-      ) < 0
+        expiresBefore,
+      ) < 0,
   );
 
-  if (expiredThreads.length === 0) {
-    return;
-  }
+  if (expiredThreads.length === 0) return;
 
   const memory = await getAgentMemory("conversation-agent");
-  await Promise.all(
-    expiredThreads.map(async (thread) => memory.deleteThread(thread.id))
-  );
+  await Promise.all(expiredThreads.map(async (thread) => memory.deleteThread(thread.id)));
 };
 
-const listTopicThreadPage = async (input: {
-  topicId: string;
-  page: number;
-}) => {
+const listTopicThreadPage = async (input: { topicId: string; page: number }) => {
   const memoryStore = await getMemoryStore();
   const result = await memoryStore.listThreads({
     filter: { resourceId: input.topicId },
@@ -105,12 +98,7 @@ export const listSidebarConversations = createServerFn({ method: "GET" })
   });
 
 const topicsInputSchema = v.object({
-  limit: v.pipe(
-    v.number(),
-    v.integer(),
-    v.minValue(1),
-    v.maxValue(SIDEBAR_INITIAL_TOPICS_LIMIT)
-  ),
+  limit: v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(SIDEBAR_INITIAL_TOPICS_LIMIT)),
   offset: v.pipe(v.number(), v.integer(), v.minValue(0)),
 });
 
@@ -148,7 +136,7 @@ export const listSidebarTopics = createServerFn({ method: "GET" })
           threads: threadsPage.items,
           title: recentTopic.title,
         };
-      })
+      }),
     );
 
     return {
@@ -166,14 +154,13 @@ export const listSidebarTopicThreads = createServerFn({ method: "GET" })
   .inputValidator(topicThreadsInputSchema)
   .middleware([topicAccessMiddleware])
   .handler(async ({ context, data }) =>
-    listTopicThreadPage({ topicId: context.topic.id, page: data.page })
+    listTopicThreadPage({ topicId: context.topic.id, page: data.page }),
   );
 
 export const sidebarConversationsQuery = () =>
   infiniteQueryOptions({
     queryKey: threadKeys.sidebarConversations(),
-    queryFn: async ({ pageParam }) =>
-      listSidebarConversations({ data: { page: pageParam } }),
+    queryFn: async ({ pageParam }) => listSidebarConversations({ data: { page: pageParam } }),
     getNextPageParam: (lastPage) => lastPage.nextPage,
     initialPageParam: 0,
     placeholderData: keepPreviousData,
@@ -189,8 +176,7 @@ const getSidebarTopicsPageRequest = (pageIndex: number) => {
 
   return {
     limit: SIDEBAR_MORE_ITEMS_LIMIT,
-    offset:
-      SIDEBAR_INITIAL_TOPICS_LIMIT + (pageIndex - 1) * SIDEBAR_MORE_ITEMS_LIMIT,
+    offset: SIDEBAR_INITIAL_TOPICS_LIMIT + (pageIndex - 1) * SIDEBAR_MORE_ITEMS_LIMIT,
   };
 };
 
@@ -202,9 +188,7 @@ export const sidebarTopicsQuery = () =>
         data: getSidebarTopicsPageRequest(pageParam),
       }),
     getNextPageParam: (lastPage, _pages, lastPageParam) => {
-      if (!lastPage.hasMore) {
-        return;
-      }
+      if (!lastPage.hasMore) return;
 
       return lastPageParam + 1;
     },

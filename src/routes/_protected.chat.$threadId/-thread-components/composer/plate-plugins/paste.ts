@@ -5,35 +5,34 @@ import { insertComposerLink, parseComposerLinkPasteSegments } from "./link";
 
 type ThreadComposerPasteConfig = PluginConfig<"thread-composer-paste">;
 
-export const ThreadComposerPastePlugin =
-  createTPlatePlugin<ThreadComposerPasteConfig>({
-    key: "thread-composer-paste",
-    handlers: {
-      onPaste: ({ editor, event }) => {
-        const text = event.clipboardData?.getData("text/plain");
+export const ThreadComposerPastePlugin = createTPlatePlugin<ThreadComposerPasteConfig>({
+  key: "thread-composer-paste",
+  handlers: {
+    onPaste: ({ editor, event }) => {
+      const text = event.clipboardData?.getData("text/plain");
 
-        const segments = parseComposerLinkPasteSegments(text);
+      const segments = parseComposerLinkPasteSegments(text);
 
-        if (!segments) {
-          return false;
+      if (!segments) {
+        return false;
+      }
+
+      event.preventDefault();
+
+      for (const [index, segment] of segments.entries()) {
+        if (segment.type === "text") {
+          editor.tf.insertText(segment.text);
+          continue;
         }
 
-        event.preventDefault();
+        insertComposerLink({
+          editor,
+          url: segment.url.href,
+          trailingSpace: index === segments.length - 1,
+        });
+      }
 
-        for (const [index, segment] of segments.entries()) {
-          if (segment.type === "text") {
-            editor.tf.insertText(segment.text);
-            continue;
-          }
-
-          insertComposerLink({
-            editor,
-            url: segment.url.href,
-            trailingSpace: index === segments.length - 1,
-          });
-        }
-
-        return true;
-      },
+      return true;
     },
-  });
+  },
+});

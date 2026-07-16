@@ -8,25 +8,20 @@ import type {
 
 declare const KitBrand: unique symbol;
 
-export type KitModule<
-  TName extends string = string,
-  TValue = unknown,
-> = readonly [name: TName, value: TValue] & {
+export type KitModule<TName extends string = string, TValue = unknown> = readonly [
+  name: TName,
+  value: TValue,
+] & {
   readonly [KitBrand]: unknown;
 };
 
-export type Kits<TKits extends readonly KitModule[]> = KitsRecord<
-  TKits[number]
->;
+export type Kits<TKits extends readonly KitModule[]> = KitsRecord<TKits[number]>;
 
 type KitsRecord<TKit extends KitModule> = {
   [TName in TKit[0]]: Extract<TKit, KitModule<TName>>[1];
 };
 
-type HasKitName<
-  TKits extends readonly KitModule[],
-  TName extends string,
-> = TKits extends readonly [
+type HasKitName<TKits extends readonly KitModule[], TName extends string> = TKits extends readonly [
   infer TFirst extends KitModule,
   ...infer TRest extends readonly KitModule[],
 ]
@@ -35,15 +30,14 @@ type HasKitName<
     : HasKitName<TRest, TName>
   : false;
 
-type HasDuplicateKitNames<TKits extends readonly KitModule[]> =
-  TKits extends readonly [
-    infer TFirst extends KitModule,
-    ...infer TRest extends readonly KitModule[],
-  ]
-    ? HasKitName<TRest, TFirst[0]> extends true
-      ? true
-      : HasDuplicateKitNames<TRest>
-    : false;
+type HasDuplicateKitNames<TKits extends readonly KitModule[]> = TKits extends readonly [
+  infer TFirst extends KitModule,
+  ...infer TRest extends readonly KitModule[],
+]
+  ? HasKitName<TRest, TFirst[0]> extends true
+    ? true
+    : HasDuplicateKitNames<TRest>
+  : false;
 
 type DuplicateKitNameError = {
   readonly duplicateKitNameError: "Kit names must be unique";
@@ -68,10 +62,8 @@ export type KitAction<
   TYield extends Err<never, unknown>,
 > = (
   context: TKit,
-  input: TInput
-) => Promise<
-  ResultType<InferOk<TResult>, InferYieldErr<TYield> | InferErr<TResult>>
->;
+  input: TInput,
+) => Promise<ResultType<InferOk<TResult>, InferYieldErr<TYield> | InferErr<TResult>>>;
 
 export type KitGeneratorAction<
   TKit extends AnyKits,
@@ -93,6 +85,6 @@ export type MatchErrorHandlers<
   TMappedError,
 > = {
   [K in UnmappedError<TError>["_tag"]]: (
-    error: Extract<UnmappedError<TError>, { _tag: K }>
+    error: Extract<UnmappedError<TError>, { _tag: K }>,
   ) => TMappedError;
 };

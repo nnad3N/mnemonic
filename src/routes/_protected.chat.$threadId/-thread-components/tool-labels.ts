@@ -40,9 +40,8 @@ export const TOOL_LABELS = {
   },
 } satisfies Record<keyof MnemonicUITools, ToolLabels>;
 
-export const isKnownToolName = (
-  toolName: string
-): toolName is keyof typeof TOOL_LABELS => toolName in TOOL_LABELS;
+export const isKnownToolName = (toolName: string): toolName is keyof typeof TOOL_LABELS =>
+  toolName in TOOL_LABELS;
 
 export const getToolLabels = (toolName: string): ToolLabels | null =>
   isKnownToolName(toolName) ? TOOL_LABELS[toolName] : null;

@@ -13,7 +13,7 @@ export const createConversation = createServerFn({ method: "POST" })
   .inputValidator(
     v.object({
       title: v.pipe(v.string(), v.nonEmpty()),
-    })
+    }),
   )
   .middleware([authMiddleware])
   .handler(async ({ context, data }) => {
@@ -39,7 +39,7 @@ export const createTopic = createServerFn({ method: "POST" })
     v.object({
       conversationTitle: v.pipe(v.string(), v.nonEmpty()),
       topicTitle: v.pipe(v.string(), v.nonEmpty()),
-    })
+    }),
   )
   .middleware([authMiddleware])
   .handler(async ({ context, data }) => {
@@ -71,7 +71,7 @@ export const createTopicConversation = createServerFn({ method: "POST" })
   .inputValidator(
     v.object({
       title: v.pipe(v.string(), v.nonEmpty()),
-    })
+    }),
   )
   .middleware([topicAccessMiddleware])
   .handler(async ({ context, data }) => {

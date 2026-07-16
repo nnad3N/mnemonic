@@ -7,10 +7,8 @@ export const mnemonicRequestContextSchema = v.object({
   filter: v.optional(
     v.object({
       topicId: v.optional(safeId<"topic">()),
-    })
+    }),
   ),
 });
 
-export type MnemonicRequestContext = v.InferOutput<
-  typeof mnemonicRequestContextSchema
->;
+export type MnemonicRequestContext = v.InferOutput<typeof mnemonicRequestContextSchema>;

@@ -5,18 +5,12 @@ import * as v from "valibot";
 import { SUPPORTED_MIME_TYPES, UPLOAD_MAX_BYTES } from "@/lib/file-validation";
 
 const extractFileTextSchema = v.object({
-  file: v.pipe(
-    v.blob(),
-    v.mimeType(SUPPORTED_MIME_TYPES),
-    v.maxSize(UPLOAD_MAX_BYTES)
-  ),
+  file: v.pipe(v.blob(), v.mimeType(SUPPORTED_MIME_TYPES), v.maxSize(UPLOAD_MAX_BYTES)),
 });
 
 type ExtractFileTextSchema = v.InferInput<typeof extractFileTextSchema>;
 
-export const getExtractFileTextData = (
-  data: ExtractFileTextSchema
-): FormData => {
+export const getExtractFileTextData = (data: ExtractFileTextSchema): FormData => {
   const formData = new FormData();
 
   for (const [key, value] of Object.entries(data)) {

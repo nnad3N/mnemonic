@@ -9,10 +9,7 @@ import {
 } from "@/components/ui/sidebar";
 
 import { SidebarConversations } from "./-sidebar/sidebar-conversation";
-import {
-  SidebarFooterSection,
-  SidebarHeaderSection,
-} from "./-sidebar/sidebar-menu";
+import { SidebarFooterSection, SidebarHeaderSection } from "./-sidebar/sidebar-menu";
 import { SidebarTopics } from "./-sidebar/sidebar-topic";
 
 export const Route = createFileRoute("/_protected")({

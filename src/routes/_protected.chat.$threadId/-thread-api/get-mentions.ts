@@ -21,26 +21,17 @@ type MentionItem = {
   type: MentionQueryType;
 };
 
-const buildFileMentionsWhereClause = (
-  topicId: SafeId<"topic">,
-  query: string
-) => {
+const buildFileMentionsWhereClause = (topicId: SafeId<"topic">, query: string) => {
   const trimmedQuery = query.trim();
 
   if (trimmedQuery.length === 0) {
     return eq(file.topicId, topicId);
   }
 
-  return and(
-    eq(file.topicId, topicId),
-    ilike(file.displayName, `%${trimmedQuery}%`)
-  );
+  return and(eq(file.topicId, topicId), ilike(file.displayName, `%${trimmedQuery}%`));
 };
 
-const buildTopicMentionsWhereClause = (
-  userId: SafeId<"user">,
-  query: string
-) => {
+const buildTopicMentionsWhereClause = (userId: SafeId<"user">, query: string) => {
   const trimmedQuery = query.trim();
 
   if (trimmedQuery.length === 0) {
@@ -53,9 +44,7 @@ const buildTopicMentionsWhereClause = (
 const titleMatchesQuery = (title: string, query: string) => {
   const trimmedQuery = query.trim().toLowerCase();
 
-  return (
-    trimmedQuery.length === 0 || title.toLowerCase().includes(trimmedQuery)
-  );
+  return trimmedQuery.length === 0 || title.toLowerCase().includes(trimmedQuery);
 };
 
 const getMentionsInputSchema = v.object({
@@ -109,10 +98,7 @@ export const getMentions = createServerFn({ method: "GET" })
       for (const thread of threadsResult.threads) {
         const title = thread.title ?? "";
 
-        if (
-          titleMatchesQuery(title, data.query) &&
-          mentions.length < MENTIONS_QUERY_LIMIT
-        ) {
+        if (titleMatchesQuery(title, data.query) && mentions.length < MENTIONS_QUERY_LIMIT) {
           mentions.push({
             displayName: title,
             id: thread.id,
@@ -138,7 +124,7 @@ export const getMentions = createServerFn({ method: "GET" })
       (mention): MentionItem => ({
         ...mention,
         type: "topic",
-      })
+      }),
     );
   });
 
@@ -147,10 +133,7 @@ export type MentionsQueryParams = {
   query?: string;
 };
 
-export const mentionsQuery = ({
-  resourceId,
-  query = "",
-}: MentionsQueryParams) =>
+export const mentionsQuery = ({ resourceId, query = "" }: MentionsQueryParams) =>
   queryOptions({
     queryKey: [...threadKeys.mentions(resourceId), { query }] as const,
     queryFn: async () =>

@@ -23,9 +23,7 @@ type DeleteVectorsInput = {
 };
 
 export type VectorApi = {
-  deleteVectors: (
-    input: DeleteVectorsInput
-  ) => Promise<ResultType<void, VectorError>>;
+  deleteVectors: (input: DeleteVectorsInput) => Promise<ResultType<void, VectorError>>;
 };
 
 export const createVectorKit = (api: VectorApi) => Kit.define("vector", api);

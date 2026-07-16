@@ -20,21 +20,13 @@ export const applyMessageEdit = async ({
     perPage: false,
   });
 
-  const messageIndex = storedMessages.findIndex(
-    (message) => message.id === messageId
-  );
+  const messageIndex = storedMessages.findIndex((message) => message.id === messageId);
 
-  if (messageIndex === -1) {
-    return;
-  }
+  if (messageIndex === -1) return;
 
-  if (storedMessages[messageIndex].role !== "user") {
-    return;
-  }
+  if (storedMessages[messageIndex].role !== "user") return;
 
-  const messageIdsToDelete = storedMessages
-    .slice(messageIndex)
-    .map((message) => message.id);
+  const messageIdsToDelete = storedMessages.slice(messageIndex).map((message) => message.id);
 
   if (messageIdsToDelete.length > 0) {
     await memory.deleteMessages(messageIdsToDelete);

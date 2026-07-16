@@ -1,19 +1,11 @@
-import {
-  useIsMutating,
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useIsMutating, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Result } from "better-result";
 
 import { FileUploadError } from "@/lib/errors/file-upload-error";
 
 import { mentionByIdQuery } from "../-thread-api/get-mentions";
 import { threadKeys, threadMutationKeys } from "../-thread-api/query-keys";
-import {
-  getPresignedUrl,
-  processFile,
-  updateFileStatus,
-} from "../-thread-api/upload-file";
+import { getPresignedUrl, processFile, updateFileStatus } from "../-thread-api/upload-file";
 
 export type UploadFileVars = {
   topicId: string;
@@ -51,7 +43,7 @@ export const useUploadFile = (threadId: string) => {
             "Content-Type": file.type,
           },
           method: "PUT",
-        })
+        }),
       );
 
       if (Result.isError(uploadResult)) {
@@ -97,7 +89,7 @@ export const useUploadFile = (threadId: string) => {
       });
 
       queryClient.setQueryData(mentionQuery.queryKey, (current) =>
-        current ? { ...current, status: "failed" as const } : current
+        current ? { ...current, status: "failed" as const } : current,
       );
 
       await Result.tryPromise(
@@ -114,7 +106,7 @@ export const useUploadFile = (threadId: string) => {
             delayMs: 1000,
             backoff: "exponential",
           },
-        }
+        },
       );
     },
     onSettled: async (_data, _error, { topicId, fileId }) => {

@@ -1,12 +1,7 @@
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 import { getRouteApi } from "@tanstack/react-router";
-import {
-  Plate,
-  PlateContent,
-  useEditorMounted,
-  usePlateEditor,
-} from "platejs/react";
+import { Plate, PlateContent, useEditorMounted, usePlateEditor } from "platejs/react";
 import { useEffect, useRef } from "react";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -18,17 +13,10 @@ import { useComposerUpload } from "../../-hooks/use-composer-upload";
 import type { ThreadInputLocation } from "../../../-chat-store";
 import { useChatStore } from "../../../-chat-store";
 import { ComposerFooter } from "./composer-footer";
-import {
-  threadEditorPlugins,
-  getThreadEditorId,
-  markdownToPlate,
-} from "./plate";
+import { threadEditorPlugins, getThreadEditorId, markdownToPlate } from "./plate";
 import { ThreadComposerFilePlugin } from "./plate-plugins/file";
 import { ThreadComposerKeyboardPlugin } from "./plate-plugins/keyboard";
-import {
-  insertComposerLink,
-  parseComposerLinkPasteSegments,
-} from "./plate-plugins/link";
+import { insertComposerLink, parseComposerLinkPasteSegments } from "./plate-plugins/link";
 
 type ThreadComposerProps = {
   location: ThreadInputLocation;
@@ -54,16 +42,13 @@ export const ThreadComposer = ({ location }: ThreadComposerProps) => {
   });
   const isEditorMounted = useEditorMounted(editorId);
 
-  const { cancelEditing, sendMessage, stopStream } =
-    useComposerActions(location);
+  const { cancelEditing, sendMessage, stopStream } = useComposerActions(location);
   const { uploadFiles } = useComposerUpload(threadId, location);
   const composerRef = useRef<HTMLDivElement>(null);
   const { dragOverProps, isDraggingOver, handleDrop } = useDragOver();
 
   useEffect(() => {
-    if (location !== "edit") {
-      return;
-    }
+    if (location !== "edit") return;
 
     const handlePointerDown = (e: PointerEvent) => {
       const node = composerRef.current;
@@ -80,9 +65,7 @@ export const ThreadComposer = ({ location }: ThreadComposerProps) => {
   }, [cancelEditing, location]);
 
   useEffect(() => {
-    if (editor.meta.isFallback || !isEditorMounted) {
-      return;
-    }
+    if (editor.meta.isFallback || !isEditorMounted) return;
 
     const { editingState, composerState } = useChatStore.getState();
     const persisted = composerState.get(threadId);
@@ -99,9 +82,7 @@ export const ThreadComposer = ({ location }: ThreadComposerProps) => {
   }, [editor, isEditorMounted, location, threadId]);
 
   useEffect(() => {
-    if (editor.meta.isFallback) {
-      return;
-    }
+    if (editor.meta.isFallback) return;
 
     editor.setOption(ThreadComposerKeyboardPlugin, "onEnter", sendMessage);
     editor.setOption(ThreadComposerKeyboardPlugin, "onEscape", cancelEditing);
@@ -115,9 +96,7 @@ export const ThreadComposer = ({ location }: ThreadComposerProps) => {
   }, [cancelEditing, editor, sendMessage, stopStream]);
 
   useEffect(() => {
-    if (editor.meta.isFallback) {
-      return;
-    }
+    if (editor.meta.isFallback) return;
 
     editor.setOption(ThreadComposerFilePlugin, "onUploadFiles", uploadFiles);
 
@@ -128,10 +107,7 @@ export const ThreadComposer = ({ location }: ThreadComposerProps) => {
 
   return (
     <ComposerWrapper
-      className={cn(
-        "bg-input/50 transition-colors",
-        isDraggingOver && "border-ring"
-      )}
+      className={cn("bg-input/50 transition-colors", isDraggingOver && "border-ring")}
       {...dragOverProps}
       onDragOverCapture={(e) => {
         e.preventDefault();
@@ -154,9 +130,7 @@ export const ThreadComposer = ({ location }: ThreadComposerProps) => {
         const text = e.dataTransfer.getData("text/plain");
         const segments = parseComposerLinkPasteSegments(text);
 
-        if (!segments) {
-          return;
-        }
+        if (!segments) return;
 
         for (const [index, segment] of segments.entries()) {
           if (segment.type === "text") {
@@ -198,21 +172,14 @@ export const ThreadComposer = ({ location }: ThreadComposerProps) => {
 
 type ComposerWrapperProps = useRender.ComponentProps<"div">;
 
-export const ComposerWrapper = ({
-  className,
-  render,
-  ...props
-}: ComposerWrapperProps) => {
+export const ComposerWrapper = ({ className, render, ...props }: ComposerWrapperProps) => {
   return useRender({
     defaultTagName: "div",
     props: mergeProps<"div">(
       {
-        className: cn(
-          "w-full min-w-0 rounded-2xl border p-1.5 text-sm",
-          className
-        ),
+        className: cn("w-full min-w-0 rounded-2xl border p-1.5 text-sm", className),
       },
-      props
+      props,
     ),
     render,
   });

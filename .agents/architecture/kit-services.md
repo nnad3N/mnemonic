@@ -98,10 +98,7 @@ export const updateFileStatus = createServerFn({ method: "POST" })
   .middleware([fileAccessMiddleware])
   .handler(async ({ context, data }) => {
     const result = await Kit.get(dbKit).run((db) =>
-      db
-        .update(file)
-        .set({ status: data.status })
-        .where(eq(file.id, context.file.id))
+      db.update(file).set({ status: data.status }).where(eq(file.id, context.file.id)),
     );
 
     if (result.isErr()) {

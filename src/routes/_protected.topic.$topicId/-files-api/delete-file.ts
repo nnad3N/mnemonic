@@ -21,10 +21,7 @@ type DeleteFileInput = {
   s3Key: string;
 };
 
-const deleteFileFn = Kit.gen(async function* (
-  ctx: DeleteFileCtx,
-  input: DeleteFileInput
-) {
+const deleteFileFn = Kit.gen(async function* (ctx: DeleteFileCtx, input: DeleteFileInput) {
   const [deleteFileResult, deleteFileEmbeddingResult] = await Promise.all([
     ctx.s3.deleteObject(input.s3Key),
     ctx.vector.deleteVectors({
@@ -34,9 +31,7 @@ const deleteFileFn = Kit.gen(async function* (
   yield* deleteFileResult;
   yield* deleteFileEmbeddingResult;
 
-  yield* await ctx.db.run((db) =>
-    db.delete(file).where(eq(file.id, input.fileId))
-  );
+  yield* await ctx.db.run((db) => db.delete(file).where(eq(file.id, input.fileId)));
 
   return Result.ok({ id: input.fileId });
 });
@@ -47,14 +42,11 @@ export const deleteFile = createServerFn({ method: "POST" })
   .middleware([fileAccessMiddleware])
   .handler(async ({ context }) =>
     Kit.serverFn(deleteFileFn, {
-      DatabaseError: () =>
-        toServerFnError.serverError("Failed to delete file record"),
-      S3Error: () =>
-        toServerFnError.serverError("Failed to delete file from S3"),
-      VectorError: () =>
-        toServerFnError.serverError("Failed to delete file embedding"),
+      DatabaseError: () => toServerFnError.serverError("Failed to delete file record"),
+      S3Error: () => toServerFnError.serverError("Failed to delete file from S3"),
+      VectorError: () => toServerFnError.serverError("Failed to delete file embedding"),
     })(deleteFileCtx, {
       fileId: context.file.id,
       s3Key: context.file.s3Key,
-    })
+    }),
   );

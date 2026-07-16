@@ -35,7 +35,7 @@ type GetPresignedUrlInput = {
 
 const getPresignedUrlFn = Kit.gen(async function* (
   ctx: UploadFileCtx,
-  input: GetPresignedUrlInput
+  input: GetPresignedUrlInput,
 ) {
   yield* validateUploadFile({
     mimeType: input.mimeType,
@@ -50,7 +50,7 @@ const getPresignedUrlFn = Kit.gen(async function* (
         id: toSafeId<"topic">(input.resourceId),
         userId: input.userId,
       },
-    })
+    }),
   );
 
   if (!ownedTopic) {
@@ -58,7 +58,7 @@ const getPresignedUrlFn = Kit.gen(async function* (
       new ServerFnError({
         message: "File uploads are only supported in topic threads",
         status: "bad-request",
-      })
+      }),
     );
   }
 
@@ -73,15 +73,10 @@ const getPresignedUrlFn = Kit.gen(async function* (
       },
     });
 
-    if (existing?.status === "ready" || existing?.status === "processing") {
-      return;
-    }
+    if (existing?.status === "ready" || existing?.status === "processing") return;
 
     if (existing) {
-      await tx
-        .update(file)
-        .set({ status: "uploading" })
-        .where(eq(file.id, existing.id));
+      await tx.update(file).set({ status: "uploading" }).where(eq(file.id, existing.id));
 
       return existing.s3Key;
     }
@@ -138,11 +133,9 @@ export const getPresignedUrl = createServerFn({ method: "POST" })
   .middleware([threadAccessMiddleware])
   .handler(async ({ context, data }) =>
     Kit.serverFn(getPresignedUrlFn, {
-      DatabaseError: () =>
-        toServerFnError.serverError("Failed to prepare file upload"),
+      DatabaseError: () => toServerFnError.serverError("Failed to prepare file upload"),
       FileUploadError: (error) => toServerFnError.serverError(error.message),
-      S3Error: () =>
-        toServerFnError.serverError("Failed to prepare file upload"),
+      S3Error: () => toServerFnError.serverError("Failed to prepare file upload"),
     })(uploadFileCtx, {
       displayName: data.displayName,
       fileId: data.fileId,
@@ -151,14 +144,11 @@ export const getPresignedUrl = createServerFn({ method: "POST" })
       sha256: data.sha256,
       sizeBytes: data.sizeBytes,
       userId: context.user.id,
-    })
+    }),
   );
 
 const updateFileStatusInputSchema = v.object({
-  status: v.pipe(
-    v.string(),
-    v.picklist(["uploading", "processing", "ready", "failed"])
-  ),
+  status: v.pipe(v.string(), v.picklist(["uploading", "processing", "ready", "failed"])),
 });
 
 export const updateFileStatus = createServerFn({ method: "POST" })
@@ -166,10 +156,7 @@ export const updateFileStatus = createServerFn({ method: "POST" })
   .middleware([fileAccessMiddleware])
   .handler(async ({ context, data }) => {
     const result = await Kit.get(dbKit).run((db) =>
-      db
-        .update(file)
-        .set({ status: data.status })
-        .where(eq(file.id, context.file.id))
+      db.update(file).set({ status: data.status }).where(eq(file.id, context.file.id)),
     );
 
     if (result.isErr()) {

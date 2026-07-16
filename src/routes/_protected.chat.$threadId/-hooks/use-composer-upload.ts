@@ -16,10 +16,7 @@ import { useIsUploadingFile, useUploadFile } from "./use-upload-file";
 
 const insertMentionItem = getMentionOnSelectItem();
 
-export const useComposerUpload = (
-  threadId: string,
-  location: ThreadInputLocation
-) => {
+export const useComposerUpload = (threadId: string, location: ThreadInputLocation) => {
   const editorId = getThreadEditorId(threadId, location);
   const editor = useEditorRef(editorId);
   const { data: topicId } = useSuspenseQuery({
@@ -44,31 +41,24 @@ export const useComposerUpload = (
   });
 
   const canUpload =
-    !editor.meta.isFallback &&
-    (topicId ? !isUploading && !isPending : !isAttaching);
+    !editor.meta.isFallback && (topicId ? !isUploading && !isPending : !isAttaching);
 
   const uploadFiles = useCallback(
     async (files: File[]) => {
-      if (!canUpload || files.length === 0) {
-        return;
-      }
+      if (!canUpload || files.length === 0) return;
 
       const fileEntries = await Promise.all(
         files.map(async (file) => ({
           file,
           sha256: await hashFileContents(file),
-        }))
+        })),
       );
 
       if (topicId) {
-        const existingFiles = await findDuplicateFiles(
-          fileEntries.map((entry) => entry.sha256)
-        );
+        const existingFiles = await findDuplicateFiles(fileEntries.map((entry) => entry.sha256));
 
         for (const { file, sha256 } of fileEntries) {
-          const existingFile = existingFiles.find(
-            (fileItem) => fileItem.sha256 === sha256
-          );
+          const existingFile = existingFiles.find((fileItem) => fileItem.sha256 === sha256);
           const fileId = existingFile?.id ?? nanoid();
 
           if (!existingFile || existingFile.status === "failed") {
@@ -93,7 +83,7 @@ export const useComposerUpload = (
 
       editor.tf.focus({ edge: "endEditor" });
     },
-    [addAttachment, canUpload, editor, findDuplicateFiles, topicId, uploadFile]
+    [addAttachment, canUpload, editor, findDuplicateFiles, topicId, uploadFile],
   );
 
   return { canUpload, uploadFiles };

@@ -37,11 +37,10 @@ const chatRequestSchema = v.pipe(
   v.forward(
     v.check(
       (input) =>
-        input.resumeData === undefined ||
-        (input.runId !== undefined && input.runId.length > 0)
+        input.resumeData === undefined || (input.runId !== undefined && input.runId.length > 0),
     ),
-    ["runId"]
-  )
+    ["runId"],
+  ),
 );
 
 export const Route = createFileRoute("/api/chat")({

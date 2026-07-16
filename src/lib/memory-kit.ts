@@ -1,7 +1,4 @@
-import type {
-  StorageListThreadsInput,
-  StorageListThreadsOutput,
-} from "@mastra/core/storage";
+import type { StorageListThreadsInput, StorageListThreadsOutput } from "@mastra/core/storage";
 import { Result, TaggedError } from "better-result";
 import type { Result as ResultType } from "better-result";
 
@@ -21,11 +18,9 @@ const toMemoryError = (cause: unknown): MemoryError =>
 
 export type MemoryApi = {
   listThreads: (
-    input: StorageListThreadsInput
+    input: StorageListThreadsInput,
   ) => Promise<ResultType<StorageListThreadsOutput, MemoryError>>;
-  deleteThread: (input: {
-    threadId: string;
-  }) => Promise<ResultType<void, MemoryError>>;
+  deleteThread: (input: { threadId: string }) => Promise<ResultType<void, MemoryError>>;
 };
 
 export const createMemoryKit = (api: MemoryApi) => Kit.define("memory", api);

@@ -59,8 +59,7 @@ function RouteComponent() {
   const hasQuery = debouncedQuery.trim().length > 0;
   const conversations = search.data?.conversations ?? [];
   const topics = search.data?.topics ?? [];
-  const hasNoResults =
-    search.isSuccess && conversations.length === 0 && topics.length === 0;
+  const hasNoResults = search.isSuccess && conversations.length === 0 && topics.length === 0;
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4">
@@ -85,12 +84,8 @@ function RouteComponent() {
               <EmptyMedia variant="icon">
                 <AlertCircleIcon className="text-destructive" />
               </EmptyMedia>
-              <EmptyTitle className="text-destructive">
-                {m.search_load_error_title()}
-              </EmptyTitle>
-              <EmptyDescription>
-                {m.search_load_error_description()}
-              </EmptyDescription>
+              <EmptyTitle className="text-destructive">{m.search_load_error_title()}</EmptyTitle>
+              <EmptyDescription>{m.search_load_error_description()}</EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
               <Button
@@ -122,38 +117,25 @@ function RouteComponent() {
           {(conversations.length > 0 || hasNoResults) && (
             <SearchSection
               title={
-                hasQuery
-                  ? m.search_conversations_title()
-                  : m.search_latest_conversations_title()
+                hasQuery ? m.search_conversations_title() : m.search_latest_conversations_title()
               }
             >
               {conversations.length > 0 ? (
                 conversations.map((conversation) => (
-                  <ConversationResult
-                    conversation={conversation}
-                    key={conversation.id}
-                  />
+                  <ConversationResult conversation={conversation} key={conversation.id} />
                 ))
               ) : (
-                <SearchSectionEmpty>
-                  {m.search_no_conversations()}
-                </SearchSectionEmpty>
+                <SearchSectionEmpty>{m.search_no_conversations()}</SearchSectionEmpty>
               )}
             </SearchSection>
           )}
 
           {(topics.length > 0 || hasNoResults) && (
             <SearchSection
-              title={
-                hasQuery
-                  ? m.search_topics_title()
-                  : m.search_latest_topics_title()
-              }
+              title={hasQuery ? m.search_topics_title() : m.search_latest_topics_title()}
             >
               {topics.length > 0 ? (
-                topics.map((topic) => (
-                  <TopicResult key={topic.id} topic={topic} />
-                ))
+                topics.map((topic) => <TopicResult key={topic.id} topic={topic} />)
               ) : (
                 <SearchSectionEmpty>{m.search_no_topics()}</SearchSectionEmpty>
               )}
@@ -207,9 +189,7 @@ type SearchSectionProps = PropsWithChildren<{
 const SearchSection = ({ children, title }: SearchSectionProps) => (
   <section className="flex flex-col gap-2">
     <h2 className="text-sm font-medium text-muted-foreground">{title}</h2>
-    <Frame className="divide-y overflow-hidden border shadow-sm">
-      {children}
-    </Frame>
+    <Frame className="divide-y overflow-hidden border shadow-sm">{children}</Frame>
   </section>
 );
 
@@ -220,12 +200,7 @@ type SearchResultContentProps = {
   title: string;
 };
 
-const SearchResultContent = ({
-  icon,
-  meta,
-  trailing,
-  title,
-}: SearchResultContentProps) => (
+const SearchResultContent = ({ icon, meta, trailing, title }: SearchResultContentProps) => (
   <>
     <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
       {icon}

@@ -81,10 +81,7 @@ const validateFileStep = createStep({
       });
     }
 
-    await db
-      .update(file)
-      .set({ status: "processing" })
-      .where(eq(file.id, row.id));
+    await db.update(file).set({ status: "processing" }).where(eq(file.id, row.id));
 
     return {
       topicId: row.topicId,
@@ -122,10 +119,7 @@ const processForRagStep = createStep({
       throw objectResult.error;
     }
 
-    const extraction = await extractBytes(
-      Buffer.from(objectResult.value),
-      mimeType
-    );
+    const extraction = await extractBytes(Buffer.from(objectResult.value), mimeType);
 
     const doc = MDocument.fromText(extraction.content);
     const chunks = await doc.chunk({
@@ -191,8 +185,8 @@ export const processFileWorkflow = createWorkflow({
             // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId check.
             eq(file.id, toSafeId<"file">(inputData.fileId)),
             // oxlint-disable-next-line eslint-js/no-restricted-syntax
-            eq(file.userId, toSafeId<"user">(inputData.userId))
-          )
+            eq(file.userId, toSafeId<"user">(inputData.userId)),
+          ),
         );
     },
   },

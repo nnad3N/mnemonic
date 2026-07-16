@@ -14,7 +14,7 @@ export const renameConversation = createServerFn({ method: "POST" })
   .inputValidator(
     v.object({
       title: v.pipe(v.string(), v.nonEmpty()),
-    })
+    }),
   )
   .middleware([threadAccessMiddleware])
   .handler(async ({ context, data }) => {
@@ -32,14 +32,11 @@ export const renameTopic = createServerFn({ method: "POST" })
   .inputValidator(
     v.object({
       title: v.pipe(v.string(), v.nonEmpty()),
-    })
+    }),
   )
   .middleware([topicAccessMiddleware])
   .handler(async ({ context, data }) => {
-    await db
-      .update(topic)
-      .set({ title: data.title })
-      .where(eq(topic.id, context.topic.id));
+    await db.update(topic).set({ title: data.title }).where(eq(topic.id, context.topic.id));
 
     return { id: context.topic.id };
   });

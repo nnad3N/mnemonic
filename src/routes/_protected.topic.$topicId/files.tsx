@@ -16,11 +16,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Frame } from "@/components/ui/frame";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-} from "@/components/ui/pagination";
+import { Pagination, PaginationContent, PaginationItem } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -63,13 +59,7 @@ const getVisiblePageNumbers = (current: number, total: number) => {
 };
 
 const getColumns = () =>
-  [
-    m.common_name(),
-    m.common_status(),
-    m.common_size(),
-    m.common_created(),
-    null,
-  ] as const;
+  [m.common_name(), m.common_status(), m.common_size(), m.common_created(), null] as const;
 
 function RouteComponent() {
   const topicId = Route.useParams({ select: (params) => params.topicId });
@@ -83,7 +73,7 @@ function RouteComponent() {
       pageSize: PAGE_SIZE,
       search: debouncedQuery,
       topicId,
-    })
+    }),
   );
 
   const columns = getColumns();
@@ -118,12 +108,8 @@ function RouteComponent() {
                 column ? (
                   <TableHead key={column}>{column}</TableHead>
                 ) : (
-                  <TableHead
-                    key={`column-${index}`}
-                    aria-hidden="true"
-                    className="w-10"
-                  />
-                )
+                  <TableHead key={`column-${index}`} aria-hidden="true" className="w-10" />
+                ),
               )}
             </TableRow>
           </TableHeader>
@@ -149,9 +135,7 @@ function RouteComponent() {
                     <EmptyTitle className="text-destructive">
                       {m.files_load_error_title()}
                     </EmptyTitle>
-                    <EmptyDescription>
-                      {m.files_load_error_description()}
-                    </EmptyDescription>
+                    <EmptyDescription>{m.files_load_error_description()}</EmptyDescription>
                   </EmptyHeader>
                   <EmptyContent>
                     <Button
@@ -172,9 +156,7 @@ function RouteComponent() {
                 <Empty>
                   <EmptyHeader>
                     <EmptyTitle>
-                      {debouncedQuery.trim().length > 0
-                        ? m.files_no_results()
-                        : m.files_empty()}
+                      {debouncedQuery.trim().length > 0 ? m.files_no_results() : m.files_empty()}
                     </EmptyTitle>
                   </EmptyHeader>
                 </Empty>
@@ -222,10 +204,7 @@ function RouteComponent() {
   );
 }
 
-const FilesStaticTableRow = ({
-  children,
-  colSpan,
-}: PropsWithChildren<{ colSpan: number }>) => (
+const FilesStaticTableRow = ({ children, colSpan }: PropsWithChildren<{ colSpan: number }>) => (
   <TableRow className="group/static">
     <TableCell
       className="group-hover/static:bg-card! dark:group-hover/static:bg-card!"

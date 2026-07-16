@@ -1,10 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ArrowDownIcon } from "lucide-react";
-import {
-  StickToBottom,
-  useStickToBottom,
-  useStickToBottomContext,
-} from "use-stick-to-bottom";
+import { StickToBottom, useStickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -26,27 +22,17 @@ function RouteComponent() {
     resize: "smooth",
     initial: "instant",
   });
-  const editingMessageIndex =
-    useChatStore((state) => state.editingState?.messageIndex) ?? Infinity;
+  const editingMessageIndex = useChatStore((state) => state.editingState?.messageIndex) ?? Infinity;
 
   return (
-    <StickToBottom
-      className="flex h-full min-h-0 w-full flex-col p-3"
-      instance={stickToBottom}
-    >
-      <ScrollArea
-        className="h-full min-h-0"
-        viewportRef={stickToBottom.scrollRef}
-      >
+    <StickToBottom className="flex h-full min-h-0 w-full flex-col p-3" instance={stickToBottom}>
+      <ScrollArea className="h-full min-h-0" viewportRef={stickToBottom.scrollRef}>
         <div
           className="mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-2.5 pb-4"
           ref={stickToBottom.contentRef}
         >
           {chat.messages.map((message, index) => (
-            <div
-              key={message.id}
-              className={cn(index > editingMessageIndex && "opacity-50")}
-            >
+            <div key={message.id} className={cn(index > editingMessageIndex && "opacity-50")}>
               <ThreadMessage
                 index={index}
                 messageCount={chat.messages.length}

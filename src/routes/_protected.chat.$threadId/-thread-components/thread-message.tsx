@@ -37,7 +37,7 @@ const isWithoutVisibleParts = ({
     (part) =>
       part.type === "reasoning" ||
       part.type === "text" ||
-      (isToolUIPart(part) && isKnownToolName(getToolName(part)))
+      (isToolUIPart(part) && isKnownToolName(getToolName(part))),
   );
 };
 
@@ -48,12 +48,7 @@ type ThreadMessageProps = {
   status: ChatStatus;
 };
 
-export const ThreadMessage = ({
-  message,
-  index,
-  messageCount,
-  status,
-}: ThreadMessageProps) => {
+export const ThreadMessage = ({ message, index, messageCount, status }: ThreadMessageProps) => {
   if (message.role === "user") {
     return <UserMessage message={message} index={index} />;
   }
@@ -67,9 +62,7 @@ export const ThreadMessage = ({
         messageCount,
       }) ? (
         <ThreadMetaLine
-          className={
-            status === "streaming" || status === "submitted" ? "shimmer" : ""
-          }
+          className={status === "streaming" || status === "submitted" ? "shimmer" : ""}
         >
           {m.chat_thread_pending_planning()}
         </ThreadMetaLine>

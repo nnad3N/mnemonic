@@ -8,9 +8,7 @@ import type { topicAgentId } from "@/mastra/agents/topic-agent";
 
 type AgentWithMemoryId = typeof conversationAgentId | typeof topicAgentId;
 
-export const getAgentMemory = async (
-  agentId: AgentWithMemoryId
-): Promise<MastraMemory> => {
+export const getAgentMemory = async (agentId: AgentWithMemoryId): Promise<MastraMemory> => {
   const agent = mastra.getAgentById(agentId);
   const memory = await agent.getMemory();
 

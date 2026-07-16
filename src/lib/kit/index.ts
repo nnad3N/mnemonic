@@ -1,9 +1,5 @@
 import { matchError, Result, TaggedError } from "better-result";
-import type {
-  Err,
-  Result as ResultType,
-  TaggedErrorInstance,
-} from "better-result";
+import type { Err, Result as ResultType, TaggedErrorInstance } from "better-result";
 
 import type {
   AnyKits,
@@ -50,7 +46,7 @@ export const toServerFnError = {
 
 const defineKit = <const TName extends string, TValue>(
   name: TName,
-  value: TValue
+  value: TValue,
 ): KitModule<TName, TValue> => {
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion
   return [name, value] as unknown as KitModule<TName, TValue>;
@@ -69,9 +65,7 @@ const createKitContext = <TKits extends readonly KitModule[]>(
   return context as Kits<TKits>;
 };
 
-const getKit = <TName extends string, TValue>(
-  kit: KitModule<TName, TValue>
-): TValue => kit[1];
+const getKit = <TName extends string, TValue>(kit: KitModule<TName, TValue>): TValue => kit[1];
 
 const kitGen =
   <
@@ -80,7 +74,7 @@ const kitGen =
     TYield extends Err<never, unknown>,
     TResult extends ResultType<unknown, unknown>,
   >(
-    action: KitGeneratorAction<TKits, TInput, TYield, TResult>
+    action: KitGeneratorAction<TKits, TInput, TYield, TResult>,
   ): KitAction<TKits, TInput, TResult, TYield> =>
   async (context: TKits, input: TInput) =>
     Result.gen(() => action(context, input));
@@ -92,11 +86,11 @@ function kitServerFn<
   TKitError extends TaggedErrorInstance<string, unknown>,
 >(
   action: KitAsyncAction<TKits, TInput, ResultType<TValue, TKitError>>,
-  handlers: MatchErrorHandlers<TKitError, ServerFnError>
+  handlers: MatchErrorHandlers<TKitError, ServerFnError>,
 ): (context: TKits, input: TInput) => Promise<TValue>;
 
 function kitServerFn<TKits extends AnyKits, TInput, TValue>(
-  action: KitAsyncAction<TKits, TInput, ResultType<TValue, ServerFnError>>
+  action: KitAsyncAction<TKits, TInput, ResultType<TValue, ServerFnError>>,
 ): (context: TKits, input: TInput) => Promise<TValue>;
 
 function kitServerFn<
@@ -106,7 +100,7 @@ function kitServerFn<
   TError extends TaggedErrorInstance<string, unknown>,
 >(
   action: KitAsyncAction<TKits, TInput, ResultType<TValue, TError>>,
-  handlers?: MatchErrorHandlers<TError, ServerFnError>
+  handlers?: MatchErrorHandlers<TError, ServerFnError>,
 ) {
   return async (context: TKits, input: TInput): Promise<TValue> => {
     const result = await action(context, input);

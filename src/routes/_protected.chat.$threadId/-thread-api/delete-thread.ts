@@ -25,16 +25,13 @@ type DeleteTopicInput = {
   topicId: SafeId<"topic">;
 };
 
-const deleteTopicFn = Kit.gen(async function* (
-  ctx: DeleteThreadCtx,
-  input: DeleteTopicInput
-) {
+const deleteTopicFn = Kit.gen(async function* (ctx: DeleteThreadCtx, input: DeleteTopicInput) {
   const [filesResult, threadsResult] = await Promise.all([
     ctx.db.run((db) =>
       db.query.file.findMany({
         where: { topicId: input.topicId },
         columns: { s3Key: true },
-      })
+      }),
     ),
     ctx.memory.listThreads({
       filter: { resourceId: input.topicId },
@@ -54,9 +51,7 @@ const deleteTopicFn = Kit.gen(async function* (
     }),
     ctx.db.run((db) => db.delete(file).where(eq(file.topicId, input.topicId))),
     ctx.db.run((db) => db.delete(topic).where(eq(topic.id, input.topicId))),
-    ...threads.map(async (thread) =>
-      ctx.memory.deleteThread({ threadId: thread.id })
-    ),
+    ...threads.map(async (thread) => ctx.memory.deleteThread({ threadId: thread.id })),
   ]);
 
   for (const result of results) {
@@ -88,8 +83,7 @@ export const deleteTopic = createServerFn({ method: "POST" })
     const topicId = context.topic.id;
     const input = { topicId };
 
-    const defaultError = () =>
-      toServerFnError.serverError("Failed to delete topic");
+    const defaultError = () => toServerFnError.serverError("Failed to delete topic");
 
     return Kit.serverFn(deleteTopicFn, {
       DatabaseError: defaultError,

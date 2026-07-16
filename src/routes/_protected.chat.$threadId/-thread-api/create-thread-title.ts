@@ -88,20 +88,15 @@ export const useCreateThreadTitle = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: CreateThreadTitleVars) =>
-      createThreadTitle({ data }),
+    mutationFn: async (data: CreateThreadTitleVars) => createThreadTitle({ data }),
     onSuccess: (thread, vars) => {
-      if (thread === null) {
-        return;
-      }
+      if (thread === null) return;
 
       const conversationsQueryOptions = sidebarConversationsQuery();
 
       queryClient.setQueryData(conversationsQueryOptions.queryKey, (current) =>
         produce(current, (draft) => {
-          if (draft === undefined) {
-            return;
-          }
+          if (draft === undefined) return;
 
           for (const page of draft.pages) {
             for (const item of page.items) {
@@ -111,20 +106,16 @@ export const useCreateThreadTitle = () => {
               }
             }
           }
-        })
+        }),
       );
 
-      if (!vars.topicId) {
-        return;
-      }
+      if (!vars.topicId) return;
 
       const topicsQueryOptions = sidebarTopicsQuery();
 
       queryClient.setQueryData(topicsQueryOptions.queryKey, (current) =>
         produce(current, (draft) => {
-          if (draft === undefined) {
-            return;
-          }
+          if (draft === undefined) return;
 
           for (const page of draft.pages) {
             for (const topic of page.items) {
@@ -140,16 +131,14 @@ export const useCreateThreadTitle = () => {
               }
             }
           }
-        })
+        }),
       );
 
       const topicThreadsQueryOptions = sidebarTopicThreadsQuery(vars.topicId);
 
       queryClient.setQueryData(topicThreadsQueryOptions.queryKey, (current) =>
         produce(current, (draft) => {
-          if (draft === undefined) {
-            return;
-          }
+          if (draft === undefined) return;
 
           for (const topicThreadPage of draft.pages) {
             for (const topicThread of topicThreadPage.items) {
@@ -159,7 +148,7 @@ export const useCreateThreadTitle = () => {
               }
             }
           }
-        })
+        }),
       );
     },
     onError: (error: unknown) => {

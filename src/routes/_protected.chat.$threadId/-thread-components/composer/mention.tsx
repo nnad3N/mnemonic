@@ -20,12 +20,7 @@ type MentionRootProps = PropsWithChildren<{
   variant?: MentionVariant;
 }>;
 
-export const MentionRoot = ({
-  render,
-  className,
-  children,
-  variant = "teal",
-}: MentionRootProps) =>
+export const MentionRoot = ({ render, className, children, variant = "teal" }: MentionRootProps) =>
   useRender({
     render,
     props: {
@@ -34,7 +29,7 @@ export const MentionRoot = ({
         variant === "teal" && "border-teal-200 bg-teal-100",
         variant === "error" && "border-destructive/15 bg-destructive/10",
         variant === "neutral" && "border-gray-300 bg-gray-200/50",
-        className
+        className,
       ),
       children,
     },
@@ -45,18 +40,14 @@ type MentionContentProps = PropsWithChildren<{
   render?: useRender.ComponentProps<"span">["render"];
 }>;
 
-export const MentionContent = ({
-  render,
-  className,
-  children,
-}: MentionContentProps) => {
+export const MentionContent = ({ render, className, children }: MentionContentProps) => {
   return useRender({
     defaultTagName: "span",
     render,
     props: {
       className: cn(
         "group/mention relative flex items-center gap-1 text-sm leading-none select-none",
-        className
+        className,
       ),
       children,
     },
@@ -84,11 +75,7 @@ export const MentionIcon = ({ className, variant }: MentionIconProps) => {
 
   return (
     <Icon
-      className={cn(
-        "size-3.25 shrink-0",
-        variant === "pending" && "animate-spin",
-        className
-      )}
+      className={cn("size-3.25 shrink-0", variant === "pending" && "animate-spin", className)}
     />
   );
 };

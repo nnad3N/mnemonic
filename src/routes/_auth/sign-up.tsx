@@ -23,18 +23,18 @@ function RouteComponent() {
     email: v.pipe(
       v.string(),
       v.nonEmpty(m.auth_validation_required()),
-      v.email(m.auth_validation_email_invalid())
+      v.email(m.auth_validation_email_invalid()),
     ),
     fullName: v.pipe(
       v.string(),
       v.trim(),
       v.nonEmpty(m.auth_validation_required()),
-      v.minLength(2, m.auth_validation_full_name_min())
+      v.minLength(2, m.auth_validation_full_name_min()),
     ),
     password: v.pipe(
       v.string(),
       v.nonEmpty(m.auth_validation_required()),
-      v.minLength(8, m.auth_validation_password_min())
+      v.minLength(8, m.auth_validation_password_min()),
     ),
   });
 
@@ -73,9 +73,7 @@ function RouteComponent() {
         <form.Field name="fullName">
           {(field) => (
             <Field field={field}>
-              <FieldLabel htmlFor={field.name}>
-                {m.auth_full_name_label()}
-              </FieldLabel>
+              <FieldLabel htmlFor={field.name}>{m.auth_full_name_label()}</FieldLabel>
               <Input
                 autoComplete="name"
                 id={field.name}
@@ -98,9 +96,7 @@ function RouteComponent() {
         <form.Field name="email">
           {(field) => (
             <Field field={field}>
-              <FieldLabel htmlFor={field.name}>
-                {m.auth_email_label()}
-              </FieldLabel>
+              <FieldLabel htmlFor={field.name}>{m.auth_email_label()}</FieldLabel>
               <Input
                 autoComplete="email"
                 id={field.name}
@@ -123,9 +119,7 @@ function RouteComponent() {
         <form.Field name="password">
           {(field) => (
             <Field field={field}>
-              <FieldLabel htmlFor={field.name}>
-                {m.auth_password_label()}
-              </FieldLabel>
+              <FieldLabel htmlFor={field.name}>{m.auth_password_label()}</FieldLabel>
               <Input
                 autoComplete="new-password"
                 id={field.name}

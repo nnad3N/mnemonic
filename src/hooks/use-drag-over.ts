@@ -4,9 +4,7 @@ export const useDragOver = () => {
   const dragCounterRef = useRef(0);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
 
-  const handleDrop = (
-    callback: (e: React.DragEvent) => Promise<void> | void
-  ) => {
+  const handleDrop = (callback: (e: React.DragEvent) => Promise<void> | void) => {
     return (e: React.DragEvent) => {
       e.preventDefault();
 

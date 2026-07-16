@@ -1,10 +1,7 @@
 import { Agent } from "@mastra/core/agent";
 import { Memory } from "@mastra/memory";
 
-import {
-  baseInstructions,
-  sharedSourceInstructions,
-} from "@/mastra/agents/base-instructions";
+import { baseInstructions, sharedSourceInstructions } from "@/mastra/agents/base-instructions";
 import { models } from "@/mastra/models";
 import { pgVector, postgresStore } from "@/mastra/storage";
 import { fileGraphRagTool } from "@/mastra/tools/file-graph-rag-tool";

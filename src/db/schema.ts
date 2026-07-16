@@ -1,12 +1,5 @@
 import { defineRelationsPart } from "drizzle-orm";
-import {
-  integer,
-  pgTable,
-  text,
-  timestamp,
-  uniqueIndex,
-  varchar,
-} from "drizzle-orm/pg-core";
+import { integer, pgTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 import { nanoid } from "nanoid";
 
 import { user } from "@/db/auth-schema";
@@ -56,10 +49,7 @@ export const file = pgTable(
 
     s3Key: text("s3_key").notNull(),
 
-    status: varchar("status", { length: 32 })
-      .$type<FileStatus>()
-      .notNull()
-      .default("uploading"),
+    status: varchar("status", { length: 32 }).$type<FileStatus>().notNull().default("uploading"),
 
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")
@@ -67,9 +57,7 @@ export const file = pgTable(
       .$onUpdate(() => new Date())
       .defaultNow(),
   },
-  (table) => [
-    uniqueIndex("file_topic_sha256_unique").on(table.topicId, table.sha256),
-  ]
+  (table) => [uniqueIndex("file_topic_sha256_unique").on(table.topicId, table.sha256)],
 );
 
 export const appRelations = defineRelationsPart({ file, topic, user }, (r) => ({

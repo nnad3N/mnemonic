@@ -20,10 +20,10 @@ const toDatabaseError = (cause: unknown): DatabaseError =>
 
 export type DbApi = {
   run: <TValue>(
-    operation: (db: DrizzleDb) => Promise<TValue>
+    operation: (db: DrizzleDb) => Promise<TValue>,
   ) => Promise<ResultType<TValue, DatabaseError>>;
   transaction: <TValue>(
-    operation: (tx: DbTransaction) => Promise<TValue>
+    operation: (tx: DbTransaction) => Promise<TValue>,
   ) => Promise<ResultType<TValue, DatabaseError>>;
 };
 

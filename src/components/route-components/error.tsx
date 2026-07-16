@@ -39,12 +39,8 @@ export const AuthErrorComponent = ({ reset, error }: AuthErrorProps) => {
         <EmptyMedia variant="icon">
           <AlertCircle className="text-destructive" />
         </EmptyMedia>
-        <EmptyTitle className="text-destructive">
-          {m.route_error_session_title()}
-        </EmptyTitle>
-        <EmptyDescription>
-          {getAuthErrorDescription(error.code)}
-        </EmptyDescription>
+        <EmptyTitle className="text-destructive">{m.route_error_session_title()}</EmptyTitle>
+        <EmptyDescription>{getAuthErrorDescription(error.code)}</EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
         <div className="flex flex-wrap justify-center gap-2">
@@ -94,12 +90,8 @@ export const GenericErrorComponent = ({ reset }: ErrorComponentProps) => {
         <EmptyMedia variant="icon">
           <AlertCircle className="text-destructive" />
         </EmptyMedia>
-        <EmptyTitle className="text-destructive">
-          {m.auth_error_generic_title()}
-        </EmptyTitle>
-        <EmptyDescription>
-          {m.route_error_contact_support_if_persists()}
-        </EmptyDescription>
+        <EmptyTitle className="text-destructive">{m.auth_error_generic_title()}</EmptyTitle>
+        <EmptyDescription>{m.route_error_contact_support_if_persists()}</EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
         <Button
@@ -109,8 +101,7 @@ export const GenericErrorComponent = ({ reset }: ErrorComponentProps) => {
               reset();
               await queryClient.refetchQueries({
                 predicate: (query) =>
-                  query.state.fetchStatus === "idle" &&
-                  query.state.status === "error",
+                  query.state.fetchStatus === "idle" && query.state.status === "error",
               });
             });
           }}

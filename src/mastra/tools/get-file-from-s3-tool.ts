@@ -33,10 +33,7 @@ const errorOutputSchema = v.object({
   message: v.string(),
 });
 
-const outputSchema = v.variant("type", [
-  successOutputSchema,
-  errorOutputSchema,
-]);
+const outputSchema = v.variant("type", [successOutputSchema, errorOutputSchema]);
 
 type GetFileSuccess = v.InferOutput<typeof successOutputSchema>;
 type GetFileError = v.InferOutput<typeof errorOutputSchema>;

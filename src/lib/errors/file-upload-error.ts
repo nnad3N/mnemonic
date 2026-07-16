@@ -1,9 +1,6 @@
 import { TaggedError } from "better-result";
 
-type FileUploadErrorReason =
-  | "s3-error"
-  | "file-too-large"
-  | "unsupported-mime-type";
+type FileUploadErrorReason = "s3-error" | "file-too-large" | "unsupported-mime-type";
 
 export type FileUploadErrorShape = {
   message?: string;
@@ -25,9 +22,7 @@ const FileUploadErrorMessage = (args: FileUploadErrorShape) => {
   }
 };
 
-export class FileUploadError extends TaggedError(
-  "FileUploadError"
-)<FileUploadErrorShape>() {
+export class FileUploadError extends TaggedError("FileUploadError")<FileUploadErrorShape>() {
   constructor(args: FileUploadErrorShape) {
     super({
       ...args,

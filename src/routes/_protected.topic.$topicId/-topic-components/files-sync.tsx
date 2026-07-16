@@ -30,7 +30,7 @@ export const FilesSync = ({ topicId }: FilesSyncProps) => {
   useEffect(() => {
     const { removePollingTopicId, addPollingTopicId } = useChatStore.getState();
     const removedFileIds = previousPendingFileIds.current.filter(
-      (fileId) => !pendingFiles.includes(fileId)
+      (fileId) => !pendingFiles.includes(fileId),
     );
 
     previousPendingFileIds.current = pendingFiles;

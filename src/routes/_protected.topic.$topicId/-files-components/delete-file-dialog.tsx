@@ -24,12 +24,7 @@ type DeleteFileDialogProps = {
   open: boolean;
 };
 
-export const DeleteFileDialog = ({
-  file,
-  onOpenChange,
-  open,
-  topicId,
-}: DeleteFileDialogProps) => {
+export const DeleteFileDialog = ({ file, onOpenChange, open, topicId }: DeleteFileDialogProps) => {
   const queryClient = useQueryClient();
 
   const deleteMutation = useMutation({

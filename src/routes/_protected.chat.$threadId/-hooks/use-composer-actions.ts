@@ -9,10 +9,7 @@ import { useEditorRef, useEditorSelector } from "platejs/react";
 import { useCreateThreadTitle } from "../-thread-api/create-thread-title";
 import { threadQuery } from "../-thread-api/get-thread";
 import { useThreadChat } from "../-thread-chat-provider";
-import {
-  getThreadEditorId,
-  plateToMarkdown,
-} from "../-thread-components/composer/plate";
+import { getThreadEditorId, plateToMarkdown } from "../-thread-components/composer/plate";
 import type { ThreadMetadataAttachment } from "../-thread-types";
 import type { ThreadInputLocation } from "../../-chat-store";
 import { useChatStore } from "../../-chat-store";
@@ -38,10 +35,7 @@ const hasComposerContent = (editor: PlateEditor, node: Descendant): boolean => {
   return node.children.some((child) => hasComposerContent(editor, child));
 };
 
-const getThreadAttachments = async (
-  threadId: string,
-  location: ThreadInputLocation
-) => {
+const getThreadAttachments = async (threadId: string, location: ThreadInputLocation) => {
   const attachments = useChatStore.getState().attachments.get(threadId);
 
   if (!attachments) {
@@ -94,7 +88,7 @@ export const useComposerActions = (location: ThreadInputLocation) => {
       return !plate.children.some((node) => hasComposerContent(plate, node));
     },
     [],
-    { id: editorId }
+    { id: editorId },
   );
 
   const chat = useThreadChat();
@@ -112,10 +106,9 @@ export const useComposerActions = (location: ThreadInputLocation) => {
         .get(threadId)
         ?.some(
           (attachment) =>
-            (attachment.status === "pending" ||
-              attachment.status === "failed") &&
-            attachment.location === location
-        ) ?? false
+            (attachment.status === "pending" || attachment.status === "failed") &&
+            attachment.location === location,
+        ) ?? false,
   );
 
   const canSend =
@@ -126,9 +119,7 @@ export const useComposerActions = (location: ThreadInputLocation) => {
     chat.status !== "streaming";
 
   const sendMessage = async () => {
-    if (!canSend) {
-      return;
-    }
+    if (!canSend) return;
 
     const text = plateToMarkdown(editor).trim();
 
@@ -138,10 +129,7 @@ export const useComposerActions = (location: ThreadInputLocation) => {
     if (location === "edit" && editingState) {
       useChatStore
         .getState()
-        .hydrateAttachments(
-          threadId,
-          chat.messages.slice(0, editingState.messageIndex)
-        );
+        .hydrateAttachments(threadId, chat.messages.slice(0, editingState.messageIndex));
     }
     if (location === "edit") {
       setEditingState(null);
@@ -158,10 +146,7 @@ export const useComposerActions = (location: ThreadInputLocation) => {
       });
     }
 
-    const { files, metadataAttachments } = await getThreadAttachments(
-      threadId,
-      location
-    );
+    const { files, metadataAttachments } = await getThreadAttachments(threadId, location);
 
     await chat.sendMessage({
       text,
@@ -186,9 +171,7 @@ export const useComposerActions = (location: ThreadInputLocation) => {
   };
 
   const stopStream = async () => {
-    if (chat.status !== "streaming") {
-      return;
-    }
+    if (chat.status !== "streaming") return;
 
     await chat.stop();
   };

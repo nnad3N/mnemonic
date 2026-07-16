@@ -48,7 +48,7 @@ type Actions = {
   setComposerValue: (threadId: ThreadId, value: Value) => void;
   upsertAttachment: (
     threadId: ThreadId,
-    attachment: Exclude<ThreadAttachment, { status: "persisted" }>
+    attachment: Exclude<ThreadAttachment, { status: "persisted" }>,
   ) => void;
   removeAttachment: (threadId: ThreadId, sha256: string) => void;
   hydrateAttachments: (threadId: ThreadId, messages: ThreadUIMessage[]) => void;
@@ -94,9 +94,7 @@ export const useChatStore = create<State & Actions>()(
             return;
           }
 
-          const attachmentIndex = attachments.findIndex(
-            (a) => a.sha256 === attachment.sha256
-          );
+          const attachmentIndex = attachments.findIndex((a) => a.sha256 === attachment.sha256);
 
           if (attachmentIndex === -1) {
             attachments.push(attachment);
@@ -108,16 +106,11 @@ export const useChatStore = create<State & Actions>()(
       removeAttachment: (threadId, sha256) => {
         set((state) => {
           const attachments = state.attachments.get(threadId);
-          const attachmentIndex =
-            attachments?.findIndex((a) => a.sha256 === sha256) ?? -1;
+          const attachmentIndex = attachments?.findIndex((a) => a.sha256 === sha256) ?? -1;
 
-          if (attachmentIndex === -1) {
-            return;
-          }
+          if (attachmentIndex === -1) return;
 
-          if (attachments?.[attachmentIndex].status === "persisted") {
-            return;
-          }
+          if (attachments?.[attachmentIndex].status === "persisted") return;
 
           attachments?.splice(attachmentIndex, 1);
         });
@@ -144,9 +137,7 @@ export const useChatStore = create<State & Actions>()(
               continue;
             }
 
-            const isPersisted = attachments.some(
-              (a) => a.sha256 === attachment.sha256
-            );
+            const isPersisted = attachments.some((a) => a.sha256 === attachment.sha256);
 
             if (!isPersisted) {
               attachments.push(attachment);
@@ -191,6 +182,6 @@ export const useChatStore = create<State & Actions>()(
       partialize: (state) => ({
         collapsedTopicIds: state.collapsedTopicIds,
       }),
-    }
-  )
+    },
+  ),
 );

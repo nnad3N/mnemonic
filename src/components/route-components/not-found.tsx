@@ -19,9 +19,7 @@ export const NotFoundComponent = () => {
         <EmptyMedia variant="icon">
           <CircleQuestionMark className="text-destructive" />
         </EmptyMedia>
-        <EmptyTitle className="text-destructive">
-          {m.not_found_title()}
-        </EmptyTitle>
+        <EmptyTitle className="text-destructive">{m.not_found_title()}</EmptyTitle>
         <EmptyDescription>{m.not_found_description()}</EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
