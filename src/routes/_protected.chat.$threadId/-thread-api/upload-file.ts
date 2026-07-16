@@ -13,8 +13,8 @@ import {
   fileAccessMiddleware,
   threadAccessMiddleware,
 } from "@/lib/middleware/assert-thread-access";
-import { s3Kit } from "@/lib/s3";
-import type { S3Kit } from "@/lib/s3";
+import { s3Kit } from "@/lib/s3-kit";
+import type { S3Kit } from "@/lib/s3-kit";
 import { toSafeId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
 import { mastra } from "@/mastra";

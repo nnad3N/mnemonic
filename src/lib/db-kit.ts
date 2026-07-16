@@ -1,4 +1,5 @@
 import { Result, TaggedError } from "better-result";
+import type { Result as ResultType } from "better-result";
 
 import { db as drizzleDb } from "@/db";
 import { Kit } from "@/lib/kit";
@@ -18,23 +19,28 @@ const toDatabaseError = (cause: unknown): DatabaseError =>
       cause instanceof Error ? cause.message : "Database operation failed",
   });
 
-const run = async <TValue>(operation: (db: DrizzleDb) => Promise<TValue>) =>
-  Result.tryPromise({
-    try: async () => operation(drizzleDb),
-    catch: toDatabaseError,
-  });
+export type DbApi = {
+  run: <TValue>(
+    operation: (db: DrizzleDb) => Promise<TValue>
+  ) => Promise<ResultType<TValue, DatabaseError>>;
+  transaction: <TValue>(
+    operation: (tx: DbTransaction) => Promise<TValue>
+  ) => Promise<ResultType<TValue, DatabaseError>>;
+};
 
-const transaction = async <TValue>(
-  operation: (tx: DbTransaction) => Promise<TValue>
-) =>
-  Result.tryPromise({
-    try: async () => drizzleDb.transaction(async (tx) => operation(tx)),
-    catch: toDatabaseError,
-  });
+export const createDbKit = (api: DbApi) => Kit.define("db", api);
 
-export const dbKit = Kit.define("db", {
-  run,
-  transaction,
+export const dbKit = createDbKit({
+  run: async (operation) =>
+    Result.tryPromise({
+      try: async () => operation(drizzleDb),
+      catch: toDatabaseError,
+    }),
+  transaction: async (operation) =>
+    Result.tryPromise({
+      try: async () => drizzleDb.transaction(async (tx) => operation(tx)),
+      catch: toDatabaseError,
+    }),
 });
 
 export type DbKit = typeof dbKit;

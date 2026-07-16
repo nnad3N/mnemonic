@@ -24,10 +24,11 @@ Kit files live under `src/lib/` and define named tuple modules with
 `Kit.define(name, value)`. The value should expose bare `Result.tryPromise` — do
 **not** wrap with `Result.await` inside the kit:
 
-- `db-kit.ts` — `Kit.define("db", { run, transaction })`
-- `memory-kit.ts` — `createMemoryKit(api)` / `Kit.define("memory", api)` with a
-  closed `MemoryApi` (`listThreads`, `deleteThread`)
-- `s3.ts` — `Kit.define("s3", { deleteObject, deleteObjects, … })`
+- `db-kit.ts` — `createDbKit(api)` with a closed `DbApi` (`run`, `transaction`)
+- `memory-kit.ts` — `createMemoryKit(api)` with a closed `MemoryApi`
+  (`listThreads`, `deleteThread`)
+- `s3-kit.ts` — `createS3Kit(api)` with a closed `S3Api` (`deleteObject`,
+  `deleteObjects`, `getObject`, …)
 
 After `Kit.createContext(dbKit, memoryKit)`, callers use the context:
 
@@ -36,8 +37,9 @@ After `Kit.createContext(dbKit, memoryKit)`, callers use the context:
 - `ctx.memory.listThreads(input)` → `Promise<Result<StorageListThreadsOutput, MemoryError>>`
 - `ctx.memory.deleteThread(input)` → `Promise<Result<void, MemoryError>>`
 
-`MemoryApi` is the mockable surface: pass a `satisfies MemoryApi` object to
-`createMemoryKit(...)` in tests.
+Each kit exports a mockable `*Api` surface: pass a `satisfies DbApi` /
+`MemoryApi` / `S3Api` object to `createDbKit` / `createMemoryKit` /
+`createS3Kit` in tests.
 
 ## Context vs direct kit access
 

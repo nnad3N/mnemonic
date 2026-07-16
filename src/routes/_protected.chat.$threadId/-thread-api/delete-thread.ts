@@ -13,8 +13,8 @@ import {
   threadAccessMiddleware,
   topicAccessMiddleware,
 } from "@/lib/middleware/assert-thread-access";
-import { s3Kit } from "@/lib/s3";
-import type { S3Kit } from "@/lib/s3";
+import { s3Kit } from "@/lib/s3-kit";
+import type { S3Kit } from "@/lib/s3-kit";
 import type { SafeId } from "@/lib/safe-id";
 import { FILE_EMBEDDINGS_INDEX } from "@/mastra/file-rag-config";
 import { pgVector } from "@/mastra/storage";

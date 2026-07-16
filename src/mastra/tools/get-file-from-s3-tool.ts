@@ -10,7 +10,8 @@ import {
   isLLMNativeImageMimeType,
   LLM_NATIVE_IMAGE_MIME_TYPES,
 } from "@/lib/file-validation";
-import { getObject } from "@/lib/s3";
+import { Kit } from "@/lib/kit";
+import { s3Kit } from "@/lib/s3-kit";
 import { toSafeId } from "@/lib/safe-id";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context";
 
@@ -92,7 +93,7 @@ export const getFileFromS3Tool = createTool({
       } satisfies GetFileError;
     }
 
-    const objectResult = await getObject(row.s3Key);
+    const objectResult = await Kit.get(s3Kit).getObject(row.s3Key);
 
     if (Result.isError(objectResult)) {
       return {

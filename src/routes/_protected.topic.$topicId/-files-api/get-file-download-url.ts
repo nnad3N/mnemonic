@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { Kit, toServerFnError } from "@/lib/kit";
 import { fileAccessMiddleware } from "@/lib/middleware/assert-thread-access";
-import { s3Kit } from "@/lib/s3";
+import { s3Kit } from "@/lib/s3-kit";
 
 const FILE_DOWNLOAD_URL_TTL_SECONDS = 3600;
 

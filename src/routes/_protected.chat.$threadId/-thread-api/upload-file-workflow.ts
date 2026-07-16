@@ -11,7 +11,7 @@ import { db } from "@/db";
 import { file } from "@/db/schema";
 import { isImageMimeType } from "@/lib/file-validation";
 import { Kit } from "@/lib/kit";
-import { S3Error, s3Kit } from "@/lib/s3";
+import { S3Error, s3Kit } from "@/lib/s3-kit";
 import { safeId, toSafeId } from "@/lib/safe-id";
 import {
   FILE_EMBEDDING_DIMENSION,

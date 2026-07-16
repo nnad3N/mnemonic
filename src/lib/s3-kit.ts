@@ -9,6 +9,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Result, TaggedError } from "better-result";
+import type { Result as ResultType } from "better-result";
 
 import { env } from "@/env";
 import { Kit } from "@/lib/kit";
@@ -68,7 +69,34 @@ type PresignedPutUrlInput = {
   key: string;
 };
 
-const getPresignedPutUrlOperation = async (input: PresignedPutUrlInput) =>
+type PresignedGetUrlInput = {
+  contentDisposition?: string;
+  expiresIn: number;
+  key: string;
+};
+
+type DeleteObjectsInput = {
+  keys: string[];
+};
+
+export type S3Api = {
+  deleteObject: (key: string) => Promise<ResultType<void, S3Error>>;
+  deleteObjects: (
+    input: DeleteObjectsInput
+  ) => Promise<ResultType<void, S3Error>>;
+  getObject: (key: string) => Promise<ResultType<Uint8Array, S3Error>>;
+  getPresignedGetUrl: (
+    input: PresignedGetUrlInput
+  ) => Promise<ResultType<string, S3Error>>;
+  getPresignedPutUrl: (
+    input: PresignedPutUrlInput
+  ) => Promise<ResultType<string, S3Error>>;
+  statObject: (key: string) => Promise<ResultType<{ size: number }, S3Error>>;
+};
+
+export const createS3Kit = (api: S3Api) => Kit.define("s3", api);
+
+const getPresignedPutUrl = async (input: PresignedPutUrlInput) =>
   Result.tryPromise({
     try: async () =>
       getSignedUrl(
@@ -84,13 +112,7 @@ const getPresignedPutUrlOperation = async (input: PresignedPutUrlInput) =>
     catch: toS3Error,
   });
 
-type PresignedGetUrlInput = {
-  contentDisposition?: string;
-  expiresIn: number;
-  key: string;
-};
-
-const getPresignedGetUrlOperation = async (input: PresignedGetUrlInput) =>
+const getPresignedGetUrl = async (input: PresignedGetUrlInput) =>
   Result.tryPromise({
     try: async () =>
       getSignedUrl(
@@ -105,7 +127,7 @@ const getPresignedGetUrlOperation = async (input: PresignedGetUrlInput) =>
     catch: toS3Error,
   });
 
-const statObjectOperation = async (key: string) =>
+const statObject = async (key: string) =>
   Result.tryPromise(
     {
       try: async () => {
@@ -132,7 +154,7 @@ const statObjectOperation = async (key: string) =>
     { retry: S3_RETRY }
   );
 
-const getObjectOperation = async (key: string) =>
+const getObject = async (key: string) =>
   Result.tryPromise(
     {
       try: async () => {
@@ -159,7 +181,7 @@ const getObjectOperation = async (key: string) =>
     { retry: S3_RETRY }
   );
 
-const deleteObjectOperation = async (key: string) =>
+const deleteObject = async (key: string) =>
   Result.tryPromise(
     {
       try: async () => {
@@ -216,11 +238,7 @@ const chunkKeys = (keys: string[], size: number) => {
   return chunks;
 };
 
-type DeleteObjectsInput = {
-  keys: string[];
-};
-
-const deleteObjectsOperation = async (input: DeleteObjectsInput) => {
+const deleteObjects = async (input: DeleteObjectsInput) => {
   if (input.keys.length === 0) {
     return Result.ok();
   }
@@ -231,21 +249,22 @@ const deleteObjectsOperation = async (input: DeleteObjectsInput) => {
     )
   );
   const [, errors] = Result.partition(batchResults);
+  const firstError = errors.at(0);
 
-  if (errors.length > 0) {
-    return Result.err(errors[0]);
+  if (firstError !== undefined) {
+    return Result.err(firstError);
   }
 
   return Result.ok();
 };
 
-export const s3Kit = Kit.define("s3", {
-  deleteObject: deleteObjectOperation,
-  deleteObjects: deleteObjectsOperation,
-  getObject: getObjectOperation,
-  getPresignedGetUrl: getPresignedGetUrlOperation,
-  getPresignedPutUrl: getPresignedPutUrlOperation,
-  statObject: statObjectOperation,
+export const s3Kit = createS3Kit({
+  deleteObject,
+  deleteObjects,
+  getObject,
+  getPresignedGetUrl,
+  getPresignedPutUrl,
+  statObject,
 });
 
 export type S3Kit = typeof s3Kit;
