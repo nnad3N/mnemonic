@@ -10,7 +10,10 @@ import { FILE_UPLOAD_TTL_SECONDS } from "@/routes/_protected.chat.$threadId/-thr
 export const getPendingFiles = createServerFn({ method: "GET" })
   .middleware([topicAccessMiddleware])
   .handler(async ({ context }) => {
-    const uploadCutoff = new Date(Date.now() - FILE_UPLOAD_TTL_SECONDS * 1000);
+    const uploadCutoff = new Date(
+      Temporal.Now.instant().subtract({ seconds: FILE_UPLOAD_TTL_SECONDS })
+        .epochMilliseconds
+    );
 
     await db
       .update(file)

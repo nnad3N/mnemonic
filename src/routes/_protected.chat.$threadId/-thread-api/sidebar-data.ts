@@ -37,10 +37,16 @@ const deleteExpiredStandaloneConversations = async (userId: string) => {
     perPage: false,
   });
 
-  const expiresBefore = Date.now() - CONVERSATION_RETENTION_MS;
+  const expiresBefore = Temporal.Now.instant().subtract({
+    milliseconds: CONVERSATION_RETENTION_MS,
+  });
 
   const expiredThreads = threads.filter(
-    (thread) => thread.updatedAt.getTime() < expiresBefore
+    (thread) =>
+      Temporal.Instant.compare(
+        Temporal.Instant.fromEpochMilliseconds(thread.updatedAt.getTime()),
+        expiresBefore
+      ) < 0
   );
 
   if (expiredThreads.length === 0) {

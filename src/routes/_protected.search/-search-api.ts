@@ -129,8 +129,11 @@ const searchItemsFn = Kit.gen(async function* (
     });
   }
 
-  conversations.sort(
-    (a, b) => Date.parse(a.updatedAt) - Date.parse(b.updatedAt)
+  conversations.sort((a, b) =>
+    Temporal.Instant.compare(
+      Temporal.Instant.from(a.updatedAt),
+      Temporal.Instant.from(b.updatedAt)
+    )
   );
 
   return Result.ok({

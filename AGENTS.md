@@ -4,11 +4,11 @@ This project uses **Ultracite**, a zero-config preset that enforces strict code 
 
 ## Quick Reference
 
-- **Format code**: `bun run format`
-- **Lint and autofix**: `bun run lint`
-- **Format and lint**: `bun run fix`
-- **Typecheck only**: `bun run typecheck`
-- **Run tests**: `bun run test`
+- **Format code**: `deno task format`
+- **Lint and autofix**: `deno task lint`
+- **Format and lint**: `deno task fix`
+- **Typecheck only**: `deno task typecheck`
+- **Run tests**: `deno task test`
 
 Oxlint + Oxfmt (the underlying engine) provides robust linting and formatting. Most issues are automatically fixable.
 
@@ -376,4 +376,10 @@ Oxlint + Oxfmt's linter will catch most issues automatically. Focus your attenti
 
 ---
 
-Most formatting and common issues are automatically fixed by Oxlint + Oxfmt. Run `bun run typecheck`, `bun run lint`, and `bun run format` before handing off changes. Do not run `bun run build` just to validate agent work unless the user explicitly asks for a build.
+Most formatting and common issues are automatically fixed by Oxlint + Oxfmt. Run `deno task typecheck`, `deno task lint`, and `deno task format` before handing off changes. Do not run `deno task build` just to validate agent work unless the user explicitly asks for a build.
+
+### Backend dates (Temporal)
+
+Use Temporal when the backend is doing real date logic (comparing instants, TTL/retention cutoffs, sorting by time). Prefer `Temporal.Instant` / `Temporal.Now.instant()` over `Date.now()` / `Date.parse` in those cases.
+
+Do not wrap plain “now for this API” call sites in Temporal when a library needs a `Date` anyway (Drizzle `$onUpdate`, Mastra `createdAt`/`updatedAt`, etc.) — use `new Date()` there. Do not add shared Date↔Temporal conversion helpers. Client UI may keep using `Date` / `Intl` for display of ISO strings.

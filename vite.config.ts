@@ -15,7 +15,7 @@ const config = defineConfig({
       project: "./project.inlang",
       strategy: ["url", "baseLocale"],
     }),
-    nitro(),
+    nitro({ preset: "deno-server" }),
     tailwindcss(),
     tanstackStart(),
     viteReact(),
