@@ -15,8 +15,7 @@ export class DatabaseError extends TaggedError("DatabaseError")<{
 const toDatabaseError = (cause: unknown): DatabaseError =>
   new DatabaseError({
     cause,
-    message:
-      cause instanceof Error ? cause.message : "Database operation failed",
+    message: "Database operation failed",
   });
 
 export type DbApi = {

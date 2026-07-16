@@ -39,17 +39,16 @@ const toS3Error = (error: unknown): S3Error => {
     return new S3Error({
       cause: error,
       code: error.name,
-      message: error.message,
+      message: "S3 operation failed",
       requestId: error.$metadata.requestId,
       statusCode: error.$metadata.httpStatusCode,
     });
   }
 
-  if (error instanceof Error) {
-    return new S3Error({ cause: error, message: error.message });
-  }
-
-  return new S3Error({ cause: error, message: "Unknown S3 error" });
+  return new S3Error({
+    cause: error,
+    message: "S3 operation failed",
+  });
 };
 
 const client = new AwsS3Client({
@@ -217,7 +216,7 @@ const deleteObjectBatch = async (keys: string[]) =>
           throw new S3Error({
             cause: error,
             code: error.Code,
-            message: error.Message ?? "Batch delete failed",
+            message: "S3 batch delete failed",
             requestId: output.$metadata.requestId,
             statusCode: output.$metadata.httpStatusCode,
           });

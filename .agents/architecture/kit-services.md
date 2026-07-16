@@ -29,6 +29,8 @@ Kit files live under `src/lib/` and define named tuple modules with
   (`listThreads`, `deleteThread`)
 - `s3-kit.ts` — `createS3Kit(api)` with a closed `S3Api` (`deleteObject`,
   `deleteObjects`, `getObject`, …)
+- `vector-kit.ts` — `createVectorKit(api)` with a closed `VectorApi`
+  (`deleteVectors`)
 
 After `Kit.createContext(dbKit, memoryKit)`, callers use the context:
 
@@ -36,10 +38,49 @@ After `Kit.createContext(dbKit, memoryKit)`, callers use the context:
 - `ctx.db.transaction(operation)` → `Promise<Result<T, DatabaseError>>`
 - `ctx.memory.listThreads(input)` → `Promise<Result<StorageListThreadsOutput, MemoryError>>`
 - `ctx.memory.deleteThread(input)` → `Promise<Result<void, MemoryError>>`
+- `ctx.vector.deleteVectors(input)` → `Promise<Result<void, VectorError>>`
 
 Each kit exports a mockable `*Api` surface: pass a `satisfies DbApi` /
-`MemoryApi` / `S3Api` object to `createDbKit` / `createMemoryKit` /
-`createS3Kit` in tests.
+`MemoryApi` / `S3Api` / `VectorApi` object to `createDbKit` /
+`createMemoryKit` / `createS3Kit` / `createVectorKit` in tests.
+
+## Kit errors (Rust-style wrapping)
+
+Kit tagged errors are the TypeScript analogue of `thiserror` types with
+`#[source]`: a **fixed domain `message`** plus the original failure in
+`cause`. Do **not** copy `cause.message` (or provider/SDK text) into
+`message`.
+
+```ts
+// Good — stable Display, cause preserved for logs/debugging
+const toMemoryError = (cause: unknown): MemoryError =>
+  new MemoryError({
+    cause,
+    message: "Memory operation failed",
+  });
+
+// Bad — flattens the source into the wrapper's Display
+new MemoryError({
+  cause,
+  message: cause instanceof Error ? cause.message : "Memory operation failed",
+});
+```
+
+Rules:
+
+- Wrap catch handlers always use a constant domain string
+  (`"Database operation failed"`, `"S3 operation failed"`, …).
+- Keep structured metadata from SDKs when useful (`code`, `requestId`,
+  `statusCode` on `S3Error`) — that is not the same as copying Display text.
+- Kits should not `throw` the same tagged error their catch maps to. Return
+  `Result.err(...)` for domain failures, or let foreign exceptions hit the
+  wrap handler. (`s3Kit` is the exception: AWS response shapes force a few
+  `throw new S3Error` paths, so `toS3Error` re-returns `S3Error.is`.)
+- `Kit.serverFn` maps kit errors to **user-safe** `ServerFnError` copy. Never
+  forward `error.message` / `cause` from kit infra errors to the client
+  (same rule as AGENTS.md for raw provider text). Domain errors that already
+  carry intentional user-facing copy (e.g. `FileUploadError` by reason) are
+  the exception at the boundary.
 
 ## Context vs direct kit access
 

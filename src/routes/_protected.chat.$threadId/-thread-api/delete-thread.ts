@@ -16,10 +16,10 @@ import {
 import { s3Kit } from "@/lib/s3-kit";
 import type { S3Kit } from "@/lib/s3-kit";
 import type { SafeId } from "@/lib/safe-id";
-import { FILE_EMBEDDINGS_INDEX } from "@/mastra/file-rag-config";
-import { pgVector } from "@/mastra/storage";
+import { vectorKit } from "@/lib/vector-kit";
+import type { VectorKit } from "@/lib/vector-kit";
 
-type DeleteThreadCtx = Kits<[DbKit, S3Kit, MemoryKit]>;
+type DeleteThreadCtx = Kits<[DbKit, S3Kit, MemoryKit, VectorKit]>;
 
 type DeleteTopicInput = {
   topicId: SafeId<"topic">;
@@ -49,12 +49,9 @@ const deleteTopicFn = Kit.gen(async function* (
     ctx.s3.deleteObjects({
       keys: files.map((row) => row.s3Key),
     }),
-    Result.tryPromise(async () =>
-      pgVector.deleteVectors({
-        indexName: FILE_EMBEDDINGS_INDEX,
-        filter: { topicId: input.topicId },
-      })
-    ),
+    ctx.vector.deleteVectors({
+      filter: { topicId: input.topicId },
+    }),
     ctx.db.run((db) => db.delete(file).where(eq(file.topicId, input.topicId))),
     ctx.db.run((db) => db.delete(topic).where(eq(topic.id, input.topicId))),
     ...threads.map(async (thread) =>
@@ -83,7 +80,7 @@ export const deleteConversation = createServerFn({ method: "POST" })
     return { id: context.thread.id };
   });
 
-const deleteThreadCtx = Kit.createContext(dbKit, s3Kit, memoryKit);
+const deleteThreadCtx = Kit.createContext(dbKit, s3Kit, memoryKit, vectorKit);
 
 export const deleteTopic = createServerFn({ method: "POST" })
   .middleware([topicAccessMiddleware])
@@ -98,6 +95,6 @@ export const deleteTopic = createServerFn({ method: "POST" })
       DatabaseError: defaultError,
       MemoryError: defaultError,
       S3Error: defaultError,
-      UnhandledException: defaultError,
+      VectorError: defaultError,
     })(deleteThreadCtx, input);
   });

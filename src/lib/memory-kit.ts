@@ -16,7 +16,7 @@ export class MemoryError extends TaggedError("MemoryError")<{
 const toMemoryError = (cause: unknown): MemoryError =>
   new MemoryError({
     cause,
-    message: cause instanceof Error ? cause.message : "Memory operation failed",
+    message: "Memory operation failed",
   });
 
 export type MemoryApi = {
