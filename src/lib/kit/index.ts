@@ -14,16 +14,23 @@ import type {
   MatchErrorHandlers,
   Kits,
   UniqueKitNames,
+  UnmappedError,
 } from "./utils";
 
 export type { Kits } from "./utils";
 
 export class ServerFnError extends TaggedError("ServerFnError")<{
   message: string;
-  status: "unauthorized" | "server-error";
+  status: "not-found" | "unauthorized" | "server-error" | "bad-request";
+  cause?: unknown;
 }>() {}
 
 export const toServerFnError = {
+  notFound: (message = "Not found") =>
+    new ServerFnError({
+      message,
+      status: "not-found",
+    }),
   unauthorized: (message = "Unauthorized") =>
     new ServerFnError({
       message,
@@ -33,6 +40,11 @@ export const toServerFnError = {
     new ServerFnError({
       message,
       status: "server-error",
+    }),
+  badRequest: (message = "Bad request") =>
+    new ServerFnError({
+      message,
+      status: "bad-request",
     }),
 };
 
@@ -44,18 +56,22 @@ const defineKit = <const TName extends string, TValue>(
   return [name, value] as unknown as KitModule<TName, TValue>;
 };
 
-const mergeKits = <TKits extends readonly KitModule[]>(
+const createKitContext = <TKits extends readonly KitModule[]>(
   ...kits: TKits & UniqueKitNames<TKits>
 ): Kits<TKits> => {
-  const merged: Record<string, unknown> = {};
+  const context: Record<string, unknown> = {};
 
   for (const [name, value] of kits) {
-    merged[name] = value;
+    context[name] = value;
   }
 
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-  return merged as Kits<TKits>;
+  return context as Kits<TKits>;
 };
+
+const getKit = <TName extends string, TValue>(
+  kit: KitModule<TName, TValue>
+): TValue => kit[1];
 
 const kitGen =
   <
@@ -96,7 +112,16 @@ function kitServerFn<
     const result = await action(context, input);
 
     if (handlers) {
-      const mapped = result.mapError((error) => matchError(error, handlers));
+      const mapped = result.mapError((error) => {
+        if (error instanceof ServerFnError) {
+          return error;
+        }
+
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- ServerFnError is handled above, leaving the errors represented by handlers.
+        const unmappedError = error as UnmappedError<TError>;
+
+        return matchError(unmappedError, handlers);
+      });
 
       if (Result.isError(mapped)) {
         throw mapped.error;
@@ -115,7 +140,8 @@ function kitServerFn<
 
 export const Kit = {
   define: defineKit,
-  merge: mergeKits,
+  get: getKit,
+  createContext: createKitContext,
   gen: kitGen,
   serverFn: kitServerFn,
 };

@@ -53,10 +53,10 @@ type SearchItemsInput = {
   userId: SafeId<"user">;
 };
 
-type SearchKit = Kits<[DbKit, MemoryKit]>;
+type SearchCtx = Kits<[DbKit, MemoryKit]>;
 
 const searchItemsFn = Kit.gen(async function* (
-  ctx: SearchKit,
+  ctx: SearchCtx,
   { query, userId }: SearchItemsInput
 ) {
   const hasQuery = query.length > 0;
@@ -149,7 +149,7 @@ const searchInputSchema = v.object({
   query: v.optional(v.string(), ""),
 });
 
-const searchKit = Kit.merge(dbKit, memoryKit);
+const searchCtx = Kit.createContext(dbKit, memoryKit);
 
 export const searchItems = createServerFn({ method: "GET" })
   .inputValidator(searchInputSchema)
@@ -159,7 +159,7 @@ export const searchItems = createServerFn({ method: "GET" })
       DatabaseError: () =>
         toServerFnError.serverError("Database search failed"),
       MemoryError: () => toServerFnError.serverError("Memory search failed"),
-    })(searchKit, {
+    })(searchCtx, {
       query: data.query.trim(),
       userId: context.user.id,
     })

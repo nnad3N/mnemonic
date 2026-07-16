@@ -2,65 +2,116 @@ import { createServerFn } from "@tanstack/react-start";
 import { Result } from "better-result";
 import { eq } from "drizzle-orm";
 
-import { db } from "@/db";
 import { file, topic } from "@/db/schema";
+import { dbKit } from "@/lib/db-kit";
+import type { DbKit } from "@/lib/db-kit";
+import { Kit, toServerFnError } from "@/lib/kit";
+import type { Kits } from "@/lib/kit";
+import { memoryKit } from "@/lib/memory-kit";
+import type { MemoryKit } from "@/lib/memory-kit";
 import {
   threadAccessMiddleware,
   topicAccessMiddleware,
 } from "@/lib/middleware/assert-thread-access";
-import { deleteObjects } from "@/lib/s3";
+import { s3Kit } from "@/lib/s3";
+import type { S3Kit } from "@/lib/s3";
+import type { SafeId } from "@/lib/safe-id";
 import { FILE_EMBEDDINGS_INDEX } from "@/mastra/file-rag-config";
-import { getAgentMemory, getMemoryStore } from "@/mastra/memory";
 import { pgVector } from "@/mastra/storage";
+
+type DeleteThreadCtx = Kits<[DbKit, S3Kit, MemoryKit]>;
+
+type DeleteTopicInput = {
+  topicId: SafeId<"topic">;
+};
+
+const deleteTopicFn = Kit.gen(async function* (
+  ctx: DeleteThreadCtx,
+  input: DeleteTopicInput
+) {
+  const [filesResult, threadsResult] = await Promise.all([
+    ctx.db.run((db) =>
+      db.query.file.findMany({
+        where: { topicId: input.topicId },
+        columns: { s3Key: true },
+      })
+    ),
+    ctx.memory(async (memory) =>
+      memory.listThreads({
+        filter: { resourceId: input.topicId },
+        page: 0,
+        perPage: false,
+      })
+    ),
+  ]);
+  const files = yield* filesResult;
+  const { threads } = yield* threadsResult;
+
+  const [
+    deleteObjectsResult,
+    deleteFileEmbeddingsResult,
+    deleteFilesResult,
+    deleteTopicResult,
+    deleteThreadsResult,
+  ] = await Promise.all([
+    ctx.s3.deleteObjects({
+      keys: files.map((row) => row.s3Key),
+    }),
+    Result.tryPromise(async () =>
+      pgVector.deleteVectors({
+        indexName: FILE_EMBEDDINGS_INDEX,
+        filter: { topicId: input.topicId },
+      })
+    ),
+    ctx.db.run((db) => db.delete(file).where(eq(file.topicId, input.topicId))),
+    ctx.db.run((db) => db.delete(topic).where(eq(topic.id, input.topicId))),
+    ctx.memory(async (memory) => {
+      await Promise.all(
+        threads.map(async (thread) =>
+          memory.deleteThread({ threadId: thread.id })
+        )
+      );
+    }),
+  ]);
+
+  yield* deleteObjectsResult;
+  yield* deleteFileEmbeddingsResult;
+  yield* deleteFilesResult;
+  yield* deleteTopicResult;
+  yield* deleteThreadsResult;
+
+  return Result.ok({ id: input.topicId });
+});
 
 export const deleteConversation = createServerFn({ method: "POST" })
   .middleware([threadAccessMiddleware])
   .handler(async ({ context }) => {
-    const memory = await getAgentMemory("conversation-agent");
-    await memory.deleteThread(context.thread.id);
+    const result = await Kit.get(memoryKit)(async (memory) =>
+      memory.deleteThread({ threadId: context.thread.id })
+    );
+
+    if (result.isErr()) {
+      throw toServerFnError.serverError("Failed to delete conversation");
+    }
 
     return { id: context.thread.id };
   });
+
+const deleteThreadCtx = Kit.createContext(dbKit, s3Kit, memoryKit);
 
 export const deleteTopic = createServerFn({ method: "POST" })
   .middleware([topicAccessMiddleware])
   .handler(async ({ context }) => {
     const topicId = context.topic.id;
+    const input = { topicId };
 
-    const files = await db.query.file.findMany({
-      where: { topicId },
-      columns: { s3Key: true },
-    });
+    const defaultError = () =>
+      toServerFnError.serverError("Failed to delete topic");
 
-    const s3Result = await deleteObjects({
-      keys: files.map((row) => row.s3Key),
-    });
-
-    if (Result.isError(s3Result)) {
-      throw s3Result.error;
-    }
-
-    await pgVector.deleteVectors({
-      indexName: FILE_EMBEDDINGS_INDEX,
-      filter: { topicId },
-    });
-
-    await db.delete(file).where(eq(file.topicId, topicId));
-
-    const [memoryStore, memory] = await Promise.all([
-      getMemoryStore(),
-      getAgentMemory("topic-agent"),
-    ]);
-    const { threads } = await memoryStore.listThreads({
-      filter: { resourceId: topicId },
-      page: 0,
-      perPage: false,
-    });
-    await Promise.all(
-      threads.map(async (thread) => memory.deleteThread(thread.id))
-    );
-
-    await db.delete(topic).where(eq(topic.id, topicId));
-
-    return { id: topicId };
+    return Kit.serverFn(deleteTopicFn, {
+      DatabaseError: defaultError,
+      MemoryError: defaultError,
+      S3Error: defaultError,
+      UnhandledException: defaultError,
+    })(deleteThreadCtx, input);
   });

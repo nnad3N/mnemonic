@@ -5,7 +5,6 @@ import {
 } from "@tanstack/react-query";
 import { Result } from "better-result";
 
-import type { FileUploadErrorShape } from "@/lib/errors/file-upload-error";
 import { FileUploadError } from "@/lib/errors/file-upload-error";
 
 import { mentionByIdQuery } from "../-thread-api/get-mentions";
@@ -15,7 +14,6 @@ import {
   processFile,
   updateFileStatus,
 } from "../-thread-api/upload-file";
-import type { GetPresignedUrlOk } from "../-thread-api/upload-file";
 
 export type UploadFileVars = {
   topicId: string;
@@ -31,7 +29,7 @@ export const useUploadFile = (threadId: string) => {
     retry: 3,
     mutationKey: threadMutationKeys.uploadFile(threadId),
     mutationFn: async ({ file, fileId, sha256 }: UploadFileVars) => {
-      const serialized = await getPresignedUrl({
+      const presigned = await getPresignedUrl({
         data: {
           displayName: file.name,
           fileId,
@@ -42,23 +40,12 @@ export const useUploadFile = (threadId: string) => {
         },
       });
 
-      const result = Result.deserialize<
-        GetPresignedUrlOk,
-        FileUploadErrorShape
-      >(serialized);
-
-      if (Result.isError(result)) {
-        throw result.error;
-      }
-
-      if (result.value.type === "skipped") {
+      if (presigned.type === "skipped") {
         return { fileId };
       }
 
-      const presignedUrl = result.value.presignedUrl;
-
       const uploadResult = await Result.tryPromise(async () =>
-        fetch(presignedUrl, {
+        fetch(presigned.presignedUrl, {
           body: file,
           headers: {
             "Content-Type": file.type,
@@ -103,7 +90,7 @@ export const useUploadFile = (threadId: string) => {
         status: "uploading" as const,
       }));
     },
-    onError: async (error, { fileId }) => {
+    onError: async (_error, { fileId }) => {
       const mentionQuery = mentionByIdQuery({
         type: "file",
         id: fileId,
@@ -113,24 +100,22 @@ export const useUploadFile = (threadId: string) => {
         current ? { ...current, status: "failed" as const } : current
       );
 
-      if (FileUploadError.is(error) && error.reason === "s3-error") {
-        await Result.tryPromise(
-          async () =>
-            updateFileStatus({
-              data: {
-                fileId,
-                status: "failed",
-              },
-            }),
-          {
-            retry: {
-              times: 3,
-              delayMs: 1000,
-              backoff: "exponential",
+      await Result.tryPromise(
+        async () =>
+          updateFileStatus({
+            data: {
+              fileId,
+              status: "failed",
             },
-          }
-        );
-      }
+          }),
+        {
+          retry: {
+            times: 3,
+            delayMs: 1000,
+            backoff: "exponential",
+          },
+        }
+      );
     },
     onSettled: async (_data, _error, { topicId, fileId }) => {
       await Promise.all([

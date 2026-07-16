@@ -86,9 +86,13 @@ export type KitAsyncAction<
   TResult extends ResultType<unknown, unknown>,
 > = (context: TKit, input: TInput) => Promise<TResult>;
 
+export type UnmappedError<TError> = Exclude<TError, { _tag: "ServerFnError" }>;
+
 export type MatchErrorHandlers<
   TError extends TaggedErrorInstance<string, unknown>,
   TMappedError,
 > = {
-  [K in TError["_tag"]]: (error: Extract<TError, { _tag: K }>) => TMappedError;
+  [K in UnmappedError<TError>["_tag"]]: (
+    error: Extract<UnmappedError<TError>, { _tag: K }>
+  ) => TMappedError;
 };

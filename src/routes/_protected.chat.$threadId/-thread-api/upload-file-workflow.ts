@@ -1,5 +1,4 @@
 import { extractBytes } from "@kreuzberg/node";
-// oxlint-disable promise/prefer-await-to-then
 import { createStep, createWorkflow } from "@mastra/core/workflows";
 import { MDocument } from "@mastra/rag";
 import { toStandardJsonSchema } from "@valibot/to-json-schema";
@@ -11,7 +10,8 @@ import * as v from "valibot";
 import { db } from "@/db";
 import { file } from "@/db/schema";
 import { isImageMimeType } from "@/lib/file-validation";
-import { getObject, statObject, S3Error } from "@/lib/s3";
+import { Kit } from "@/lib/kit";
+import { S3Error, s3Kit } from "@/lib/s3";
 import { safeId, toSafeId } from "@/lib/safe-id";
 import {
   FILE_EMBEDDING_DIMENSION,
@@ -19,6 +19,8 @@ import {
   fileEmbeddingModel,
 } from "@/mastra/file-rag-config";
 import { pgVector } from "@/mastra/storage";
+
+const s3 = Kit.get(s3Kit);
 
 const workflowInputSchema = v.object({
   fileId: v.pipe(v.string(), v.nanoid()),
@@ -67,7 +69,7 @@ const validateFileStep = createStep({
       throw new Error("File is not awaiting upload");
     }
 
-    const headResult = await statObject(row.s3Key);
+    const headResult = await s3.statObject(row.s3Key);
 
     if (Result.isError(headResult)) {
       throw headResult.error;
@@ -114,7 +116,7 @@ const processForRagStep = createStep({
       return { fileId };
     }
 
-    const objectResult = await getObject(s3Key);
+    const objectResult = await s3.getObject(s3Key);
 
     if (Result.isError(objectResult)) {
       throw objectResult.error;

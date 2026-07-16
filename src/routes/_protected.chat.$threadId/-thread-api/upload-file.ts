@@ -1,58 +1,127 @@
 import { createServerFn } from "@tanstack/react-start";
-import type { SerializedResult } from "better-result";
 import { Result } from "better-result";
 import { eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { db } from "@/db";
 import { file } from "@/db/schema";
-import type { FileUploadErrorShape } from "@/lib/errors/file-upload-error";
-import { FileUploadError } from "@/lib/errors/file-upload-error";
+import { dbKit } from "@/lib/db-kit";
+import type { DbKit } from "@/lib/db-kit";
 import { validateUploadFile } from "@/lib/file-validation";
+import { Kit, ServerFnError, toServerFnError } from "@/lib/kit";
+import type { Kits } from "@/lib/kit";
 import {
   fileAccessMiddleware,
   threadAccessMiddleware,
 } from "@/lib/middleware/assert-thread-access";
-import { getPresignedPutUrl, S3Error } from "@/lib/s3";
+import { s3Kit } from "@/lib/s3";
+import type { S3Kit } from "@/lib/s3";
 import { toSafeId } from "@/lib/safe-id";
+import type { SafeId } from "@/lib/safe-id";
 import { mastra } from "@/mastra";
 
 export const FILE_UPLOAD_TTL_SECONDS = 60;
 
-type GetTopicForUploadProps = {
+type UploadFileCtx = Kits<[DbKit, S3Kit]>;
+
+type GetPresignedUrlInput = {
+  displayName: string;
+  fileId: string;
+  mimeType: string;
   resourceId: string;
-  userId: string;
+  sha256: string;
+  sizeBytes: number;
+  userId: SafeId<"user">;
 };
 
-const getTopicForUpload = async ({
-  resourceId,
-  userId,
-}: GetTopicForUploadProps) => {
-  const ownedTopic = await db.query.topic.findFirst({
-    columns: { id: true },
-    where: {
-      // oxlint-disable-next-line eslint-js/no-restricted-syntax -- ownership check.
-      id: toSafeId<"topic">(resourceId),
-      // oxlint-disable-next-line eslint-js/no-restricted-syntax -- ownership check.
-      userId: toSafeId<"user">(userId),
-    },
+const getPresignedUrlFn = Kit.gen(async function* (
+  ctx: UploadFileCtx,
+  input: GetPresignedUrlInput
+) {
+  yield* validateUploadFile({
+    mimeType: input.mimeType,
+    sizeBytes: input.sizeBytes,
   });
 
+  const ownedTopic = yield* await ctx.db.run(async (db) =>
+    db.query.topic.findFirst({
+      columns: { id: true },
+      where: {
+        // oxlint-disable-next-line eslint-js/no-restricted-syntax -- ownership check.
+        id: toSafeId<"topic">(input.resourceId),
+        userId: input.userId,
+      },
+    })
+  );
+
   if (!ownedTopic) {
-    throw new Error("File uploads are only supported in topic threads");
+    return Result.err(
+      new ServerFnError({
+        message: "File uploads are only supported in topic threads",
+        status: "bad-request",
+      })
+    );
   }
 
-  return ownedTopic.id;
-};
+  const topicId = ownedTopic.id;
 
-export type GetPresignedUrlOk =
-  | { type: "skipped" }
-  | { type: "upload"; presignedUrl: string };
+  const fileKey = yield* await ctx.db.transaction(async (tx) => {
+    const existing = await tx.query.file.findFirst({
+      columns: { id: true, s3Key: true, status: true },
+      where: {
+        sha256: input.sha256,
+        topicId,
+      },
+    });
 
-export type GetPresignedUrlResult = SerializedResult<
-  GetPresignedUrlOk,
-  FileUploadErrorShape
->;
+    if (existing?.status === "ready" || existing?.status === "processing") {
+      return;
+    }
+
+    if (existing) {
+      await tx
+        .update(file)
+        .set({ status: "uploading" })
+        .where(eq(file.id, existing.id));
+
+      return existing.s3Key;
+    }
+
+    const s3Key = `${input.userId}/${topicId}/${input.fileId}`;
+
+    await tx.insert(file).values({
+      // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId write.
+      id: toSafeId<"file">(input.fileId),
+      userId: input.userId,
+      topicId,
+      displayName: input.displayName,
+      mimeType: input.mimeType,
+      s3Key,
+      sha256: input.sha256,
+      sizeBytes: input.sizeBytes,
+      status: "uploading",
+    });
+
+    return s3Key;
+  });
+
+  if (!fileKey) {
+    return Result.ok({
+      type: "skipped" as const,
+    });
+  }
+
+  const presignedUrl = yield* await ctx.s3.getPresignedPutUrl({
+    contentLength: input.sizeBytes,
+    contentType: input.mimeType,
+    expiresIn: FILE_UPLOAD_TTL_SECONDS,
+    key: fileKey,
+  });
+
+  return Result.ok({
+    type: "upload" as const,
+    presignedUrl,
+  });
+});
 
 const getPresignedUrlInputSchema = v.object({
   displayName: v.pipe(v.string(), v.nonEmpty()),
@@ -62,95 +131,28 @@ const getPresignedUrlInputSchema = v.object({
   sizeBytes: v.pipe(v.number(), v.minValue(1)),
 });
 
+const uploadFileCtx = Kit.createContext(dbKit, s3Kit);
+
 export const getPresignedUrl = createServerFn({ method: "POST" })
   .inputValidator(getPresignedUrlInputSchema)
   .middleware([threadAccessMiddleware])
-  .handler(async ({ context, data }): Promise<GetPresignedUrlResult> => {
-    const result = await Result.gen(async function* () {
-      yield* validateUploadFile({
-        mimeType: data.mimeType,
-        sizeBytes: data.sizeBytes,
-      });
-
-      const topicId = await getTopicForUpload({
-        resourceId: context.thread.resourceId,
-        userId: context.user.id,
-      });
-
-      const fileKey = await db.transaction(async (tx) => {
-        const existing = await tx.query.file.findFirst({
-          columns: { id: true, s3Key: true, status: true },
-          where: {
-            sha256: data.sha256,
-            topicId,
-          },
-        });
-
-        if (existing?.status === "ready" || existing?.status === "processing") {
-          return;
-        }
-
-        if (existing) {
-          await tx
-            .update(file)
-            .set({ status: "uploading" })
-            .where(eq(file.id, existing.id));
-
-          return existing.s3Key;
-        }
-
-        const s3Key = `${context.user.id}/${topicId}/${data.fileId}`;
-
-        await tx.insert(file).values({
-          // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId write.
-          id: toSafeId<"file">(data.fileId),
-          userId: context.user.id,
-          topicId,
-          displayName: data.displayName,
-          mimeType: data.mimeType,
-          s3Key,
-          sha256: data.sha256,
-          sizeBytes: data.sizeBytes,
-          status: "uploading",
-        });
-
-        return s3Key;
-      });
-
-      if (!fileKey) {
-        return Result.ok({
-          type: "skipped" as const,
-        });
-      }
-
-      const presignedUrl = yield* Result.await(
-        getPresignedPutUrl({
-          contentLength: data.sizeBytes,
-          contentType: data.mimeType,
-          expiresIn: FILE_UPLOAD_TTL_SECONDS,
-          key: fileKey,
-        })
-      );
-
-      return Result.ok({
-        type: "upload" as const,
-        presignedUrl,
-      });
-    });
-
-    return Result.serialize(
-      result.mapError((error) => {
-        if (S3Error.is(error)) {
-          return new FileUploadError({
-            reason: "s3-error",
-            message: error.message,
-          });
-        }
-
-        return error;
-      })
-    );
-  });
+  .handler(async ({ context, data }) =>
+    Kit.serverFn(getPresignedUrlFn, {
+      DatabaseError: () =>
+        toServerFnError.serverError("Failed to prepare file upload"),
+      FileUploadError: (error) => toServerFnError.serverError(error.message),
+      S3Error: () =>
+        toServerFnError.serverError("Failed to prepare file upload"),
+    })(uploadFileCtx, {
+      displayName: data.displayName,
+      fileId: data.fileId,
+      mimeType: data.mimeType,
+      resourceId: context.thread.resourceId,
+      sha256: data.sha256,
+      sizeBytes: data.sizeBytes,
+      userId: context.user.id,
+    })
+  );
 
 const updateFileStatusInputSchema = v.object({
   status: v.pipe(
@@ -163,10 +165,16 @@ export const updateFileStatus = createServerFn({ method: "POST" })
   .inputValidator(updateFileStatusInputSchema)
   .middleware([fileAccessMiddleware])
   .handler(async ({ context, data }) => {
-    await db
-      .update(file)
-      .set({ status: data.status })
-      .where(eq(file.id, context.file.id));
+    const result = await Kit.get(dbKit).run((db) =>
+      db
+        .update(file)
+        .set({ status: data.status })
+        .where(eq(file.id, context.file.id))
+    );
+
+    if (result.isErr()) {
+      throw toServerFnError.serverError("Failed to update file status");
+    }
   });
 
 export const processFile = createServerFn({ method: "POST" })
@@ -183,11 +191,18 @@ export const processFile = createServerFn({ method: "POST" })
     });
 
     if (result.status === "failed") {
-      throw result.error;
+      throw new ServerFnError({
+        message: "File processing failed",
+        status: "server-error",
+        cause: result.error,
+      });
     }
 
     if (result.status !== "success") {
-      throw new Error("File processing did not complete");
+      throw new ServerFnError({
+        message: "File processing did not complete",
+        status: "server-error",
+      });
     }
 
     return { fileId: context.file.id };

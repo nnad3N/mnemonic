@@ -1,14 +1,20 @@
 # Kit Services
 
 `Kit` is the backend pattern for testable application logic. A kit module is a
-named capability tuple, such as the database kit. A merged kit is the combined
-kit object created with `Kit.merge(...)`.
+named capability tuple, such as the database kit. A kit context is the combined
+kit object created with `Kit.createContext(...)`.
 
 ## Naming
 
-- Kits provide named capabilities, for example `dbKit` from `src/lib/db-kit.ts`.
-- `Kits<[...]>` is the combined kit object type created by kit tuples.
-- `Kit.merge(...)` creates the live combined kit object.
+- Kit modules provide named capabilities, for example `dbKit` from
+  `src/lib/db-kit.ts`. Module values and their types keep the `*Kit` suffix
+  (`dbKit`, `type DbKit`).
+- `Kits<[...]>` is the combined kit context type created by kit tuples.
+- Live contexts and their type aliases use the `*Ctx` suffix, for example
+  `const searchCtx = Kit.createContext(dbKit, memoryKit)` and
+  `type SearchCtx = Kits<[DbKit, MemoryKit]>`.
+- `Kit.createContext(...)` creates the live kit context from one or more modules.
+- `Kit.get(module)` returns the kit value from a kit module for direct use.
 - `Kit.gen(...)` defines result-returning application logic.
 - `Kit.serverFn(...)` adapts a kit function at the server boundary.
 
@@ -21,15 +27,46 @@ Kit files live under `src/lib/` and define named tuple modules with
 - `db-kit.ts` — `Kit.define("db", operationHandler)`
 - `memory-kit.ts` — `Kit.define("memory", operationHandler)`
 
-After `Kit.merge(dbKit, memoryKit)`, callers use the merged context:
+After `Kit.createContext(dbKit, memoryKit)`, callers use the context:
 
 - `ctx.db.run(operation)` → `Promise<Result<T, DatabaseError>>`
 - `ctx.db.transaction(operation)` → `Promise<Result<T, DatabaseError>>`
 - `ctx.memory(operation)` → `Promise<Result<T, MemoryError>>`
 
+## Context vs direct kit access
+
+Prefer `Kit.createContext(...)` with `Kit.gen` / `Kit.serverFn` for application
+logic. That keeps dependencies injectable so the same function can run with live
+kits in production and fakes in tests.
+
+Use `Kit.get(module)` only when the handler is so simple that wiring a full kit
+action would be more boilerplate than it is worth. In that case, call the kit
+value directly:
+
+```ts
+export const updateFileStatus = createServerFn({ method: "POST" })
+  .inputValidator(updateFileStatusInputSchema)
+  .middleware([fileAccessMiddleware])
+  .handler(async ({ context, data }) => {
+    const result = await Kit.get(dbKit).run((db) =>
+      db
+        .update(file)
+        .set({ status: data.status })
+        .where(eq(file.id, context.file.id))
+    );
+
+    if (result.isErr()) {
+      throw new ServerFnError({
+        message: "Failed to update file status",
+        status: "server-error",
+      });
+    }
+  });
+```
+
 ## Dependency Direction
 
-Kit functions should receive a merged kit instead of importing live services
+Kit functions should receive a kit context instead of importing live services
 directly. This keeps the same logic usable with live kits in production and
 fake kits in tests.
 
@@ -74,16 +111,16 @@ Follow the ordering used by
 4. Exported result DTO types: response shapes consumed by the route/client.
 5. Internal input and context types: name the action input after the use case,
    for example `SearchItemsInput`, and define the kit context as
-   `type SearchKit = Kits<[DbKit, MemoryKit]>`.
+   `type SearchCtx = Kits<[DbKit, MemoryKit]>`.
 6. Kit action: define the application logic with `Kit.gen(...)`. Destructure
    input in the parameter list when it improves readability.
 7. Server input schema: put the Valibot `inputValidator` schema after the kit
    action, close to the `createServerFn` that uses it.
-8. Live kit composition: create the live context with `Kit.merge(...)` after
-   the schema and before the exported server function.
+8. Live kit composition: create the live context with `Kit.createContext(...)`
+   after the schema and before the exported server function. Name it `*Ctx`.
 9. Exported server function: adapt the kit action with `Kit.serverFn(...)`,
    map every possible kit/domain error to `ServerFnError`, and pass the live
-   kit plus boundary-normalized input.
+   context plus boundary-normalized input.
 10. Client query helpers: put query input types and `queryOptions(...)`
     builders after the server function.
 
@@ -103,10 +140,12 @@ only construct the mapped error.
 Reference: [`src/routes/_protected.search/-search-api.ts`](../../src/routes/_protected.search/-search-api.ts)
 
 ```ts
-const searchKit = Kit.merge(dbKit, memoryKit);
+type SearchCtx = Kits<[DbKit, MemoryKit]>;
+
+const searchCtx = Kit.createContext(dbKit, memoryKit);
 
 const searchItemsFn = Kit.gen(async function* (
-  ctx: Kits<[DbKit, MemoryKit]>,
+  ctx: SearchCtx,
   { query, userId }: SearchItemsInput
 ) {
   const [topicsResult, threadsResult] = await Promise.all([
@@ -128,7 +167,7 @@ const searchItemsServerFn = Kit.serverFn(searchItemsFn, {
 export const searchItems = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .handler(async ({ context, data }) =>
-    searchItemsServerFn(searchKit, {
+    searchItemsServerFn(searchCtx, {
       userId: context.user.id,
       query: data.query.trim(),
     })

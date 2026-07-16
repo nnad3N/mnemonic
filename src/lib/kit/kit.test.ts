@@ -1,5 +1,6 @@
 /* oxlint-disable no-shadow */
 import { Panic, panic, Result, TaggedError } from "better-result";
+import type { Result as ResultType } from "better-result";
 import { describe, expect, it } from "vitest";
 
 import { Kit, ServerFnError } from ".";
@@ -18,19 +19,25 @@ const textKit = Kit.define("text", {
   label: (value: number) => Result.ok(`value:${value}`),
 });
 
-const kits = Kit.merge(numberKit, textKit);
+const ctx = Kit.createContext(numberKit, textKit);
 
-type TestKits = Kits<[typeof numberKit, typeof textKit]>;
+type TestCtx = Kits<[typeof numberKit, typeof textKit]>;
 
 describe("kit", () => {
-  it("merges defined kits into a context keyed by kit name", () => {
-    expect(kits.number.double(3).unwrap()).toBe(6);
-    expect(kits.text.label(4).unwrap()).toBe("value:4");
+  it("creates a context keyed by kit name", () => {
+    expect(ctx.number.double(3).unwrap()).toBe(6);
+    expect(ctx.text.label(4).unwrap()).toBe("value:4");
+  });
+
+  it("gets the kit value from a kit module", () => {
+    const number = Kit.get(numberKit);
+
+    expect(number.double(3).unwrap()).toBe(6);
   });
 
   it("composes yielded kit results in Kit.gen", async () => {
     const action = Kit.gen(async function* (
-      ctx: TestKits,
+      ctx: TestCtx,
       input: { value: number }
     ) {
       const incremented = yield* await ctx.number.increment(input.value);
@@ -40,14 +47,14 @@ describe("kit", () => {
       return Result.ok(label);
     });
 
-    const result = await action(kits, { value: 2 });
+    const result = await action(ctx, { value: 2 });
 
     expect(result.unwrap()).toBe("value:6");
   });
 
   it("unwraps successful Kit.serverFn results", async () => {
     const action = Kit.gen(async function* (
-      ctx: TestKits,
+      ctx: TestCtx,
       input: { value: number }
     ) {
       const doubled = yield* ctx.number.double(input.value);
@@ -55,11 +62,11 @@ describe("kit", () => {
       return Result.ok(doubled);
     });
 
-    await expect(Kit.serverFn(action)(kits, { value: 5 })).resolves.toBe(10);
+    await expect(Kit.serverFn(action)(ctx, { value: 5 })).resolves.toBe(10);
   });
 
   it("maps custom tagged errors to ServerFnError", async () => {
-    const action = Kit.gen(async function* (_ctx: TestKits, _input: null) {
+    const action = Kit.gen(async function* (_ctx: TestCtx, _input: null) {
       yield* new TestKitError({ message: "kit failed" });
 
       return Result.ok();
@@ -73,15 +80,36 @@ describe("kit", () => {
         }),
     });
 
-    await expect(serverFn(kits, null)).rejects.toMatchObject({
+    await expect(serverFn(ctx, null)).rejects.toMatchObject({
       _tag: "ServerFnError",
       message: "kit failed",
       status: "server-error",
     });
   });
 
+  it("skips mapping errors that are already ServerFnError values", async () => {
+    const serverError = new ServerFnError({
+      message: "already mapped",
+      status: "bad-request",
+    });
+    const action = async (
+      _ctx: TestCtx,
+      _input: null
+    ): Promise<ResultType<void, TestKitError | ServerFnError>> =>
+      Result.err(serverError);
+    const serverFn = Kit.serverFn(action, {
+      TestKitError: (error) =>
+        new ServerFnError({
+          message: error.message,
+          status: "server-error",
+        }),
+    });
+
+    await expect(serverFn(ctx, null)).rejects.toBe(serverError);
+  });
+
   it("accepts ServerFnError results without an error map", async () => {
-    const action = Kit.gen(async function* (_ctx: TestKits, _input: null) {
+    const action = Kit.gen(async function* (_ctx: TestCtx, _input: null) {
       yield* new ServerFnError({
         message: "already mapped",
         status: "unauthorized",
@@ -92,7 +120,7 @@ describe("kit", () => {
 
     const serverFn = Kit.serverFn(action);
 
-    await expect(serverFn(kits, null)).rejects.toMatchObject({
+    await expect(serverFn(ctx, null)).rejects.toMatchObject({
       _tag: "ServerFnError",
       message: "already mapped",
       status: "unauthorized",
@@ -101,7 +129,7 @@ describe("kit", () => {
 
   it("propagates panics from server function actions", async () => {
     const cause = new Error("panic cause");
-    const action = async (_ctx: TestKits, _input: null) => {
+    const action = async (_ctx: TestCtx, _input: null) => {
       Result.ok(1).map(() => {
         throw cause;
       });
@@ -110,7 +138,7 @@ describe("kit", () => {
     };
     const serverFn = Kit.serverFn(action);
 
-    const error = await serverFn(kits, null).catch((error: unknown) => error);
+    const error = await serverFn(ctx, null).catch((error: unknown) => error);
 
     expect(Panic.is(error)).toBeTruthy();
     expect(error).toMatchObject({ cause });
@@ -119,12 +147,12 @@ describe("kit", () => {
   it("propagates explicit panic calls from server function actions", async () => {
     const cause = new Error("explicit panic cause");
     const message = "explicit panic";
-    const action = async (_ctx: TestKits, _input: null) => {
+    const action = async (_ctx: TestCtx, _input: null) => {
       panic(message, cause);
     };
     const serverFn = Kit.serverFn(action);
 
-    const error = await serverFn(kits, null).catch((error: unknown) => error);
+    const error = await serverFn(ctx, null).catch((error: unknown) => error);
 
     expect(Panic.is(error)).toBeTruthy();
     expect(error).toMatchObject({
