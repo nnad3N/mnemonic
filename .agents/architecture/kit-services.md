@@ -24,14 +24,20 @@ Kit files live under `src/lib/` and define named tuple modules with
 `Kit.define(name, value)`. The value should expose bare `Result.tryPromise` — do
 **not** wrap with `Result.await` inside the kit:
 
-- `db-kit.ts` — `Kit.define("db", operationHandler)`
-- `memory-kit.ts` — `Kit.define("memory", operationHandler)`
+- `db-kit.ts` — `Kit.define("db", { run, transaction })`
+- `memory-kit.ts` — `createMemoryKit(api)` / `Kit.define("memory", api)` with a
+  closed `MemoryApi` (`listThreads`, `deleteThread`)
+- `s3.ts` — `Kit.define("s3", { deleteObject, deleteObjects, … })`
 
 After `Kit.createContext(dbKit, memoryKit)`, callers use the context:
 
 - `ctx.db.run(operation)` → `Promise<Result<T, DatabaseError>>`
 - `ctx.db.transaction(operation)` → `Promise<Result<T, DatabaseError>>`
-- `ctx.memory(operation)` → `Promise<Result<T, MemoryError>>`
+- `ctx.memory.listThreads(input)` → `Promise<Result<StorageListThreadsOutput, MemoryError>>`
+- `ctx.memory.deleteThread(input)` → `Promise<Result<void, MemoryError>>`
+
+`MemoryApi` is the mockable surface: pass a `satisfies MemoryApi` object to
+`createMemoryKit(...)` in tests.
 
 ## Context vs direct kit access
 
@@ -91,7 +97,7 @@ For parallel independent ops, use `Promise.all` on kit calls (each returns
 ```ts
 const [topicsResult, threadsResult] = await Promise.all([
   ctx.db.run((db) => db.select(...)),
-  ctx.memory((memory) => memory.listThreads(...)),
+  ctx.memory.listThreads(...),
 ]);
 
 const topics = yield* topicsResult;
@@ -150,7 +156,7 @@ const searchItemsFn = Kit.gen(async function* (
 ) {
   const [topicsResult, threadsResult] = await Promise.all([
     ctx.db.run((db) => db.select(...)),
-    ctx.memory((memory) => memory.listThreads(...)),
+    ctx.memory.listThreads(...),
   ]);
 
   const topics = yield* topicsResult;

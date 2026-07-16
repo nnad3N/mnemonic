@@ -74,16 +74,12 @@ const searchItemsFn = Kit.gen(async function* (
         .orderBy(desc(topic.updatedAt))
         .limit(SEARCH_TOPIC_LIMIT)
     ),
-    ctx.memory(async (memory) =>
-      memory.listThreads({
-        filter: { resourceId: userId },
-        orderBy: { direction: "DESC", field: "updatedAt" },
-        page: 0,
-        perPage: hasQuery
-          ? SEARCH_TOPIC_THREAD_SCAN_LIMIT
-          : SEARCH_THREAD_LIMIT,
-      })
-    ),
+    ctx.memory.listThreads({
+      filter: { resourceId: userId },
+      orderBy: { direction: "DESC", field: "updatedAt" },
+      page: 0,
+      perPage: hasQuery ? SEARCH_TOPIC_THREAD_SCAN_LIMIT : SEARCH_THREAD_LIMIT,
+    }),
   ]);
 
   const recentTopics = yield* recentTopicsResult;
@@ -94,30 +90,28 @@ const searchItemsFn = Kit.gen(async function* (
     .slice(0, SEARCH_THREAD_LIMIT)
     .map((thread) => toConversationResult(thread));
 
-  const topicThreadResults = yield* await ctx.memory(async (memory) =>
-    Promise.all(
-      recentTopics.map(async (recentTopic) =>
-        memory.listThreads({
-          filter: { resourceId: recentTopic.id },
-          orderBy: { direction: "DESC", field: "updatedAt" },
-          page: 0,
-          perPage: hasQuery
-            ? SEARCH_TOPIC_THREAD_SCAN_LIMIT
-            : SEARCH_THREAD_LIMIT,
-        })
-      )
+  const topicThreadBatch = await Promise.all(
+    recentTopics.map(async (recentTopic) =>
+      ctx.memory.listThreads({
+        filter: { resourceId: recentTopic.id },
+        orderBy: { direction: "DESC", field: "updatedAt" },
+        page: 0,
+        perPage: hasQuery
+          ? SEARCH_TOPIC_THREAD_SCAN_LIMIT
+          : SEARCH_THREAD_LIMIT,
+      })
     )
   );
 
   const topicResults: SearchTopicResult[] = [];
 
   for (const [index, recentTopic] of recentTopics.entries()) {
-    const result = topicThreadResults[index];
+    const listed = yield* topicThreadBatch[index];
     const topicMatchesQuery = titleMatchesQuery(recentTopic.title, query);
 
     const matchingThreads = topicMatchesQuery
-      ? result.threads
-      : result.threads.filter((thread) =>
+      ? listed.threads
+      : listed.threads.filter((thread) =>
           titleMatchesQuery(thread.title ?? "", query)
         );
 

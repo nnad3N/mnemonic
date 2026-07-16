@@ -36,24 +36,16 @@ const deleteTopicFn = Kit.gen(async function* (
         columns: { s3Key: true },
       })
     ),
-    ctx.memory(async (memory) =>
-      memory.listThreads({
-        filter: { resourceId: input.topicId },
-        page: 0,
-        perPage: false,
-      })
-    ),
+    ctx.memory.listThreads({
+      filter: { resourceId: input.topicId },
+      page: 0,
+      perPage: false,
+    }),
   ]);
   const files = yield* filesResult;
   const { threads } = yield* threadsResult;
 
-  const [
-    deleteObjectsResult,
-    deleteFileEmbeddingsResult,
-    deleteFilesResult,
-    deleteTopicResult,
-    deleteThreadsResult,
-  ] = await Promise.all([
+  const results = await Promise.all([
     ctx.s3.deleteObjects({
       keys: files.map((row) => row.s3Key),
     }),
@@ -65,20 +57,14 @@ const deleteTopicFn = Kit.gen(async function* (
     ),
     ctx.db.run((db) => db.delete(file).where(eq(file.topicId, input.topicId))),
     ctx.db.run((db) => db.delete(topic).where(eq(topic.id, input.topicId))),
-    ctx.memory(async (memory) => {
-      await Promise.all(
-        threads.map(async (thread) =>
-          memory.deleteThread({ threadId: thread.id })
-        )
-      );
-    }),
+    ...threads.map(async (thread) =>
+      ctx.memory.deleteThread({ threadId: thread.id })
+    ),
   ]);
 
-  yield* deleteObjectsResult;
-  yield* deleteFileEmbeddingsResult;
-  yield* deleteFilesResult;
-  yield* deleteTopicResult;
-  yield* deleteThreadsResult;
+  for (const result of results) {
+    yield* result;
+  }
 
   return Result.ok({ id: input.topicId });
 });
@@ -86,9 +72,9 @@ const deleteTopicFn = Kit.gen(async function* (
 export const deleteConversation = createServerFn({ method: "POST" })
   .middleware([threadAccessMiddleware])
   .handler(async ({ context }) => {
-    const result = await Kit.get(memoryKit)(async (memory) =>
-      memory.deleteThread({ threadId: context.thread.id })
-    );
+    const result = await Kit.get(memoryKit).deleteThread({
+      threadId: context.thread.id,
+    });
 
     if (result.isErr()) {
       throw toServerFnError.serverError("Failed to delete conversation");
