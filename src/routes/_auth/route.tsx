@@ -13,7 +13,6 @@ import { Route as SignUpRoute } from "@/routes/_auth/sign-up";
 
 export const Route = createFileRoute("/_auth")({ component: LayoutComponent });
 
-/* oxlint-disable func-style */
 function LayoutComponent() {
   const pathname = useLocation({ select: (s) => s.pathname });
 

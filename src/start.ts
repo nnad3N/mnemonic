@@ -13,12 +13,11 @@ import { paraglideMiddleware } from "@/paraglide/server";
  *
  * @see https://tanstack.com/router/v1/docs/guide/internationalization-i18n
  */
-// oxlint-disable-next-line require-await
 const paraglideI18n = createMiddleware().server(async ({ next, request }) =>
   paraglideMiddleware(request, async () => {
     const ctx = await next();
     return ctx.response;
-  })
+  }),
 );
 
 export const startInstance = createStart(() => ({

@@ -1,6 +1,6 @@
-# Ultracite Code Standards
+# Code Standards
 
-This project uses **Ultracite**, a zero-config preset that enforces strict code quality standards through automated formatting and linting.
+This project uses **Oxlint** and **Oxfmt** for linting and formatting.
 
 ## Quick Reference
 
@@ -10,7 +10,7 @@ This project uses **Ultracite**, a zero-config preset that enforces strict code 
 - **Typecheck only**: `deno task typecheck`
 - **Run tests**: `deno task test`
 
-Oxlint + Oxfmt (the underlying engine) provides robust linting and formatting. Most issues are automatically fixable.
+Oxlint + Oxfmt provide robust linting and formatting. Most issues are automatically fixable.
 
 ---
 
@@ -142,23 +142,10 @@ const getStatusDotClassName = (status: FileStatus) => {
 - Use top-level regex literals instead of creating them in loops
 - Prefer specific imports over namespace imports
 - Avoid barrel files (index files that re-export everything)
-- Use proper image components (e.g., Next.js `<Image>`) over `<img>` tags
 
-### Framework-Specific Guidance
-
-**Next.js:**
-
-- Use Next.js `<Image>` component for images
-- Use `next/head` or App Router metadata API for head elements
-- Use Server Components for async data fetching instead of async Client Components
-
-**React 19+:**
+### React 19+
 
 - Use ref as a prop instead of `React.forwardRef`
-
-**Solid/Svelte/Vue/Qwik:**
-
-- Use `class` and `for` attributes (not `className` or `htmlFor`)
 
 ---
 
@@ -167,7 +154,6 @@ const getStatusDotClassName = (status: FileStatus) => {
 Every file under `src/routes/` follows the same shape. `createFileRoute(...)({ component: ... })` runs **before** the component is defined, so the component must be a **hoisted function declaration**, not an arrow function expression.
 
 - Name the component **`RouteComponent`** for page routes and **`LayoutComponent`** for pathless layouts (`_*.tsx` / `_*/route.tsx`). Don't invent per-route names like `SignInRoute` or `AuthLayout` — keep the name uniform across files so jumping between routes is predictable.
-- Disable `func-style` for the declaration with a file-scoped comment: `/* oxlint-disable func-style */` directly above `function RouteComponent() {`. This is the only place `func-style` should be disabled in the codebase; everywhere else, prefer arrow functions per the Modern JS guidance above.
 - Reference the component by name inside `createFileRoute`:
 
 ```tsx
@@ -175,7 +161,6 @@ export const Route = createFileRoute("/some/path")({
   component: RouteComponent,
 });
 
-/* oxlint-disable func-style */
 function RouteComponent() {
   // ...
 }
@@ -365,7 +350,7 @@ Messages live in [`messages/en.json`](messages/en.json) and [`messages/pl.json`]
 
 ## When Oxlint + Oxfmt Can't Help
 
-Oxlint + Oxfmt's linter will catch most issues automatically. Focus your attention on:
+Oxlint + Oxfmt will catch most issues automatically. Focus your attention on:
 
 1. **Business logic correctness** - Oxlint + Oxfmt can't validate your algorithms
 2. **Meaningful naming** - Use descriptive names for functions, variables, and types

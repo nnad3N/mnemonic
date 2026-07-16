@@ -57,7 +57,7 @@ export const RenameField = ({
 
   const form = useForm({
     defaultValues: { title: initialValue },
-    onSubmit: async ({ value }) => {
+    onSubmit: ({ value }) => {
       const trimmed = value.title.trim();
 
       if (trimmed.length === 0 || trimmed === initialValue.trim()) {
@@ -139,7 +139,7 @@ export const RenameTopicField = ({
 
   const form = useForm({
     defaultValues: { title: initialValue },
-    onSubmit: async ({ value }) => {
+    onSubmit: ({ value }) => {
       const trimmed = value.title.trim();
 
       if (trimmed.length === 0 || trimmed === initialValue.trim()) {

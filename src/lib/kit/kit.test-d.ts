@@ -69,7 +69,7 @@ test("Kit.serverFn infers custom error handler keys", () => {
     _ctx: TestCtx,
     _input: undefined
   ): Promise<ResultType<string, TypeTestError | OtherTypeTestError>> =>
-    Result.err(new TypeTestError({ message: "failed" }));
+    Promise.resolve(Result.err(new TypeTestError({ message: "failed" })));
 
   Kit.serverFn(action, {
     TypeTestError: (error) =>
@@ -96,10 +96,12 @@ test("Kit.serverFn infers custom error handler keys", () => {
 
 test("Kit.serverFn accepts ServerFnError actions without handlers", () => {
   const action = Kit.gen(async function* (_ctx: TestCtx, _input: undefined) {
-    yield* new ServerFnError({
-      message: "already mapped",
-      status: "server-error",
-    });
+    yield* await Promise.resolve(
+      new ServerFnError({
+        message: "already mapped",
+        status: "server-error",
+      })
+    );
 
     return Result.ok();
   });
@@ -114,11 +116,13 @@ test("Kit.serverFn skips ServerFnError handler keys for mixed unions", () => {
     _ctx: TestCtx,
     _input: undefined
   ): Promise<ResultType<string, TypeTestError | ServerFnError>> =>
-    Result.err(
-      new ServerFnError({
-        message: "already mapped",
-        status: "server-error",
-      })
+    Promise.resolve(
+      Result.err(
+        new ServerFnError({
+          message: "already mapped",
+          status: "server-error",
+        })
+      )
     );
 
   expectTypeOf(

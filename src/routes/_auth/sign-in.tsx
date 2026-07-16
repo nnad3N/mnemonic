@@ -16,7 +16,6 @@ export const Route = createFileRoute("/_auth/sign-in")({
   component: RouteComponent,
 });
 
-/* oxlint-disable func-style */
 function RouteComponent() {
   const navigate = useNavigate();
 

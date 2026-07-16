@@ -51,7 +51,6 @@ const formatUpdatedAt = (updatedAt: string) =>
     timeStyle: "short",
   }).format(new Date(updatedAt));
 
-/* oxlint-disable func-style */
 function RouteComponent() {
   const { q } = Route.useSearch();
   const navigate = Route.useNavigate();

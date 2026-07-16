@@ -71,7 +71,6 @@ const getColumns = () =>
     null,
   ] as const;
 
-/* oxlint-disable func-style */
 function RouteComponent() {
   const topicId = Route.useParams({ select: (params) => params.topicId });
   const { page, q } = Route.useSearch();

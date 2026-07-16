@@ -26,7 +26,6 @@ export const Route = createFileRoute("/_protected")({
   component: LayoutComponent,
 });
 
-/* oxlint-disable func-style */
 function LayoutComponent() {
   const user = Route.useRouteContext({ select: (context) => context.user });
 

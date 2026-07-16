@@ -196,7 +196,7 @@ const RenameFileField = ({
 
   const form = useForm({
     defaultValues: { displayName: file.displayName },
-    onSubmit: async ({ value }) => {
+    onSubmit: ({ value }) => {
       const trimmed = value.displayName.trim();
 
       if (trimmed.length === 0 || trimmed === file.displayName.trim()) {
@@ -250,7 +250,6 @@ const RenameFileField = ({
 };
 
 const getStatusLabel = (status: FileStatus) => {
-  // oxlint-disable-next-line default-case
   switch (status) {
     case "uploading": {
       return m.common_uploading();

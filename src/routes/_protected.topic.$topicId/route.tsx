@@ -6,7 +6,6 @@ export const Route = createFileRoute("/_protected/topic/$topicId")({
   component: RouteComponent,
 });
 
-/* oxlint-disable func-style */
 function RouteComponent() {
   const topicId = Route.useParams({ select: (params) => params.topicId });
 

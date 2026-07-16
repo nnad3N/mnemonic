@@ -80,7 +80,6 @@ export const useAuthSessionQuery = (): void => {
   }, [data, error, isPending, isRefetching, queryClient, router]);
 };
 
-// oxlint-disable-next-line func-style
 function RootDocument({ children }: { children: React.ReactNode }) {
   useAuthSessionQuery();
 

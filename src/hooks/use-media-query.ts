@@ -30,7 +30,6 @@ const resolveMax = (value: Breakpoint | number): string => {
 const isBreakpointKey = (key: string): key is Breakpoint => key in BREAKPOINTS;
 
 const parseQuery = (
-  // oxlint-disable-next-line typescript/ban-types
   query: BreakpointQuery | MediaQueryInput | (string & {})
 ): string => {
   if (typeof query !== "string") {
@@ -84,7 +83,6 @@ export type MediaQueryInput = {
 };
 
 export const useMediaQuery = (
-  // oxlint-disable-next-line typescript/ban-types
   query: BreakpointQuery | MediaQueryInput | (string & {})
 ): boolean => {
   const mediaQuery = parseQuery(query);

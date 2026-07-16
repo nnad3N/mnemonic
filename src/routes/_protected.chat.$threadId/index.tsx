@@ -20,7 +20,6 @@ export const Route = createFileRoute("/_protected/chat/$threadId/")({
   component: RouteComponent,
 });
 
-// oxlint-disable-next-line func-style
 function RouteComponent() {
   const chat = useThreadChat();
   const stickToBottom = useStickToBottom({

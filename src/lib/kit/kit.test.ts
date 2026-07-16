@@ -1,4 +1,3 @@
-/* oxlint-disable no-shadow */
 import { Panic, panic, Result, TaggedError } from "better-result";
 import type { Result as ResultType } from "better-result";
 import { describe, expect, it } from "vitest";
@@ -12,7 +11,7 @@ class TestKitError extends TaggedError("TestKitError")<{
 
 const numberKit = Kit.define("number", {
   double: (value: number) => Result.ok(value * 2),
-  increment: async (value: number) => Result.ok(value + 1),
+  increment: async (value: number) => Promise.resolve(Result.ok(value + 1)),
 });
 
 const textKit = Kit.define("text", {
@@ -36,10 +35,7 @@ describe("kit", () => {
   });
 
   it("composes yielded kit results in Kit.gen", async () => {
-    const action = Kit.gen(async function* (
-      ctx: TestCtx,
-      input: { value: number }
-    ) {
+    const action = Kit.gen(async function* (ctx: TestCtx, input: { value: number }) {
       const incremented = yield* await ctx.number.increment(input.value);
       const doubled = yield* ctx.number.double(incremented);
       const label = yield* ctx.text.label(doubled);
@@ -53,11 +49,8 @@ describe("kit", () => {
   });
 
   it("unwraps successful Kit.serverFn results", async () => {
-    const action = Kit.gen(async function* (
-      ctx: TestCtx,
-      input: { value: number }
-    ) {
-      const doubled = yield* ctx.number.double(input.value);
+    const action = Kit.gen(async function* (ctx: TestCtx, input: { value: number }) {
+      const doubled = yield* await Promise.resolve(ctx.number.double(input.value));
 
       return Result.ok(doubled);
     });
@@ -67,7 +60,7 @@ describe("kit", () => {
 
   it("maps custom tagged errors to ServerFnError", async () => {
     const action = Kit.gen(async function* (_ctx: TestCtx, _input: null) {
-      yield* new TestKitError({ message: "kit failed" });
+      yield* await Promise.resolve(new TestKitError({ message: "kit failed" }));
 
       return Result.ok();
     });
@@ -94,9 +87,9 @@ describe("kit", () => {
     });
     const action = async (
       _ctx: TestCtx,
-      _input: null
+      _input: null,
     ): Promise<ResultType<void, TestKitError | ServerFnError>> =>
-      Result.err(serverError);
+      Promise.resolve(Result.err(serverError));
     const serverFn = Kit.serverFn(action, {
       TestKitError: (error) =>
         new ServerFnError({
@@ -110,10 +103,12 @@ describe("kit", () => {
 
   it("accepts ServerFnError results without an error map", async () => {
     const action = Kit.gen(async function* (_ctx: TestCtx, _input: null) {
-      yield* new ServerFnError({
-        message: "already mapped",
-        status: "unauthorized",
-      });
+      yield* await Promise.resolve(
+        new ServerFnError({
+          message: "already mapped",
+          status: "unauthorized",
+        }),
+      );
 
       return Result.ok();
     });
@@ -134,7 +129,7 @@ describe("kit", () => {
         throw cause;
       });
 
-      return Result.ok();
+      return Promise.resolve(Result.ok());
     };
     const serverFn = Kit.serverFn(action);
 
@@ -149,6 +144,7 @@ describe("kit", () => {
     const message = "explicit panic";
     const action = async (_ctx: TestCtx, _input: null) => {
       panic(message, cause);
+      return Promise.resolve(Result.ok());
     };
     const serverFn = Kit.serverFn(action);
 

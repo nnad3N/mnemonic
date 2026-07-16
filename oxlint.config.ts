@@ -1,10 +1,7 @@
 import { defineConfig } from "oxlint";
-import core from "ultracite/oxlint/core";
-import react from "ultracite/oxlint/react";
-import vitest from "ultracite/oxlint/vitest";
 
 export default defineConfig({
-  extends: [core, react, vitest],
+  plugins: ["eslint", "typescript", "oxc", "react", "import", "jsx-a11y", "vitest"],
   jsPlugins: [{ name: "eslint-js", specifier: "oxlint-plugin-eslint" }],
   ignorePatterns: [
     "**/.nx/**",
@@ -17,20 +14,21 @@ export default defineConfig({
   options: {
     typeAware: true,
   },
+  categories: {
+    correctness: "error",
+  },
+  overrides: [
+    {
+      // Type-level Vitest tests assert via @ts-expect-error / expectTypeOf, not expect()
+      files: ["**/*.test-d.ts"],
+      rules: {
+        "vitest/expect-expect": "off",
+      },
+    },
+  ],
   rules: {
-    "no-inline-comments": "off",
-    "unicorn/prefer-spread": "off",
-    "unicorn/prefer-ternary": "off",
-    "unicorn/prefer-set-has": "off",
-    "consistent-return": "off",
-    "prefer-await-to-callbacks": "off",
-    "promise/prefer-await-to-then": "off",
-    "func-names": "off",
-    "max-classes-per-file": "off",
-    "prefer-destructuring": "off",
-    "arrow-body-style": "off",
-    "require-await": "off",
-    "sort-keys": "off",
+    "jsx-a11y/no-autofocus": "off",
+
     "import/no-commonjs": "error",
     "eslint-js/no-restricted-syntax": [
       "error",
@@ -40,7 +38,6 @@ export default defineConfig({
           "toSafeId is only allowed at validated backend boundaries; add an inline oxlint disable with a reason when branding raw IDs for Drizzle.",
       },
     ],
-    "no-use-before-define": "allow",
     "typescript/ban-ts-comment": [
       "error",
       {
@@ -49,15 +46,14 @@ export default defineConfig({
       },
     ],
     "typescript/consistent-type-definitions": ["error", "type"],
-    "typescript/no-misused-promises": [
-      "error",
-      { checksVoidReturn: { attributes: false } },
-    ],
-    "typescript/only-throw-error": "off",
+    "typescript/no-misused-promises": ["error", { checksVoidReturn: { attributes: false } }],
+    "typescript/no-unsafe-type-assertion": "error",
+    "typescript/promise-function-async": "error",
+    "typescript/require-await": "error",
     "typescript/strict-boolean-expressions": [
       "error",
       { allowNullableBoolean: true, allowNullableString: true },
     ],
-    "typescript/strict-void-return": "off",
+    "typescript/switch-exhaustiveness-check": "error",
   },
 });
