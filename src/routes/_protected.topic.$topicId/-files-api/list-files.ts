@@ -1,11 +1,13 @@
 import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
+import { Result } from "better-result";
 import { and, desc, eq, ilike } from "drizzle-orm";
 import * as v from "valibot";
 
-import { db } from "@/db";
 import { file } from "@/db/schema";
 import type { FileStatus } from "@/db/schema";
+import { dbKit } from "@/lib/db-kit";
+import { Kit, toServerFnError } from "@/lib/kit";
 import { topicAccessMiddleware } from "@/lib/middleware/assert-thread-access";
 import type { SafeId } from "@/lib/safe-id";
 import { topicKeys } from "@/routes/_protected.topic.$topicId/-topic-api/query-keys";
@@ -33,28 +35,33 @@ export const listFiles = createServerFn({ method: "GET" })
     const whereClause = buildWhereClause(context.topic.id, data.search);
     const offset = (data.page - 1) * data.pageSize;
 
-    const [items, totalCount] = await Promise.all([
-      db
-        .select({
-          createdAt: file.createdAt,
-          displayName: file.displayName,
-          id: file.id,
-          mimeType: file.mimeType,
-          sizeBytes: file.sizeBytes,
-          status: file.status,
-        })
-        .from(file)
-        .where(whereClause)
-        .orderBy(desc(file.createdAt))
-        .limit(data.pageSize)
-        .offset(offset),
-      db.$count(file, whereClause),
-    ]);
+    const result = await Kit.get(dbKit).run(async (db) => {
+      const [items, totalCount] = await Promise.all([
+        db
+          .select({
+            createdAt: file.createdAt,
+            displayName: file.displayName,
+            id: file.id,
+            mimeType: file.mimeType,
+            sizeBytes: file.sizeBytes,
+            status: file.status,
+          })
+          .from(file)
+          .where(whereClause)
+          .orderBy(desc(file.createdAt))
+          .limit(data.pageSize)
+          .offset(offset),
+        db.$count(file, whereClause),
+      ]);
 
-    return {
-      items,
-      totalCount,
-    };
+      return { items, totalCount };
+    });
+
+    if (Result.isError(result)) {
+      throw toServerFnError.serverError("Failed to list files");
+    }
+
+    return result.value;
   });
 
 export type FileItem = {

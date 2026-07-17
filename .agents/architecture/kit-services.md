@@ -27,7 +27,9 @@ Kit files live under `src/lib/` and define named tuple modules with
 
 - `db-kit.ts` — `createDbKit(api)` with a closed `DbApi` (`run`, `transaction`)
 - `memory-kit.ts` — `createMemoryKit(api)` with a closed `MemoryApi`
-  (`listThreads`, `deleteThread`)
+  (`getThreadById`, `saveThread`, `updateThread`, `listThreads`,
+  `listMessages`, and deletion operations). Live Mastra memory-store and agent-memory
+  acquisition is private to this kit.
 - `s3-kit.ts` — `createS3Kit(api)` with a closed `S3Api` (`deleteObject`,
   `deleteObjects`, `getObject`, …)
 - `vector-kit.ts` — `createVectorKit(api)` with a closed `VectorApi`
@@ -38,12 +40,18 @@ After `Kit.createContext(dbKit, memoryKit)`, callers use the context:
 - `ctx.db.run(operation)` → `Promise<Result<T, DatabaseError>>`
 - `ctx.db.transaction(operation)` → `Promise<Result<T, DatabaseError>>`
 - `ctx.memory.listThreads(input)` → `Promise<Result<StorageListThreadsOutput, MemoryError>>`
+- `ctx.memory.getThreadById(input)` → `Promise<Result<StorageThreadType | null, MemoryError>>`
+- `ctx.memory.listMessages(input)` → `Promise<Result<StorageListMessagesOutput, MemoryError>>`
 - `ctx.memory.deleteThread(input)` → `Promise<Result<void, MemoryError>>`
 - `ctx.vector.deleteVectors(input)` → `Promise<Result<void, VectorError>>`
 
 Each kit exports a mockable `*Api` surface: pass a `satisfies DbApi` /
-`MemoryApi` / `S3Api` / `VectorApi` object to `createDbKit` /
-`createMemoryKit` / `createS3Kit` / `createVectorKit` in tests.
+`MemoryApi` / `S3Api` / `VectorApi` object to the corresponding `create*Kit`
+function in tests.
+
+The shared Drizzle client is exported as `drizzleDb` from `src/db/index.ts`
+because Better Auth needs the concrete client during framework initialization.
+Application queries must still go through `dbKit`.
 
 ## Kit errors (Rust-style wrapping)
 
@@ -110,6 +118,11 @@ export const updateFileStatus = createServerFn({ method: "POST" })
     }
   });
 ```
+
+Do not create a kit solely to wrap one SDK call used by one server function.
+Keep that call at its owning boundary with `Result.tryPromise(...)`. Kits are
+for reusable capabilities or dependencies that application actions need to
+inject and compose.
 
 ## Dependency Direction
 

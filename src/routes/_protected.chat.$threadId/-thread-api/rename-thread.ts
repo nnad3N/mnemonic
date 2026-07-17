@@ -1,14 +1,16 @@
 import { createServerFn } from "@tanstack/react-start";
+import { Result } from "better-result";
 import { eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { db } from "@/db";
 import { topic } from "@/db/schema";
+import { dbKit } from "@/lib/db-kit";
+import { Kit, toServerFnError } from "@/lib/kit";
+import { memoryKit } from "@/lib/memory-kit";
 import {
   threadAccessMiddleware,
   topicAccessMiddleware,
 } from "@/lib/middleware/assert-thread-access";
-import { getMemoryStore } from "@/mastra/memory";
 
 export const renameConversation = createServerFn({ method: "POST" })
   .validator(
@@ -18,12 +20,15 @@ export const renameConversation = createServerFn({ method: "POST" })
   )
   .middleware([threadAccessMiddleware])
   .handler(async ({ context, data }) => {
-    const memoryStore = await getMemoryStore();
-    await memoryStore.updateThread({
+    const result = await Kit.get(memoryKit).updateThread({
       id: context.thread.id,
       metadata: context.thread.metadata ?? {},
       title: data.title,
     });
+
+    if (Result.isError(result)) {
+      throw toServerFnError.serverError("Failed to rename conversation");
+    }
 
     return { id: context.thread.id };
   });
@@ -36,7 +41,13 @@ export const renameTopic = createServerFn({ method: "POST" })
   )
   .middleware([topicAccessMiddleware])
   .handler(async ({ context, data }) => {
-    await db.update(topic).set({ title: data.title }).where(eq(topic.id, context.topic.id));
+    const result = await Kit.get(dbKit).run((db) =>
+      db.update(topic).set({ title: data.title }).where(eq(topic.id, context.topic.id)),
+    );
+
+    if (Result.isError(result)) {
+      throw toServerFnError.serverError("Failed to rename topic");
+    }
 
     return { id: context.topic.id };
   });

@@ -1,9 +1,26 @@
-import type { StorageListThreadsInput, StorageListThreadsOutput } from "@mastra/core/storage";
-import { Result, TaggedError } from "better-result";
+import type { MastraMemory } from "@mastra/core/memory";
+import type { MemoryStorage } from "@mastra/core/storage";
+import type {
+  StorageListMessagesInput,
+  StorageListMessagesOutput,
+  StorageListThreadsInput,
+  StorageListThreadsOutput,
+} from "@mastra/core/storage";
+import { panic, Result, TaggedError } from "better-result";
 import type { Result as ResultType } from "better-result";
 
 import { Kit } from "@/lib/kit";
-import { getMemoryStore } from "@/mastra/memory";
+import { mastra } from "@/mastra";
+import type { conversationAgentId } from "@/mastra/agents/conversation-agent";
+import type { topicAgentId } from "@/mastra/agents/topic-agent";
+
+type AgentWithMemoryId = typeof conversationAgentId | typeof topicAgentId;
+type GetThreadInput = Parameters<MemoryStorage["getThreadById"]>[0];
+type GetThreadOutput = Awaited<ReturnType<MemoryStorage["getThreadById"]>>;
+type SaveThreadInput = Parameters<MemoryStorage["saveThread"]>[0];
+type SaveThreadOutput = Awaited<ReturnType<MemoryStorage["saveThread"]>>;
+type UpdateThreadInput = Parameters<MemoryStorage["updateThread"]>[0];
+type UpdateThreadOutput = Awaited<ReturnType<MemoryStorage["updateThread"]>>;
 
 export class MemoryError extends TaggedError("MemoryError")<{
   cause: unknown;
@@ -17,15 +34,66 @@ const toMemoryError = (cause: unknown): MemoryError =>
   });
 
 export type MemoryApi = {
+  deleteAgentThread: (input: {
+    agentId: AgentWithMemoryId;
+    threadId: string;
+  }) => Promise<ResultType<void, MemoryError>>;
+  deleteMessages: (input: {
+    agentId: AgentWithMemoryId;
+    messageIds: string[];
+  }) => Promise<ResultType<void, MemoryError>>;
   listThreads: (
     input: StorageListThreadsInput,
   ) => Promise<ResultType<StorageListThreadsOutput, MemoryError>>;
   deleteThread: (input: { threadId: string }) => Promise<ResultType<void, MemoryError>>;
+  getThreadById: (input: GetThreadInput) => Promise<ResultType<GetThreadOutput, MemoryError>>;
+  listMessages: (
+    input: StorageListMessagesInput,
+  ) => Promise<ResultType<StorageListMessagesOutput, MemoryError>>;
+  saveThread: (input: SaveThreadInput) => Promise<ResultType<SaveThreadOutput, MemoryError>>;
+  updateThread: (input: UpdateThreadInput) => Promise<ResultType<UpdateThreadOutput, MemoryError>>;
 };
 
 export const createMemoryKit = (api: MemoryApi) => Kit.define("memory", api);
 
+const getMemoryStore = async (): Promise<MemoryStorage> => {
+  const memoryStore = await mastra.getStorage()?.getStore("memory");
+
+  if (!memoryStore) {
+    panic("Mastra memory storage is not configured");
+  }
+
+  return memoryStore;
+};
+
+const getAgentMemory = async (agentId: AgentWithMemoryId): Promise<MastraMemory> => {
+  const agent = mastra.getAgentById(agentId);
+  const memory = await agent.getMemory();
+
+  if (!memory) {
+    panic("Agent memory is not configured");
+  }
+
+  return memory;
+};
+
 export const memoryKit = createMemoryKit({
+  deleteAgentThread: async ({ agentId, threadId }) =>
+    Result.tryPromise({
+      try: async () => {
+        const memory = await getAgentMemory(agentId);
+        return memory.deleteThread(threadId);
+      },
+      catch: toMemoryError,
+    }),
+  deleteMessages: async ({ agentId, messageIds }) =>
+    Result.tryPromise({
+      try: async () => {
+        const memory = await getAgentMemory(agentId);
+        return memory.deleteMessages(messageIds);
+      },
+      catch: toMemoryError,
+    }),
   listThreads: async (input) =>
     Result.tryPromise({
       try: async () => {
@@ -39,6 +107,38 @@ export const memoryKit = createMemoryKit({
       try: async () => {
         const memory = await getMemoryStore();
         return memory.deleteThread(input);
+      },
+      catch: toMemoryError,
+    }),
+  getThreadById: async (input) =>
+    Result.tryPromise({
+      try: async () => {
+        const memory = await getMemoryStore();
+        return memory.getThreadById(input);
+      },
+      catch: toMemoryError,
+    }),
+  listMessages: async (input) =>
+    Result.tryPromise({
+      try: async () => {
+        const memory = await getMemoryStore();
+        return memory.listMessages(input);
+      },
+      catch: toMemoryError,
+    }),
+  saveThread: async (input) =>
+    Result.tryPromise({
+      try: async () => {
+        const memory = await getMemoryStore();
+        return memory.saveThread(input);
+      },
+      catch: toMemoryError,
+    }),
+  updateThread: async (input) =>
+    Result.tryPromise({
+      try: async () => {
+        const memory = await getMemoryStore();
+        return memory.updateThread(input);
       },
       catch: toMemoryError,
     }),

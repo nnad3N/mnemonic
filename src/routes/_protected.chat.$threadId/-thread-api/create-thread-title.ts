@@ -1,11 +1,15 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { generateText } from "ai";
+import { Result } from "better-result";
 import { produce } from "immer";
 import * as v from "valibot";
 
+import { Kit, toServerFnError } from "@/lib/kit";
+import type { Kits } from "@/lib/kit";
+import { memoryKit } from "@/lib/memory-kit";
+import type { MemoryKit } from "@/lib/memory-kit";
 import { threadAccessMiddleware } from "@/lib/middleware/assert-thread-access";
-import { getMemoryStore } from "@/mastra/memory";
 import { models } from "@/mastra/models";
 import {
   sidebarConversationsQuery,
@@ -46,37 +50,65 @@ const createThreadTitleSchema = v.object({
   text: v.pipe(v.string(), v.nonEmpty()),
 });
 
+type CreateThreadTitleCtx = Kits<[MemoryKit]>;
+
+type CreateThreadTitleInput = {
+  metadata: Record<string, unknown>;
+  text: string;
+  threadId: string;
+};
+
+const createThreadTitleFn = Kit.gen(async function* (
+  ctx: CreateThreadTitleCtx,
+  input: CreateThreadTitleInput,
+) {
+  const text = yield* await Result.tryPromise({
+    try: async () => {
+      const result = await generateText({
+        abortSignal: AbortSignal.timeout(TITLE_GENERATION_TIMEOUT_MS),
+        model: models.threadTitle,
+        prompt: input.text,
+        system: TITLE_SYSTEM_PROMPT,
+      });
+
+      return result.text;
+    },
+    catch: () => toServerFnError.serverError("Failed to generate conversation title"),
+  });
+
+  const title = sanitizeTitle(text);
+
+  if (!title) {
+    return Result.ok(null);
+  }
+
+  const thread = yield* await ctx.memory.updateThread({
+    id: input.threadId,
+    metadata: input.metadata,
+    title,
+  });
+
+  return Result.ok({
+    id: thread.id,
+    title,
+    updatedAt: thread.updatedAt.toISOString(),
+  });
+});
+
+const createThreadTitleCtx = Kit.createContext(memoryKit);
+
 export const createThreadTitle = createServerFn({ method: "POST" })
   .validator(createThreadTitleSchema)
   .middleware([threadAccessMiddleware])
-  .handler(async ({ context, data }) => {
-    const memoryStore = await getMemoryStore();
-
-    const { text } = await generateText({
-      model: models.threadTitle,
-      prompt: data.text,
-      system: TITLE_SYSTEM_PROMPT,
-      abortSignal: AbortSignal.timeout(TITLE_GENERATION_TIMEOUT_MS),
-    });
-
-    const title = sanitizeTitle(text);
-
-    if (title === null) {
-      return null;
-    }
-
-    const thread = await memoryStore.updateThread({
-      id: context.thread.id,
+  .handler(async ({ context, data }) =>
+    Kit.serverFn(createThreadTitleFn, {
+      MemoryError: () => toServerFnError.serverError("Failed to save conversation title"),
+    })(createThreadTitleCtx, {
       metadata: context.thread.metadata ?? {},
-      title,
-    });
-
-    return {
-      id: thread.id,
-      title,
-      updatedAt: thread.updatedAt.toISOString(),
-    };
-  });
+      text: data.text,
+      threadId: context.thread.id,
+    }),
+  );
 
 type CreateThreadTitleVars = {
   threadId: string;
@@ -90,13 +122,13 @@ export const useCreateThreadTitle = () => {
   return useMutation({
     mutationFn: async (data: CreateThreadTitleVars) => createThreadTitle({ data }),
     onSuccess: (thread, vars) => {
-      if (thread === null) return;
+      if (!thread) return;
 
       const conversationsQueryOptions = sidebarConversationsQuery();
 
       queryClient.setQueryData(conversationsQueryOptions.queryKey, (current) =>
         produce(current, (draft) => {
-          if (draft === undefined) return;
+          if (!draft) return;
 
           for (const page of draft.pages) {
             for (const item of page.items) {
@@ -115,7 +147,7 @@ export const useCreateThreadTitle = () => {
 
       queryClient.setQueryData(topicsQueryOptions.queryKey, (current) =>
         produce(current, (draft) => {
-          if (draft === undefined) return;
+          if (!draft) return;
 
           for (const page of draft.pages) {
             for (const topic of page.items) {
@@ -138,7 +170,7 @@ export const useCreateThreadTitle = () => {
 
       queryClient.setQueryData(topicThreadsQueryOptions.queryKey, (current) =>
         produce(current, (draft) => {
-          if (draft === undefined) return;
+          if (!draft) return;
 
           for (const topicThreadPage of draft.pages) {
             for (const topicThread of topicThreadPage.items) {

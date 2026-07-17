@@ -1,7 +1,7 @@
 import { Result, TaggedError } from "better-result";
 import type { Result as ResultType } from "better-result";
 
-import { db as drizzleDb } from "@/db";
+import { drizzleDb } from "@/db";
 import { Kit } from "@/lib/kit";
 
 type DrizzleDb = typeof drizzleDb;

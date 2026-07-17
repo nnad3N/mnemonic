@@ -181,11 +181,7 @@ export const processFile = createServerFn({ method: "POST" })
     });
 
     if (Result.isError(workflowResult)) {
-      throw new ServerFnError({
-        message: "File processing could not be started",
-        status: "server-error",
-        cause: workflowResult.error,
-      });
+      throw toServerFnError.serverError("File processing could not be started");
     }
 
     const result = workflowResult.value;

@@ -9,6 +9,6 @@ import { appRelations } from "./schema.ts";
 
 export const schema = { ...appSchema, ...authSchema };
 
-export const db = drizzle(env.DATABASE_URL, {
+export const drizzleDb = drizzle(env.DATABASE_URL, {
   relations: { ...appRelations, ...authRelations },
 });
