@@ -59,6 +59,7 @@ const client = new AwsS3Client({
   endpoint: env.S3_ENDPOINT,
   forcePathStyle: env.S3_FORCE_PATH_STYLE === "true",
   region: env.S3_REGION,
+  requestChecksumCalculation: "WHEN_REQUIRED",
 });
 
 type PresignedPutUrlInput = {

@@ -1,4 +1,4 @@
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 
 import { topicKeys } from "@/routes/_protected.topic.$topicId/-topic-api/query-keys";
@@ -17,7 +17,7 @@ export const FilesSync = ({ topicId }: FilesSyncProps) => {
   const queryClient = useQueryClient();
   const previousPendingFileIds = useRef<string[]>([]);
   const isPolling = useChatStore((state) => state.pollingTopicIds.has(topicId));
-  const { data: pendingFiles } = useSuspenseQuery({
+  const { data: pendingFiles } = useQuery({
     queryFn: async () =>
       getPendingFiles({
         data: { topicId },
@@ -28,6 +28,8 @@ export const FilesSync = ({ topicId }: FilesSyncProps) => {
   });
 
   useEffect(() => {
+    if (!pendingFiles) return;
+
     const { removePollingTopicId, addPollingTopicId } = useChatStore.getState();
     const removedFileIds = previousPendingFileIds.current.filter(
       (fileId) => !pendingFiles.includes(fileId),
