@@ -121,7 +121,8 @@ const validateFileStep = createStep({
   id: "validate-file",
   inputSchema: toStandardJsonSchema(workflowInputSchema),
   outputSchema: toStandardJsonSchema(validatedFileSchema),
-  execute: async ({ inputData }) => Kit.toException(validateFileFn)(processFileCtx, inputData),
+  execute: async ({ inputData }) =>
+    Kit.run(async () => validateFileFn(processFileCtx, inputData)).throws(),
 });
 
 const workflowOutputSchema = v.object({
@@ -195,7 +196,8 @@ const processForRagStep = createStep({
   id: "process-for-rag",
   inputSchema: toStandardJsonSchema(validatedFileSchema),
   outputSchema: toStandardJsonSchema(workflowOutputSchema),
-  execute: async ({ inputData }) => Kit.toException(processForRagFn)(processFileCtx, inputData),
+  execute: async ({ inputData }) =>
+    Kit.run(async () => processForRagFn(processFileCtx, inputData)).throws(),
 });
 
 export const processFileWorkflow = createWorkflow({

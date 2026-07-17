@@ -1,6 +1,6 @@
 import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
-import { Result } from "better-result";
+import { matchError, Result } from "better-result";
 import { and, desc, eq, ilike } from "drizzle-orm";
 import * as v from "valibot";
 
@@ -8,7 +8,7 @@ import { file, topic } from "@/db/schema";
 import { dbKit } from "@/lib/db-kit";
 import type { DbKit } from "@/lib/db-kit";
 import { Kit, toServerFnError } from "@/lib/kit";
-import type { Kits } from "@/lib/kit";
+import type { Kits, ServerFnError } from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit";
 import type { MemoryKit } from "@/lib/memory-kit";
 import { authMiddleware } from "@/lib/middleware/auth-middleware";
@@ -83,7 +83,7 @@ const getMentionsFn = Kit.gen(async function* (ctx: MentionsCtx, input: GetMenti
   );
 
   if (ownedTopic) {
-    const [fileMentionsResult, threadsResult] = await Promise.all([
+    const [fileMentions, threads] = yield* await Kit.promiseAll([
       ctx.db.run((db) =>
         db
           .select({
@@ -103,8 +103,6 @@ const getMentionsFn = Kit.gen(async function* (ctx: MentionsCtx, input: GetMenti
       }),
     ]);
 
-    const fileMentions = yield* fileMentionsResult;
-    const threads = yield* threadsResult;
     const mentions: MentionItem[] = fileMentions.map((mention) => ({
       ...mention,
       type: "file",
@@ -245,14 +243,18 @@ export const getMentions = createServerFn({ method: "GET" })
   .validator(getMentionsInputSchema)
   .middleware([authMiddleware])
   .handler(async ({ context, data }) =>
-    Kit.serverFn(getMentionsFn, {
-      DatabaseError: () => toServerFnError.serverError("Failed to load mentions"),
-      MemoryError: () => toServerFnError.serverError("Failed to load conversation mentions"),
-    })(mentionsCtx, {
-      query: data.query,
-      resourceId: data.resourceId,
-      userId: context.user.id,
-    }),
+    Kit.run(async () =>
+      getMentionsFn(mentionsCtx, {
+        query: data.query,
+        resourceId: data.resourceId,
+        userId: context.user.id,
+      }),
+    ).throws<ServerFnError>((error) =>
+      matchError(error, {
+        DatabaseError: () => toServerFnError.serverError("Failed to load mentions"),
+        MemoryError: () => toServerFnError.serverError("Failed to load conversation mentions"),
+      }),
+    ),
   );
 
 export type MentionsQueryParams = {
@@ -274,14 +276,18 @@ export const getMentionById = createServerFn({ method: "GET" })
   .validator(getMentionByIdInputSchema)
   .middleware([authMiddleware])
   .handler(async ({ context, data }) =>
-    Kit.serverFn(getMentionByIdFn, {
-      DatabaseError: () => toServerFnError.serverError("Failed to load mention"),
-      MemoryError: () => toServerFnError.serverError("Failed to load conversation mention"),
-    })(mentionsCtx, {
-      id: data.id,
-      type: data.type,
-      userId: context.user.id,
-    }),
+    Kit.run(async () =>
+      getMentionByIdFn(mentionsCtx, {
+        id: data.id,
+        type: data.type,
+        userId: context.user.id,
+      }),
+    ).throws<ServerFnError>((error) =>
+      matchError(error, {
+        DatabaseError: () => toServerFnError.serverError("Failed to load mention"),
+        MemoryError: () => toServerFnError.serverError("Failed to load conversation mention"),
+      }),
+    ),
   );
 
 type GetMentionByIdParams = {

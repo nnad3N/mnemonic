@@ -2,7 +2,7 @@ import type { StorageThreadType } from "@mastra/core/memory";
 import type { StorageListThreadsOutput } from "@mastra/core/storage";
 import { infiniteQueryOptions, keepPreviousData } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
-import { Result } from "better-result";
+import { matchError, Result } from "better-result";
 import { desc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
@@ -10,7 +10,7 @@ import { topic } from "@/db/schema";
 import { dbKit } from "@/lib/db-kit";
 import type { DbKit } from "@/lib/db-kit";
 import { Kit, toServerFnError } from "@/lib/kit";
-import type { Kits } from "@/lib/kit";
+import type { Kits, ServerFnError } from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit";
 import type { MemoryKit } from "@/lib/memory-kit";
 import { topicAccessMiddleware } from "@/lib/middleware/assert-thread-access";
@@ -74,7 +74,7 @@ const listSidebarConversationsFn = Kit.gen(async function* (
   });
 
   const expiredThreads = getExpiredThreads(oldestThreads.threads);
-  const deletionResults = await Promise.all(
+  yield* await Kit.promiseAll(
     expiredThreads.map(async (thread) =>
       ctx.memory.deleteAgentThread({
         agentId: "conversation-agent",
@@ -82,10 +82,6 @@ const listSidebarConversationsFn = Kit.gen(async function* (
       }),
     ),
   );
-
-  for (const result of deletionResults) {
-    yield* result;
-  }
 
   const conversations = yield* await ctx.memory.listThreads({
     filter: { resourceId: input.userId },
@@ -168,12 +164,16 @@ export const listSidebarConversations = createServerFn({ method: "GET" })
   .validator(paginationInputSchema)
   .middleware([authMiddleware])
   .handler(async ({ context, data }) =>
-    Kit.serverFn(listSidebarConversationsFn, {
-      MemoryError: () => toServerFnError.serverError("Failed to list conversations"),
-    })(sidebarCtx, {
-      page: data.page,
-      userId: context.user.id,
-    }),
+    Kit.run(async () =>
+      listSidebarConversationsFn(sidebarCtx, {
+        page: data.page,
+        userId: context.user.id,
+      }),
+    ).throws<ServerFnError>((error) =>
+      matchError(error, {
+        MemoryError: () => toServerFnError.serverError("Failed to list conversations"),
+      }),
+    ),
   );
 
 const topicsInputSchema = v.object({
@@ -185,14 +185,18 @@ export const listSidebarTopics = createServerFn({ method: "GET" })
   .validator(topicsInputSchema)
   .middleware([authMiddleware])
   .handler(async ({ context, data }) =>
-    Kit.serverFn(listSidebarTopicsFn, {
-      DatabaseError: () => toServerFnError.serverError("Failed to list topics"),
-      MemoryError: () => toServerFnError.serverError("Failed to list topic conversations"),
-    })(sidebarCtx, {
-      limit: data.limit,
-      offset: data.offset,
-      userId: context.user.id,
-    }),
+    Kit.run(async () =>
+      listSidebarTopicsFn(sidebarCtx, {
+        limit: data.limit,
+        offset: data.offset,
+        userId: context.user.id,
+      }),
+    ).throws<ServerFnError>((error) =>
+      matchError(error, {
+        DatabaseError: () => toServerFnError.serverError("Failed to list topics"),
+        MemoryError: () => toServerFnError.serverError("Failed to list topic conversations"),
+      }),
+    ),
   );
 
 const topicThreadsInputSchema = v.object({

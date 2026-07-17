@@ -58,74 +58,42 @@ test("KitModule rejects unbranded tuples", () => {
   Kit.get(plainKit);
 });
 
-test("Kit.serverFn infers custom error handler keys", () => {
-  const action = async (
-    _ctx: TestCtx,
-    _input: undefined,
-  ): Promise<ResultType<string, TypeTestError | OtherTypeTestError>> =>
+test("Kit.run infers async Result values and errors", () => {
+  const operation = async (): Promise<ResultType<string, TypeTestError | OtherTypeTestError>> =>
     Promise.resolve(Result.err(new TypeTestError({ message: "failed" })));
+  const run = Kit.run(operation);
 
-  Kit.serverFn(action, {
-    TypeTestError: (error) =>
-      new ServerFnError({
-        message: error.message,
-        status: "server-error",
-      }),
-    OtherTypeTestError: (error) =>
-      new ServerFnError({
-        message: error.message,
-        status: "server-error",
-      }),
+  run.inspect((value) => {
+    expectTypeOf(value).toEqualTypeOf<string>();
   });
 
-  // @ts-expect-error all custom tagged error variants need handlers
-  Kit.serverFn(action, {
-    TypeTestError: (error) =>
-      new ServerFnError({
-        message: error.message,
-        status: "server-error",
-      }),
-  });
-});
-
-test("Kit.serverFn accepts ServerFnError actions without handlers", () => {
-  const action = Kit.gen(async function* (_ctx: TestCtx, _input: undefined) {
-    yield* await Promise.resolve(
-      new ServerFnError({
-        message: "already mapped",
-        status: "server-error",
-      }),
-    );
-
-    return Result.ok();
+  run.inspectErr((error) => {
+    expectTypeOf(error).toEqualTypeOf<TypeTestError | OtherTypeTestError>();
   });
 
-  expectTypeOf(Kit.serverFn(action)).toEqualTypeOf<
-    (context: TestCtx, input: undefined) => Promise<void>
-  >();
-});
-
-test("Kit.serverFn skips ServerFnError handler keys for mixed unions", () => {
-  const action = async (
-    _ctx: TestCtx,
-    _input: undefined,
-  ): Promise<ResultType<string, TypeTestError | ServerFnError>> =>
-    Promise.resolve(
-      Result.err(
-        new ServerFnError({
-          message: "already mapped",
-          status: "server-error",
-        }),
-      ),
-    );
-
+  expectTypeOf(run.throws()).toEqualTypeOf<Promise<string>>();
   expectTypeOf(
-    Kit.serverFn(action, {
-      TypeTestError: (error) =>
-        new ServerFnError({
-          message: error.message,
-          status: "server-error",
-        }),
+    run.throws<ServerFnError>((error) => {
+      expectTypeOf(error).toEqualTypeOf<TypeTestError | OtherTypeTestError>();
+
+      return new ServerFnError({
+        message: error.message,
+        status: "server-error",
+      });
     }),
-  ).toEqualTypeOf<(context: TestCtx, input: undefined) => Promise<string>>();
+  ).toEqualTypeOf<Promise<string>>();
+
+  // @ts-expect-error mapped errors must be Error instances
+  void run.throws(() => "failed");
+});
+
+test("Kit.promiseAll preserves tuple values and unions errors", () => {
+  const numberResult: Promise<ResultType<number, TypeTestError>> = Promise.resolve(Result.ok(1));
+  const textResult: Promise<ResultType<string, OtherTypeTestError>> = Promise.resolve(
+    Result.ok("two"),
+  );
+
+  expectTypeOf(Kit.promiseAll([numberResult, textResult])).toEqualTypeOf<
+    Promise<ResultType<[number, string], TypeTestError | OtherTypeTestError>>
+  >();
 });

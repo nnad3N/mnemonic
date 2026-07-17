@@ -3,21 +3,21 @@ import { Result } from "better-result";
 import { eq } from "drizzle-orm";
 
 import { file, topic } from "@/db/schema";
-import { dbKit } from "@/lib/db-kit";
 import type { DbKit } from "@/lib/db-kit";
+import { dbKit } from "@/lib/db-kit";
+import type { Kits, ServerFnError } from "@/lib/kit";
 import { Kit, toServerFnError } from "@/lib/kit";
-import type { Kits } from "@/lib/kit";
-import { memoryKit } from "@/lib/memory-kit";
 import type { MemoryKit } from "@/lib/memory-kit";
+import { memoryKit } from "@/lib/memory-kit";
 import {
   threadAccessMiddleware,
   topicAccessMiddleware,
 } from "@/lib/middleware/assert-thread-access";
-import { s3Kit } from "@/lib/s3-kit";
 import type { S3Kit } from "@/lib/s3-kit";
+import { s3Kit } from "@/lib/s3-kit";
 import type { SafeId } from "@/lib/safe-id";
-import { vectorKit } from "@/lib/vector-kit";
 import type { VectorKit } from "@/lib/vector-kit";
+import { vectorKit } from "@/lib/vector-kit";
 
 type DeleteThreadCtx = Kits<[DbKit, S3Kit, MemoryKit, VectorKit]>;
 
@@ -26,7 +26,7 @@ type DeleteTopicInput = {
 };
 
 const deleteTopicFn = Kit.gen(async function* (ctx: DeleteThreadCtx, input: DeleteTopicInput) {
-  const [filesResult, threadsResult] = await Promise.all([
+  const [files, { threads }] = yield* await Kit.promiseAll([
     ctx.db.run((db) =>
       db.query.file.findMany({
         where: { topicId: input.topicId },
@@ -39,10 +39,7 @@ const deleteTopicFn = Kit.gen(async function* (ctx: DeleteThreadCtx, input: Dele
       perPage: false,
     }),
   ]);
-  const files = yield* filesResult;
-  const { threads } = yield* threadsResult;
-
-  const results = await Promise.all([
+  yield* await Kit.promiseAll([
     ctx.s3.deleteObjects({
       keys: files.map((row) => row.s3Key),
     }),
@@ -53,10 +50,6 @@ const deleteTopicFn = Kit.gen(async function* (ctx: DeleteThreadCtx, input: Dele
     ctx.db.run((db) => db.delete(topic).where(eq(topic.id, input.topicId))),
     ...threads.map(async (thread) => ctx.memory.deleteThread({ threadId: thread.id })),
   ]);
-
-  for (const result of results) {
-    yield* result;
-  }
 
   return Result.ok({ id: input.topicId });
 });
@@ -83,12 +76,7 @@ export const deleteTopic = createServerFn({ method: "POST" })
     const topicId = context.topic.id;
     const input = { topicId };
 
-    const defaultError = () => toServerFnError.serverError("Failed to delete topic");
-
-    return Kit.serverFn(deleteTopicFn, {
-      DatabaseError: defaultError,
-      MemoryError: defaultError,
-      S3Error: defaultError,
-      VectorError: defaultError,
-    })(deleteThreadCtx, input);
+    return Kit.run(async () => deleteTopicFn(deleteThreadCtx, input)).throws<ServerFnError>(() =>
+      toServerFnError.serverError("Failed to delete topic"),
+    );
   });

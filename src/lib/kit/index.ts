@@ -1,16 +1,13 @@
-import { matchError, Result, TaggedError } from "better-result";
-import type { Err, Result as ResultType, TaggedErrorInstance } from "better-result";
+import { Result, TaggedError } from "better-result";
+import type { Err, Result as ResultType } from "better-result";
 
 import type {
   AnyKits,
   KitModule,
   KitAction,
-  KitAsyncAction,
   KitGeneratorAction,
-  MatchErrorHandlers,
   Kits,
   UniqueKitNames,
-  UnmappedError,
 } from "./utils";
 
 export type { Kits } from "./utils";
@@ -79,78 +76,90 @@ const kitGen =
   async (context: TKits, input: TInput) =>
     Result.gen(() => action(context, input));
 
-const kitToException =
-  <TKits extends AnyKits, TInput, TValue, TError extends Error>(
-    action: KitAsyncAction<TKits, TInput, ResultType<TValue, TError>>,
-  ) =>
-  async (context: TKits, input: TInput): Promise<TValue> => {
-    const result = await action(context, input);
+type KitRunResult<TValue, TError extends Error> = {
+  inspect: (effect: (value: TValue) => void) => KitRunResult<TValue, TError>;
+  inspectErr: (effect: (error: TError) => void) => KitRunResult<TValue, TError>;
+  throws: {
+    (): Promise<TValue>;
+    // oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- callers may explicitly constrain the boundary error type.
+    <TMappedError extends Error>(mapError: (error: TError) => TMappedError): Promise<TValue>;
+  };
+};
 
-    if (Result.isError(result)) {
+const createKitRunResult = <TValue, TError extends Error>(
+  resultPromise: Promise<ResultType<TValue, TError>>,
+): KitRunResult<TValue, TError> => {
+  function throws(): Promise<TValue>;
+  // oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- mirrors the public overload's explicit boundary error constraint.
+  function throws<TMappedError extends Error>(
+    mapError: (error: TError) => TMappedError,
+  ): Promise<TValue>;
+  async function throws<TMappedError extends Error>(
+    mapError?: (error: TError) => TMappedError,
+  ): Promise<TValue> {
+    const result = await resultPromise;
+
+    if (Result.isOk(result)) {
+      return result.value;
+    }
+
+    if (!mapError) {
       throw result.error;
     }
 
-    return result.value;
+    throw result.mapError(mapError).error;
+  }
+
+  return {
+    inspect: (effect) => createKitRunResult(resultPromise.then((result) => result.tap(effect))),
+    inspectErr: (effect) =>
+      createKitRunResult(resultPromise.then((result) => result.tapError(effect))),
+    throws,
   };
+};
 
-function kitServerFn<
-  TKits extends AnyKits,
-  TInput,
-  TValue,
-  TKitError extends TaggedErrorInstance<string, unknown>,
+const kitRun = <TValue, TError extends Error>(
+  operation: () => Promise<ResultType<TValue, TError>>,
+): KitRunResult<TValue, TError> => createKitRunResult(Promise.resolve().then(operation));
+
+type InferPromiseResultValue<TPromise> =
+  Awaited<TPromise> extends ResultType<infer TValue, unknown> ? TValue : never;
+
+type InferPromiseResultError<TPromise> =
+  Awaited<TPromise> extends ResultType<unknown, infer TError> ? TError : never;
+
+type PromiseAllValues<TPromises extends readonly Promise<ResultType<unknown, Error>>[]> = {
+  -readonly [TIndex in keyof TPromises]: InferPromiseResultValue<TPromises[TIndex]>;
+};
+
+const kitPromiseAll = async <
+  const TPromises extends readonly Promise<ResultType<unknown, Error>>[],
 >(
-  action: KitAsyncAction<TKits, TInput, ResultType<TValue, TKitError>>,
-  handlers: MatchErrorHandlers<TKitError, ServerFnError>,
-): (context: TKits, input: TInput) => Promise<TValue>;
+  promises: TPromises,
+): Promise<ResultType<PromiseAllValues<TPromises>, InferPromiseResultError<TPromises[number]>>> => {
+  const results = await Promise.all(promises);
+  const combined = Result.gen(function* () {
+    const values: unknown[] = [];
 
-function kitServerFn<TKits extends AnyKits, TInput, TValue>(
-  action: KitAsyncAction<TKits, TInput, ResultType<TValue, ServerFnError>>,
-): (context: TKits, input: TInput) => Promise<TValue>;
-
-function kitServerFn<
-  TKits extends AnyKits,
-  TInput,
-  TValue,
-  TError extends TaggedErrorInstance<string, unknown>,
->(
-  action: KitAsyncAction<TKits, TInput, ResultType<TValue, TError>>,
-  handlers?: MatchErrorHandlers<TError, ServerFnError>,
-) {
-  return async (context: TKits, input: TInput): Promise<TValue> => {
-    const result = await action(context, input);
-
-    if (handlers) {
-      const mapped = result.mapError((error) => {
-        if (error instanceof ServerFnError) {
-          return error;
-        }
-
-        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- ServerFnError is handled above, leaving the errors represented by handlers.
-        const unmappedError = error as UnmappedError<TError>;
-
-        return matchError(unmappedError, handlers);
-      });
-
-      if (Result.isError(mapped)) {
-        throw mapped.error;
-      }
-
-      return mapped.value;
+    for (const result of results) {
+      values.push(yield* result);
     }
 
-    if (Result.isError(result)) {
-      throw result.error;
-    }
+    return Result.ok(values);
+  });
 
-    return result.value;
-  };
-}
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Promise.all and the loop preserve input order; each yielded value occupies its corresponding tuple index.
+  return combined as ResultType<
+    PromiseAllValues<TPromises>,
+    InferPromiseResultError<TPromises[number]>
+  >;
+};
 
 export const Kit = {
   define: defineKit,
   get: getKit,
   createContext: createKitContext,
   gen: kitGen,
-  serverFn: kitServerFn,
-  toException: kitToException,
+  promiseAll: kitPromiseAll,
+  run: kitRun,
 };

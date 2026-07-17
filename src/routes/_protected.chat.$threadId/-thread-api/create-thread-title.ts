@@ -1,11 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { generateText } from "ai";
-import { Result } from "better-result";
+import { matchError, Result } from "better-result";
 import { produce } from "immer";
 import * as v from "valibot";
 
-import { Kit, toServerFnError } from "@/lib/kit";
+import { Kit, ServerFnError, toServerFnError } from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit";
 import type { MemoryKit } from "@/lib/memory-kit";
@@ -101,12 +101,20 @@ export const createThreadTitle = createServerFn({ method: "POST" })
   .validator(createThreadTitleSchema)
   .middleware([threadAccessMiddleware])
   .handler(async ({ context, data }) =>
-    Kit.serverFn(createThreadTitleFn, {
-      MemoryError: () => toServerFnError.serverError("Failed to save conversation title"),
-    })(createThreadTitleCtx, {
-      metadata: context.thread.metadata ?? {},
-      text: data.text,
-      threadId: context.thread.id,
+    Kit.run(async () =>
+      createThreadTitleFn(createThreadTitleCtx, {
+        metadata: context.thread.metadata ?? {},
+        text: data.text,
+        threadId: context.thread.id,
+      }),
+    ).throws<ServerFnError>((error) => {
+      if (ServerFnError.is(error)) {
+        return error;
+      }
+
+      return matchError(error, {
+        MemoryError: () => toServerFnError.serverError("Failed to save conversation title"),
+      });
     }),
   );
 

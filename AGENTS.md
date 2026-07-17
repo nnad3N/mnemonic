@@ -123,13 +123,17 @@ const getStatusDotClassName = (status: FileStatus) => {
 
 - Use raw `Result.tryPromise(...)` for a simple fallible operation. Use `Kit.gen(...)` when application logic coordinates multiple kit operations or needs injectable dependencies.
 - Inside `Kit.gen`, compose asynchronous kit results with `yield* await`. Return expected, recoverable tool outcomes as ordinary `Result.ok(...)` values; reserve `Err` for failures that should short-circuit the action.
-- Use `result.match({ ok, err })` only when both branches need meaningful handling. If the success value passes through unchanged and only the error branch is mapped, use a normal `if (Result.isError(result))` followed by `return result.value`. At tool boundaries, keep provider and infrastructure details out of error output shown to the model.
+- Inside `Kit.gen`, use `yield* await Kit.promiseAll([...])` when independent operations return Result promises and should run concurrently. It preserves Promise.all concurrency, combines successful values in input order, and unions member error types. Keep bespoke loops when results must remain paired with source records or need per-item handling.
+- Use `result.match({ ok, err })` only when both branches need meaningful handling. Outside thin `Kit.run` boundary adapters, if the success value passes through unchanged and only the error branch is mapped, use a normal `if (Result.isError(result))` followed by `return result.value`. At tool boundaries, keep provider and infrastructure details out of error output shown to the model.
 - Use `mapError` to translate an error type and `tapError` for error-only side effects such as logging. Prefer these combinators over an `if` that only maps or observes a Result branch.
-- Use `Kit.toException(...)` when crossing into a framework boundary that represents failure by throwing. It throws the original error instance. Do not use Better Result's `.unwrap()` there because it converts `Err` into `Panic`.
-- Inline `Kit.toException(...)` in a thin framework adapter and directly return its promise without a redundant `await`:
+- Use `Kit.run(async () => operationReturningResult())` only in thin server-function, workflow, or tool adapters that can directly return the successful value. Finish the chain with `.throws()` to throw the original error instance, or `.throws<BoundaryError>(mapper)` to translate it. Do not use `Kit.run` in ordinary application logic, middleware, client code, recovery paths, transformed-success handlers, or multi-step Result branching.
+- `Kit.run(...).inspect(...)` and `.inspectErr(...)` provide synchronous success/error side effects before `.throws()`. They preserve the underlying Result and use Better Result's Panic behavior if an inspection callback throws.
+- At server-function boundaries, map the complete error union to user-safe `ServerFnError` values. Use Better Result's `matchError(...)` inside `.throws<ServerFnError>(...)` when tagged variants need distinct exhaustive mappings. If the source union already includes `ServerFnError`, return it unchanged via `ServerFnError.is(error)` before matching the remaining variants.
+- Inline `Kit.run(...)` in the framework adapter and directly return its `.throws()` promise without a redundant `await`. Do not use Better Result's `.unwrap()` at a throwing boundary because it converts `Err` into `Panic`:
 
 ```ts
-execute: async ({ inputData }) => Kit.toException(processFn)(processCtx, inputData),
+execute: async ({ inputData }) =>
+  Kit.run(async () => processFn(processCtx, inputData)).throws(),
 ```
 
 - An `if (Result.isError(result))` remains appropriate when TypeScript narrowing is needed or when throwing must happen outside a Result callback to preserve the original error.

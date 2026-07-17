@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { Result } from "better-result";
+import { matchError, Result } from "better-result";
 import { eq } from "drizzle-orm";
 import * as v from "valibot";
 
@@ -132,18 +132,26 @@ export const getPresignedUrl = createServerFn({ method: "POST" })
   .validator(getPresignedUrlInputSchema)
   .middleware([threadAccessMiddleware])
   .handler(async ({ context, data }) =>
-    Kit.serverFn(getPresignedUrlFn, {
-      DatabaseError: () => toServerFnError.serverError("Failed to prepare file upload"),
-      FileUploadError: (error) => toServerFnError.serverError(error.message),
-      S3Error: () => toServerFnError.serverError("Failed to prepare file upload"),
-    })(uploadFileCtx, {
-      displayName: data.displayName,
-      fileId: data.fileId,
-      mimeType: data.mimeType,
-      resourceId: context.thread.resourceId,
-      sha256: data.sha256,
-      sizeBytes: data.sizeBytes,
-      userId: context.user.id,
+    Kit.run(async () =>
+      getPresignedUrlFn(uploadFileCtx, {
+        displayName: data.displayName,
+        fileId: data.fileId,
+        mimeType: data.mimeType,
+        resourceId: context.thread.resourceId,
+        sha256: data.sha256,
+        sizeBytes: data.sizeBytes,
+        userId: context.user.id,
+      }),
+    ).throws<ServerFnError>((error) => {
+      if (ServerFnError.is(error)) {
+        return error;
+      }
+
+      return matchError(error, {
+        DatabaseError: () => toServerFnError.serverError("Failed to prepare file upload"),
+        FileUploadError: (fileUploadError) => toServerFnError.serverError(fileUploadError.message),
+        S3Error: () => toServerFnError.serverError("Failed to prepare file upload"),
+      });
     }),
   );
 

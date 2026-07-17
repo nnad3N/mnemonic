@@ -1,5 +1,4 @@
 import { createServerFn } from "@tanstack/react-start";
-import { Result } from "better-result";
 import { and, eq, inArray } from "drizzle-orm";
 import * as v from "valibot";
 
@@ -15,21 +14,17 @@ const findFilesBySha256InputSchema = v.object({
 export const findFilesBySha256 = createServerFn({ method: "GET" })
   .validator(findFilesBySha256InputSchema)
   .middleware([topicAccessMiddleware])
-  .handler(async ({ context, data }) => {
-    const result = await Kit.get(dbKit).run((db) =>
-      db
-        .select({
-          id: file.id,
-          sha256: file.sha256,
-          status: file.status,
-        })
-        .from(file)
-        .where(and(eq(file.topicId, context.topic.id), inArray(file.sha256, data.sha256s))),
-    );
-
-    if (Result.isError(result)) {
-      throw toServerFnError.serverError("Failed to find matching files");
-    }
-
-    return result.value;
-  });
+  .handler(async ({ context, data }) =>
+    Kit.run(async () =>
+      Kit.get(dbKit).run((db) =>
+        db
+          .select({
+            id: file.id,
+            sha256: file.sha256,
+            status: file.status,
+          })
+          .from(file)
+          .where(and(eq(file.topicId, context.topic.id), inArray(file.sha256, data.sha256s))),
+      ),
+    ).throws(() => toServerFnError.serverError("Failed to find matching files")),
+  );

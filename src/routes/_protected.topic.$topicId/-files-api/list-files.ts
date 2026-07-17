@@ -1,6 +1,5 @@
 import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
-import { Result } from "better-result";
 import { and, desc, eq, ilike } from "drizzle-orm";
 import * as v from "valibot";
 
@@ -35,33 +34,29 @@ export const listFiles = createServerFn({ method: "GET" })
     const whereClause = buildWhereClause(context.topic.id, data.search);
     const offset = (data.page - 1) * data.pageSize;
 
-    const result = await Kit.get(dbKit).run(async (db) => {
-      const [items, totalCount] = await Promise.all([
-        db
-          .select({
-            createdAt: file.createdAt,
-            displayName: file.displayName,
-            id: file.id,
-            mimeType: file.mimeType,
-            sizeBytes: file.sizeBytes,
-            status: file.status,
-          })
-          .from(file)
-          .where(whereClause)
-          .orderBy(desc(file.createdAt))
-          .limit(data.pageSize)
-          .offset(offset),
-        db.$count(file, whereClause),
-      ]);
+    return Kit.run(async () =>
+      Kit.get(dbKit).run(async (db) => {
+        const [items, totalCount] = await Promise.all([
+          db
+            .select({
+              createdAt: file.createdAt,
+              displayName: file.displayName,
+              id: file.id,
+              mimeType: file.mimeType,
+              sizeBytes: file.sizeBytes,
+              status: file.status,
+            })
+            .from(file)
+            .where(whereClause)
+            .orderBy(desc(file.createdAt))
+            .limit(data.pageSize)
+            .offset(offset),
+          db.$count(file, whereClause),
+        ]);
 
-      return { items, totalCount };
-    });
-
-    if (Result.isError(result)) {
-      throw toServerFnError.serverError("Failed to list files");
-    }
-
-    return result.value;
+        return { items, totalCount };
+      }),
+    ).throws(() => toServerFnError.serverError("Failed to list files"));
   });
 
 export type FileItem = {

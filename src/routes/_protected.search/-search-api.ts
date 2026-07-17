@@ -1,7 +1,7 @@
 import type { StorageThreadType } from "@mastra/core/memory";
 import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
-import { Result } from "better-result";
+import { matchError, Result } from "better-result";
 import { desc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
@@ -9,7 +9,7 @@ import { topic } from "@/db/schema";
 import { dbKit } from "@/lib/db-kit";
 import type { DbKit } from "@/lib/db-kit";
 import { Kit, toServerFnError } from "@/lib/kit";
-import type { Kits } from "@/lib/kit";
+import type { Kits, ServerFnError } from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit";
 import type { MemoryKit } from "@/lib/memory-kit";
 import { authMiddleware } from "@/lib/middleware/auth-middleware";
@@ -57,7 +57,7 @@ const searchItemsFn = Kit.gen(async function* (
 ) {
   const hasQuery = query.length > 0;
 
-  const [recentTopicsResult, standaloneThreadsResult] = await Promise.all([
+  const [recentTopics, standaloneThreads] = yield* await Kit.promiseAll([
     ctx.db.run((db) =>
       db
         .select({
@@ -77,9 +77,6 @@ const searchItemsFn = Kit.gen(async function* (
       perPage: hasQuery ? SEARCH_TOPIC_THREAD_SCAN_LIMIT : SEARCH_THREAD_LIMIT,
     }),
   ]);
-
-  const recentTopics = yield* recentTopicsResult;
-  const standaloneThreads = yield* standaloneThreadsResult;
 
   const conversations = standaloneThreads.threads
     .filter((thread) => titleMatchesQuery(thread.title ?? "", query))
@@ -144,13 +141,17 @@ export const searchItems = createServerFn({ method: "GET" })
   .validator(searchInputSchema)
   .middleware([authMiddleware])
   .handler(async ({ context, data }) =>
-    Kit.serverFn(searchItemsFn, {
-      DatabaseError: () => toServerFnError.serverError("Database search failed"),
-      MemoryError: () => toServerFnError.serverError("Memory search failed"),
-    })(searchCtx, {
-      query: data.query.trim(),
-      userId: context.user.id,
-    }),
+    Kit.run(async () =>
+      searchItemsFn(searchCtx, {
+        query: data.query.trim(),
+        userId: context.user.id,
+      }),
+    ).throws<ServerFnError>((error) =>
+      matchError(error, {
+        DatabaseError: () => toServerFnError.serverError("Database search failed"),
+        MemoryError: () => toServerFnError.serverError("Memory search failed"),
+      }),
+    ),
   );
 
 export type SearchQueryInput = {

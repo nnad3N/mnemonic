@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { Result } from "better-result";
+import { matchError, Result } from "better-result";
 import { nanoid } from "nanoid";
 import * as v from "valibot";
 
@@ -7,7 +7,7 @@ import { topic } from "@/db/schema";
 import { dbKit } from "@/lib/db-kit";
 import type { DbKit } from "@/lib/db-kit";
 import { Kit, toServerFnError } from "@/lib/kit";
-import type { Kits } from "@/lib/kit";
+import type { Kits, ServerFnError } from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit";
 import type { MemoryKit } from "@/lib/memory-kit";
 import { topicAccessMiddleware } from "@/lib/middleware/assert-thread-access";
@@ -87,14 +87,18 @@ export const createTopic = createServerFn({ method: "POST" })
   )
   .middleware([authMiddleware])
   .handler(async ({ context, data }) =>
-    Kit.serverFn(createTopicFn, {
-      DatabaseError: () => toServerFnError.serverError("Failed to create topic"),
-      MemoryError: () => toServerFnError.serverError("Failed to create topic conversation"),
-    })(createTopicCtx, {
-      conversationTitle: data.conversationTitle,
-      topicTitle: data.topicTitle,
-      userId: context.user.id,
-    }),
+    Kit.run(async () =>
+      createTopicFn(createTopicCtx, {
+        conversationTitle: data.conversationTitle,
+        topicTitle: data.topicTitle,
+        userId: context.user.id,
+      }),
+    ).throws<ServerFnError>((error) =>
+      matchError(error, {
+        DatabaseError: () => toServerFnError.serverError("Failed to create topic"),
+        MemoryError: () => toServerFnError.serverError("Failed to create topic conversation"),
+      }),
+    ),
   );
 
 export const createTopicConversation = createServerFn({ method: "POST" })

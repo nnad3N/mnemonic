@@ -1,5 +1,4 @@
-import { Panic, panic, Result, TaggedError } from "better-result";
-import type { Result as ResultType } from "better-result";
+import { Panic, Result, TaggedError } from "better-result";
 import { describe, expect, it } from "vitest";
 
 import { Kit, ServerFnError } from ".";
@@ -48,126 +47,99 @@ describe("kit", () => {
     expect(result.unwrap()).toBe("value:6");
   });
 
-  it("returns successful values through Kit.toException", async () => {
-    const action = async (_ctx: TestCtx, input: { value: number }) =>
-      Promise.resolve(Result.ok(input.value * 2));
+  it("runs an async Result operation once and returns its successful value", async () => {
+    let executionCount = 0;
+    const run = Kit.run(async () => {
+      executionCount += 1;
+      return Promise.resolve(Result.ok(10));
+    });
 
-    await expect(Kit.toException(action)(ctx, { value: 5 })).resolves.toBe(10);
+    await expect(run.throws()).resolves.toBe(10);
+    await expect(run.throws()).resolves.toBe(10);
+    expect(executionCount).toBe(1);
   });
 
-  it("throws the original error through Kit.toException", async () => {
-    const error = new TestKitError({ message: "boundary failed" });
-    const action = async (_ctx: TestCtx, _input: null) => Promise.resolve(Result.err(error));
+  it("inspects successful values through Kit.run", async () => {
+    const inspectedValues: number[] = [];
 
-    await expect(Kit.toException(action)(ctx, null)).rejects.toBe(error);
+    const run = Kit.run(async () => Promise.resolve(Result.ok(10))).inspect((value) => {
+      inspectedValues.push(value);
+    });
+
+    await expect(run.throws()).resolves.toBe(10);
+    expect(inspectedValues).toEqual([10]);
   });
 
-  it("unwraps successful Kit.serverFn results", async () => {
-    const action = Kit.gen(async function* (ctx: TestCtx, input: { value: number }) {
-      const doubled = yield* await Promise.resolve(ctx.number.double(input.value));
+  it("inspects errors through Kit.run", async () => {
+    const error = new TestKitError({ message: "observed failure" });
+    const observedErrors: TestKitError[] = [];
 
-      return Result.ok(doubled);
-    });
-
-    await expect(Kit.serverFn(action)(ctx, { value: 5 })).resolves.toBe(10);
-  });
-
-  it("maps custom tagged errors to ServerFnError", async () => {
-    const action = Kit.gen(async function* (_ctx: TestCtx, _input: null) {
-      yield* await Promise.resolve(new TestKitError({ message: "kit failed" }));
-
-      return Result.ok();
-    });
-
-    const serverFn = Kit.serverFn(action, {
-      TestKitError: (error) =>
-        new ServerFnError({
-          message: error.message,
-          status: "server-error",
-        }),
-    });
-
-    await expect(serverFn(ctx, null)).rejects.toMatchObject({
-      _tag: "ServerFnError",
-      message: "kit failed",
-      status: "server-error",
-    });
-  });
-
-  it("skips mapping errors that are already ServerFnError values", async () => {
-    const serverError = new ServerFnError({
-      message: "already mapped",
-      status: "bad-request",
-    });
-    const action = async (
-      _ctx: TestCtx,
-      _input: null,
-    ): Promise<ResultType<void, TestKitError | ServerFnError>> =>
-      Promise.resolve(Result.err(serverError));
-    const serverFn = Kit.serverFn(action, {
-      TestKitError: (error) =>
-        new ServerFnError({
-          message: error.message,
-          status: "server-error",
-        }),
-    });
-
-    await expect(serverFn(ctx, null)).rejects.toBe(serverError);
-  });
-
-  it("accepts ServerFnError results without an error map", async () => {
-    const action = Kit.gen(async function* (_ctx: TestCtx, _input: null) {
-      yield* await Promise.resolve(
-        new ServerFnError({
-          message: "already mapped",
-          status: "unauthorized",
-        }),
-      );
-
-      return Result.ok();
-    });
-
-    const serverFn = Kit.serverFn(action);
-
-    await expect(serverFn(ctx, null)).rejects.toMatchObject({
-      _tag: "ServerFnError",
-      message: "already mapped",
-      status: "unauthorized",
-    });
-  });
-
-  it("propagates panics from server function actions", async () => {
-    const cause = new Error("panic cause");
-    const action = async (_ctx: TestCtx, _input: null) => {
-      Result.ok(1).map(() => {
-        throw cause;
+    const run = Kit.run(async () => Promise.resolve(Result.err(error)))
+      .inspectErr((observedError) => {
+        observedErrors.push(observedError);
+      })
+      .inspectErr((observedError) => {
+        observedErrors.push(observedError);
       });
 
-      return Promise.resolve(Result.ok());
-    };
-    const serverFn = Kit.serverFn(action);
-
-    const error = await serverFn(ctx, null).catch((error: unknown) => error);
-
-    expect(Panic.is(error)).toBeTruthy();
-    expect(error).toMatchObject({ cause });
+    await expect(run.throws()).rejects.toBe(error);
+    expect(observedErrors).toHaveLength(2);
+    expect(observedErrors.at(0)).toBe(error);
+    expect(observedErrors.at(1)).toBe(error);
   });
 
-  it("propagates explicit panic calls from server function actions", async () => {
-    const cause = new Error("explicit panic cause");
-    const message = "explicit panic";
-    const action = async (_ctx: TestCtx, _input: null) => {
-      panic(message, cause);
-      return Promise.resolve(Result.ok());
-    };
-    const serverFn = Kit.serverFn(action);
-
-    const error = await serverFn(ctx, null).catch((error: unknown) => error);
-
-    expect(Panic.is(error)).toBeTruthy();
-    expect(error).toMatchObject({
-      cause,
-      message,
+  it("maps errors before throwing through Kit.run", async () => {
+    const error = new TestKitError({ message: "kit failed" });
+    const serverError = new ServerFnError({
+      message: "boundary failed",
+      status: "server-error",
     });
+
+    await expect(
+      Kit.run(async () => Promise.resolve(Result.err(error))).throws<ServerFnError>(
+        () => serverError,
+      ),
+    ).rejects.toBe(serverError);
+  });
+
+  it("preserves Panic behavior when a Kit.run error mapper throws", async () => {
+    const cause = new Error("mapper panic");
+    const error = new TestKitError({ message: "kit failed" });
+    const thrown = await Kit.run(async () => Promise.resolve(Result.err(error)))
+      .throws(() => {
+        throw cause;
+      })
+      .catch((thrown: unknown) => thrown);
+
+    expect(Panic.is(thrown)).toBeTruthy();
+    expect(thrown).toMatchObject({ cause });
+  });
+
+  it("combines parallel Result promises in input order", async () => {
+    const result = await Kit.promiseAll([
+      Promise.resolve(Result.ok(1)),
+      Promise.resolve(Result.ok("two")),
+    ]);
+
+    expect(result.unwrap()).toEqual([1, "two"]);
+  });
+
+  it("returns the first Kit.promiseAll error in input order", async () => {
+    const firstError = new TestKitError({ message: "first failure" });
+    const secondError = new TestKitError({ message: "second failure" });
+    const result = await Kit.promiseAll([
+      Promise.resolve(Result.err(firstError)),
+      Promise.resolve(Result.err(secondError)),
+    ]);
+
+    expect(Result.isError(result)).toBeTruthy();
+    const returnedError = Result.isError(result) ? result.error : undefined;
+    expect(returnedError).toBe(firstError);
+  });
+
+  it("combines an empty list of Result promises", async () => {
+    const result = await Kit.promiseAll([]);
+
+    expect(result.unwrap()).toEqual([]);
   });
 });
