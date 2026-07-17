@@ -1,13 +1,11 @@
 import { Agent } from "@mastra/core/agent";
 import { Memory } from "@mastra/memory";
 
-import {
-  baseInstructions,
-  sharedSourceInstructions,
-} from "@/mastra/agents/base-instructions";
+import { baseInstructions, sharedSourceInstructions } from "@/mastra/agents/base-instructions";
 import { models } from "@/mastra/models";
 import { pgVector, postgresStore } from "@/mastra/storage";
 import { accessTopicTool } from "@/mastra/tools/access-topic-tool";
+import { webFetchTool } from "@/mastra/tools/web-fetch-tool";
 import { webSearchTool } from "@/mastra/tools/web-search-tool";
 
 export const conversationAgentId = "conversation-agent";
@@ -30,8 +28,9 @@ export const conversationMemory = new Memory({
 });
 
 export const conversationAgentTools = {
-  "access-topic": accessTopicTool,
-  "web-search": webSearchTool,
+  accessTopic: accessTopicTool,
+  webFetch: webFetchTool,
+  webSearch: webSearchTool,
 } as const;
 
 export const conversationAgent = new Agent({
@@ -43,16 +42,17 @@ ${sharedSourceInstructions}
 
 Available sources:
 - Conversation recall: past messages in the current conversation only. Prefer this when the answer may already appear in prior chat.
-- Web search: current or external information. Use when the question needs facts outside this conversation or up-to-date information from the web.
-- Access topic: topic artifacts and topic-scoped conversation history. Use when the user asks for information from a topic, topic files, topic artifacts, or prior topic conversations.
+- Web: current or external information via webSearch (discover pages) or webFetch (read a known URL).
+- Access topic: topic files and topic-scoped conversation history. Use when the user asks for information from a topic, topic files, or prior topic conversations.
 
 ## Access topic
-Use access-topic only when the topic is clear. If the user asks about a topic but no topic can be identified, ask which topic to use.
+Use accessTopic only when the topic is clear. If the user asks about a topic but no topic can be identified, ask which topic to use.
 
-## Web search
-Use web-search when:
-- The user asks for current events, external documentation, or explicitly wants a web search.
-- Conversation recall did not fully answer the question and topic context is not required.
+## Web
+- Use webSearch to discover pages when no specific URL is known.
+- Use webFetch when the user provided a URL or a prior search already identified the page to read.
+- Prefer these when the question needs facts outside this conversation or up-to-date information from the web, or when conversation recall did not fully answer and topic context is not required.
+- Tool descriptions own exact input requirements and result shapes.
 
 ## Conversation history
 Use recall to browse past messages in the current conversation only:

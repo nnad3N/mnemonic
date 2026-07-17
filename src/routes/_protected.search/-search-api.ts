@@ -1,20 +1,34 @@
 import type { StorageThreadType } from "@mastra/core/memory";
 import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
+import { matchError, Result } from "better-result";
 import { desc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { db } from "@/db";
 import { topic } from "@/db/schema";
+import { dbKit } from "@/lib/db-kit";
+import type { DbKit } from "@/lib/db-kit";
+import { Kit, toServerFnError } from "@/lib/kit";
+import type { Kits, ServerFnError } from "@/lib/kit";
+import { memoryKit } from "@/lib/memory-kit";
+import type { MemoryKit } from "@/lib/memory-kit";
 import { authMiddleware } from "@/lib/middleware/auth-middleware";
-import { getMemoryStore } from "@/mastra/memory";
+import type { SafeId } from "@/lib/safe-id";
 
 const SEARCH_TOPIC_LIMIT = 100;
 const SEARCH_THREAD_LIMIT = 5;
 const SEARCH_TOPIC_THREAD_SCAN_LIMIT = 100;
 
-const searchInputSchema = v.object({
-  query: v.optional(v.string(), ""),
+const titleMatchesQuery = (title: string, query: string) => {
+  const trimmedQuery = query.trim().toLowerCase();
+
+  return trimmedQuery.length === 0 || title.toLowerCase().includes(trimmedQuery);
+};
+
+const toConversationResult = (thread: StorageThreadType): SearchConversationResult => ({
+  id: thread.id,
+  title: thread.title ?? "",
+  updatedAt: thread.updatedAt.toISOString(),
 });
 
 export type SearchConversationResult = {
@@ -30,37 +44,21 @@ export type SearchTopicResult = {
   updatedAt: string;
 };
 
-const titleMatchesQuery = (title: string, query: string) => {
-  const trimmedQuery = query.trim().toLowerCase();
-
-  return (
-    trimmedQuery.length === 0 || title.toLowerCase().includes(trimmedQuery)
-  );
+type SearchItemsInput = {
+  query: string;
+  userId: SafeId<"user">;
 };
 
-const toConversationResult = (
-  thread: StorageThreadType
-): SearchConversationResult => ({
-  id: thread.id,
-  title: thread.title ?? "",
-  updatedAt: thread.updatedAt.toISOString(),
-});
+type SearchCtx = Kits<[DbKit, MemoryKit]>;
 
-const byUpdatedAtDesc = (
-  first: SearchConversationResult,
-  second: SearchConversationResult
-) => Date.parse(second.updatedAt) - Date.parse(first.updatedAt);
+const searchItemsFn = Kit.gen(async function* (
+  ctx: SearchCtx,
+  { query, userId }: SearchItemsInput,
+) {
+  const hasQuery = query.length > 0;
 
-export const searchItems = createServerFn({ method: "GET" })
-  .inputValidator(searchInputSchema)
-  .middleware([authMiddleware])
-  .handler(async ({ context, data }) => {
-    const userId = context.user.id;
-    const query = data.query.trim();
-    const memoryStore = await getMemoryStore();
-    const hasQuery = query.length > 0;
-
-    const [recentTopics, standaloneThreads] = await Promise.all([
+  const [recentTopics, standaloneThreads] = yield* await Kit.promiseAll([
+    ctx.db.run((db) =>
       db
         .select({
           id: topic.id,
@@ -71,67 +69,96 @@ export const searchItems = createServerFn({ method: "GET" })
         .where(eq(topic.userId, userId))
         .orderBy(desc(topic.updatedAt))
         .limit(SEARCH_TOPIC_LIMIT),
-      memoryStore.listThreads({
-        filter: { resourceId: userId },
+    ),
+    ctx.memory.listThreads({
+      filter: { resourceId: userId },
+      orderBy: { direction: "DESC", field: "updatedAt" },
+      page: 0,
+      perPage: hasQuery ? SEARCH_TOPIC_THREAD_SCAN_LIMIT : SEARCH_THREAD_LIMIT,
+    }),
+  ]);
+
+  const conversations = standaloneThreads.threads
+    .filter((thread) => titleMatchesQuery(thread.title ?? "", query))
+    .slice(0, SEARCH_THREAD_LIMIT)
+    .map((thread) => toConversationResult(thread));
+
+  const topicThreadBatch = await Promise.all(
+    recentTopics.map(async (recentTopic) =>
+      ctx.memory.listThreads({
+        filter: { resourceId: recentTopic.id },
         orderBy: { direction: "DESC", field: "updatedAt" },
         page: 0,
-        perPage: hasQuery
-          ? SEARCH_TOPIC_THREAD_SCAN_LIMIT
-          : SEARCH_THREAD_LIMIT,
+        perPage: hasQuery ? SEARCH_TOPIC_THREAD_SCAN_LIMIT : SEARCH_THREAD_LIMIT,
       }),
-    ]);
+    ),
+  );
 
-    const conversations = standaloneThreads.threads
-      .filter((thread) => titleMatchesQuery(thread.title ?? "", query))
-      .slice(0, SEARCH_THREAD_LIMIT)
-      .map((thread) => toConversationResult(thread));
+  const topicResults: SearchTopicResult[] = [];
 
-    const topicResults = await Promise.all(
-      recentTopics.map(async (recentTopic) => {
-        const topicMatchesQuery = titleMatchesQuery(recentTopic.title, query);
-        const result = await memoryStore.listThreads({
-          filter: { resourceId: recentTopic.id },
-          orderBy: { direction: "DESC", field: "updatedAt" },
-          page: 0,
-          perPage: hasQuery
-            ? SEARCH_TOPIC_THREAD_SCAN_LIMIT
-            : SEARCH_THREAD_LIMIT,
-        });
+  for (const [index, recentTopic] of recentTopics.entries()) {
+    const listed = yield* topicThreadBatch[index];
+    const topicMatchesQuery = titleMatchesQuery(recentTopic.title, query);
 
-        const matchingThreads = topicMatchesQuery
-          ? result.threads
-          : result.threads.filter((thread) =>
-              titleMatchesQuery(thread.title ?? "", query)
-            );
+    const matchingThreads = topicMatchesQuery
+      ? listed.threads
+      : listed.threads.filter((thread) => titleMatchesQuery(thread.title ?? "", query));
 
-        if (hasQuery && !(topicMatchesQuery || matchingThreads.length > 0)) {
-          return null;
-        }
+    if (hasQuery && !(topicMatchesQuery || matchingThreads.length > 0)) {
+      continue;
+    }
 
-        return {
-          conversations: matchingThreads
-            .slice(0, SEARCH_THREAD_LIMIT)
-            .map((thread) => toConversationResult(thread)),
-          id: recentTopic.id,
-          title: recentTopic.title,
-          updatedAt: recentTopic.updatedAt.toISOString(),
-        } satisfies SearchTopicResult;
-      })
-    );
+    topicResults.push({
+      conversations: matchingThreads
+        .slice(0, SEARCH_THREAD_LIMIT)
+        .map((thread) => toConversationResult(thread)),
+      id: recentTopic.id,
+      title: recentTopic.title,
+      updatedAt: recentTopic.updatedAt.toISOString(),
+    });
+  }
 
-    conversations.sort(byUpdatedAtDesc);
+  conversations.sort((a, b) =>
+    Temporal.Instant.compare(
+      Temporal.Instant.from(a.updatedAt),
+      Temporal.Instant.from(b.updatedAt),
+    ),
+  );
 
-    return {
-      conversations,
-      topics: topicResults.filter((topicResult) => topicResult !== null),
-    };
+  return Result.ok({
+    conversations,
+    topics: topicResults,
   });
+});
 
-export type SearchQueryParams = {
+const searchInputSchema = v.object({
+  query: v.optional(v.string(), ""),
+});
+
+const searchCtx = Kit.createContext(dbKit, memoryKit);
+
+export const searchItems = createServerFn({ method: "GET" })
+  .validator(searchInputSchema)
+  .middleware([authMiddleware])
+  .handler(async ({ context, data }) =>
+    Kit.run(async () =>
+      searchItemsFn(searchCtx, {
+        query: data.query.trim(),
+        userId: context.user.id,
+      }),
+    ).throws<ServerFnError>((error) =>
+      matchError(error, {
+        DatabaseError: () => toServerFnError.serverError("Database search failed"),
+        MemoryError: () => toServerFnError.serverError("Memory search failed"),
+      }),
+    ),
+  );
+
+export type SearchQueryInput = {
   query: string;
 };
 
-export const searchQuery = ({ query }: SearchQueryParams) =>
+export const searchQuery = ({ query }: SearchQueryInput) =>
   queryOptions({
     queryFn: async () =>
       searchItems({

@@ -1,15 +1,13 @@
 import { Agent } from "@mastra/core/agent";
 import { Memory } from "@mastra/memory";
 
-import {
-  baseInstructions,
-  sharedSourceInstructions,
-} from "@/mastra/agents/base-instructions";
+import { baseInstructions, sharedSourceInstructions } from "@/mastra/agents/base-instructions";
 import { models } from "@/mastra/models";
 import { pgVector, postgresStore } from "@/mastra/storage";
-import { artifactGraphRagTool } from "@/mastra/tools/artifact-graph-rag-tool";
-import { artifactVectorSearchTool } from "@/mastra/tools/artifact-vector-search-tool";
-import { getArtifactFromS3Tool } from "@/mastra/tools/get-artifact-from-s3-tool";
+import { fileGraphRagTool } from "@/mastra/tools/file-graph-rag-tool";
+import { fileVectorSearchTool } from "@/mastra/tools/file-vector-search-tool";
+import { getFileFromS3Tool } from "@/mastra/tools/get-file-from-s3-tool";
+import { webFetchTool } from "@/mastra/tools/web-fetch-tool";
 import { webSearchTool } from "@/mastra/tools/web-search-tool";
 
 export const topicAgentId = "topic-agent";
@@ -32,15 +30,16 @@ export const topicMemory = new Memory({
 });
 
 export const topicAgentTools = {
-  "artifact-graph-rag": artifactGraphRagTool,
-  "artifact-vector-search": artifactVectorSearchTool,
-  "get-artifact-from-s3": getArtifactFromS3Tool,
-  "web-search": webSearchTool,
+  fileGraphRag: fileGraphRagTool,
+  fileVectorSearch: fileVectorSearchTool,
+  getFileFromS3: getFileFromS3Tool,
+  webFetch: webFetchTool,
+  webSearch: webSearchTool,
 } as const;
 
 export const topicAgent = new Agent({
   description:
-    "Uses current topic artifacts, topic-scoped conversation recall, raw topic file access, and web search to answer topic-specific questions.",
+    "Uses current topic files, topic-scoped conversation recall, raw topic file access, and web search/fetch to answer topic-specific questions.",
   id: topicAgentId,
   instructions: `
 ${baseInstructions}
@@ -48,23 +47,24 @@ ${baseInstructions}
 ${sharedSourceInstructions}
 
 Available sources:
-- Topic artifacts: uploaded files in the current topic. Prefer these for questions about the user's documents.
-- Web search: external or current information. Use when the question needs facts outside the topic or up-to-date information from the web.
+- Topic files: uploaded files in the current topic. Prefer these for questions about the user's documents.
+- Web: external or current information via webSearch (discover pages) or webFetch (read a known URL).
 - Conversation recall: past messages within the current topic. Use when the answer may already appear in prior chat.
 
-When sources conflict, prefer topic artifacts over web search, and web search over conversation recall.
+When sources conflict, prefer topic files over web, and web over conversation recall.
 
-## Web search
-Use web-search when:
-- The user asks for current events, external documentation, or explicitly wants a web search.
-- Topic artifact tools plus conversation recall did not fully answer the question.
+## Web
+- Use webSearch to discover pages when no specific URL is known.
+- Use webFetch when the user provided a URL or a prior search already identified the page to read.
+- Prefer these for current events, external documentation, explicit web requests, or when topic file tools plus conversation recall did not fully answer.
+- Tool descriptions own exact input requirements and result shapes.
 
 ## Topic file access
-When gathering from topic artifacts, pick the tool that fits the question. You do not need to run every artifact tool.
+When gathering from topic files, pick the tool that fits the question. You do not need to run every file tool.
 
-- artifact-vector-search — Direct facts, quotes, or specific passages in uploaded documents.
-- artifact-graph-rag — When information spans multiple files, connected passages matter, or relationships between concepts are important.
-- get-artifact-from-s3 — Raw file inspection for images, or fallback direct inspection when search tools are insufficient.
+- fileVectorSearch — Direct facts, quotes, or specific passages in uploaded documents.
+- fileGraphRag — When information spans multiple files, connected passages matter, or relationships between concepts are important.
+- getFileFromS3 — Raw file inspection for images, or fallback direct inspection when search tools are insufficient.
 
 Search tools are automatically scoped to the current topic. Tool descriptions own exact input requirements and file-type limits.
 

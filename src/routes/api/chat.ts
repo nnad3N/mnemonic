@@ -2,15 +2,21 @@ import { handleChatStream } from "@mastra/ai-sdk";
 import { RequestContext } from "@mastra/core/request-context";
 import { createFileRoute } from "@tanstack/react-router";
 import { createUIMessageStreamResponse } from "ai";
+import { matchError, Result, TaggedError } from "better-result";
 import * as v from "valibot";
 
-import { db } from "@/db";
-import { applyMessageEdit } from "@/lib/chat/apply-message-edit";
+import { dbKit } from "@/lib/db-kit";
+import type { DbKit } from "@/lib/db-kit";
+import { Kit } from "@/lib/kit";
+import type { Kits } from "@/lib/kit";
+import { memoryKit } from "@/lib/memory-kit";
+import type { MemoryKit } from "@/lib/memory-kit";
 import { authMiddleware } from "@/lib/middleware/auth-middleware";
+import { toSafeId } from "@/lib/safe-id";
+import type { SafeId } from "@/lib/safe-id";
 import { mastra } from "@/mastra";
 import { conversationAgentId } from "@/mastra/agents/conversation-agent";
 import { topicAgentId } from "@/mastra/agents/topic-agent";
-import { getAgentMemory, getMemoryStore } from "@/mastra/memory";
 import type { MnemonicRequestContext } from "@/mastra/request-context";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 
@@ -36,12 +42,115 @@ const chatRequestSchema = v.pipe(
   v.forward(
     v.check(
       (input) =>
-        input.resumeData === undefined ||
-        (input.runId !== undefined && input.runId.length > 0)
+        input.resumeData === undefined || (input.runId !== undefined && input.runId.length > 0),
     ),
-    ["runId"]
-  )
+    ["runId"],
+  ),
 );
+
+type ChatRequest = v.InferOutput<typeof chatRequestSchema>;
+type ChatCtx = Kits<[DbKit, MemoryKit]>;
+
+type ChatInput = {
+  abortSignal: AbortSignal;
+  body: ChatRequest;
+  userId: SafeId<"user">;
+};
+
+class ChatNotFoundError extends TaggedError("ChatNotFoundError")<{
+  message: string;
+}>() {}
+
+class ChatStreamError extends TaggedError("ChatStreamError")<{
+  cause: unknown;
+  message: string;
+}>() {}
+
+const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
+  const thread = yield* await ctx.memory.getThreadById({
+    threadId: input.body.threadId,
+  });
+
+  if (!thread) {
+    return Result.err(new ChatNotFoundError({ message: "Thread not found" }));
+  }
+
+  const topic = yield* await ctx.db.run((db) =>
+    db.query.topic.findFirst({
+      where: {
+        // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId check.
+        id: toSafeId<"topic">(thread.resourceId),
+        userId: input.userId,
+      },
+      columns: { id: true },
+    }),
+  );
+
+  if (thread.resourceId !== input.userId && !topic) {
+    return Result.err(new ChatNotFoundError({ message: "Thread not found" }));
+  }
+
+  const agentId = topic ? topicAgentId : conversationAgentId;
+
+  if (input.body.messageId) {
+    const { messages: storedMessages } = yield* await ctx.memory.listMessages({
+      threadId: input.body.threadId,
+      page: 0,
+      perPage: false,
+    });
+    const messageIndex = storedMessages.findIndex((message) => message.id === input.body.messageId);
+    const editedMessage = messageIndex === -1 ? undefined : storedMessages.at(messageIndex);
+
+    if (editedMessage?.role === "user") {
+      const messageIds = storedMessages.slice(messageIndex).map((message) => message.id);
+
+      if (messageIds.length > 0) {
+        yield* await ctx.memory.deleteMessages({ agentId, messageIds });
+      }
+    }
+  }
+
+  const requestContext = new RequestContext<MnemonicRequestContext>();
+  requestContext.set("userId", input.userId);
+
+  if (topic) {
+    requestContext.set("filter", { topicId: topic.id });
+  }
+
+  const stream = yield* await Result.tryPromise({
+    try: async () =>
+      handleChatStream<ThreadUIMessage>({
+        agentId,
+        defaultOptions: {
+          maxSteps: 10,
+        },
+        mastra,
+        params: {
+          ...input.body,
+          abortSignal: input.abortSignal,
+          memory: {
+            resource: thread.resourceId,
+            thread: input.body.threadId,
+          },
+          // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+          messages: input.body.messages as ThreadUIMessage[],
+          requestContext,
+        },
+        sendReasoning: true,
+        sendSources: true,
+        version: "v6",
+      }),
+    catch: (cause) =>
+      new ChatStreamError({
+        message: "Chat stream failed",
+        cause,
+      }),
+  });
+
+  return Result.ok(stream);
+});
+
+const chatCtx = Kit.createContext(dbKit, memoryKit);
 
 export const Route = createFileRoute("/api/chat")({
   server: {
@@ -54,72 +163,22 @@ export const Route = createFileRoute("/api/chat")({
           return new Response("Bad Request", { status: 400 });
         }
 
-        const body = result.output;
-
-        const memoryStore = await getMemoryStore();
-        const thread = await memoryStore.getThreadById({
-          threadId: body.threadId,
+        const chatResult = await chatFn(chatCtx, {
+          abortSignal: request.signal,
+          body: result.output,
+          userId: context.user.id,
         });
 
-        if (thread === null) {
-          return new Response("Not Found", { status: 404 });
-        }
-
-        const topic = await db.query.topic.findFirst({
-          where: {
-            id: thread.resourceId,
-            userId: context.user.id,
-          },
-          columns: { id: true },
+        return chatResult.match({
+          ok: (stream) => createUIMessageStreamResponse({ stream }),
+          err: (error) =>
+            matchError(error, {
+              ChatNotFoundError: () => new Response("Not Found", { status: 404 }),
+              ChatStreamError: () => new Response("Internal Server Error", { status: 500 }),
+              DatabaseError: () => new Response("Internal Server Error", { status: 500 }),
+              MemoryError: () => new Response("Internal Server Error", { status: 500 }),
+            }),
         });
-
-        if (thread.resourceId !== context.user.id && !topic) {
-          return new Response("Not Found", { status: 404 });
-        }
-
-        const agentId = topic ? topicAgentId : conversationAgentId;
-
-        if (body.messageId) {
-          const memory = await getAgentMemory(agentId);
-
-          await applyMessageEdit({
-            memory,
-            memoryStore,
-            threadId: body.threadId,
-            messageId: body.messageId,
-          });
-        }
-
-        const requestContext = new RequestContext<MnemonicRequestContext>();
-        requestContext.set("userId", context.user.id);
-
-        if (topic) {
-          requestContext.set("filter", { topicId: topic.id });
-        }
-
-        const stream = await handleChatStream<ThreadUIMessage>({
-          agentId,
-          defaultOptions: {
-            maxSteps: 10,
-          },
-          mastra,
-          params: {
-            ...body,
-            abortSignal: request.signal,
-            memory: {
-              resource: thread.resourceId,
-              thread: body.threadId,
-            },
-            // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-            messages: body.messages as ThreadUIMessage[],
-            requestContext,
-          },
-          sendReasoning: true,
-          sendSources: true,
-          version: "v6",
-        });
-
-        return createUIMessageStreamResponse({ stream });
       },
     },
   },

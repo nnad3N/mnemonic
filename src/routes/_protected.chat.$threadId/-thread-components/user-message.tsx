@@ -26,8 +26,7 @@ type UserMessageContentProps = {
 export const UserMessage = ({ message, index }: UserMessageProps) => {
   const editingState = useChatStore((state) => state.editingState);
   const setEditingState = useChatStore((state) => state.setEditingState);
-  const markdown =
-    message.parts.find((part) => part.type === "text")?.text ?? "";
+  const markdown = message.parts.find((part) => part.type === "text")?.text ?? "";
   const isEditing = editingState?.messageId === message.id;
 
   if (isEditing) {
@@ -61,7 +60,7 @@ const UserMessageContent = ({ markdown }: UserMessageContentProps) => {
         plugins: threadStaticEditorPlugins,
         value: (plate) => markdownToStaticPlate(plate, markdown),
       }),
-    [markdown]
+    [markdown],
   );
 
   return (

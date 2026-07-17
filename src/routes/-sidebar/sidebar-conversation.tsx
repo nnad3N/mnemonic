@@ -31,8 +31,7 @@ export const SidebarConversations = () => {
   const queryClient = useQueryClient();
   const conversationsQueryOptions = sidebarConversationsQuery();
   const conversations = useInfiniteQuery(conversationsQueryOptions);
-  const conversationItems =
-    conversations.data?.pages.flatMap((page) => page.items) ?? [];
+  const conversationItems = conversations.data?.pages.flatMap((page) => page.items) ?? [];
   const hasMultiplePages = (conversations.data?.pages.length ?? 0) > 1;
 
   return (
@@ -44,9 +43,7 @@ export const SidebarConversations = () => {
             conversationItems.map((thread) => (
               <SidebarMenuItem key={thread.id}>
                 <SidebarConversationItem
-                  renderButton={(isActive) => (
-                    <SidebarMenuButton isActive={isActive} />
-                  )}
+                  renderButton={(isActive) => <SidebarMenuButton isActive={isActive} />}
                   thread={thread}
                 />
               </SidebarMenuItem>
@@ -57,37 +54,30 @@ export const SidebarConversations = () => {
           {conversations.isSuccess && conversationItems.length === 0 && (
             <SidebarGroupEmpty>{m.nav_no_conversations()}</SidebarGroupEmpty>
           )}
-          {conversations.isSuccess &&
-            (conversations.hasNextPage || hasMultiplePages) && (
-              <SidebarMenuItem>
-                <SidebarMore
-                  render={<SidebarMenuButton />}
-                  disabled={
-                    conversations.isFetchingNextPage ||
-                    !conversations.hasNextPage
-                  }
-                  onCollapse={() => {
-                    queryClient.setQueryData(
-                      conversationsQueryOptions.queryKey,
-                      (current) => {
-                        if (!current) {
-                          return current;
-                        }
+          {conversations.isSuccess && (conversations.hasNextPage || hasMultiplePages) && (
+            <SidebarMenuItem>
+              <SidebarMore
+                render={<SidebarMenuButton />}
+                disabled={conversations.isFetchingNextPage || !conversations.hasNextPage}
+                onCollapse={() => {
+                  queryClient.setQueryData(conversationsQueryOptions.queryKey, (current) => {
+                    if (!current) {
+                      return current;
+                    }
 
-                        return {
-                          pageParams: current.pageParams.slice(0, 1),
-                          pages: current.pages.slice(0, 1),
-                        };
-                      }
-                    );
-                  }}
-                  onMore={async () => {
-                    await conversations.fetchNextPage();
-                  }}
-                  showCollapse={hasMultiplePages}
-                />
-              </SidebarMenuItem>
-            )}
+                    return {
+                      pageParams: current.pageParams.slice(0, 1),
+                      pages: current.pages.slice(0, 1),
+                    };
+                  });
+                }}
+                onMore={async () => {
+                  await conversations.fetchNextPage();
+                }}
+                showCollapse={hasMultiplePages}
+              />
+            </SidebarMenuItem>
+          )}
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>
@@ -99,10 +89,7 @@ type SidebarConversationItemProps = {
   thread: SidebarThread;
 };
 
-export const SidebarConversationItem = ({
-  renderButton,
-  thread,
-}: SidebarConversationItemProps) => {
+export const SidebarConversationItem = ({ renderButton, thread }: SidebarConversationItemProps) => {
   const [isRenaming, setIsRenaming] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
@@ -149,11 +136,7 @@ export const SidebarConversationItem = ({
         </ContextMenuContent>
       </ContextMenu>
 
-      <DeleteThreadDialog
-        threadId={thread.id}
-        onOpenChange={setDeleteOpen}
-        open={deleteOpen}
-      />
+      <DeleteThreadDialog threadId={thread.id} onOpenChange={setDeleteOpen} open={deleteOpen} />
     </>
   );
 };

@@ -2,7 +2,7 @@
 
 import { Result } from "better-result";
 
-import { ArtifactUploadError } from "@/lib/errors/artifact-upload-error";
+import { FileUploadError } from "@/lib/errors/file-upload-error";
 
 export type MimeType = `${string}/${string}`;
 
@@ -177,26 +177,22 @@ export const isLLMNativeImageMimeType = (mimeType: string): boolean =>
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion
   LLM_NATIVE_IMAGE_MIME_TYPES.includes(mimeType as MimeType);
 
-export const isImageMimeType = (mimeType: string): boolean =>
-  mimeType.startsWith("image/");
+export const isImageMimeType = (mimeType: string): boolean => mimeType.startsWith("image/");
 
-export const validateUploadFile = (input: {
-  mimeType: string;
-  sizeBytes: number;
-}) => {
+export const validateUploadFile = (input: { mimeType: string; sizeBytes: number }) => {
   if (!isSupportedMimeType(input.mimeType)) {
     return Result.err(
-      new ArtifactUploadError({
+      new FileUploadError({
         reason: "unsupported-mime-type",
-      })
+      }),
     );
   }
 
   if (input.sizeBytes > UPLOAD_MAX_BYTES) {
     return Result.err(
-      new ArtifactUploadError({
+      new FileUploadError({
         reason: "file-too-large",
-      })
+      }),
     );
   }
 

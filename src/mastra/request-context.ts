@@ -1,14 +1,14 @@
 import * as v from "valibot";
 
+import { safeId } from "@/lib/safe-id";
+
 export const mnemonicRequestContextSchema = v.object({
-  userId: v.pipe(v.string(), v.nanoid()),
+  userId: safeId<"user">(),
   filter: v.optional(
     v.object({
-      topicId: v.optional(v.pipe(v.string(), v.nanoid())),
-    })
+      topicId: v.optional(safeId<"topic">()),
+    }),
   ),
 });
 
-export type MnemonicRequestContext = v.InferOutput<
-  typeof mnemonicRequestContextSchema
->;
+export type MnemonicRequestContext = v.InferOutput<typeof mnemonicRequestContextSchema>;

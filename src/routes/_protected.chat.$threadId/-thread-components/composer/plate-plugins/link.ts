@@ -22,14 +22,8 @@ type InsertLinkNodeInput = {
   url: string;
 };
 
-const insertLinkNode = ({
-  editor,
-  type,
-  url: urlString,
-}: InsertLinkNodeInput) => {
-  if (!URL.canParse(urlString)) {
-    return;
-  }
+const insertLinkNode = ({ editor, type, url: urlString }: InsertLinkNodeInput) => {
+  if (!URL.canParse(urlString)) return;
 
   const url = new URL(urlString);
 
@@ -51,9 +45,7 @@ const insertLinkNode = ({
 
   editor.tf.insertNodes(node, { at: selection, select: false });
 
-  if (anchorIndex === undefined) {
-    return;
-  }
+  if (anchorIndex === undefined) return;
 
   const voidPath = [...anchor.path.slice(0, -1), anchorIndex + 1];
   const afterPoint = editor.api.after(voidPath);
@@ -77,14 +69,12 @@ export const getComposerLinkLabel = (url: string) => {
   return `${parsed.hostname}${parsed.pathname}`;
 };
 
-type ComposerLinkPasteSegment =
-  | { type: "link"; url: URL }
-  | { type: "text"; text: string };
+type ComposerLinkPasteSegment = { type: "link"; url: URL } | { type: "text"; text: string };
 
 const HTTP_URL_PATTERN = /https?:\/\/[^\s]+/gu;
 
 export const parseComposerLinkPasteSegments = (
-  input: string
+  input: string,
 ): ComposerLinkPasteSegment[] | null => {
   const segments: ComposerLinkPasteSegment[] = [];
   let lastIndex = 0;
@@ -134,15 +124,11 @@ export const insertComposerLink = ({
 }: InsertComposerLinkInput) => {
   insertLinkNode({ editor, type: KEYS.a, url });
 
-  if (!trailingSpace) {
-    return;
-  }
+  if (!trailingSpace) return;
 
   const { selection } = editor;
 
-  if (!selection || editor.api.after(selection.anchor)) {
-    return;
-  }
+  if (!selection || editor.api.after(selection.anchor)) return;
 
   editor.tf.insertText(" ");
 };
@@ -152,15 +138,10 @@ type ComposerLinkElement = TElement & {
   url: string;
 };
 
-export const unlinkComposerLink = (
-  editor: SlateEditor,
-  element: ComposerLinkElement
-) => {
+export const unlinkComposerLink = (editor: SlateEditor, element: ComposerLinkElement) => {
   const at = editor.api.findPath(element);
 
-  if (!at) {
-    return;
-  }
+  if (!at) return;
 
   editor.tf.withoutNormalizing(() => {
     editor.tf.removeNodes({ at });
@@ -175,15 +156,10 @@ export const unlinkComposerLink = (
   });
 };
 
-export const removeComposerLink = (
-  editor: SlateEditor,
-  element: ComposerLinkElement
-) => {
+export const removeComposerLink = (editor: SlateEditor, element: ComposerLinkElement) => {
   const at = editor.api.findPath(element);
 
-  if (!at) {
-    return;
-  }
+  if (!at) return;
 
   editor.tf.removeNodes({ at });
   editor.tf.focus();

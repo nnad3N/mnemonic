@@ -1,9 +1,4 @@
-import {
-  Link,
-  Outlet,
-  createFileRoute,
-  useLocation,
-} from "@tanstack/react-router";
+import { Link, Outlet, createFileRoute, useLocation } from "@tanstack/react-router";
 
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,7 +8,6 @@ import { Route as SignUpRoute } from "@/routes/_auth/sign-up";
 
 export const Route = createFileRoute("/_auth")({ component: LayoutComponent });
 
-/* oxlint-disable func-style */
 function LayoutComponent() {
   const pathname = useLocation({ select: (s) => s.pathname });
 

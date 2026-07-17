@@ -1,11 +1,15 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { generateText } from "ai";
+import { matchError, Result } from "better-result";
 import { produce } from "immer";
 import * as v from "valibot";
 
+import { Kit, ServerFnError, toServerFnError } from "@/lib/kit";
+import type { Kits } from "@/lib/kit";
+import { memoryKit } from "@/lib/memory-kit";
+import type { MemoryKit } from "@/lib/memory-kit";
 import { threadAccessMiddleware } from "@/lib/middleware/assert-thread-access";
-import { getMemoryStore } from "@/mastra/memory";
 import { models } from "@/mastra/models";
 import {
   sidebarConversationsQuery,
@@ -46,37 +50,73 @@ const createThreadTitleSchema = v.object({
   text: v.pipe(v.string(), v.nonEmpty()),
 });
 
-export const createThreadTitle = createServerFn({ method: "POST" })
-  .inputValidator(createThreadTitleSchema)
-  .middleware([threadAccessMiddleware])
-  .handler(async ({ context, data }) => {
-    const memoryStore = await getMemoryStore();
+type CreateThreadTitleCtx = Kits<[MemoryKit]>;
 
-    const { text } = await generateText({
-      model: models.threadTitle,
-      prompt: data.text,
-      system: TITLE_SYSTEM_PROMPT,
-      abortSignal: AbortSignal.timeout(TITLE_GENERATION_TIMEOUT_MS),
-    });
+type CreateThreadTitleInput = {
+  metadata: Record<string, unknown>;
+  text: string;
+  threadId: string;
+};
 
-    const title = sanitizeTitle(text);
+const createThreadTitleFn = Kit.gen(async function* (
+  ctx: CreateThreadTitleCtx,
+  input: CreateThreadTitleInput,
+) {
+  const text = yield* await Result.tryPromise({
+    try: async () => {
+      const result = await generateText({
+        abortSignal: AbortSignal.timeout(TITLE_GENERATION_TIMEOUT_MS),
+        model: models.threadTitle,
+        prompt: input.text,
+        system: TITLE_SYSTEM_PROMPT,
+      });
 
-    if (title === null) {
-      return null;
-    }
-
-    const thread = await memoryStore.updateThread({
-      id: context.thread.id,
-      metadata: context.thread.metadata ?? {},
-      title,
-    });
-
-    return {
-      id: thread.id,
-      title,
-      updatedAt: thread.updatedAt.toISOString(),
-    };
+      return result.text;
+    },
+    catch: () => toServerFnError.serverError("Failed to generate conversation title"),
   });
+
+  const title = sanitizeTitle(text);
+
+  if (!title) {
+    return Result.ok(null);
+  }
+
+  const thread = yield* await ctx.memory.updateThread({
+    id: input.threadId,
+    metadata: input.metadata,
+    title,
+  });
+
+  return Result.ok({
+    id: thread.id,
+    title,
+    updatedAt: thread.updatedAt.toISOString(),
+  });
+});
+
+const createThreadTitleCtx = Kit.createContext(memoryKit);
+
+export const createThreadTitle = createServerFn({ method: "POST" })
+  .validator(createThreadTitleSchema)
+  .middleware([threadAccessMiddleware])
+  .handler(async ({ context, data }) =>
+    Kit.run(async () =>
+      createThreadTitleFn(createThreadTitleCtx, {
+        metadata: context.thread.metadata ?? {},
+        text: data.text,
+        threadId: context.thread.id,
+      }),
+    ).throws<ServerFnError>((error) => {
+      if (ServerFnError.is(error)) {
+        return error;
+      }
+
+      return matchError(error, {
+        MemoryError: () => toServerFnError.serverError("Failed to save conversation title"),
+      });
+    }),
+  );
 
 type CreateThreadTitleVars = {
   threadId: string;
@@ -88,20 +128,15 @@ export const useCreateThreadTitle = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: CreateThreadTitleVars) =>
-      createThreadTitle({ data }),
+    mutationFn: async (data: CreateThreadTitleVars) => createThreadTitle({ data }),
     onSuccess: (thread, vars) => {
-      if (thread === null) {
-        return;
-      }
+      if (!thread) return;
 
       const conversationsQueryOptions = sidebarConversationsQuery();
 
       queryClient.setQueryData(conversationsQueryOptions.queryKey, (current) =>
         produce(current, (draft) => {
-          if (draft === undefined) {
-            return;
-          }
+          if (!draft) return;
 
           for (const page of draft.pages) {
             for (const item of page.items) {
@@ -111,20 +146,16 @@ export const useCreateThreadTitle = () => {
               }
             }
           }
-        })
+        }),
       );
 
-      if (!vars.topicId) {
-        return;
-      }
+      if (!vars.topicId) return;
 
       const topicsQueryOptions = sidebarTopicsQuery();
 
       queryClient.setQueryData(topicsQueryOptions.queryKey, (current) =>
         produce(current, (draft) => {
-          if (draft === undefined) {
-            return;
-          }
+          if (!draft) return;
 
           for (const page of draft.pages) {
             for (const topic of page.items) {
@@ -140,16 +171,14 @@ export const useCreateThreadTitle = () => {
               }
             }
           }
-        })
+        }),
       );
 
       const topicThreadsQueryOptions = sidebarTopicThreadsQuery(vars.topicId);
 
       queryClient.setQueryData(topicThreadsQueryOptions.queryKey, (current) =>
         produce(current, (draft) => {
-          if (draft === undefined) {
-            return;
-          }
+          if (!draft) return;
 
           for (const topicThreadPage of draft.pages) {
             for (const topicThread of topicThreadPage.items) {
@@ -159,11 +188,8 @@ export const useCreateThreadTitle = () => {
               }
             }
           }
-        })
+        }),
       );
-    },
-    onError: (error: unknown) => {
-      console.error(error);
     },
   });
 };

@@ -55,7 +55,6 @@ export const getAuthErrorDescription = (code?: string): string => {
 };
 
 export class AuthError extends TaggedError("AuthError")<{
-  // oxlint-disable-next-line typescript/ban-types
   code?: AuthErrorCode | (string & {});
   message: string;
   status: number;

@@ -2,10 +2,7 @@ import { useIsMutating, useMutation } from "@tanstack/react-query";
 
 import { isLLMNativeImageMimeType } from "@/lib/file-validation";
 
-import {
-  extractFileText,
-  getExtractFileTextData,
-} from "../-thread-api/extract-file-text";
+import { extractFileText, getExtractFileTextData } from "../-thread-api/extract-file-text";
 import { threadMutationKeys } from "../-thread-api/query-keys";
 import type { ThreadInputLocation } from "../../-chat-store";
 import { useChatStore } from "../../-chat-store";
@@ -15,10 +12,7 @@ type AddAttachmentVars = {
   sha256: string;
 };
 
-export const useAddAttachment = (
-  threadId: string,
-  location: ThreadInputLocation
-) => {
+export const useAddAttachment = (threadId: string, location: ThreadInputLocation) => {
   const upsertAttachment = useChatStore((state) => state.upsertAttachment);
 
   return useMutation({

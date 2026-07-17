@@ -8,29 +8,28 @@ type ThreadComposerFileConfig = PluginConfig<
   }
 >;
 
-export const ThreadComposerFilePlugin =
-  createTPlatePlugin<ThreadComposerFileConfig>({
-    key: "thread-composer-file",
-    options: {
-      onUploadFiles: undefined,
+export const ThreadComposerFilePlugin = createTPlatePlugin<ThreadComposerFileConfig>({
+  key: "thread-composer-file",
+  options: {
+    onUploadFiles: undefined,
+  },
+  handlers: {
+    onPaste: ({ event, getOptions }) => {
+      const { onUploadFiles } = getOptions();
+
+      if (!onUploadFiles) {
+        return false;
+      }
+
+      const files = event.clipboardData?.files;
+
+      if (!files?.length) {
+        return false;
+      }
+
+      event.preventDefault();
+      void onUploadFiles([...files]);
+      return true;
     },
-    handlers: {
-      onPaste: ({ event, getOptions }) => {
-        const { onUploadFiles } = getOptions();
-
-        if (!onUploadFiles) {
-          return false;
-        }
-
-        const files = event.clipboardData?.files;
-
-        if (!files?.length) {
-          return false;
-        }
-
-        event.preventDefault();
-        void onUploadFiles([...files]);
-        return true;
-      },
-    },
-  });
+  },
+});

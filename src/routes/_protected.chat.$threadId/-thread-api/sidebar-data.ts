@@ -1,14 +1,21 @@
 import type { StorageThreadType } from "@mastra/core/memory";
+import type { StorageListThreadsOutput } from "@mastra/core/storage";
 import { infiniteQueryOptions, keepPreviousData } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
+import { matchError, Result } from "better-result";
 import { desc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { db } from "@/db";
 import { topic } from "@/db/schema";
+import { dbKit } from "@/lib/db-kit";
+import type { DbKit } from "@/lib/db-kit";
+import { Kit, toServerFnError } from "@/lib/kit";
+import type { Kits, ServerFnError } from "@/lib/kit";
+import { memoryKit } from "@/lib/memory-kit";
+import type { MemoryKit } from "@/lib/memory-kit";
 import { topicAccessMiddleware } from "@/lib/middleware/assert-thread-access";
 import { authMiddleware } from "@/lib/middleware/auth-middleware";
-import { getAgentMemory, getMemoryStore } from "@/mastra/memory";
+import type { SafeId } from "@/lib/safe-id";
 import { threadKeys } from "@/routes/_protected.chat.$threadId/-thread-api/query-keys";
 import type {
   SidebarThread,
@@ -28,92 +35,76 @@ const toSidebarThread = (thread: StorageThreadType): SidebarThread => ({
   updatedAt: thread.updatedAt.toISOString(),
 });
 
-const deleteExpiredStandaloneConversations = async (userId: string) => {
-  const memoryStore = await getMemoryStore();
-  const { threads } = await memoryStore.listThreads({
-    filter: { resourceId: userId },
+const getExpiredThreads = (threads: StorageThreadType[]) => {
+  const expiresBefore = Temporal.Now.instant().subtract({
+    milliseconds: CONVERSATION_RETENTION_MS,
+  });
+
+  return threads.filter(
+    (thread) =>
+      Temporal.Instant.compare(
+        Temporal.Instant.fromEpochMilliseconds(thread.updatedAt.getTime()),
+        expiresBefore,
+      ) < 0,
+  );
+};
+
+const toTopicThreadsPage = (result: StorageListThreadsOutput) => ({
+  hasMore: result.hasMore,
+  items: result.threads.map(toSidebarThread),
+  nextPage: result.hasMore ? result.page + 1 : null,
+});
+
+type SidebarCtx = Kits<[DbKit, MemoryKit]>;
+
+type ListSidebarConversationsInput = {
+  page: number;
+  userId: SafeId<"user">;
+};
+
+const listSidebarConversationsFn = Kit.gen(async function* (
+  ctx: SidebarCtx,
+  input: ListSidebarConversationsInput,
+) {
+  const oldestThreads = yield* await ctx.memory.listThreads({
+    filter: { resourceId: input.userId },
     orderBy: { direction: "ASC", field: "updatedAt" },
     page: 0,
     perPage: false,
   });
 
-  const expiresBefore = Date.now() - CONVERSATION_RETENTION_MS;
-
-  const expiredThreads = threads.filter(
-    (thread) => thread.updatedAt.getTime() < expiresBefore
+  const expiredThreads = getExpiredThreads(oldestThreads.threads);
+  yield* await Kit.promiseAll(
+    expiredThreads.map(async (thread) =>
+      ctx.memory.deleteAgentThread({
+        agentId: "conversation-agent",
+        threadId: thread.id,
+      }),
+    ),
   );
 
-  if (expiredThreads.length === 0) {
-    return;
-  }
-
-  const memory = await getAgentMemory("conversation-agent");
-  await Promise.all(
-    expiredThreads.map(async (thread) => memory.deleteThread(thread.id))
-  );
-};
-
-const listTopicThreadPage = async (input: {
-  topicId: string;
-  page: number;
-}) => {
-  const memoryStore = await getMemoryStore();
-  const result = await memoryStore.listThreads({
-    filter: { resourceId: input.topicId },
+  const conversations = yield* await ctx.memory.listThreads({
+    filter: { resourceId: input.userId },
     orderBy: { direction: "DESC", field: "updatedAt" },
     page: input.page,
-    perPage: SIDEBAR_TOPIC_THREADS_PAGE_SIZE,
+    perPage: SIDEBAR_CONVERSATIONS_PAGE_SIZE,
   });
 
-  return {
-    hasMore: result.hasMore,
-    items: result.threads.map(toSidebarThread),
-    nextPage: result.hasMore ? result.page + 1 : null,
-  };
+  return Result.ok(toTopicThreadsPage(conversations));
+});
+
+type ListSidebarTopicsInput = {
+  limit: number;
+  offset: number;
+  userId: SafeId<"user">;
 };
 
-const paginationInputSchema = v.object({
-  page: v.pipe(v.number(), v.integer(), v.minValue(0)),
-});
-
-export const listSidebarConversations = createServerFn({ method: "GET" })
-  .inputValidator(paginationInputSchema)
-  .middleware([authMiddleware])
-  .handler(async ({ context, data }) => {
-    const userId = context.user.id;
-    await deleteExpiredStandaloneConversations(userId);
-
-    const memoryStore = await getMemoryStore();
-    const result = await memoryStore.listThreads({
-      filter: { resourceId: userId },
-      orderBy: { direction: "DESC", field: "updatedAt" },
-      page: data.page,
-      perPage: SIDEBAR_CONVERSATIONS_PAGE_SIZE,
-    });
-
-    return {
-      hasMore: result.hasMore,
-      items: result.threads.map(toSidebarThread),
-      nextPage: result.hasMore ? result.page + 1 : null,
-    };
-  });
-
-const topicsInputSchema = v.object({
-  limit: v.pipe(
-    v.number(),
-    v.integer(),
-    v.minValue(1),
-    v.maxValue(SIDEBAR_INITIAL_TOPICS_LIMIT)
-  ),
-  offset: v.pipe(v.number(), v.integer(), v.minValue(0)),
-});
-
-export const listSidebarTopics = createServerFn({ method: "GET" })
-  .inputValidator(topicsInputSchema)
-  .middleware([authMiddleware])
-  .handler(async ({ context, data }) => {
-    const userTopicsWhere = eq(topic.userId, context.user.id);
-
+const listSidebarTopicsFn = Kit.gen(async function* (
+  ctx: SidebarCtx,
+  input: ListSidebarTopicsInput,
+) {
+  const { recentTopics, totalCount } = yield* await ctx.db.run(async (db) => {
+    const userTopicsWhere = eq(topic.userId, input.userId);
     const [recentTopics, totalCount] = await Promise.all([
       db
         .select({
@@ -123,33 +114,90 @@ export const listSidebarTopics = createServerFn({ method: "GET" })
         .from(topic)
         .where(userTopicsWhere)
         .orderBy(desc(topic.updatedAt))
-        .limit(data.limit)
-        .offset(data.offset),
+        .limit(input.limit)
+        .offset(input.offset),
       db.$count(topic, userTopicsWhere),
     ]);
 
-    const items: SidebarTopic[] = await Promise.all(
-      recentTopics.map(async (recentTopic) => {
-        const threadsPage = await listTopicThreadPage({
-          topicId: recentTopic.id,
-          page: 0,
-        });
-
-        return {
-          id: recentTopic.id,
-          hasMoreThreads: threadsPage.hasMore,
-          nextThreadsPage: threadsPage.nextPage,
-          threads: threadsPage.items,
-          title: recentTopic.title,
-        };
-      })
-    );
-
-    return {
-      hasMore: data.offset + recentTopics.length < totalCount,
-      items,
-    };
+    return { recentTopics, totalCount };
   });
+
+  const threadResults = await Promise.all(
+    recentTopics.map(async (recentTopic) =>
+      ctx.memory.listThreads({
+        filter: { resourceId: recentTopic.id },
+        orderBy: { direction: "DESC", field: "updatedAt" },
+        page: 0,
+        perPage: SIDEBAR_TOPIC_THREADS_PAGE_SIZE,
+      }),
+    ),
+  );
+
+  const items: SidebarTopic[] = [];
+
+  for (const [index, recentTopic] of recentTopics.entries()) {
+    const threads = yield* threadResults[index];
+    const threadsPage = toTopicThreadsPage(threads);
+
+    items.push({
+      id: recentTopic.id,
+      hasMoreThreads: threadsPage.hasMore,
+      nextThreadsPage: threadsPage.nextPage,
+      threads: threadsPage.items,
+      title: recentTopic.title,
+    });
+  }
+
+  return Result.ok({
+    hasMore: input.offset + recentTopics.length < totalCount,
+    items,
+  });
+});
+
+const sidebarCtx = Kit.createContext(dbKit, memoryKit);
+
+const paginationInputSchema = v.object({
+  page: v.pipe(v.number(), v.integer(), v.minValue(0)),
+});
+
+export const listSidebarConversations = createServerFn({ method: "GET" })
+  .validator(paginationInputSchema)
+  .middleware([authMiddleware])
+  .handler(async ({ context, data }) =>
+    Kit.run(async () =>
+      listSidebarConversationsFn(sidebarCtx, {
+        page: data.page,
+        userId: context.user.id,
+      }),
+    ).throws<ServerFnError>((error) =>
+      matchError(error, {
+        MemoryError: () => toServerFnError.serverError("Failed to list conversations"),
+      }),
+    ),
+  );
+
+const topicsInputSchema = v.object({
+  limit: v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(SIDEBAR_INITIAL_TOPICS_LIMIT)),
+  offset: v.pipe(v.number(), v.integer(), v.minValue(0)),
+});
+
+export const listSidebarTopics = createServerFn({ method: "GET" })
+  .validator(topicsInputSchema)
+  .middleware([authMiddleware])
+  .handler(async ({ context, data }) =>
+    Kit.run(async () =>
+      listSidebarTopicsFn(sidebarCtx, {
+        limit: data.limit,
+        offset: data.offset,
+        userId: context.user.id,
+      }),
+    ).throws<ServerFnError>((error) =>
+      matchError(error, {
+        DatabaseError: () => toServerFnError.serverError("Failed to list topics"),
+        MemoryError: () => toServerFnError.serverError("Failed to list topic conversations"),
+      }),
+    ),
+  );
 
 const topicThreadsInputSchema = v.object({
   page: v.pipe(v.number(), v.integer(), v.minValue(0)),
@@ -157,17 +205,27 @@ const topicThreadsInputSchema = v.object({
 });
 
 export const listSidebarTopicThreads = createServerFn({ method: "GET" })
-  .inputValidator(topicThreadsInputSchema)
+  .validator(topicThreadsInputSchema)
   .middleware([topicAccessMiddleware])
-  .handler(async ({ context, data }) =>
-    listTopicThreadPage({ topicId: context.topic.id, page: data.page })
-  );
+  .handler(async ({ context, data }) => {
+    const result = await Kit.get(memoryKit).listThreads({
+      filter: { resourceId: context.topic.id },
+      orderBy: { direction: "DESC", field: "updatedAt" },
+      page: data.page,
+      perPage: SIDEBAR_TOPIC_THREADS_PAGE_SIZE,
+    });
+
+    if (Result.isError(result)) {
+      throw toServerFnError.serverError("Failed to list topic conversations");
+    }
+
+    return toTopicThreadsPage(result.value);
+  });
 
 export const sidebarConversationsQuery = () =>
   infiniteQueryOptions({
     queryKey: threadKeys.sidebarConversations(),
-    queryFn: async ({ pageParam }) =>
-      listSidebarConversations({ data: { page: pageParam } }),
+    queryFn: async ({ pageParam }) => listSidebarConversations({ data: { page: pageParam } }),
     getNextPageParam: (lastPage) => lastPage.nextPage,
     initialPageParam: 0,
     placeholderData: keepPreviousData,
@@ -183,8 +241,7 @@ const getSidebarTopicsPageRequest = (pageIndex: number) => {
 
   return {
     limit: SIDEBAR_MORE_ITEMS_LIMIT,
-    offset:
-      SIDEBAR_INITIAL_TOPICS_LIMIT + (pageIndex - 1) * SIDEBAR_MORE_ITEMS_LIMIT,
+    offset: SIDEBAR_INITIAL_TOPICS_LIMIT + (pageIndex - 1) * SIDEBAR_MORE_ITEMS_LIMIT,
   };
 };
 
@@ -196,9 +253,7 @@ export const sidebarTopicsQuery = () =>
         data: getSidebarTopicsPageRequest(pageParam),
       }),
     getNextPageParam: (lastPage, _pages, lastPageParam) => {
-      if (!lastPage.hasMore) {
-        return;
-      }
+      if (!lastPage.hasMore) return;
 
       return lastPageParam + 1;
     },

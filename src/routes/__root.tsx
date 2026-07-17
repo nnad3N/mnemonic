@@ -13,7 +13,6 @@ import { ErrorComponent } from "@/components/route-components/error";
 import { NotFoundComponent } from "@/components/route-components/not-found";
 import { Toaster } from "@/components/ui/sonner";
 import { authClient } from "@/lib/better-auth/auth-client";
-import PostHogProvider from "@/lib/posthog/provider";
 import TanStackQueryDevtools from "@/lib/tanstack-query/devtools";
 import type { RouterContext } from "@/lib/tanstack-query/root-provider";
 import { getLocale } from "@/paraglide/runtime";
@@ -72,16 +71,13 @@ export const useAuthSessionQuery = (): void => {
   const { data, error, isPending, isRefetching } = authClient.useSession();
 
   useEffect(() => {
-    if (isPending || isRefetching) {
-      return;
-    }
+    if (isPending || isRefetching) return;
 
     queryClient.setQueryData(authKeys.session(), { data, error });
     void router.invalidate();
   }, [data, error, isPending, isRefetching, queryClient, router]);
 };
 
-// oxlint-disable-next-line func-style
 function RootDocument({ children }: { children: React.ReactNode }) {
   useAuthSessionQuery();
 
@@ -91,24 +87,20 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <PostHogProvider>
-          <Toaster />
-          <main className="flex h-dvh flex-col overflow-hidden">
-            {children}
-          </main>
-          <TanStackDevtools
-            config={{
-              position: "bottom-right",
-            }}
-            plugins={[
-              {
-                name: "Tanstack Router",
-                render: <TanStackRouterDevtoolsPanel />,
-              },
-              TanStackQueryDevtools,
-            ]}
-          />
-        </PostHogProvider>
+        <Toaster />
+        <main className="flex h-dvh flex-col overflow-hidden">{children}</main>
+        <TanStackDevtools
+          config={{
+            position: "bottom-right",
+          }}
+          plugins={[
+            {
+              name: "Tanstack Router",
+              render: <TanStackRouterDevtoolsPanel />,
+            },
+            TanStackQueryDevtools,
+          ]}
+        />
         <Scripts />
       </body>
     </html>

@@ -21,18 +21,11 @@ type AssistantMessageProps = {
   message: ThreadUIMessage;
 };
 
-export const AssistantMessage = ({
-  isAnimating = false,
-  message,
-}: AssistantMessageProps) => {
+export const AssistantMessage = ({ isAnimating = false, message }: AssistantMessageProps) => {
   return (
     <div className="flex flex-col gap-1">
       {message.parts.map((part, i) => (
-        <AssistantMessagePart
-          isAnimating={isAnimating}
-          key={`${part.type}-${i}`}
-          part={part}
-        />
+        <AssistantMessagePart isAnimating={isAnimating} key={`${part.type}-${i}`} part={part} />
       ))}
     </div>
   );
@@ -43,10 +36,7 @@ type AssistantMessagePartProps = {
   part: ThreadUIMessagePart;
 };
 
-const AssistantMessagePart = ({
-  isAnimating,
-  part,
-}: AssistantMessagePartProps) => {
+const AssistantMessagePart = ({ isAnimating, part }: AssistantMessagePartProps) => {
   // oxlint-disable-next-line typescript/switch-exhaustiveness-check
   switch (part.type) {
     case "text": {

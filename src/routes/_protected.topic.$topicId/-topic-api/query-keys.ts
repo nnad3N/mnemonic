@@ -1,5 +1,4 @@
 export const topicKeys = {
   all: ["topics"] as const,
-  artifacts: (topicId: string) =>
-    [...topicKeys.all, topicId, "artifacts"] as const,
+  files: (topicId: string) => [...topicKeys.all, topicId, "files"] as const,
 };

@@ -2,23 +2,14 @@ import * as v from "valibot";
 
 const MENTION_KEY_TYPE_SEPARATOR = "::";
 
-const mentionTypeSchema = v.picklist([
-  "artifact",
-  "attachment",
-  "selection",
-  "thread",
-  "topic",
-]);
+const mentionTypeSchema = v.picklist(["file", "attachment", "selection", "thread", "topic"]);
 
 type MentionKeyType = v.InferOutput<typeof mentionTypeSchema>;
 
-export type MentionKey =
-  `${MentionKeyType}${typeof MENTION_KEY_TYPE_SEPARATOR}${string}`;
+export type MentionKey = `${MentionKeyType}${typeof MENTION_KEY_TYPE_SEPARATOR}${string}`;
 
-export const getMentionKey = (value: {
-  type: MentionKeyType;
-  value: string;
-}): MentionKey => `${value.type}${MENTION_KEY_TYPE_SEPARATOR}${value.value}`;
+export const getMentionKey = (value: { type: MentionKeyType; value: string }): MentionKey =>
+  `${value.type}${MENTION_KEY_TYPE_SEPARATOR}${value.value}`;
 
 export type MentionValue = {
   key: MentionKey;

@@ -18,16 +18,8 @@ type SidebarMenuButtonSkeletonProps = {
   showIcon?: boolean;
 };
 
-const SidebarMenuButtonSkeleton = ({
-  seed,
-  showIcon = false,
-}: SidebarMenuButtonSkeletonProps) => (
-  <SidebarMenuButton
-    aria-hidden="true"
-    className="pointer-events-none"
-    disabled
-    tabIndex={-1}
-  >
+const SidebarMenuButtonSkeleton = ({ seed, showIcon = false }: SidebarMenuButtonSkeletonProps) => (
+  <SidebarMenuButton aria-hidden="true" className="pointer-events-none" disabled tabIndex={-1}>
     {showIcon ? <Skeleton className="size-4 shrink-0 rounded-sm" /> : null}
     <Skeleton className={cn("h-4 flex-1", getSkeletonWidthClass(seed))} />
   </SidebarMenuButton>
@@ -37,9 +29,7 @@ type SidebarMenuSubButtonSkeletonProps = {
   seed: number;
 };
 
-const SidebarMenuSubButtonSkeleton = ({
-  seed,
-}: SidebarMenuSubButtonSkeletonProps) => (
+const SidebarMenuSubButtonSkeleton = ({ seed }: SidebarMenuSubButtonSkeletonProps) => (
   <SidebarMenuSubButton
     aria-disabled="true"
     aria-hidden="true"
@@ -55,9 +45,7 @@ type SidebarConversationsSkeletonProps = {
   count: number;
 };
 
-export const SidebarConversationsSkeleton = ({
-  count,
-}: SidebarConversationsSkeletonProps) =>
+export const SidebarConversationsSkeleton = ({ count }: SidebarConversationsSkeletonProps) =>
   Array.from({ length: count }, (_, index) => (
     <SidebarMenuItem key={index}>
       <SidebarMenuButtonSkeleton seed={index} />

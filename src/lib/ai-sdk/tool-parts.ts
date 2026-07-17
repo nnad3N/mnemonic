@@ -7,9 +7,7 @@ type ToolPartStatusInput = {
   state: DynamicToolUIPart["state"];
 };
 
-export const getToolPartStatus = (
-  part: ToolPartStatusInput
-): ToolPartStatus => {
+export const getToolPartStatus = (part: ToolPartStatusInput): ToolPartStatus => {
   switch (part.state) {
     case "output-error":
     case "output-denied": {

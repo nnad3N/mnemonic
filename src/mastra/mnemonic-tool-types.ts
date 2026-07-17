@@ -11,10 +11,7 @@ type ConversationMemoryTools = Pick<
   ReturnType<typeof conversationMemory.listTools>,
   EnabledMemoryToolName
 >;
-type TopicMemoryTools = Pick<
-  ReturnType<typeof topicMemory.listTools>,
-  EnabledMemoryToolName
->;
+type TopicMemoryTools = Pick<ReturnType<typeof topicMemory.listTools>, EnabledMemoryToolName>;
 
 type MnemonicTools = typeof conversationAgentTools &
   ConversationMemoryTools &

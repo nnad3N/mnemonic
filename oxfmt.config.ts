@@ -1,8 +1,18 @@
 import { defineConfig } from "oxfmt";
-import ultracite from "ultracite/oxfmt";
 
 export default defineConfig({
-  ...ultracite,
+  ignorePatterns: [
+    "**/dist",
+    "**/build",
+    "**/out",
+    "**/.output",
+    "**/.vite",
+    "**/.cache",
+    "**/coverage",
+    "**/*.gen.*",
+    "**/*.generated.*",
+  ],
+  sortImports: true,
   sortTailwindcss: {
     functions: ["cn", "clsx", "cva"],
     stylesheet: "./src/styles.css",

@@ -1,22 +1,24 @@
-# Ultracite Code Standards
+# Code Standards
 
-This project uses **Ultracite**, a zero-config preset that enforces strict code quality standards through automated formatting and linting.
+This project uses **Oxlint** and **Oxfmt** for linting and formatting.
 
 ## Quick Reference
 
-- **Format code**: `bun run format`
-- **Lint and autofix**: `bun run lint`
-- **Format and lint**: `bun run fix`
-- **Typecheck only**: `bun run typecheck`
-- **Run tests**: `bun run test`
+- **Format code**: `deno task format`
+- **Lint and autofix**: `deno task lint`
+- **Format and lint**: `deno task fix`
+- **Typecheck only**: `deno task typecheck`
+- **Run tests**: `deno task test`
 
-Oxlint + Oxfmt (the underlying engine) provides robust linting and formatting. Most issues are automatically fixable.
+Oxlint + Oxfmt provide robust linting and formatting. Most issues are automatically fixable.
 
 ---
 
 ## Core Principles
 
 Write code that is **accessible, performant, type-safe, and maintainable**. Focus on clarity and explicit intent over brevity.
+
+Architecture notes for agents live in [`.agents/architecture`](.agents/architecture). Read the relevant note before changing a documented cross-cutting pattern, such as branded backend IDs.
 
 ### Type Safety & Explicitness
 
@@ -25,6 +27,7 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
 - Use const assertions (`as const`) for immutable values and literal types
 - Leverage TypeScript's type narrowing instead of type assertions
 - Use meaningful variable names instead of magic numbers - extract constants with descriptive names
+- When branding, validating, or otherwise narrowing a property from a structured input object, pass the property directly from its source object (e.g. `toSafeId(inputData.fileId)`) instead of destructuring it first solely to pass into the narrowing helper. Keep the original trust boundary visible at the call site.
 
 ### Modern JavaScript/TypeScript
 
@@ -35,12 +38,12 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
 - Prefer template literals over string concatenation
 - Use destructuring for object and array assignments
 - Use `const` by default, `let` only when reassignment is needed, never `var`
+- Bare early returns are more readable as a one-liner without braces: `if (condition) return;`. Always use curly braces when returning a value: `if (condition) { return value; }`
 
 ### Async & Promises
 
-- Always `await` promises in async functions - don't forget to use the return value
+- Always consume promises in async functions. When directly returning a promise, return it without a redundant `await`; otherwise `await` it and use the result.
 - Use `async/await` syntax instead of promise chains for better readability
-- Handle errors appropriately in async code with try-catch blocks
 - Don't use async functions as Promise executors
 - In event handlers that call promise-returning functions, make the handler `async` and `await` the promise. Do not discard promises with `void` when the handler can be async.
 
@@ -70,18 +73,18 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
   className={cn(
     "size-1.5 rounded-full",
     status === "ready" && "bg-green-500",
-    status === "failed" && "bg-red-500"
+    status === "failed" && "bg-red-500",
   )}
 />;
 
 // Good — component owns the variants
-const ArtifactStatusChip = ({ status }: { status: ArtifactStatus }) => (
+const FileStatusChip = ({ status }: { status: FileStatus }) => (
   <Badge variant="outline">
     <span
       className={cn(
         "size-1.5 rounded-full",
         status === "ready" && "bg-green-500",
-        status === "failed" && "bg-red-500"
+        status === "failed" && "bg-red-500",
       )}
     />
     {label}
@@ -89,7 +92,7 @@ const ArtifactStatusChip = ({ status }: { status: ArtifactStatus }) => (
 );
 
 // Bad — class-string lookup helper
-const getStatusDotClassName = (status: ArtifactStatus) => {
+const getStatusDotClassName = (status: FileStatus) => {
   switch (status) {
     case "ready":
       return "bg-green-500";
@@ -111,9 +114,39 @@ const getStatusDotClassName = (status: ArtifactStatus) => {
 
 - Remove `console.log`, `debugger`, and `alert` statements from production code
 - Throw `Error` objects with descriptive messages, not strings or other values
-- Use `try-catch` blocks meaningfully - don't catch errors just to rethrow them
+- **Never use `try`/`catch`** — wrap fallible async work with `Result.tryPromise(...)` from `better-result`. Prefer the bare callback form (`Result.tryPromise(async () => …)`) unless a kit needs a typed `catch` mapper. Consume results with `match`, `mapError`, `tapError`, or `Result.isError(...)` / `Result.isOk(...)` according to the operation; do not use `try`/`catch` to swallow, rethrow, or translate errors.
 - Prefer early returns over nested conditionals for error cases
 - **Never render raw error messages in client UI** — do not display `error.message`, provider/API payloads, stack traces, or other server-derived text. Show user-safe copy via Paraglide messages or an error-code lookup (see [`src/lib/auth-errors.ts`](src/lib/auth-errors.ts)); log details server-side for debugging
+- **Kit infra errors** — fixed domain `message` + `cause`; never copy `cause.message` into the wrapper. See [`.agents/architecture/kit-services.md`](.agents/architecture/kit-services.md) (Kit errors).
+
+### Better Result and Kit patterns
+
+- Use raw `Result.tryPromise(...)` for a simple fallible operation. Use `Kit.gen(...)` when application logic coordinates multiple kit operations or needs injectable dependencies.
+- Inside `Kit.gen`, compose asynchronous kit results with `yield* await`. Return expected, recoverable tool outcomes as ordinary `Result.ok(...)` values; reserve `Err` for failures that should short-circuit the action.
+- Inside `Kit.gen`, use `yield* await Kit.promiseAll([...])` when independent operations return Result promises and should run concurrently. It preserves Promise.all concurrency, combines successful values in input order, and unions member error types. Keep bespoke loops when results must remain paired with source records or need per-item handling.
+- Use `result.match({ ok, err })` only when both branches need meaningful handling. Outside thin `Kit.run` boundary adapters, if the success value passes through unchanged and only the error branch is mapped, use a normal `if (Result.isError(result))` followed by `return result.value`. At tool boundaries, keep provider and infrastructure details out of error output shown to the model.
+- Use `mapError` to translate an error type and `tapError` for error-only side effects such as logging. Prefer these combinators over an `if` that only maps or observes a Result branch.
+- Use `Kit.run(async () => operationReturningResult())` only in thin server-function, workflow, or tool adapters that can directly return the successful value. Finish the chain with `.throws()` to throw the original error instance, or `.throws<BoundaryError>(mapper)` to translate it. Do not use `Kit.run` in ordinary application logic, middleware, client code, recovery paths, transformed-success handlers, or multi-step Result branching.
+- `Kit.run(...).inspect(...)` and `.inspectErr(...)` provide synchronous success/error side effects before `.throws()`. They preserve the underlying Result and use Better Result's Panic behavior if an inspection callback throws.
+- At server-function boundaries, map the complete error union to user-safe `ServerFnError` values. Use Better Result's `matchError(...)` inside `.throws<ServerFnError>(...)` when tagged variants need distinct exhaustive mappings. If the source union already includes `ServerFnError`, return it unchanged via `ServerFnError.is(error)` before matching the remaining variants.
+- Inline `Kit.run(...)` in the framework adapter and directly return its `.throws()` promise without a redundant `await`. Do not use Better Result's `.unwrap()` at a throwing boundary because it converts `Err` into `Panic`:
+
+```ts
+execute: async ({ inputData }) =>
+  Kit.run(async () => processFn(processCtx, inputData)).throws(),
+```
+
+- An `if (Result.isError(result))` remains appropriate when TypeScript narrowing is needed or when throwing must happen outside a Result callback to preserve the original error.
+- When a `db.run` / `db.transaction` callback only returns one Drizzle query, use an implicit-return callback without `async`, braces, or an inner `await`:
+
+```ts
+yield *
+  (await ctx.db.run((db) =>
+    db.update(file).set({ status: "ready" }).where(eq(file.id, input.fileId)),
+  ));
+```
+
+Use an `async` block body only when the callback performs multiple awaited operations or must explicitly return a transformed value.
 
 ### Code Organization
 
@@ -138,23 +171,10 @@ const getStatusDotClassName = (status: ArtifactStatus) => {
 - Use top-level regex literals instead of creating them in loops
 - Prefer specific imports over namespace imports
 - Avoid barrel files (index files that re-export everything)
-- Use proper image components (e.g., Next.js `<Image>`) over `<img>` tags
 
-### Framework-Specific Guidance
-
-**Next.js:**
-
-- Use Next.js `<Image>` component for images
-- Use `next/head` or App Router metadata API for head elements
-- Use Server Components for async data fetching instead of async Client Components
-
-**React 19+:**
+### React 19+
 
 - Use ref as a prop instead of `React.forwardRef`
-
-**Solid/Svelte/Vue/Qwik:**
-
-- Use `class` and `for` attributes (not `className` or `htmlFor`)
 
 ---
 
@@ -163,7 +183,6 @@ const getStatusDotClassName = (status: ArtifactStatus) => {
 Every file under `src/routes/` follows the same shape. `createFileRoute(...)({ component: ... })` runs **before** the component is defined, so the component must be a **hoisted function declaration**, not an arrow function expression.
 
 - Name the component **`RouteComponent`** for page routes and **`LayoutComponent`** for pathless layouts (`_*.tsx` / `_*/route.tsx`). Don't invent per-route names like `SignInRoute` or `AuthLayout` — keep the name uniform across files so jumping between routes is predictable.
-- Disable `func-style` for the declaration with a file-scoped comment: `/* oxlint-disable func-style */` directly above `function RouteComponent() {`. This is the only place `func-style` should be disabled in the codebase; everywhere else, prefer arrow functions per the Modern JS guidance above.
 - Reference the component by name inside `createFileRoute`:
 
 ```tsx
@@ -171,7 +190,6 @@ export const Route = createFileRoute("/some/path")({
   component: RouteComponent,
 });
 
-/* oxlint-disable func-style */
 function RouteComponent() {
   // ...
 }
@@ -201,13 +219,19 @@ TanStack Router's `search` option is typed loosely — you can return almost any
 - Prefer **`Route.useNavigate()`** / **`Route.Link`** (or `from={Route.fullPath}`) so `prev` is inferred from the route's `validateSearch` schema.
 - Ensure **`Register.router`** uses `typeof router` on a module-level router instance (see [`src/router.tsx`](src/router.tsx)) — not `ReturnType<typeof getRouter>`.
 
-Reference: [`src/routes/_protected.topic.$topicId/artifacts.tsx`](src/routes/_protected.topic.$topicId/artifacts.tsx)
+Reference: [`src/routes/_protected.topic.$topicId/files.tsx`](src/routes/_protected.topic.$topicId/files.tsx)
 
 ---
 
 ## Valibot schemas
 
-Use Valibot for every input boundary: server fn validators, middleware `inputValidator`, route `validateSearch`, env vars, tool/workflow schemas, and form `onDynamic` schemas.
+Use Valibot for every input boundary: server fn validators, middleware `validator`, route `validateSearch`, env vars, tool/workflow schemas, and form `onDynamic` schemas.
+
+Mastra workflow lifecycle callbacks receive initial data that has already passed the workflow `inputSchema`. Use `v.parse(workflowInputSchema, getInitData())` directly to recover the inferred type; do not wrap it in a Result or add a `safeParse` branch for a shape Mastra already validated.
+
+### Tool input descriptions
+
+For Mastra `createTool` input schemas, document each parameter with `v.description(...)` in the pipe (after constraints). Put defaults, formats, and where to get IDs there — not in the tool-level `description` string. The tool description owns purpose, when to use / not use, outputs, and fallbacks. See [`.agents/change-tool-description/SKILL.md`](.agents/change-tool-description/SKILL.md).
 
 ### Pipe constraints
 
@@ -229,14 +253,14 @@ For optional fields, wrap the full pipe: `v.optional(v.pipe(v.string(), v.nonEmp
 
 ### ID fields
 
-Any schema field named `id` or ending in `Id` (`topicId`, `threadId`, `artifactId`, `userId`, `messageId`, …) must validate as a nanoid:
+Any schema field named `id` or ending in `Id` (`topicId`, `threadId`, `fileId`, `userId`, `messageId`, …) must validate as a nanoid:
 
 ```tsx
 topicId: v.pipe(v.string(), v.nanoid()),
 messageId: v.optional(v.pipe(v.string(), v.nanoid())),
 ```
 
-Reference: [`src/routes/_protected.topic.$topicId/-artifacts-api/list-artifacts.ts`](src/routes/_protected.topic.$topicId/-artifacts-api/list-artifacts.ts), [`src/lib/middleware/assert-thread-access.ts`](src/lib/middleware/assert-thread-access.ts)
+Reference: [`src/routes/_protected.topic.$topicId/-files-api/list-files.ts`](src/routes/_protected.topic.$topicId/-files-api/list-files.ts), [`src/lib/middleware/assert-thread-access.ts`](src/lib/middleware/assert-thread-access.ts)
 
 ---
 
@@ -253,7 +277,7 @@ const schema = v.object({
   email: v.pipe(
     v.string(),
     v.nonEmpty(m.auth_validation_required()),
-    v.email(m.auth_validation_email_invalid())
+    v.email(m.auth_validation_email_invalid()),
   ),
 });
 ```
@@ -292,9 +316,7 @@ const formErrors = useStore(form.store, (s) => toFormErrors(s.fieldMeta));
 Subscribe narrowly to drive the submit button:
 
 ```tsx
-<form.Subscribe
-  selector={(s) => ({ canSubmit: s.canSubmit, isSubmitting: s.isSubmitting })}
->
+<form.Subscribe selector={(s) => ({ canSubmit: s.canSubmit, isSubmitting: s.isSubmitting })}>
   {({ canSubmit, isSubmitting }) => (
     <Button disabled={!canSubmit} loading={isSubmitting} type="submit">
       {m.auth_sign_in_submit()}
@@ -347,7 +369,7 @@ When adding a new subagent with custom UI, add its `agent-<key>` name to `tool-p
 Messages live in [`messages/en.json`](messages/en.json) and [`messages/pl.json`](messages/pl.json). Use Paraglide getters from `@/paraglide/messages` (`m.message_key()`).
 
 - **`common_*` for generic UI copy** — reuse shared keys for words and short phrases that mean the same everywhere (`common_loading`, `common_retry`, `common_try_again`, `common_please_try_again`, `common_cancel`, `common_delete`, `common_search`, `common_rename`, `common_download`, `common_sign_out`, `common_no_results`, status labels, table column headers, etc.). Do **not** create feature-scoped one-offs when a `common_*` key already fits.
-- **Feature-scoped keys** (`chat_*`, `artifacts_*`, `nav_*`, …) are for context-specific copy only: page titles, empty-state descriptions, error explanations, placeholders tied to a screen or domain concept.
+- **Feature-scoped keys** (`chat_*`, `files_*`, `nav_*`, …) are for context-specific copy only: page titles, empty-state descriptions, error explanations, placeholders tied to a screen or domain concept.
 - When adding a string, check `common_*` first before introducing a new key.
 
 ---
@@ -361,7 +383,7 @@ Messages live in [`messages/en.json`](messages/en.json) and [`messages/pl.json`]
 
 ## When Oxlint + Oxfmt Can't Help
 
-Oxlint + Oxfmt's linter will catch most issues automatically. Focus your attention on:
+Oxlint + Oxfmt will catch most issues automatically. Focus your attention on:
 
 1. **Business logic correctness** - Oxlint + Oxfmt can't validate your algorithms
 2. **Meaningful naming** - Use descriptive names for functions, variables, and types
@@ -372,4 +394,10 @@ Oxlint + Oxfmt's linter will catch most issues automatically. Focus your attenti
 
 ---
 
-Most formatting and common issues are automatically fixed by Oxlint + Oxfmt. Run `bun run typecheck`, `bun run lint`, and `bun run format` before handing off changes. Do not run `bun run build` just to validate agent work unless the user explicitly asks for a build.
+Most formatting and common issues are automatically fixed by Oxlint + Oxfmt. Run `deno task typecheck`, `deno task lint`, and `deno task format` before handing off changes. Do not run `deno task build` just to validate agent work unless the user explicitly asks for a build.
+
+### Backend dates (Temporal)
+
+Use Temporal when the backend is doing real date logic (comparing instants, TTL/retention cutoffs, sorting by time). Prefer `Temporal.Instant` / `Temporal.Now.instant()` over `Date.now()` / `Date.parse` in those cases.
+
+Do not wrap plain “now for this API” call sites in Temporal when a library needs a `Date` anyway (Drizzle `$onUpdate`, Mastra `createdAt`/`updatedAt`, etc.) — use `new Date()` there. Do not add shared Date↔Temporal conversion helpers. Client UI may keep using `Date` / `Intl` for display of ISO strings.

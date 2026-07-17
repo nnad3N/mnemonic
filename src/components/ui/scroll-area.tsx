@@ -7,12 +7,7 @@ type ScrollAreaProps = ScrollAreaPrimitive.Root.Props & {
   viewportRef?: React.Ref<HTMLDivElement>;
 };
 
-function ScrollArea({
-  className,
-  children,
-  viewportRef,
-  ...props
-}: ScrollAreaProps) {
+function ScrollArea({ className, children, viewportRef, ...props }: ScrollAreaProps) {
   return (
     <ScrollAreaPrimitive.Root
       data-slot="scroll-area"
@@ -44,7 +39,7 @@ function ScrollBar({
       orientation={orientation}
       className={cn(
         "flex touch-none p-px opacity-0 transition-opacity select-none data-hovering:opacity-100 data-scrolling:opacity-100 data-horizontal:h-2.5 data-horizontal:flex-col data-horizontal:border-t data-horizontal:border-t-transparent data-vertical:h-full data-vertical:w-2.5 data-vertical:border-l data-vertical:border-l-transparent",
-        className
+        className,
       )}
       {...props}
     >

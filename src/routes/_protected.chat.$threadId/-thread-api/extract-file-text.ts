@@ -1,22 +1,18 @@
 import { extractBytes } from "@kreuzberg/node";
 import { createServerFn } from "@tanstack/react-start";
+import { Result } from "better-result";
 import * as v from "valibot";
 
 import { SUPPORTED_MIME_TYPES, UPLOAD_MAX_BYTES } from "@/lib/file-validation";
+import { toServerFnError } from "@/lib/kit";
 
 const extractFileTextSchema = v.object({
-  file: v.pipe(
-    v.blob(),
-    v.mimeType(SUPPORTED_MIME_TYPES),
-    v.maxSize(UPLOAD_MAX_BYTES)
-  ),
+  file: v.pipe(v.blob(), v.mimeType(SUPPORTED_MIME_TYPES), v.maxSize(UPLOAD_MAX_BYTES)),
 });
 
 type ExtractFileTextSchema = v.InferInput<typeof extractFileTextSchema>;
 
-export const getExtractFileTextData = (
-  data: ExtractFileTextSchema
-): FormData => {
+export const getExtractFileTextData = (data: ExtractFileTextSchema): FormData => {
   const formData = new FormData();
 
   for (const [key, value] of Object.entries(data)) {
@@ -27,7 +23,7 @@ export const getExtractFileTextData = (
 };
 
 export const extractFileText = createServerFn({ method: "POST" })
-  .inputValidator((data: FormData) => {
+  .validator((data: FormData) => {
     // runtime check
     if (data instanceof FormData) {
       return v.parse(extractFileTextSchema, Object.fromEntries(data.entries()));
@@ -36,8 +32,16 @@ export const extractFileText = createServerFn({ method: "POST" })
     return v.parse(extractFileTextSchema, data);
   })
   .handler(async ({ data }) => {
-    const fileBytes = Buffer.from(await data.file.arrayBuffer());
-    const extraction = await extractBytes(fileBytes, data.file.type);
+    const result = await Result.tryPromise(async () => {
+      const fileBytes = Buffer.from(await data.file.arrayBuffer());
+      const extraction = await extractBytes(fileBytes, data.file.type);
 
-    return { text: extraction.content };
+      return extraction.content;
+    });
+
+    if (Result.isError(result)) {
+      throw toServerFnError.serverError("Failed to extract file text");
+    }
+
+    return { text: result.value };
   });

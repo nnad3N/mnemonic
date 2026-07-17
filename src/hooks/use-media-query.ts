@@ -12,10 +12,7 @@ const BREAKPOINTS = {
 
 type Breakpoint = keyof typeof BREAKPOINTS;
 
-export type BreakpointQuery =
-  | Breakpoint
-  | `max-${Breakpoint}`
-  | `${Breakpoint}:max-${Breakpoint}`;
+export type BreakpointQuery = Breakpoint | `max-${Breakpoint}` | `${Breakpoint}:max-${Breakpoint}`;
 
 const resolveMin = (value: Breakpoint | number): string => {
   const px = typeof value === "number" ? value : BREAKPOINTS[value];
@@ -29,10 +26,7 @@ const resolveMax = (value: Breakpoint | number): string => {
 
 const isBreakpointKey = (key: string): key is Breakpoint => key in BREAKPOINTS;
 
-const parseQuery = (
-  // oxlint-disable-next-line typescript/ban-types
-  query: BreakpointQuery | MediaQueryInput | (string & {})
-): string => {
+const parseQuery = (query: BreakpointQuery | MediaQueryInput | (string & {})): string => {
   if (typeof query !== "string") {
     const parts: string[] = [];
     if (query.min !== undefined) {
@@ -84,8 +78,7 @@ export type MediaQueryInput = {
 };
 
 export const useMediaQuery = (
-  // oxlint-disable-next-line typescript/ban-types
-  query: BreakpointQuery | MediaQueryInput | (string & {})
+  query: BreakpointQuery | MediaQueryInput | (string & {}),
 ): boolean => {
   const mediaQuery = parseQuery(query);
 
@@ -102,7 +95,7 @@ export const useMediaQuery = (
         mql.removeEventListener("change", onStoreChange);
       };
     },
-    [mediaQuery]
+    [mediaQuery],
   );
 
   const getSnapshot = useCallback(() => {

@@ -1,10 +1,12 @@
-import { notFound } from "@tanstack/react-router";
 import { createMiddleware } from "@tanstack/react-start";
+import { Result } from "better-result";
 import * as v from "valibot";
 
-import { db } from "@/db";
+import { dbKit } from "@/lib/db-kit";
+import { Kit, toServerFnError } from "@/lib/kit";
+import { memoryKit } from "@/lib/memory-kit";
 import { authMiddleware } from "@/lib/middleware/auth-middleware";
-import { getMemoryStore } from "@/mastra/memory";
+import { toSafeId } from "@/lib/safe-id";
 
 const threadAccessInputSchema = v.looseObject({
   threadId: v.pipe(v.string(), v.nanoid()),
@@ -19,27 +21,39 @@ type ThreadAccessInputSchema = v.InferOutput<typeof threadAccessInputSchema>;
 // from context instead.
 export const threadAccessMiddleware = createMiddleware({ type: "function" })
   .middleware([authMiddleware])
-  .inputValidator((data: ThreadAccessInputSchema) => data as unknown)
+  .validator((data: ThreadAccessInputSchema) => data as unknown)
   .server(async ({ context, data, next }) => {
     const { threadId } = v.parse(threadAccessInputSchema, data);
-    const memoryStore = await getMemoryStore();
-    const thread = await memoryStore.getThreadById({ threadId });
+    const threadResult = await Kit.get(memoryKit).getThreadById({ threadId });
 
-    if (thread === null) {
-      throw notFound();
+    if (Result.isError(threadResult)) {
+      throw toServerFnError.serverError("Failed to verify thread access");
+    }
+
+    const thread = threadResult.value;
+
+    if (!thread) {
+      throw toServerFnError.notFound();
     }
 
     if (thread.resourceId !== context.user.id) {
-      const ownedTopic = await db.query.topic.findFirst({
-        where: {
-          id: thread.resourceId,
-          userId: context.user.id,
-        },
-        columns: { id: true },
-      });
+      const topicResult = await Kit.get(dbKit).run((db) =>
+        db.query.topic.findFirst({
+          where: {
+            // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId check.
+            id: toSafeId<"topic">(thread.resourceId),
+            userId: context.user.id,
+          },
+          columns: { id: true },
+        }),
+      );
 
-      if (!ownedTopic) {
-        throw notFound();
+      if (Result.isError(topicResult)) {
+        throw toServerFnError.serverError("Failed to verify thread access");
+      }
+
+      if (!topicResult.value) {
+        throw toServerFnError.notFound();
       }
     }
 
@@ -58,19 +72,28 @@ type TopicAccessInputSchema = v.InferOutput<typeof topicAccessInputSchema>;
 
 export const topicAccessMiddleware = createMiddleware({ type: "function" })
   .middleware([authMiddleware])
-  .inputValidator((data: TopicAccessInputSchema) => data as unknown)
+  .validator((data: TopicAccessInputSchema) => data as unknown)
   .server(async ({ context, data, next }) => {
     const { topicId } = v.parse(topicAccessInputSchema, data);
-    const ownedTopic = await db.query.topic.findFirst({
-      where: {
-        id: topicId,
-        userId: context.user.id,
-      },
-      columns: { id: true },
-    });
+    const topicResult = await Kit.get(dbKit).run((db) =>
+      db.query.topic.findFirst({
+        where: {
+          // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId check.
+          id: toSafeId<"topic">(topicId),
+          userId: context.user.id,
+        },
+        columns: { id: true },
+      }),
+    );
+
+    if (Result.isError(topicResult)) {
+      throw toServerFnError.serverError("Failed to verify topic access");
+    }
+
+    const ownedTopic = topicResult.value;
 
     if (!ownedTopic) {
-      throw notFound();
+      throw toServerFnError.notFound();
     }
 
     return next({
@@ -80,41 +103,48 @@ export const topicAccessMiddleware = createMiddleware({ type: "function" })
     });
   });
 
-const artifactAccessInputSchema = v.looseObject({
-  artifactId: v.pipe(v.string(), v.nanoid()),
+const fileAccessInputSchema = v.looseObject({
+  fileId: v.pipe(v.string(), v.nanoid()),
 });
 
-type ArtifactAccessInputSchema = v.InferOutput<
-  typeof artifactAccessInputSchema
->;
+type FileAccessInputSchema = v.InferOutput<typeof fileAccessInputSchema>;
 
-export const artifactAccessMiddleware = createMiddleware({ type: "function" })
+export const fileAccessMiddleware = createMiddleware({ type: "function" })
   .middleware([authMiddleware])
-  .inputValidator((data: ArtifactAccessInputSchema) => data as unknown)
+  .validator((data: FileAccessInputSchema) => data as unknown)
   .server(async ({ context, data, next }) => {
-    const { artifactId } = v.parse(artifactAccessInputSchema, data);
-    const ownedArtifact = await db.query.artifact.findFirst({
-      columns: {
-        displayName: true,
-        id: true,
-        s3Key: true,
-        status: true,
-        topicId: true,
-      },
-      where: {
-        id: artifactId,
-        userId: context.user.id,
-      },
-    });
+    const { fileId } = v.parse(fileAccessInputSchema, data);
+    const fileResult = await Kit.get(dbKit).run((db) =>
+      db.query.file.findFirst({
+        columns: {
+          displayName: true,
+          id: true,
+          s3Key: true,
+          status: true,
+          topicId: true,
+        },
+        where: {
+          // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId check.
+          id: toSafeId<"file">(fileId),
+          userId: context.user.id,
+        },
+      }),
+    );
 
-    if (!ownedArtifact) {
-      throw notFound();
+    if (Result.isError(fileResult)) {
+      throw toServerFnError.serverError("Failed to verify file access");
+    }
+
+    const ownedFile = fileResult.value;
+
+    if (!ownedFile) {
+      throw toServerFnError.notFound();
     }
 
     return next({
       context: {
-        artifact: ownedArtifact,
-        topicId: ownedArtifact.topicId,
+        file: ownedFile,
+        topicId: ownedFile.topicId,
       },
     });
   });

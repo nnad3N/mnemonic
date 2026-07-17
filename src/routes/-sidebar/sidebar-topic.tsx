@@ -16,11 +16,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -67,9 +63,7 @@ export const SidebarTopics = () => {
       <SidebarGroupContent>
         <SidebarMenu>
           {topics.isSuccess ? (
-            topicItems.map((topic) => (
-              <SidebarTopicItem key={topic.id} topic={topic} />
-            ))
+            topicItems.map((topic) => <SidebarTopicItem key={topic.id} topic={topic} />)
           ) : (
             <SidebarTopicsSkeleton count={2} />
           )}
@@ -82,19 +76,16 @@ export const SidebarTopics = () => {
                 render={<SidebarMenuButton />}
                 disabled={topics.isFetchingNextPage || !topics.hasNextPage}
                 onCollapse={() => {
-                  queryClient.setQueryData(
-                    topicsQueryOptions.queryKey,
-                    (current) => {
-                      if (!current) {
-                        return current;
-                      }
-
-                      return {
-                        pageParams: current.pageParams.slice(0, 1),
-                        pages: current.pages.slice(0, 1),
-                      };
+                  queryClient.setQueryData(topicsQueryOptions.queryKey, (current) => {
+                    if (!current) {
+                      return current;
                     }
-                  );
+
+                    return {
+                      pageParams: current.pageParams.slice(0, 1),
+                      pages: current.pages.slice(0, 1),
+                    };
+                  });
                 }}
                 onMore={async () => {
                   await topics.fetchNextPage();
@@ -118,9 +109,7 @@ const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const isOpen = useChatStore(
-    (state) => !state.collapsedTopicIds.includes(topic.id)
-  );
+  const isOpen = useChatStore((state) => !state.collapsedTopicIds.includes(topic.id));
   const setTopicCollapsed = useChatStore((state) => state.setTopicCollapsed);
   const topicThreadsQueryOptions = infiniteQueryOptions({
     ...sidebarTopicThreadsQuery(topic.id),
@@ -186,9 +175,7 @@ const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
             <div className="flex w-full items-center">
               <ContextMenuTrigger
                 render={
-                  <CollapsibleTrigger
-                    render={<SidebarMenuButton className="min-w-0 flex-1" />}
-                  />
+                  <CollapsibleTrigger render={<SidebarMenuButton className="min-w-0 flex-1" />} />
                 }
               >
                 <ChevronRightIcon className="transition-transform group-data-panel-open/topic:rotate-90" />
@@ -218,15 +205,10 @@ const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
               {m.common_rename()}
             </ContextMenuItem>
             <ContextMenuItem
-              render={
-                <Link
-                  params={{ topicId: topic.id }}
-                  to="/topic/$topicId/artifacts"
-                />
-              }
+              render={<Link params={{ topicId: topic.id }} to="/topic/$topicId/files" />}
             >
               <FileIcon />
-              {m.nav_artifacts()}
+              {m.nav_files()}
             </ContextMenuItem>
             <ContextMenuItem
               onClick={() => {
@@ -259,28 +241,19 @@ const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
             {(topicThreads.hasNextPage || hasMultipleThreadPages) && (
               <SidebarMenuSubItem>
                 <SidebarMore
-                  render={
-                    <SidebarMenuSubButton
-                      render={<button className="w-full" />}
-                    />
-                  }
-                  disabled={
-                    topicThreads.isFetchingNextPage || !topicThreads.hasNextPage
-                  }
+                  render={<SidebarMenuSubButton render={<button className="w-full" />} />}
+                  disabled={topicThreads.isFetchingNextPage || !topicThreads.hasNextPage}
                   onCollapse={() => {
-                    queryClient.setQueryData(
-                      topicThreadsQueryOptions.queryKey,
-                      (current) => {
-                        if (!current) {
-                          return current;
-                        }
-
-                        return {
-                          pageParams: current.pageParams.slice(0, 1),
-                          pages: current.pages.slice(0, 1),
-                        };
+                    queryClient.setQueryData(topicThreadsQueryOptions.queryKey, (current) => {
+                      if (!current) {
+                        return current;
                       }
-                    );
+
+                      return {
+                        pageParams: current.pageParams.slice(0, 1),
+                        pages: current.pages.slice(0, 1),
+                      };
+                    });
                   }}
                   onMore={async () => {
                     await topicThreads.fetchNextPage();
@@ -293,11 +266,7 @@ const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
         </CollapsibleContent>
       </Collapsible>
 
-      <DeleteTopicDialog
-        onOpenChange={setDeleteOpen}
-        open={deleteOpen}
-        topic={topic}
-      />
+      <DeleteTopicDialog onOpenChange={setDeleteOpen} open={deleteOpen} topic={topic} />
     </SidebarMenuItem>
   );
 };

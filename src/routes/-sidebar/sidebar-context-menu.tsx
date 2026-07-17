@@ -33,11 +33,7 @@ type RenameFieldProps = {
   stopRenaming: () => void;
 };
 
-export const RenameField = ({
-  threadId,
-  initialValue,
-  stopRenaming,
-}: RenameFieldProps) => {
+export const RenameField = ({ threadId, initialValue, stopRenaming }: RenameFieldProps) => {
   const queryClient = useQueryClient();
 
   const renameMutation = useMutation({
@@ -57,7 +53,7 @@ export const RenameField = ({
 
   const form = useForm({
     defaultValues: { title: initialValue },
-    onSubmit: async ({ value }) => {
+    onSubmit: ({ value }) => {
       const trimmed = value.title.trim();
 
       if (trimmed.length === 0 || trimmed === initialValue.trim()) {
@@ -139,7 +135,7 @@ export const RenameTopicField = ({
 
   const form = useForm({
     defaultValues: { title: initialValue },
-    onSubmit: async ({ value }) => {
+    onSubmit: ({ value }) => {
       const trimmed = value.title.trim();
 
       if (trimmed.length === 0 || trimmed === initialValue.trim()) {
@@ -197,11 +193,7 @@ type DeleteThreadDialogProps = {
   open: boolean;
 };
 
-export const DeleteThreadDialog = ({
-  threadId,
-  onOpenChange,
-  open,
-}: DeleteThreadDialogProps) => {
+export const DeleteThreadDialog = ({ threadId, onOpenChange, open }: DeleteThreadDialogProps) => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const activeThreadId = useParams({
@@ -232,9 +224,7 @@ export const DeleteThreadDialog = ({
     <AlertDialog onOpenChange={onOpenChange} open={open}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>
-            {m.nav_delete_thread_confirm_title()}
-          </AlertDialogTitle>
+          <AlertDialogTitle>{m.nav_delete_thread_confirm_title()}</AlertDialogTitle>
           <AlertDialogDescription>
             {m.nav_delete_thread_confirm_description()}
           </AlertDialogDescription>
@@ -264,11 +254,7 @@ type DeleteTopicDialogProps = {
   topic: SidebarTopic;
 };
 
-export const DeleteTopicDialog = ({
-  onOpenChange,
-  open,
-  topic,
-}: DeleteTopicDialogProps) => {
+export const DeleteTopicDialog = ({ onOpenChange, open, topic }: DeleteTopicDialogProps) => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const activeThreadId = useParams({
@@ -287,10 +273,7 @@ export const DeleteTopicDialog = ({
       });
     },
     onSuccess: async () => {
-      if (
-        activeThreadId &&
-        topic.threads.some((thread) => thread.id === activeThreadId)
-      ) {
+      if (activeThreadId && topic.threads.some((thread) => thread.id === activeThreadId)) {
         await navigate({ to: "/search" });
       }
       await queryClient.invalidateQueries({ queryKey: threadKeys.sidebar() });
@@ -302,9 +285,7 @@ export const DeleteTopicDialog = ({
     <AlertDialog onOpenChange={onOpenChange} open={open}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>
-            {m.nav_delete_topic_confirm_title()}
-          </AlertDialogTitle>
+          <AlertDialogTitle>{m.nav_delete_topic_confirm_title()}</AlertDialogTitle>
           <AlertDialogDescription>
             {m.nav_delete_topic_confirm_description()}
           </AlertDialogDescription>

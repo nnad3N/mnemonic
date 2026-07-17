@@ -13,10 +13,7 @@ type AssistantToolPartProps = {
   part: DynamicToolUIPart | ToolUIPart<ThreadUITools>;
 };
 
-const getToolPartLabel = (
-  status: ToolPartStatus,
-  labels: ToolLabels
-): string => {
+const getToolPartLabel = (status: ToolPartStatus, labels: ToolLabels): string => {
   if (status === "error") {
     return labels.error();
   }
@@ -39,10 +36,7 @@ export const AssistantToolPart = ({ part }: AssistantToolPartProps) => {
 
   return (
     <ThreadMetaLine
-      className={cn(
-        status === "pending" && "shimmer",
-        status === "error" && "text-destructive"
-      )}
+      className={cn(status === "pending" && "shimmer", status === "error" && "text-destructive")}
     >
       {getToolPartLabel(status, labels)}
     </ThreadMetaLine>

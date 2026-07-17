@@ -66,9 +66,7 @@ const UploadButton = ({ location }: UploadButtonProps) => {
         onChange={async (e) => {
           const files = e.target.files;
 
-          if (!files || files.length === 0) {
-            return;
-          }
+          if (!files || files.length === 0) return;
 
           await uploadFiles([...files]);
 

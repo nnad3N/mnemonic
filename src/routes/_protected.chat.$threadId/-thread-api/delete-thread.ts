@@ -2,65 +2,81 @@ import { createServerFn } from "@tanstack/react-start";
 import { Result } from "better-result";
 import { eq } from "drizzle-orm";
 
-import { db } from "@/db";
-import { artifact, topic } from "@/db/schema";
+import { file, topic } from "@/db/schema";
+import type { DbKit } from "@/lib/db-kit";
+import { dbKit } from "@/lib/db-kit";
+import type { Kits, ServerFnError } from "@/lib/kit";
+import { Kit, toServerFnError } from "@/lib/kit";
+import type { MemoryKit } from "@/lib/memory-kit";
+import { memoryKit } from "@/lib/memory-kit";
 import {
   threadAccessMiddleware,
   topicAccessMiddleware,
 } from "@/lib/middleware/assert-thread-access";
-import { deleteObjects } from "@/lib/s3";
-import { ARTIFACT_EMBEDDINGS_INDEX } from "@/mastra/artifact-rag-config";
-import { getAgentMemory, getMemoryStore } from "@/mastra/memory";
-import { pgVector } from "@/mastra/storage";
+import type { S3Kit } from "@/lib/s3-kit";
+import { s3Kit } from "@/lib/s3-kit";
+import type { SafeId } from "@/lib/safe-id";
+import type { VectorKit } from "@/lib/vector-kit";
+import { vectorKit } from "@/lib/vector-kit";
+
+type DeleteThreadCtx = Kits<[DbKit, S3Kit, MemoryKit, VectorKit]>;
+
+type DeleteTopicInput = {
+  topicId: SafeId<"topic">;
+};
+
+const deleteTopicFn = Kit.gen(async function* (ctx: DeleteThreadCtx, input: DeleteTopicInput) {
+  const [files, { threads }] = yield* await Kit.promiseAll([
+    ctx.db.run((db) =>
+      db.query.file.findMany({
+        where: { topicId: input.topicId },
+        columns: { s3Key: true },
+      }),
+    ),
+    ctx.memory.listThreads({
+      filter: { resourceId: input.topicId },
+      page: 0,
+      perPage: false,
+    }),
+  ]);
+  yield* await Kit.promiseAll([
+    ctx.s3.deleteObjects({
+      keys: files.map((row) => row.s3Key),
+    }),
+    ctx.vector.deleteVectors({
+      filter: { topicId: input.topicId },
+    }),
+    ctx.db.run((db) => db.delete(file).where(eq(file.topicId, input.topicId))),
+    ctx.db.run((db) => db.delete(topic).where(eq(topic.id, input.topicId))),
+    ...threads.map(async (thread) => ctx.memory.deleteThread({ threadId: thread.id })),
+  ]);
+
+  return Result.ok({ id: input.topicId });
+});
 
 export const deleteConversation = createServerFn({ method: "POST" })
   .middleware([threadAccessMiddleware])
   .handler(async ({ context }) => {
-    const memory = await getAgentMemory("conversation-agent");
-    await memory.deleteThread(context.thread.id);
+    const result = await Kit.get(memoryKit).deleteThread({
+      threadId: context.thread.id,
+    });
+
+    if (result.isErr()) {
+      throw toServerFnError.serverError("Failed to delete conversation");
+    }
 
     return { id: context.thread.id };
   });
+
+const deleteThreadCtx = Kit.createContext(dbKit, s3Kit, memoryKit, vectorKit);
 
 export const deleteTopic = createServerFn({ method: "POST" })
   .middleware([topicAccessMiddleware])
   .handler(async ({ context }) => {
     const topicId = context.topic.id;
+    const input = { topicId };
 
-    const artifacts = await db.query.artifact.findMany({
-      where: { topicId },
-      columns: { s3Key: true },
-    });
-
-    const s3Result = await deleteObjects({
-      keys: artifacts.map((row) => row.s3Key),
-    });
-
-    if (Result.isError(s3Result)) {
-      throw s3Result.error;
-    }
-
-    await pgVector.deleteVectors({
-      indexName: ARTIFACT_EMBEDDINGS_INDEX,
-      filter: { topicId },
-    });
-
-    await db.delete(artifact).where(eq(artifact.topicId, topicId));
-
-    const [memoryStore, memory] = await Promise.all([
-      getMemoryStore(),
-      getAgentMemory("topic-agent"),
-    ]);
-    const { threads } = await memoryStore.listThreads({
-      filter: { resourceId: topicId },
-      page: 0,
-      perPage: false,
-    });
-    await Promise.all(
-      threads.map(async (thread) => memory.deleteThread(thread.id))
+    return Kit.run(async () => deleteTopicFn(deleteThreadCtx, input)).throws<ServerFnError>(() =>
+      toServerFnError.serverError("Failed to delete topic"),
     );
-
-    await db.delete(topic).where(eq(topic.id, topicId));
-
-    return { id: topicId };
   });

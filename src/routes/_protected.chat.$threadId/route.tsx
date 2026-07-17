@@ -13,7 +13,6 @@ export const Route = createFileRoute("/_protected/chat/$threadId")({
   ),
 });
 
-/* oxlint-disable func-style */
 function RouteComponent() {
   const threadId = Route.useParams({ select: (params) => params.threadId });
 
