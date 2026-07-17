@@ -151,8 +151,5 @@ export const useCreateThreadTitle = () => {
         }),
       );
     },
-    onError: (error: unknown) => {
-      console.error(error);
-    },
   });
 };

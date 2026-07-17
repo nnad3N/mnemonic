@@ -1,4 +1,4 @@
-import { QueryClient } from "@tanstack/react-query";
+import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 import type { Session, User } from "better-auth";
 
 export type RouterContext = {
@@ -7,8 +7,19 @@ export type RouterContext = {
   user: User | undefined;
 };
 
+const logCacheError = (error: unknown) => {
+  console.error(error);
+};
+
 export const getContext = (): RouterContext => {
-  const queryClient = new QueryClient();
+  const queryClient = new QueryClient({
+    queryCache: new QueryCache({
+      onError: logCacheError,
+    }),
+    mutationCache: new MutationCache({
+      onError: logCacheError,
+    }),
+  });
 
   return {
     queryClient,
