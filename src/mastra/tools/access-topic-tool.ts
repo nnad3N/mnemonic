@@ -11,8 +11,18 @@ import { mnemonicRequestContextSchema } from "@/mastra/request-context";
 import type { MnemonicRequestContext } from "@/mastra/request-context";
 
 const inputSchema = v.object({
-  topicId: v.pipe(v.string(), v.nanoid()),
-  prompt: v.pipe(v.string(), v.nonEmpty()),
+  topicId: v.pipe(
+    v.string(),
+    v.nanoid(),
+    v.description(
+      "Bare topic ID only. For a mention key like topic::{ID}, pass only {ID} — not the prefix, title, thread ID, or Mastra resource ID.",
+    ),
+  ),
+  prompt: v.pipe(
+    v.string(),
+    v.nonEmpty(),
+    v.description("Question or instruction for the topic agent to answer from that topic."),
+  ),
 });
 
 const outputSchema = v.object({
@@ -28,7 +38,6 @@ export const accessTopicTool = createTool({
     "Ask the topic agent to answer from one specific topic's files and topic-scoped conversation history.",
     "Use when the user names, @-mentions, or otherwise clearly identifies a topic and wants information from that topic, its files, or prior topic conversations.",
     "Do not use for general web research, the current standalone conversation, or an unclear topic; ask which topic to use before calling.",
-    "Input topicId must be the bare topic ID. For a mention key like topic::{ID}, pass only {ID}, not the prefix, title, thread ID, or Mastra resource ID.",
     "Returns a synthesized answer from the topic agent, not raw file contents.",
   ].join(" "),
   execute: async ({ topicId, prompt }, context) => {

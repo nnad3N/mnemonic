@@ -14,7 +14,7 @@ export const fileGraphRagTool = createGraphRAGTool({
     "Use when the answer likely depends on relationships, connected passages, or evidence spread across multiple uploaded files.",
     "Prefer fileVectorSearch first for direct facts, quotes, or specific passages unless the question clearly requires cross-document connections.",
     "Do not use for images, binary inspection, or loading a raw file; use getFileFromS3 for supported image inspection.",
-    "Input queryText should contain the user's question or targeted search terms. Results are scoped to the current topic.",
+    "Results are scoped to the current topic.",
   ].join(" "),
   enableFilter: true,
   graphOptions: {

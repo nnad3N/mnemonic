@@ -44,7 +44,6 @@ Architecture notes for agents live in [`.agents/architecture`](.agents/architect
 
 - Always `await` promises in async functions - don't forget to use the return value
 - Use `async/await` syntax instead of promise chains for better readability
-- Handle errors appropriately in async code with try-catch blocks
 - Don't use async functions as Promise executors
 - In event handlers that call promise-returning functions, make the handler `async` and `await` the promise. Do not discard promises with `void` when the handler can be async.
 
@@ -115,7 +114,7 @@ const getStatusDotClassName = (status: FileStatus) => {
 
 - Remove `console.log`, `debugger`, and `alert` statements from production code
 - Throw `Error` objects with descriptive messages, not strings or other values
-- Use `try-catch` blocks meaningfully - don't catch errors just to rethrow them
+- **Never use `try`/`catch`** — wrap fallible async work with `Result.tryPromise(...)` from `better-result`, then branch with `Result.isError(...)` / `Result.isOk(...)`. Prefer the bare callback form (`Result.tryPromise(async () => …)`) unless a kit needs a typed `catch` mapper. Do not use `try`/`catch` to swallow, rethrow, or translate errors.
 - Prefer early returns over nested conditionals for error cases
 - **Never render raw error messages in client UI** — do not display `error.message`, provider/API payloads, stack traces, or other server-derived text. Show user-safe copy via Paraglide messages or an error-code lookup (see [`src/lib/auth-errors.ts`](src/lib/auth-errors.ts)); log details server-side for debugging
 - **Kit infra errors** — fixed domain `message` + `cause`; never copy `cause.message` into the wrapper. See [`.agents/architecture/kit-services.md`](.agents/architecture/kit-services.md) (Kit errors).
@@ -198,6 +197,10 @@ Reference: [`src/routes/_protected.topic.$topicId/files.tsx`](src/routes/_protec
 ## Valibot schemas
 
 Use Valibot for every input boundary: server fn validators, middleware `inputValidator`, route `validateSearch`, env vars, tool/workflow schemas, and form `onDynamic` schemas.
+
+### Tool input descriptions
+
+For Mastra `createTool` input schemas, document each parameter with `v.description(...)` in the pipe (after constraints). Put defaults, formats, and where to get IDs there — not in the tool-level `description` string. The tool description owns purpose, when to use / not use, outputs, and fallbacks. See [`.agents/change-tool-description/SKILL.md`](.agents/change-tool-description/SKILL.md).
 
 ### Pipe constraints
 

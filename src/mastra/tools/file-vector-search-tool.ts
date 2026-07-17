@@ -10,7 +10,7 @@ export const fileVectorSearchTool = createVectorQueryTool({
     "Use first for direct facts, quotes, definitions, dates, or specific passages in indexed PDFs, office documents, and other text-extracted files.",
     "Do not use for images or raw binary inspection; use getFileFromS3 for supported image inspection.",
     "If results are too narrow or the answer spans multiple files, try fileGraphRag next.",
-    "Input queryText should contain the user's question or targeted search terms. Results are scoped to the current topic and may be partial excerpts, not complete documents.",
+    "Results are scoped to the current topic and may be partial excerpts, not complete documents.",
   ].join(" "),
   enableFilter: true,
   id: "file-vector-search",

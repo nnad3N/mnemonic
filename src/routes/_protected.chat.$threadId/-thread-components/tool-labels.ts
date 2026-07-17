@@ -33,6 +33,11 @@ export const TOOL_LABELS = {
     error: m.chat_thread_tool_recall_error,
     pending: m.chat_thread_tool_recall_pending,
   },
+  webFetch: {
+    done: m.chat_thread_tool_web_fetch_done,
+    error: m.chat_thread_tool_web_fetch_error,
+    pending: m.chat_thread_tool_web_fetch_pending,
+  },
   webSearch: {
     done: m.chat_thread_tool_web_search_done,
     error: m.chat_thread_tool_web_search_error,

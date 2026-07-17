@@ -7,7 +7,6 @@
     "npm:@aws-sdk/client-s3@3.1073.0": "3.1073.0",
     "npm:@aws-sdk/s3-request-presigner@3.1073.0": "3.1073.0",
     "npm:@base-ui/react@^1.5.0": "1.5.0_@types+react@19.2.14_react@19.2.6_react-dom@19.2.6__react@19.2.6",
-    "npm:@exalabs/ai-sdk@^2.1.0": "2.1.0_ai@6.0.193__zod@3.25.76",
     "npm:@fontsource-variable/geist-mono@^5.2.7": "5.2.7",
     "npm:@fontsource-variable/geist@^5.2.9": "5.2.9",
     "npm:@fontsource/geist-sans@^5.2.5": "5.2.5",
@@ -25,7 +24,7 @@
     "npm:@platejs/mention@53": "53.0.0_platejs@53.0.6__react@19.2.6__react-dom@19.2.6___react@19.2.6__@types+react@19.2.14__immer@11.1.8_react@19.2.6_react-dom@19.2.6__react@19.2.6_@types+react@19.2.14_immer@11.1.8",
     "npm:@rolldown/plugin-babel@~0.2.3": "0.2.3_vite@8.0.11",
     "npm:@streamdown/math@^1.0.2": "1.0.2_react@19.2.6",
-    "npm:@t3-oss/env-core@~0.13.11": "0.13.11_typescript@7.0.2_valibot@1.4.0__typescript@7.0.2",
+    "npm:@t3-oss/env-core@~0.13.11": "0.13.11_typescript@7.0.2_valibot@1.4.0__typescript@7.0.2_zod@4.4.3",
     "npm:@tailwindcss/typography@~0.5.19": "0.5.19_tailwindcss@4.2.4",
     "npm:@tailwindcss/vite@^4.2.4": "4.2.4_vite@8.0.11",
     "npm:@tanstack/devtools-event-client@latest": "0.4.3",
@@ -55,6 +54,7 @@
     "npm:clsx@^2.1.1": "2.1.1",
     "npm:drizzle-kit@^1.0.0-rc.2-e38a2ba": "1.0.0-rc.2-e38a2ba",
     "npm:drizzle-orm@^1.0.0-rc.2-e38a2ba": "1.0.0-rc.2-e38a2ba_postgres@3.4.9_valibot@1.4.0__typescript@7.0.2_zod@4.4.3_typescript@7.0.2",
+    "npm:firecrawl@^4.30.0": "4.30.0",
     "npm:immer@^11.1.8": "11.1.8",
     "npm:lucide-react@^1.17.0": "1.17.0_react@19.2.6",
     "npm:mastra@^1.8.1": "1.8.1_@mastra+core@1.32.1__zod@4.4.3_zod@4.4.3",
@@ -102,14 +102,6 @@
         "zod@4.4.3"
       ]
     },
-    "@ai-sdk/gateway@3.0.121_zod@3.25.76": {
-      "integrity": "sha512-uY248djJRxa5W68MHiyqO8WLdOeKQoRClGg7PVX/VPhVW8SJNM7/l5DcrA5WAM3YfQrLyNkgZa2VOu8T0t8LUw==",
-      "dependencies": [
-        "@ai-sdk/provider@3.0.10",
-        "@ai-sdk/provider-utils@4.0.27_zod@3.25.76",
-        "@vercel/oidc"
-      ]
-    },
     "@ai-sdk/gateway@3.0.121_zod@4.4.3": {
       "integrity": "sha512-uY248djJRxa5W68MHiyqO8WLdOeKQoRClGg7PVX/VPhVW8SJNM7/l5DcrA5WAM3YfQrLyNkgZa2VOu8T0t8LUw==",
       "dependencies": [
@@ -152,14 +144,6 @@
         "@standard-schema/spec",
         "eventsource-parser",
         "zod@4.4.3"
-      ]
-    },
-    "@ai-sdk/provider-utils@4.0.27_zod@3.25.76": {
-      "integrity": "sha512-ubkAJ+xODouwtmN1tYlvTPphH1hPOBfZaEQe8U7skGvFAnIRs9PPpsq57bC2+Ky/MB4yzhd6YOsxTAx9sGpazw==",
-      "dependencies": [
-        "@ai-sdk/provider@3.0.10",
-        "@standard-schema/spec",
-        "eventsource-parser"
       ]
     },
     "@ai-sdk/provider-utils@4.0.27_zod@4.4.3": {
@@ -1227,13 +1211,6 @@
       "integrity": "sha512-56hiAJPhwQ1R4i+21FVF7V8kSD5zZTdHcVuRFMW0hn753vVfQN8xlx4uOPT4xoGH0Z/oVATuR82AiqSTDIpaHg==",
       "os": ["win32"],
       "cpu": ["x64"]
-    },
-    "@exalabs/ai-sdk@2.1.0_ai@6.0.193__zod@3.25.76": {
-      "integrity": "sha512-Uf+j/ieZ8mPPIxELcBpeS8dbYt58pWBcwic3mdbZK1+f96daDX8zNAauHmfZLWo7ZcHpdofiXKPfmc56m5isGg==",
-      "dependencies": [
-        "ai@6.0.193_zod@3.25.76",
-        "zod@3.25.76"
-      ]
     },
     "@expo/devcert@1.2.1": {
       "integrity": "sha512-qC4eaxmKMTmJC2ahwyui6ud8f3W60Ss7pMkpBq40Hu3zyiAaugPXnZ24145U7K36qO9UHdZUVxsCvIpz2RYYCA==",
@@ -2710,7 +2687,7 @@
         "remark-math"
       ]
     },
-    "@t3-oss/env-core@0.13.11_typescript@7.0.2_valibot@1.4.0__typescript@7.0.2": {
+    "@t3-oss/env-core@0.13.11_typescript@7.0.2_valibot@1.4.0__typescript@7.0.2_zod@4.4.3": {
       "integrity": "sha512-sM7GYY+KL7H/Hl0BE0inWfk3nRHZOLhmVn7sHGxaZt9FAR6KqREXAE+6TqKfiavfXmpRxO/OZ2QgKRd+oiBYRQ==",
       "dependencies": [
         "typescript@7.0.2",
@@ -3747,6 +3724,12 @@
       "integrity": "sha512-UVJyE9MttOsBQIDKw1skb9nAwQuR5wuGD3+82K6JgJlm/Y+KI92oNsMNGZCYdDsVtRHSak0pcV5Dno5+4jh9sw==",
       "bin": true
     },
+    "agent-base@6.0.2": {
+      "integrity": "sha512-RZNwNclF7+MS/8bDg70amg32dyeZGZxiDuQmZxKLAlQjr3jGyLx+4Kkk58UO7D2QdgFIQCovuSuZESne6RG6XQ==",
+      "dependencies": [
+        "debug@4.4.3"
+      ]
+    },
     "agent-base@7.1.4": {
       "integrity": "sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ=="
     },
@@ -3764,15 +3747,6 @@
         "@ai-sdk/provider-utils@4.0.27_zod@4.4.3",
         "@opentelemetry/api",
         "zod@4.4.3"
-      ]
-    },
-    "ai@6.0.193_zod@3.25.76": {
-      "integrity": "sha512-VQOTOse8+X8kMtg61DNSXlYJzwOW4NjMLDJNk/qxClWsFe4oiyFJDHGGG1oezfGcFzuYuQe/8Z7r4kwiZWh2YQ==",
-      "dependencies": [
-        "@ai-sdk/gateway@3.0.121_zod@3.25.76",
-        "@ai-sdk/provider@3.0.10",
-        "@ai-sdk/provider-utils@4.0.27_zod@3.25.76",
-        "@opentelemetry/api"
       ]
     },
     "ai@6.0.193_zod@4.4.3": {
@@ -3919,6 +3893,15 @@
     },
     "atomic-sleep@1.0.0": {
       "integrity": "sha512-kNOjDqAh7px0XWNI+4QbzoiR/nTkHAWNud2uvnJquD1/x5a7EQZMJT0AczqK0Qn67oY/TTQ1LbUKajZpp3I9tQ=="
+    },
+    "axios@1.18.0": {
+      "integrity": "sha512-E32NzpYKp++W7XRe52rHiXV2ehxmh3wbdgO7MHeFM+vqxLBYHzt0ElkiImtOBxtOmyp0yoC8C6uESVV84Y2/hw==",
+      "dependencies": [
+        "follow-redirects",
+        "form-data",
+        "https-proxy-agent@5.0.1",
+        "proxy-from-env"
+      ]
     },
     "b4a@1.8.1": {
       "integrity": "sha512-aiqre1Nr0B/6DgE2N5vwTc+2/oQZ4Wh1t4NznYY4E00y8LCt6NqdRv81so00oo27D8MVKTpUa/MwUUtBLXCoDw=="
@@ -5362,6 +5345,18 @@
         "yaml"
       ]
     },
+    "firecrawl@4.30.0": {
+      "integrity": "sha512-JBfoWkr4U1xH3QZ3wHHuKiOFJGtvMtFZrwPumqDaXHxx165qR/NDbPhyLfDg2HCHBE6r3Q/50B9RcHzncJA13Q==",
+      "dependencies": [
+        "axios",
+        "typescript-event-target",
+        "zod@3.25.76",
+        "zod-to-json-schema@3.25.2_zod@4.4.3"
+      ]
+    },
+    "follow-redirects@1.16.0": {
+      "integrity": "sha512-y5rN/uOsadFT/JfYwhxRS5R7Qce+g3zG97+JrtFZlC9klX/W5hD7iiLzScI4nZqUS7DNUdhPgw4xI8W2LuXlUw=="
+    },
     "foreground-child@3.3.1": {
       "integrity": "sha512-gIXjKqtFuWEgzFRJA9WCQeSJLZDjgJUOMCMzxtvFq/37KojM1BFGufqsCy0r4qSQmYLsZYMeyRqzIWOMup03sw==",
       "dependencies": [
@@ -5755,10 +5750,17 @@
         "toidentifier"
       ]
     },
+    "https-proxy-agent@5.0.1": {
+      "integrity": "sha512-dFcAjpTQFgoLMzC2VwU+C/CbS7uRL0lWmxDITmqm7C+7F0Odmj6s9l6alZc6AELXhrnggM2CeWSXHGOdX2YtwA==",
+      "dependencies": [
+        "agent-base@6.0.2",
+        "debug@4.4.3"
+      ]
+    },
     "https-proxy-agent@7.0.6": {
       "integrity": "sha512-vK9P5/iUfdl95AI+JVyUuIcVtd4ofvtrOr3HNtM2yxC9bnMbEdp3x01OhQNnjb8IJYi38VlTE3mBXwcfvywuSw==",
       "dependencies": [
-        "agent-base",
+        "agent-base@7.1.4",
         "debug@4.4.3"
       ]
     },
@@ -7657,6 +7659,9 @@
     "proxy-compare@2.6.0": {
       "integrity": "sha512-8xuCeM3l8yqdmbPoYeLbrAXCBWu19XEYc5/F28f5qOaoAIMyfmBUkl5axiK+x9olUvRlcekvnm98AP9RDngOIw=="
     },
+    "proxy-from-env@2.1.0": {
+      "integrity": "sha512-cJ+oHTW1VAEa8cJslgmUZrc+sjRKgAKl3Zyse6+PV38hZe/V6Z14TbCuXcan9F9ghlz4QrFr2c92TNF82UkYHA=="
+    },
     "pump@3.0.4": {
       "integrity": "sha512-VS7sjc6KR7e1ukRFhQSY5LM2uBWAUPiOPa/A3mkKmiMwSmRFUITt0xuj+/lesgnCv+dPIEYlkzrcyXgquIHMcA==",
       "dependencies": [
@@ -8224,7 +8229,7 @@
         "fast-glob",
         "fs-extra",
         "fuzzysort",
-        "https-proxy-agent",
+        "https-proxy-agent@7.0.6",
         "kleur@4.1.5",
         "msw",
         "node-fetch@3.3.2",
@@ -8716,6 +8721,9 @@
         "media-typer",
         "mime-types@3.0.2"
       ]
+    },
+    "typescript-event-target@1.1.2": {
+      "integrity": "sha512-TvkrTUpv7gCPlcnSoEwUVUBwsdheKm+HF5u2tPAKubkIGMfovdSizCTaZRY/NhR8+Ijy8iZZUapbVQAsNrkFrw=="
     },
     "typescript-paths@1.5.2_typescript@6.0.3": {
       "integrity": "sha512-s5iiRIWOSw80dBgPACm0asPQZHHQcbPz69f26eRq01dStusuD11idZ0NDcAbkj6WuUGcRwJediPOsrArIS92eg==",
@@ -9306,7 +9314,6 @@
         "npm:@aws-sdk/client-s3@3.1073.0",
         "npm:@aws-sdk/s3-request-presigner@3.1073.0",
         "npm:@base-ui/react@^1.5.0",
-        "npm:@exalabs/ai-sdk@^2.1.0",
         "npm:@fontsource-variable/geist-mono@^5.2.7",
         "npm:@fontsource-variable/geist@^5.2.9",
         "npm:@fontsource/geist-sans@^5.2.5",
@@ -9354,6 +9361,7 @@
         "npm:clsx@^2.1.1",
         "npm:drizzle-kit@^1.0.0-rc.2-e38a2ba",
         "npm:drizzle-orm@^1.0.0-rc.2-e38a2ba",
+        "npm:firecrawl@^4.30.0",
         "npm:immer@^11.1.8",
         "npm:lucide-react@^1.17.0",
         "npm:mastra@^1.8.1",

@@ -16,7 +16,11 @@ import { toSafeId } from "@/lib/safe-id";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context";
 
 const inputSchema = v.object({
-  fileId: v.pipe(v.string(), v.nanoid()),
+  fileId: v.pipe(
+    v.string(),
+    v.nanoid(),
+    v.description("File ID from a file @-mention or a prior tool result in the current topic."),
+  ),
 });
 
 const successOutputSchema = v.object({
@@ -48,7 +52,6 @@ export const getFileFromS3Tool = createTool({
     "Use for images, which are not text-indexed, or when the user @-mentions a specific supported image file.",
     "Do not use for office documents, PDFs, or other extracted-only uploads; use fileVectorSearch or fileGraphRag for those.",
     `Supported MIME types: ${LLM_NATIVE_IMAGE_MIME_TYPES.join(", ")}.`,
-    "Input fileId must come from a file @-mention or prior tool result.",
   ].join(" "),
   execute: async ({ fileId }, context) => {
     const topicId = context.requestContext?.get("filter")?.topicId;
