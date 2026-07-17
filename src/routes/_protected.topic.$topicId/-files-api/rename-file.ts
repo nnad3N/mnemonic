@@ -12,7 +12,7 @@ const renameFileInputSchema = v.object({
 
 export const renameFile = createServerFn({ method: "POST" })
   .middleware([fileAccessMiddleware])
-  .inputValidator(renameFileInputSchema)
+  .validator(renameFileInputSchema)
   .handler(async ({ context, data }) => {
     await db
       .update(file)

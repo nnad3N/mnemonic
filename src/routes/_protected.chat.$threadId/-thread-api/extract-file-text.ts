@@ -21,7 +21,7 @@ export const getExtractFileTextData = (data: ExtractFileTextSchema): FormData =>
 };
 
 export const extractFileText = createServerFn({ method: "POST" })
-  .inputValidator((data: FormData) => {
+  .validator((data: FormData) => {
     // runtime check
     if (data instanceof FormData) {
       return v.parse(extractFileTextSchema, Object.fromEntries(data.entries()));

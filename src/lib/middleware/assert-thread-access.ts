@@ -20,7 +20,7 @@ type ThreadAccessInputSchema = v.InferOutput<typeof threadAccessInputSchema>;
 // from context instead.
 export const threadAccessMiddleware = createMiddleware({ type: "function" })
   .middleware([authMiddleware])
-  .inputValidator((data: ThreadAccessInputSchema) => data as unknown)
+  .validator((data: ThreadAccessInputSchema) => data as unknown)
   .server(async ({ context, data, next }) => {
     const { threadId } = v.parse(threadAccessInputSchema, data);
     const memoryStore = await getMemoryStore();
@@ -60,7 +60,7 @@ type TopicAccessInputSchema = v.InferOutput<typeof topicAccessInputSchema>;
 
 export const topicAccessMiddleware = createMiddleware({ type: "function" })
   .middleware([authMiddleware])
-  .inputValidator((data: TopicAccessInputSchema) => data as unknown)
+  .validator((data: TopicAccessInputSchema) => data as unknown)
   .server(async ({ context, data, next }) => {
     const { topicId } = v.parse(topicAccessInputSchema, data);
     const ownedTopic = await db.query.topic.findFirst({
@@ -91,7 +91,7 @@ type FileAccessInputSchema = v.InferOutput<typeof fileAccessInputSchema>;
 
 export const fileAccessMiddleware = createMiddleware({ type: "function" })
   .middleware([authMiddleware])
-  .inputValidator((data: FileAccessInputSchema) => data as unknown)
+  .validator((data: FileAccessInputSchema) => data as unknown)
   .server(async ({ context, data, next }) => {
     const { fileId } = v.parse(fileAccessInputSchema, data);
     const ownedFile = await db.query.file.findFirst({

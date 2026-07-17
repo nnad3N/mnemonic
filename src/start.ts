@@ -1,4 +1,4 @@
-import { createMiddleware, createStart } from "@tanstack/react-start";
+import { createCsrfMiddleware, createMiddleware, createStart } from "@tanstack/react-start";
 
 import { paraglideMiddleware } from "@/paraglide/server";
 
@@ -20,6 +20,10 @@ const paraglideI18n = createMiddleware().server(async ({ next, request }) =>
   }),
 );
 
+const csrfMiddleware = createCsrfMiddleware({
+  filter: (ctx) => ctx.handlerType === "serverFn",
+});
+
 export const startInstance = createStart(() => ({
-  requestMiddleware: [paraglideI18n],
+  requestMiddleware: [csrfMiddleware, paraglideI18n],
 }));

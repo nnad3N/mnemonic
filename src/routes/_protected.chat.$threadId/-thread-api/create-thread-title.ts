@@ -47,7 +47,7 @@ const createThreadTitleSchema = v.object({
 });
 
 export const createThreadTitle = createServerFn({ method: "POST" })
-  .inputValidator(createThreadTitleSchema)
+  .validator(createThreadTitleSchema)
   .middleware([threadAccessMiddleware])
   .handler(async ({ context, data }) => {
     const memoryStore = await getMemoryStore();

@@ -58,7 +58,7 @@ const getMentionByIdInputSchema = v.object({
 });
 
 export const getMentions = createServerFn({ method: "GET" })
-  .inputValidator(getMentionsInputSchema)
+  .validator(getMentionsInputSchema)
   .middleware([authMiddleware])
   .handler(async ({ context, data }) => {
     const ownedTopic = await db.query.topic.findFirst({
@@ -144,7 +144,7 @@ export const mentionsQuery = ({ resourceId, query = "" }: MentionsQueryParams) =
   });
 
 export const getMentionById = createServerFn({ method: "GET" })
-  .inputValidator(getMentionByIdInputSchema)
+  .validator(getMentionByIdInputSchema)
   .middleware([authMiddleware])
   .handler(async ({ context, data }) => {
     switch (data.type) {

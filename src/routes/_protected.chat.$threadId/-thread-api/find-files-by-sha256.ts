@@ -11,7 +11,7 @@ const findFilesBySha256InputSchema = v.object({
 });
 
 export const findFilesBySha256 = createServerFn({ method: "GET" })
-  .inputValidator(findFilesBySha256InputSchema)
+  .validator(findFilesBySha256InputSchema)
   .middleware([topicAccessMiddleware])
   .handler(async ({ context, data }) => {
     return db

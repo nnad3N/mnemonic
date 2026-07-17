@@ -10,7 +10,7 @@ import { createSafeId } from "@/lib/safe-id";
 import { getMemoryStore } from "@/mastra/memory";
 
 export const createConversation = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     v.object({
       title: v.pipe(v.string(), v.nonEmpty()),
     }),
@@ -35,7 +35,7 @@ export const createConversation = createServerFn({ method: "POST" })
   });
 
 export const createTopic = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     v.object({
       conversationTitle: v.pipe(v.string(), v.nonEmpty()),
       topicTitle: v.pipe(v.string(), v.nonEmpty()),
@@ -68,7 +68,7 @@ export const createTopic = createServerFn({ method: "POST" })
   });
 
 export const createTopicConversation = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     v.object({
       title: v.pipe(v.string(), v.nonEmpty()),
     }),

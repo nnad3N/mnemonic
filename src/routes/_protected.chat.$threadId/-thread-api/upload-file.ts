@@ -129,7 +129,7 @@ const getPresignedUrlInputSchema = v.object({
 const uploadFileCtx = Kit.createContext(dbKit, s3Kit);
 
 export const getPresignedUrl = createServerFn({ method: "POST" })
-  .inputValidator(getPresignedUrlInputSchema)
+  .validator(getPresignedUrlInputSchema)
   .middleware([threadAccessMiddleware])
   .handler(async ({ context, data }) =>
     Kit.serverFn(getPresignedUrlFn, {
@@ -152,7 +152,7 @@ const updateFileStatusInputSchema = v.object({
 });
 
 export const updateFileStatus = createServerFn({ method: "POST" })
-  .inputValidator(updateFileStatusInputSchema)
+  .validator(updateFileStatusInputSchema)
   .middleware([fileAccessMiddleware])
   .handler(async ({ context, data }) => {
     const result = await Kit.get(dbKit).run((db) =>

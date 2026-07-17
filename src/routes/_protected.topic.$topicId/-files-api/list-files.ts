@@ -27,7 +27,7 @@ const buildWhereClause = (topicId: SafeId<"topic">, search: string) => {
 };
 
 export const listFiles = createServerFn({ method: "GET" })
-  .inputValidator(listFilesInputSchema)
+  .validator(listFilesInputSchema)
   .middleware([topicAccessMiddleware])
   .handler(async ({ context, data }) => {
     const whereClause = buildWhereClause(context.topic.id, data.search);

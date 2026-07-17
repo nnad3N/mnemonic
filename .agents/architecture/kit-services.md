@@ -94,7 +94,7 @@ value directly:
 
 ```ts
 export const updateFileStatus = createServerFn({ method: "POST" })
-  .inputValidator(updateFileStatusInputSchema)
+  .validator(updateFileStatusInputSchema)
   .middleware([fileAccessMiddleware])
   .handler(async ({ context, data }) => {
     const result = await Kit.get(dbKit).run((db) =>
@@ -160,7 +160,7 @@ Follow the ordering used by
    `type SearchCtx = Kits<[DbKit, MemoryKit]>`.
 6. Kit action: define the application logic with `Kit.gen(...)`. Destructure
    input in the parameter list when it improves readability.
-7. Server input schema: put the Valibot `inputValidator` schema after the kit
+7. Server input schema: put the Valibot `validator` schema after the kit
    action, close to the `createServerFn` that uses it.
 8. Live kit composition: create the live context with `Kit.createContext(...)`
    after the schema and before the exported server function. Name it `*Ctx`.

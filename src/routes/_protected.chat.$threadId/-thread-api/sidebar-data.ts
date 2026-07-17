@@ -76,7 +76,7 @@ const paginationInputSchema = v.object({
 });
 
 export const listSidebarConversations = createServerFn({ method: "GET" })
-  .inputValidator(paginationInputSchema)
+  .validator(paginationInputSchema)
   .middleware([authMiddleware])
   .handler(async ({ context, data }) => {
     const userId = context.user.id;
@@ -103,7 +103,7 @@ const topicsInputSchema = v.object({
 });
 
 export const listSidebarTopics = createServerFn({ method: "GET" })
-  .inputValidator(topicsInputSchema)
+  .validator(topicsInputSchema)
   .middleware([authMiddleware])
   .handler(async ({ context, data }) => {
     const userTopicsWhere = eq(topic.userId, context.user.id);
@@ -151,7 +151,7 @@ const topicThreadsInputSchema = v.object({
 });
 
 export const listSidebarTopicThreads = createServerFn({ method: "GET" })
-  .inputValidator(topicThreadsInputSchema)
+  .validator(topicThreadsInputSchema)
   .middleware([topicAccessMiddleware])
   .handler(async ({ context, data }) =>
     listTopicThreadPage({ topicId: context.topic.id, page: data.page }),

@@ -141,7 +141,7 @@ const searchInputSchema = v.object({
 const searchCtx = Kit.createContext(dbKit, memoryKit);
 
 export const searchItems = createServerFn({ method: "GET" })
-  .inputValidator(searchInputSchema)
+  .validator(searchInputSchema)
   .middleware([authMiddleware])
   .handler(async ({ context, data }) =>
     Kit.serverFn(searchItemsFn, {

@@ -196,7 +196,7 @@ Reference: [`src/routes/_protected.topic.$topicId/files.tsx`](src/routes/_protec
 
 ## Valibot schemas
 
-Use Valibot for every input boundary: server fn validators, middleware `inputValidator`, route `validateSearch`, env vars, tool/workflow schemas, and form `onDynamic` schemas.
+Use Valibot for every input boundary: server fn validators, middleware `validator`, route `validateSearch`, env vars, tool/workflow schemas, and form `onDynamic` schemas.
 
 ### Tool input descriptions
 
