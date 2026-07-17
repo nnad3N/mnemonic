@@ -32,6 +32,7 @@ export default defineConfig({
     "no-shadow": "off",
     "react/react-in-jsx-scope": "off",
     "jsx-a11y/no-autofocus": "off",
+    "jsx-a11y/control-has-associated-label": "off",
     "import/no-commonjs": "error",
     "eslint-js/no-restricted-syntax": [
       "error",
