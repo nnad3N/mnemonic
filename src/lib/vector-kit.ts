@@ -17,24 +17,48 @@ const toVectorError = (cause: unknown): VectorError =>
   });
 
 type DeleteVectorsParams = Parameters<typeof pgVector.deleteVectors>[0];
+type CreateIndexInput = Omit<Parameters<typeof pgVector.createIndex>[0], "indexName">;
+type UpsertInput = Omit<Parameters<typeof pgVector.upsert>[0], "indexName">;
 
 type DeleteVectorsInput = {
   filter: NonNullable<DeleteVectorsParams["filter"]>;
 };
 
 export type VectorApi = {
+  createIndex: (input: CreateIndexInput) => Promise<ResultType<void, VectorError>>;
   deleteVectors: (input: DeleteVectorsInput) => Promise<ResultType<void, VectorError>>;
+  upsert: (input: UpsertInput) => Promise<ResultType<void, VectorError>>;
 };
 
 export const createVectorKit = (api: VectorApi) => Kit.define("vector", api);
 
 export const vectorKit = createVectorKit({
+  createIndex: async (input) =>
+    Result.tryPromise({
+      try: async () => {
+        await pgVector.createIndex({
+          ...input,
+          indexName: FILE_EMBEDDINGS_INDEX,
+        });
+      },
+      catch: toVectorError,
+    }),
   deleteVectors: async (input) =>
     Result.tryPromise({
       try: async () => {
         await pgVector.deleteVectors({
           indexName: FILE_EMBEDDINGS_INDEX,
           filter: input.filter,
+        });
+      },
+      catch: toVectorError,
+    }),
+  upsert: async (input) =>
+    Result.tryPromise({
+      try: async () => {
+        await pgVector.upsert({
+          ...input,
+          indexName: FILE_EMBEDDINGS_INDEX,
         });
       },
       catch: toVectorError,

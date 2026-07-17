@@ -48,6 +48,20 @@ describe("kit", () => {
     expect(result.unwrap()).toBe("value:6");
   });
 
+  it("returns successful values through Kit.toException", async () => {
+    const action = async (_ctx: TestCtx, input: { value: number }) =>
+      Promise.resolve(Result.ok(input.value * 2));
+
+    await expect(Kit.toException(action)(ctx, { value: 5 })).resolves.toBe(10);
+  });
+
+  it("throws the original error through Kit.toException", async () => {
+    const error = new TestKitError({ message: "boundary failed" });
+    const action = async (_ctx: TestCtx, _input: null) => Promise.resolve(Result.err(error));
+
+    await expect(Kit.toException(action)(ctx, null)).rejects.toBe(error);
+  });
+
   it("unwraps successful Kit.serverFn results", async () => {
     const action = Kit.gen(async function* (ctx: TestCtx, input: { value: number }) {
       const doubled = yield* await Promise.resolve(ctx.number.double(input.value));

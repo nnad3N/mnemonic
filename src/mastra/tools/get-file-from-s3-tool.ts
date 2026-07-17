@@ -4,15 +4,19 @@ import { toStandardJsonSchema } from "@valibot/to-json-schema";
 import { Result } from "better-result";
 import * as v from "valibot";
 
-import { db } from "@/db";
+import { dbKit } from "@/lib/db-kit";
+import type { DbKit } from "@/lib/db-kit";
 import {
   isImageMimeType,
   isLLMNativeImageMimeType,
   LLM_NATIVE_IMAGE_MIME_TYPES,
 } from "@/lib/file-validation";
 import { Kit } from "@/lib/kit";
+import type { Kits } from "@/lib/kit";
 import { s3Kit } from "@/lib/s3-kit";
+import type { S3Kit } from "@/lib/s3-kit";
 import { toSafeId } from "@/lib/safe-id";
+import type { SafeId } from "@/lib/safe-id";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context";
 
 const inputSchema = v.object({
@@ -42,6 +46,67 @@ const outputSchema = v.variant("type", [successOutputSchema, errorOutputSchema])
 type GetFileSuccess = v.InferOutput<typeof successOutputSchema>;
 type GetFileError = v.InferOutput<typeof errorOutputSchema>;
 
+type GetFileInput = {
+  fileId: string;
+  topicId?: SafeId<"topic">;
+};
+
+type GetFileCtx = Kits<[DbKit, S3Kit]>;
+
+const getFileFn = Kit.gen(async function* (ctx: GetFileCtx, input: GetFileInput) {
+  if (!input.topicId) {
+    return Result.ok({
+      type: "error",
+      message: "File not found.",
+    } satisfies GetFileError);
+  }
+
+  const row = yield* await ctx.db.run((db) =>
+    db.query.file.findFirst({
+      columns: {
+        displayName: true,
+        id: true,
+        mimeType: true,
+        s3Key: true,
+        sizeBytes: true,
+        status: true,
+      },
+      where: {
+        // oxlint-disable-next-line eslint-js/no-restricted-syntax -- scoped by trusted topic.
+        id: toSafeId<"file">(input.fileId),
+        topicId: input.topicId,
+      },
+    }),
+  );
+
+  if (!row || row.status !== "ready") {
+    return Result.ok({
+      type: "error",
+      message: "File not found.",
+    } satisfies GetFileError);
+  }
+
+  if (!isLLMNativeImageMimeType(row.mimeType)) {
+    return Result.ok({
+      type: "error",
+      message: `File "${row.displayName}" (${row.mimeType}) cannot be loaded directly. Use vector or graph search instead.`,
+    } satisfies GetFileError);
+  }
+
+  const object = yield* await ctx.s3.getObject(row.s3Key);
+
+  return Result.ok({
+    type: "success",
+    fileId: row.id,
+    data: Buffer.from(object).toString("base64"),
+    displayName: row.displayName,
+    mimeType: row.mimeType,
+    sizeBytes: row.sizeBytes,
+  } satisfies GetFileSuccess);
+});
+
+const getFileCtx = Kit.createContext(dbKit, s3Kit);
+
 export const getFileFromS3Tool = createTool({
   id: "get-file-from-s3",
   inputSchema: toStandardJsonSchema(inputSchema),
@@ -54,62 +119,19 @@ export const getFileFromS3Tool = createTool({
     `Supported MIME types: ${LLM_NATIVE_IMAGE_MIME_TYPES.join(", ")}.`,
   ].join(" "),
   execute: async ({ fileId }, context) => {
-    const topicId = context.requestContext?.get("filter")?.topicId;
-
-    if (!topicId) {
-      return {
-        type: "error",
-        message: "File not found.",
-      } satisfies GetFileError;
-    }
-
-    const row = await db.query.file.findFirst({
-      columns: {
-        displayName: true,
-        id: true,
-        mimeType: true,
-        s3Key: true,
-        sizeBytes: true,
-        status: true,
-      },
-      where: {
-        // oxlint-disable-next-line eslint-js/no-restricted-syntax -- scoped by trusted topic.
-        id: toSafeId<"file">(fileId),
-        topicId,
-      },
+    const result = await getFileFn(getFileCtx, {
+      fileId,
+      topicId: context.requestContext?.get("filter")?.topicId,
     });
 
-    if (!row || row.status !== "ready") {
-      return {
-        type: "error",
-        message: "File not found.",
-      } satisfies GetFileError;
-    }
-
-    if (!isLLMNativeImageMimeType(row.mimeType)) {
-      return {
-        type: "error",
-        message: `File "${row.displayName}" (${row.mimeType}) cannot be loaded directly. Use vector or graph search instead.`,
-      } satisfies GetFileError;
-    }
-
-    const objectResult = await Kit.get(s3Kit).getObject(row.s3Key);
-
-    if (Result.isError(objectResult)) {
+    if (Result.isError(result)) {
       return {
         type: "error",
         message: "File could not be loaded.",
       } satisfies GetFileError;
     }
 
-    return {
-      type: "success",
-      fileId: row.id,
-      data: Buffer.from(objectResult.value).toString("base64"),
-      displayName: row.displayName,
-      mimeType: row.mimeType,
-      sizeBytes: row.sizeBytes,
-    } satisfies GetFileSuccess;
+    return result.value;
   },
   toModelOutput: (output): ToolResultOutput => {
     if (output.type === "error") {

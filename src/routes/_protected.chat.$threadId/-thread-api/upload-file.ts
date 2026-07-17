@@ -167,15 +167,28 @@ export const updateFileStatus = createServerFn({ method: "POST" })
 export const processFile = createServerFn({ method: "POST" })
   .middleware([fileAccessMiddleware])
   .handler(async ({ context }) => {
-    const workflow = mastra.getWorkflow("process-file");
-    const run = await workflow.createRun();
-    const result = await run.start({
-      inputData: {
-        fileId: context.file.id,
-        topicId: context.topicId,
-        userId: context.user.id,
-      },
+    const workflowResult = await Result.tryPromise(async () => {
+      const workflow = mastra.getWorkflow("process-file");
+      const run = await workflow.createRun();
+
+      return run.start({
+        inputData: {
+          fileId: context.file.id,
+          topicId: context.topicId,
+          userId: context.user.id,
+        },
+      });
     });
+
+    if (Result.isError(workflowResult)) {
+      throw new ServerFnError({
+        message: "File processing could not be started",
+        status: "server-error",
+        cause: workflowResult.error,
+      });
+    }
+
+    const result = workflowResult.value;
 
     if (result.status === "failed") {
       throw new ServerFnError({

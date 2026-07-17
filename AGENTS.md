@@ -42,7 +42,7 @@ Architecture notes for agents live in [`.agents/architecture`](.agents/architect
 
 ### Async & Promises
 
-- Always `await` promises in async functions - don't forget to use the return value
+- Always consume promises in async functions. When directly returning a promise, return it without a redundant `await`; otherwise `await` it and use the result.
 - Use `async/await` syntax instead of promise chains for better readability
 - Don't use async functions as Promise executors
 - In event handlers that call promise-returning functions, make the handler `async` and `await` the promise. Do not discard promises with `void` when the handler can be async.
@@ -114,10 +114,35 @@ const getStatusDotClassName = (status: FileStatus) => {
 
 - Remove `console.log`, `debugger`, and `alert` statements from production code
 - Throw `Error` objects with descriptive messages, not strings or other values
-- **Never use `try`/`catch`** — wrap fallible async work with `Result.tryPromise(...)` from `better-result`, then branch with `Result.isError(...)` / `Result.isOk(...)`. Prefer the bare callback form (`Result.tryPromise(async () => …)`) unless a kit needs a typed `catch` mapper. Do not use `try`/`catch` to swallow, rethrow, or translate errors.
+- **Never use `try`/`catch`** — wrap fallible async work with `Result.tryPromise(...)` from `better-result`. Prefer the bare callback form (`Result.tryPromise(async () => …)`) unless a kit needs a typed `catch` mapper. Consume results with `match`, `mapError`, `tapError`, or `Result.isError(...)` / `Result.isOk(...)` according to the operation; do not use `try`/`catch` to swallow, rethrow, or translate errors.
 - Prefer early returns over nested conditionals for error cases
 - **Never render raw error messages in client UI** — do not display `error.message`, provider/API payloads, stack traces, or other server-derived text. Show user-safe copy via Paraglide messages or an error-code lookup (see [`src/lib/auth-errors.ts`](src/lib/auth-errors.ts)); log details server-side for debugging
 - **Kit infra errors** — fixed domain `message` + `cause`; never copy `cause.message` into the wrapper. See [`.agents/architecture/kit-services.md`](.agents/architecture/kit-services.md) (Kit errors).
+
+### Better Result and Kit patterns
+
+- Use raw `Result.tryPromise(...)` for a simple fallible operation. Use `Kit.gen(...)` when application logic coordinates multiple kit operations or needs injectable dependencies.
+- Inside `Kit.gen`, compose asynchronous kit results with `yield* await`. Return expected, recoverable tool outcomes as ordinary `Result.ok(...)` values; reserve `Err` for failures that should short-circuit the action.
+- Use `result.match({ ok, err })` only when both branches need meaningful handling. If the success value passes through unchanged and only the error branch is mapped, use a normal `if (Result.isError(result))` followed by `return result.value`. At tool boundaries, keep provider and infrastructure details out of error output shown to the model.
+- Use `mapError` to translate an error type and `tapError` for error-only side effects such as logging. Prefer these combinators over an `if` that only maps or observes a Result branch.
+- Use `Kit.toException(...)` when crossing into a framework boundary that represents failure by throwing. It throws the original error instance. Do not use Better Result's `.unwrap()` there because it converts `Err` into `Panic`.
+- Inline `Kit.toException(...)` in a thin framework adapter and directly return its promise without a redundant `await`:
+
+```ts
+execute: async ({ inputData }) => Kit.toException(processFn)(processCtx, inputData),
+```
+
+- An `if (Result.isError(result))` remains appropriate when TypeScript narrowing is needed or when throwing must happen outside a Result callback to preserve the original error.
+- When a `db.run` / `db.transaction` callback only returns one Drizzle query, use an implicit-return callback without `async`, braces, or an inner `await`:
+
+```ts
+yield *
+  (await ctx.db.run((db) =>
+    db.update(file).set({ status: "ready" }).where(eq(file.id, input.fileId)),
+  ));
+```
+
+Use an `async` block body only when the callback performs multiple awaited operations or must explicitly return a transformed value.
 
 ### Code Organization
 
@@ -197,6 +222,8 @@ Reference: [`src/routes/_protected.topic.$topicId/files.tsx`](src/routes/_protec
 ## Valibot schemas
 
 Use Valibot for every input boundary: server fn validators, middleware `validator`, route `validateSearch`, env vars, tool/workflow schemas, and form `onDynamic` schemas.
+
+Mastra workflow lifecycle callbacks receive initial data that has already passed the workflow `inputSchema`. Use `v.parse(workflowInputSchema, getInitData())` directly to recover the inferred type; do not wrap it in a Result or add a `safeParse` branch for a shape Mastra already validated.
 
 ### Tool input descriptions
 

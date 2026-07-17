@@ -16,6 +16,7 @@ kit object created with `Kit.createContext(...)`.
 - `Kit.createContext(...)` creates the live kit context from one or more modules.
 - `Kit.get(module)` returns the kit value from a kit module for direct use.
 - `Kit.gen(...)` defines result-returning application logic.
+- `Kit.toException(...)` adapts a kit action at a framework boundary that represents failure by throwing.
 - `Kit.serverFn(...)` adapts a kit function at the server boundary.
 
 ## Kit Modules
@@ -225,5 +226,22 @@ action and an optional handler map; it applies `mapError` + `matchError`, then
 returns the ok value or throws the mapped error. When the handler map is
 omitted, the action must already return `Result<T, ServerFnError>`. Handlers
 call the `Kit.serverFn` adapter only — never `.unwrap()` directly.
+
+## Non-server Framework Boundaries
+
+Use `Kit.toException(...)` when a framework such as Mastra represents failure with
+a thrown `Error`. The adapter returns successful values and throws the original
+error instance, preserving tagged error identity and metadata. Do not replace it
+with Better Result's `.unwrap()`, which converts an `Err` into a `Panic`.
+
+```ts
+const mastraStep = createStep({
+  // ...
+  execute: async ({ inputData }) => Kit.toException(processStepFn)(processCtx, inputData),
+});
+```
+
+`Kit.toException` does not sanitize errors for a client. Continue using
+`Kit.serverFn` with exhaustive mappings at server-function boundaries.
 
 Use `status: "unauthorized"` in `ServerFnError` when mapping auth failures.

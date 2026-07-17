@@ -79,6 +79,20 @@ const kitGen =
   async (context: TKits, input: TInput) =>
     Result.gen(() => action(context, input));
 
+const kitToException =
+  <TKits extends AnyKits, TInput, TValue, TError extends Error>(
+    action: KitAsyncAction<TKits, TInput, ResultType<TValue, TError>>,
+  ) =>
+  async (context: TKits, input: TInput): Promise<TValue> => {
+    const result = await action(context, input);
+
+    if (Result.isError(result)) {
+      throw result.error;
+    }
+
+    return result.value;
+  };
+
 function kitServerFn<
   TKits extends AnyKits,
   TInput,
@@ -138,4 +152,5 @@ export const Kit = {
   createContext: createKitContext,
   gen: kitGen,
   serverFn: kitServerFn,
+  toException: kitToException,
 };
