@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 
 import { getToolPartStatus } from "@/lib/ai-sdk/tool-parts";
 import { cn } from "@/lib/utils";
+import { useMessageState } from "@/routes/_protected.chat.$threadId/-hooks/use-message-state";
 import { ThreadMetaLine } from "@/routes/_protected.chat.$threadId/-thread-components/thread-meta-line";
 import { isKnownToolName } from "@/routes/_protected.chat.$threadId/-thread-components/tool-labels";
 import type { ThreadUITools } from "@/routes/_protected.chat.$threadId/-thread-types";
@@ -92,6 +93,7 @@ type AssistantToolPartProps = {
 };
 
 export const AssistantToolPart = ({ part, className }: AssistantToolPartProps) => {
+  const { isAnimating } = useMessageState();
   const toolName = getToolName(part);
 
   if (!isKnownToolName(toolName)) {
@@ -103,7 +105,7 @@ export const AssistantToolPart = ({ part, className }: AssistantToolPartProps) =
   return (
     <ThreadMetaLine
       className={cn(
-        status === "pending" && "shimmer",
+        status === "pending" && isAnimating && "shimmer",
         status === "error" && "text-destructive",
         className,
       )}

@@ -7,6 +7,8 @@ import { FileIcon, FileTextIcon, LinkIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Streamdown } from "streamdown";
 
+import { useMessageState } from "@/routes/_protected.chat.$threadId/-hooks/use-message-state";
+import { MessageStateContext } from "@/routes/_protected.chat.$threadId/-message-state-context";
 import { AssistantReasoningPart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-reasoning-part";
 import { AssistantToolPart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-tool-part";
 import { AssistantToolSourcesPart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-tool-sources-part";
@@ -29,20 +31,22 @@ type AssistantMessageProps = {
 
 export const AssistantMessage = ({ isAnimating = false, message }: AssistantMessageProps) => {
   return (
-    <div className="flex flex-col gap-1">
-      {message.parts.map((part, i) => (
-        <AssistantMessagePart isAnimating={isAnimating} key={`${part.type}-${i}`} part={part} />
-      ))}
-    </div>
+    <MessageStateContext.Provider value={{ isAnimating }}>
+      <div className="flex flex-col gap-1">
+        {message.parts.map((part, i) => (
+          <AssistantMessagePart key={`${part.type}-${i}`} part={part} />
+        ))}
+      </div>
+    </MessageStateContext.Provider>
   );
 };
 
 type AssistantMessagePartProps = {
-  isAnimating: boolean;
   part: ThreadUIMessagePart;
 };
 
-const AssistantMessagePart = ({ isAnimating, part }: AssistantMessagePartProps) => {
+const AssistantMessagePart = ({ part }: AssistantMessagePartProps) => {
+  const { isAnimating } = useMessageState();
   const { resolvedTheme } = useTheme();
 
   // oxlint-disable-next-line typescript/switch-exhaustiveness-check

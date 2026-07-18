@@ -35,7 +35,7 @@ export const UserMessage = ({ message, index }: UserMessageProps) => {
 
   return (
     <ComposerWrapper
-      className="relative block w-full overflow-clip bg-secondary text-left transition-colors hover:border-ring"
+      className="relative block w-full overflow-clip bg-input/50 text-left transition-colors hover:border-ring/50"
       onClick={() => {
         setEditingState({
           messageId: message.id,

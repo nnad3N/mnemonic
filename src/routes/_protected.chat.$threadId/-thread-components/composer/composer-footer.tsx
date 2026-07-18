@@ -16,15 +16,16 @@ type ComposerFooterProps = {
 
 export const ComposerFooter = ({ location }: ComposerFooterProps) => {
   const chat = useThreadChat();
+  const { stopStream } = useComposerActions(location);
 
   return (
     <div className="flex w-full items-center justify-between">
       <UploadButton location={location} />
       <div className="ml-auto">
-        {chat.status === "streaming" ? (
+        {chat.status === "streaming" || chat.status === "submitted" ? (
           <Button
             onClick={async () => {
-              await chat.stop();
+              await stopStream();
             }}
             size="icon-xs"
             type="button"

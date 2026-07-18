@@ -171,9 +171,27 @@ export const useComposerActions = (location: ThreadInputLocation) => {
   };
 
   const stopStream = async () => {
-    if (chat.status !== "streaming") return;
-
     await chat.stop();
+
+    const lastMessage = chat.messages.at(-1);
+
+    if (
+      lastMessage?.role === "assistant" &&
+      lastMessage.parts.some((part) => part.type === "text")
+    ) {
+      return;
+    }
+
+    const messageIndex = chat.messages.findLastIndex((message) => message.role === "user");
+    if (messageIndex === -1) return;
+
+    const message = chat.messages[messageIndex];
+
+    setEditingState({
+      messageId: message.id,
+      messageIndex,
+      markdown: message.parts.find((part) => part.type === "text")?.text ?? "",
+    });
   };
 
   return {
