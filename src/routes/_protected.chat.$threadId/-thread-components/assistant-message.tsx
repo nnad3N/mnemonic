@@ -9,6 +9,7 @@ import { Streamdown } from "streamdown";
 
 import { AssistantReasoningPart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-reasoning-part";
 import { AssistantToolPart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-tool-part";
+import { AssistantToolSourcesPart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-tool-sources-part";
 import { ThreadMetaLine } from "@/routes/_protected.chat.$threadId/-thread-components/thread-meta-line";
 import type {
   ThreadUIMessage,
@@ -75,6 +76,11 @@ const AssistantMessagePart = ({ isAnimating, part }: AssistantMessagePartProps) 
     case "source-document": {
       return <SourceDocumentPart part={part} />;
     }
+    case "tool-webSearch":
+    case "tool-webFetch": {
+      return <AssistantToolSourcesPart part={part} />;
+    }
+
     default: {
       if (isToolUIPart(part)) {
         return <AssistantToolPart part={part} />;

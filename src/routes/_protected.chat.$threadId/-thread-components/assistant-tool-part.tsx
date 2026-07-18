@@ -9,10 +9,6 @@ import { ThreadMetaLine } from "@/routes/_protected.chat.$threadId/-thread-compo
 import { isKnownToolName } from "@/routes/_protected.chat.$threadId/-thread-components/tool-labels";
 import type { ThreadUITools } from "@/routes/_protected.chat.$threadId/-thread-types";
 
-type AssistantToolPartProps = {
-  part: DynamicToolUIPart | ToolUIPart<ThreadUITools>;
-};
-
 type ToolStatus = ReturnType<typeof getToolPartStatus>;
 
 const renderToolLabel = (toolName: keyof ThreadUITools, status: ToolStatus): ReactNode => {
@@ -90,7 +86,12 @@ const renderToolLabel = (toolName: keyof ThreadUITools, status: ToolStatus): Rea
   }
 };
 
-export const AssistantToolPart = ({ part }: AssistantToolPartProps) => {
+type AssistantToolPartProps = {
+  part: DynamicToolUIPart | ToolUIPart<ThreadUITools>;
+  className?: string;
+};
+
+export const AssistantToolPart = ({ part, className }: AssistantToolPartProps) => {
   const toolName = getToolName(part);
 
   if (!isKnownToolName(toolName)) {
@@ -101,7 +102,11 @@ export const AssistantToolPart = ({ part }: AssistantToolPartProps) => {
 
   return (
     <ThreadMetaLine
-      className={cn(status === "pending" && "shimmer", status === "error" && "text-destructive")}
+      className={cn(
+        status === "pending" && "shimmer",
+        status === "error" && "text-destructive",
+        className,
+      )}
     >
       {renderToolLabel(toolName, status)}
     </ThreadMetaLine>
