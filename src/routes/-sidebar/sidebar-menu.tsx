@@ -2,11 +2,15 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   ChevronsUpDownIcon,
+  LaptopIcon,
   LogOutIcon,
   MessageSquareTextIcon,
   MessagesSquareIcon,
+  MoonIcon,
   SearchIcon,
+  SunIcon,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { toast } from "sonner";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -15,6 +19,12 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -153,6 +163,7 @@ type SidebarFooterSectionProps = {
 export const SidebarFooterSection = ({ user }: SidebarFooterSectionProps) => {
   const { isMobile } = useSidebar();
   const navigate = useNavigate();
+  const { setTheme, theme } = useTheme();
   const displayName = user.name ?? user.email;
   const initials = getInitials(displayName);
 
@@ -185,6 +196,36 @@ export const SidebarFooterSection = ({ user }: SidebarFooterSectionProps) => {
               align={isMobile ? "end" : "center"}
               sideOffset={4}
             >
+              <DropdownMenuGroup>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <SunIcon />
+                    Theme
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuRadioGroup
+                      value={theme ?? "system"}
+                      onValueChange={(value) => {
+                        setTheme(value);
+                      }}
+                    >
+                      <DropdownMenuRadioItem value="light">
+                        <SunIcon />
+                        Light
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="dark">
+                        <MoonIcon />
+                        Dark
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="system">
+                        <LaptopIcon />
+                        System
+                      </DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
               <DropdownMenuGroup>
                 <DropdownMenuItem
                   onClick={async () => {

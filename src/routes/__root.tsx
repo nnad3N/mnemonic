@@ -11,6 +11,7 @@ import { useEffect } from "react";
 
 import { ErrorComponent } from "@/components/route-components/error";
 import { NotFoundComponent } from "@/components/route-components/not-found";
+import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { authClient } from "@/lib/better-auth/auth-client";
 import TanStackQueryDevtools from "@/lib/tanstack-query/devtools";
@@ -82,25 +83,27 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   useAuthSessionQuery();
 
   return (
-    <html lang={getLocale()}>
+    <html lang={getLocale()} suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
       <body>
-        <Toaster />
-        <main className="flex h-dvh flex-col overflow-hidden">{children}</main>
-        <TanStackDevtools
-          config={{
-            position: "bottom-right",
-          }}
-          plugins={[
-            {
-              name: "Tanstack Router",
-              render: <TanStackRouterDevtoolsPanel />,
-            },
-            TanStackQueryDevtools,
-          ]}
-        />
+        <ThemeProvider>
+          <Toaster />
+          <main className="flex h-dvh flex-col overflow-hidden">{children}</main>
+          <TanStackDevtools
+            config={{
+              position: "bottom-right",
+            }}
+            plugins={[
+              {
+                name: "Tanstack Router",
+                render: <TanStackRouterDevtoolsPanel />,
+              },
+              TanStackQueryDevtools,
+            ]}
+          />
+        </ThemeProvider>
         <Scripts />
       </body>
     </html>
