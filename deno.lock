@@ -24,6 +24,7 @@
     "npm:@platejs/markdown@^53.2.2": "53.2.2_platejs@53.2.4__react@19.2.7__react-dom@19.2.7___react@19.2.7__@types+react@19.2.17__immer@11.1.11__scheduler@0.27.0_react@19.2.7_react-dom@19.2.7__react@19.2.7_typescript@7.0.2",
     "npm:@platejs/mention@53": "53.0.0_platejs@53.2.4__react@19.2.7__react-dom@19.2.7___react@19.2.7__@types+react@19.2.17__immer@11.1.11__scheduler@0.27.0_react@19.2.7_react-dom@19.2.7__react@19.2.7_@types+react@19.2.17_immer@11.1.11_scheduler@0.27.0",
     "npm:@rolldown/plugin-babel@~0.2.3": "0.2.3_@babel+core@7.29.7_rolldown@1.1.5_vite@8.1.4__esbuild@0.28.1_esbuild@0.28.1",
+    "npm:@shadcn/react@~0.2.1": "0.2.1_@types+react@19.2.17_react@19.2.7",
     "npm:@streamdown/code@^1.1.1": "1.1.1_react@19.2.7",
     "npm:@streamdown/math@^1.0.2": "1.0.2_react@19.2.7",
     "npm:@streamdown/mermaid@^1.0.2": "1.0.2_react@19.2.7",
@@ -86,7 +87,6 @@
     "npm:tw-shimmer@~0.4.11": "0.4.11_tailwindcss@4.3.2",
     "npm:typescript@^7.0.2": "7.0.2",
     "npm:use-debounce@^10.1.1": "10.1.1_react@19.2.7",
-    "npm:use-stick-to-bottom@^1.1.6": "1.1.6_react@19.2.7",
     "npm:valibot@^1.4.2": "1.4.2_typescript@7.0.2",
     "npm:vite@^8.0.11": "8.1.4_esbuild@0.28.1",
     "npm:vitest@^4.1.10": "4.1.10_vite@8.1.4__esbuild@0.28.1",
@@ -2795,6 +2795,17 @@
     },
     "@sec-ant/readable-stream@0.4.1": {
       "integrity": "sha512-831qok9r2t8AlxLko40y2ebgSDhenenCatLVeW/uBtnHPyhHOvG0C7TvfgecV+wHzIm5KUICgzmVpWS+IMEAeg=="
+    },
+    "@shadcn/react@0.2.1_@types+react@19.2.17_react@19.2.7": {
+      "integrity": "sha512-5krgi3dRMKb5jH6a+qPzVJUy/54s0kKE4Rw4LjDfLqOdVQTWKUgxWf1kW8r912I0jX/Lzxqc+pgjkjWxUIK5BQ==",
+      "dependencies": [
+        "@types/react",
+        "react@19.2.7"
+      ],
+      "optionalPeers": [
+        "@types/react",
+        "react@19.2.7"
+      ]
     },
     "@shikijs/core@3.23.0": {
       "integrity": "sha512-NSWQz0riNb67xthdm5br6lAkvpDJRTgB36fxlo37ZzM2yq0PQFFzbd8psqC2XMPgCzo1fW6cVi18+ArJ44wqgA==",
@@ -10111,6 +10122,7 @@
         "npm:@platejs/markdown@^53.2.2",
         "npm:@platejs/mention@53",
         "npm:@rolldown/plugin-babel@~0.2.3",
+        "npm:@shadcn/react@~0.2.1",
         "npm:@streamdown/code@^1.1.1",
         "npm:@streamdown/math@^1.0.2",
         "npm:@streamdown/mermaid@^1.0.2",
@@ -10173,7 +10185,6 @@
         "npm:tw-shimmer@~0.4.11",
         "npm:typescript@^7.0.2",
         "npm:use-debounce@^10.1.1",
-        "npm:use-stick-to-bottom@^1.1.6",
         "npm:valibot@^1.4.2",
         "npm:vite@^8.0.11",
         "npm:vitest@^4.1.10",
