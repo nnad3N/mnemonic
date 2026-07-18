@@ -26,6 +26,7 @@
     "npm:@rolldown/plugin-babel@~0.2.3": "0.2.3_@babel+core@7.29.7_rolldown@1.1.5_vite@8.1.4__esbuild@0.28.1_esbuild@0.28.1",
     "npm:@streamdown/code@^1.1.1": "1.1.1_react@19.2.7",
     "npm:@streamdown/math@^1.0.2": "1.0.2_react@19.2.7",
+    "npm:@streamdown/mermaid@^1.0.2": "1.0.2_react@19.2.7",
     "npm:@t3-oss/env-core@~0.13.11": "0.13.11_typescript@7.0.2_valibot@1.4.2__typescript@7.0.2_zod@4.4.3",
     "npm:@tailwindcss/typography@~0.5.20": "0.5.20_tailwindcss@4.3.2",
     "npm:@tailwindcss/vite@^4.2.4": "4.3.2_vite@8.1.4__esbuild@0.28.1_esbuild@0.28.1",
@@ -2985,6 +2986,13 @@
         "react@19.2.7",
         "rehype-katex",
         "remark-math"
+      ]
+    },
+    "@streamdown/mermaid@1.0.2_react@19.2.7": {
+      "integrity": "sha512-Fr/4sBWnAeSnxM3PcrV/+DiZe5oPMq9gOkUIAH7ZauJeuwrZ/DVzD4g0zlav6AH0axh2m/sOfrfLtY5aLT7niw==",
+      "dependencies": [
+        "mermaid",
+        "react@19.2.7"
       ]
     },
     "@t3-oss/env-core@0.13.11_typescript@7.0.2_valibot@1.4.2__typescript@7.0.2_zod@4.4.3": {
@@ -10105,6 +10113,7 @@
         "npm:@rolldown/plugin-babel@~0.2.3",
         "npm:@streamdown/code@^1.1.1",
         "npm:@streamdown/math@^1.0.2",
+        "npm:@streamdown/mermaid@^1.0.2",
         "npm:@t3-oss/env-core@~0.13.11",
         "npm:@tailwindcss/typography@~0.5.20",
         "npm:@tailwindcss/vite@^4.2.4",

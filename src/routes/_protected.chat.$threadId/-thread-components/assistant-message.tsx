@@ -1,8 +1,10 @@
 import { createCodePlugin } from "@streamdown/code";
 import { createMathPlugin } from "@streamdown/math";
+import { createMermaidPlugin } from "@streamdown/mermaid";
 import type { FileUIPart, SourceDocumentUIPart, SourceUrlUIPart } from "ai";
 import { isToolUIPart } from "ai";
 import { FileIcon, FileTextIcon, LinkIcon } from "lucide-react";
+import { useTheme } from "next-themes";
 import { Streamdown } from "streamdown";
 
 import { AssistantReasoningPart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-reasoning-part";
@@ -16,6 +18,7 @@ import type {
 const streamdownPlugins = {
   code: createCodePlugin(),
   math: createMathPlugin({ singleDollarTextMath: true }),
+  mermaid: createMermaidPlugin(),
 };
 
 type AssistantMessageProps = {
@@ -39,12 +42,22 @@ type AssistantMessagePartProps = {
 };
 
 const AssistantMessagePart = ({ isAnimating, part }: AssistantMessagePartProps) => {
+  const { resolvedTheme } = useTheme();
+
   // oxlint-disable-next-line typescript/switch-exhaustiveness-check
   switch (part.type) {
     case "text": {
       return (
         <div className="typeset typeset-chat">
-          <Streamdown isAnimating={isAnimating} plugins={streamdownPlugins}>
+          <Streamdown
+            isAnimating={isAnimating}
+            mermaid={{
+              config: {
+                theme: resolvedTheme === "dark" ? "dark" : "default",
+              },
+            }}
+            plugins={streamdownPlugins}
+          >
             {part.text}
           </Streamdown>
         </div>

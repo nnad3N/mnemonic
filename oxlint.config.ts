@@ -62,7 +62,12 @@ export default defineConfig({
     "typescript/require-await": "error",
     "typescript/strict-boolean-expressions": [
       "error",
-      { allowNullableBoolean: true, allowNullableString: true },
+      {
+        allowNullableBoolean: true,
+        allowNullableString: true,
+        allowNullableNumber: false,
+        allowNumber: false,
+      },
     ],
     "typescript/switch-exhaustiveness-check": "error",
   },

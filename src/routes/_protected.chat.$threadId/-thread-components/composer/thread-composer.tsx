@@ -16,7 +16,7 @@ import { ComposerFooter } from "./composer-footer";
 import { threadEditorPlugins, getThreadEditorId, markdownToPlate } from "./plate";
 import { ThreadComposerFilePlugin } from "./plate-plugins/file";
 import { ThreadComposerKeyboardPlugin } from "./plate-plugins/keyboard";
-import { insertComposerLink, parseComposerLinkPasteSegments } from "./plate-plugins/link";
+import { insertComposerClipboardText } from "./plate-plugins/paste";
 
 type ThreadComposerProps = {
   location: ThreadInputLocation;
@@ -128,22 +128,10 @@ export const ThreadComposer = ({ location }: ThreadComposerProps) => {
         }
 
         const text = e.dataTransfer.getData("text/plain");
-        const segments = parseComposerLinkPasteSegments(text);
 
-        if (!segments) return;
+        if (!text) return;
 
-        for (const [index, segment] of segments.entries()) {
-          if (segment.type === "text") {
-            editor.tf.insertText(segment.text);
-            continue;
-          }
-
-          insertComposerLink({
-            editor,
-            url: segment.url.href,
-            trailingSpace: index === segments.length - 1,
-          });
-        }
+        insertComposerClipboardText(editor, text);
       })}
       ref={composerRef}
     >

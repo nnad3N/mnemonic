@@ -21,9 +21,9 @@ export const ThreadComposerFilePlugin = createTPlatePlugin<ThreadComposerFileCon
         return false;
       }
 
-      const files = event.clipboardData?.files;
+      const files = event.clipboardData.files;
 
-      if (!files?.length) {
+      if (files.length === 0) {
         return false;
       }
 
