@@ -7,6 +7,8 @@ import viteReact, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { nitro } from "nitro/vite";
 import { defineConfig } from "vite";
 
+const isVitest = Boolean(process.env.VITEST);
+
 const config = defineConfig({
   plugins: [
     devtools(),
@@ -15,7 +17,8 @@ const config = defineConfig({
       project: "./project.inlang",
       strategy: ["url", "baseLocale"],
     }),
-    nitro({ preset: "deno-server" }),
+    // Nitro's Vite plugin conflicts with Vitest (CJS React load + hung teardown).
+    !isVitest && nitro({ preset: "deno-server" }),
     tailwindcss(),
     tanstackStart(),
     viteReact(),

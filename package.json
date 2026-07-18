@@ -10,7 +10,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "start": "deno run -A .output/server/index.mjs",
-    "test": "vitest run --config vitest.config.ts --typecheck",
+    "test": "vitest run --typecheck",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint --fix",
     "format": "oxfmt",
