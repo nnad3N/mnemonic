@@ -41,9 +41,11 @@ const AssistantMessagePart = ({ isAnimating, part }: AssistantMessagePartProps) 
   switch (part.type) {
     case "text": {
       return (
-        <Streamdown isAnimating={isAnimating} plugins={streamdownPlugins}>
-          {part.text}
-        </Streamdown>
+        <div className="typeset typeset-chat">
+          <Streamdown isAnimating={isAnimating} plugins={streamdownPlugins}>
+            {part.text}
+          </Streamdown>
+        </div>
       );
     }
     case "reasoning": {
