@@ -1,6 +1,7 @@
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
+import { T, useGT } from "gt-tanstack-start";
 import { toast } from "sonner";
 import * as v from "valibot";
 
@@ -15,7 +16,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { m } from "@/paraglide/messages";
 import {
   deleteConversation,
   deleteTopic,
@@ -34,6 +34,7 @@ type RenameFieldProps = {
 };
 
 export const RenameField = ({ threadId, initialValue, stopRenaming }: RenameFieldProps) => {
+  const gt = useGT();
   const queryClient = useQueryClient();
 
   const renameMutation = useMutation({
@@ -41,8 +42,8 @@ export const RenameField = ({ threadId, initialValue, stopRenaming }: RenameFiel
       await renameConversation({ data: { threadId, title } });
     },
     onError: () => {
-      toast.error(m.nav_rename_thread_error_title(), {
-        description: m.common_please_try_again(),
+      toast.error(gt("Could not rename conversation"), {
+        description: gt("Please try again."),
       });
     },
     onSuccess: async () => {
@@ -116,6 +117,7 @@ export const RenameTopicField = ({
   initialValue,
   stopRenaming,
 }: RenameTopicFieldProps) => {
+  const gt = useGT();
   const queryClient = useQueryClient();
 
   const renameMutation = useMutation({
@@ -123,8 +125,8 @@ export const RenameTopicField = ({
       await renameTopic({ data: { topicId, title } });
     },
     onError: () => {
-      toast.error(m.nav_rename_topic_error_title(), {
-        description: m.common_please_try_again(),
+      toast.error(gt("Could not rename topic"), {
+        description: gt("Please try again."),
       });
     },
     onSuccess: async () => {
@@ -194,6 +196,7 @@ type DeleteThreadDialogProps = {
 };
 
 export const DeleteThreadDialog = ({ threadId, onOpenChange, open }: DeleteThreadDialogProps) => {
+  const gt = useGT();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const activeThreadId = useParams({
@@ -207,8 +210,8 @@ export const DeleteThreadDialog = ({ threadId, onOpenChange, open }: DeleteThrea
       await deleteConversation({ data: { threadId } });
     },
     onError: () => {
-      toast.error(m.nav_delete_thread_error_title(), {
-        description: m.common_please_try_again(),
+      toast.error(gt("Could not delete conversation"), {
+        description: gt("Please try again."),
       });
     },
     onSuccess: async () => {
@@ -224,14 +227,16 @@ export const DeleteThreadDialog = ({ threadId, onOpenChange, open }: DeleteThrea
     <AlertDialog onOpenChange={onOpenChange} open={open}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{m.nav_delete_thread_confirm_title()}</AlertDialogTitle>
+          <AlertDialogTitle>
+            <T>Delete conversation?</T>
+          </AlertDialogTitle>
           <AlertDialogDescription>
-            {m.nav_delete_thread_confirm_description()}
+            <T>This conversation and its messages will be permanently deleted.</T>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel render={<Button variant="outline" />}>
-            {m.common_cancel()}
+            <T>Cancel</T>
           </AlertDialogCancel>
           <Button
             disabled={deleteMutation.isPending}
@@ -240,7 +245,7 @@ export const DeleteThreadDialog = ({ threadId, onOpenChange, open }: DeleteThrea
             }}
             variant="destructive"
           >
-            {m.common_delete()}
+            <T>Delete</T>
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -255,6 +260,7 @@ type DeleteTopicDialogProps = {
 };
 
 export const DeleteTopicDialog = ({ onOpenChange, open, topic }: DeleteTopicDialogProps) => {
+  const gt = useGT();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const activeThreadId = useParams({
@@ -268,8 +274,8 @@ export const DeleteTopicDialog = ({ onOpenChange, open, topic }: DeleteTopicDial
       await deleteTopic({ data: { topicId: topic.id } });
     },
     onError: () => {
-      toast.error(m.nav_delete_topic_error_title(), {
-        description: m.common_please_try_again(),
+      toast.error(gt("Could not delete topic"), {
+        description: gt("Please try again."),
       });
     },
     onSuccess: async () => {
@@ -285,14 +291,16 @@ export const DeleteTopicDialog = ({ onOpenChange, open, topic }: DeleteTopicDial
     <AlertDialog onOpenChange={onOpenChange} open={open}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{m.nav_delete_topic_confirm_title()}</AlertDialogTitle>
+          <AlertDialogTitle>
+            <T>Delete topic?</T>
+          </AlertDialogTitle>
           <AlertDialogDescription>
-            {m.nav_delete_topic_confirm_description()}
+            <T>This topic and all its conversations will be permanently deleted.</T>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel render={<Button variant="outline" />}>
-            {m.common_cancel()}
+            <T>Cancel</T>
           </AlertDialogCancel>
           <Button
             disabled={deleteMutation.isPending}
@@ -301,7 +309,7 @@ export const DeleteTopicDialog = ({ onOpenChange, open, topic }: DeleteTopicDial
             }}
             variant="destructive"
           >
-            {m.common_delete()}
+            <T>Delete</T>
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

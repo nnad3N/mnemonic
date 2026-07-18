@@ -58,12 +58,13 @@ Architecture notes for agents live in [`.agents/architecture`](.agents/architect
 - Use the `key` prop for elements in iterables (prefer unique IDs over array indices)
 - Nest children between opening and closing tags instead of passing as props
 - Don't define components inside other components
-- Use semantic HTML and ARIA attributes for accessibility:
+- Use semantic HTML for accessibility:
   - Provide meaningful alt text for images
   - Use proper heading hierarchy
   - Add labels for form inputs
   - Include keyboard event handlers alongside mouse events
   - Use semantic elements (`<button>`, `<nav>`, etc.) instead of divs with roles
+  - Do not add `aria-label` or `title` attributes
 - **Variant styling** — do not add helper functions that map a discriminant to Tailwind class strings (e.g. `getStatusClassName(status)` with a `switch`). Either inline classes in JSX with `cn(..., condition && "class")`, or extract a small component that owns the variant markup:
 - Keep static Tailwind class strings inline in JSX unless extracting a small component or using `cn(...)` materially improves conditional readability. Do not create local constants whose only purpose is to hold a reusable Tailwind class string for one file.
 
@@ -116,7 +117,7 @@ const getStatusDotClassName = (status: FileStatus) => {
 - Throw `Error` objects with descriptive messages, not strings or other values
 - **Never use `try`/`catch`** — wrap fallible async work with `Result.tryPromise(...)` from `better-result`. Prefer the bare callback form (`Result.tryPromise(async () => …)`) unless a kit needs a typed `catch` mapper. Consume results with `match`, `mapError`, `tapError`, or `Result.isError(...)` / `Result.isOk(...)` according to the operation; do not use `try`/`catch` to swallow, rethrow, or translate errors.
 - Prefer early returns over nested conditionals for error cases
-- **Never render raw error messages in client UI** — do not display `error.message`, provider/API payloads, stack traces, or other server-derived text. Show user-safe copy via Paraglide messages or an error-code lookup (see [`src/lib/auth-errors.ts`](src/lib/auth-errors.ts)); log details server-side for debugging
+- **Never render raw error messages in client UI** — do not display `error.message`, provider/API payloads, stack traces, or other server-derived text. Show user-safe copy via GT translations or an error-code lookup (see [`src/lib/auth-errors.ts`](src/lib/auth-errors.ts)); log details server-side for debugging
 - **Kit infra errors** — fixed domain `message` + `cause`; never copy `cause.message` into the wrapper. See [`.agents/architecture/kit-services.md`](.agents/architecture/kit-services.md) (Kit errors).
 
 ### Better Result and Kit patterns
@@ -270,14 +271,16 @@ This project pairs **TanStack React Form** (validation/state) with **Base UI For
 
 ### Building a form
 
-- **Schema with Valibot** at the top of the component, using Paraglide messages for error copy:
+- **Schema with Valibot** inside the component, using `useGT()` for localized error copy:
 
 ```tsx
+const gt = useGT();
+
 const schema = v.object({
   email: v.pipe(
     v.string(),
-    v.nonEmpty(m.auth_validation_required()),
-    v.email(m.auth_validation_email_invalid()),
+    v.nonEmpty(gt("This field is required.")),
+    v.email(gt("Please enter a valid email address.")),
   ),
 });
 ```
@@ -297,7 +300,7 @@ const form = useForm({
 });
 ```
 
-- **Locate the schema inside the component** so Paraglide message getters re-evaluate per render and stay aligned with the active locale.
+- **Locate the schema inside the component** so `useGT()` stays aligned with the active locale.
 
 ### Wiring validation errors to Base UI
 
@@ -319,7 +322,7 @@ Subscribe narrowly to drive the submit button:
 <form.Subscribe selector={(s) => ({ canSubmit: s.canSubmit, isSubmitting: s.isSubmitting })}>
   {({ canSubmit, isSubmitting }) => (
     <Button disabled={!canSubmit} loading={isSubmitting} type="submit">
-      {m.auth_sign_in_submit()}
+      <T>Sign in</T>
     </Button>
   )}
 </form.Subscribe>
@@ -364,13 +367,13 @@ When adding a new subagent with custom UI, add its `agent-<key>` name to `tool-p
 
 ---
 
-## Internationalization (Paraglide)
+## Internationalization (GT)
 
-Messages live in [`messages/en.json`](messages/en.json) and [`messages/pl.json`](messages/pl.json). Use Paraglide getters from `@/paraglide/messages` (`m.message_key()`).
+Use GT with `gt-tanstack-start` throughout the app. Import `useGT`, `useLocale`, and `useSetLocale` from `gt-tanstack-start`; it re-exports the GT React bindings used by the CLI scanner. Use `<T>text</T>` from `gt-react` or `gt-tanstack-start` for simple visible JSX text, and `const gt = useGT()` for attributes, toasts, validators, tooltips, and interpolated or conditional copy. Helpers outside components that need translations should take `gt: GT` from [`src/lib/gt.ts`](src/lib/gt.ts).
 
-- **`common_*` for generic UI copy** — reuse shared keys for words and short phrases that mean the same everywhere (`common_loading`, `common_retry`, `common_try_again`, `common_please_try_again`, `common_cancel`, `common_delete`, `common_search`, `common_rename`, `common_download`, `common_sign_out`, `common_no_results`, status labels, table column headers, etc.). Do **not** create feature-scoped one-offs when a `common_*` key already fits.
-- **Feature-scoped keys** (`chat_*`, `files_*`, `nav_*`, …) are for context-specific copy only: page titles, empty-state descriptions, error explanations, placeholders tied to a screen or domain concept.
-- When adding a string, check `common_*` first before introducing a new key.
+- Supported locales are English (`en`) and Polish (`pl`). The active locale is stored in the GT locale cookie; use `useLocale()` and `useSetLocale()` for client-side locale controls.
+- GT translation artifacts live in [`src/_gt/`](src/_gt/). Keep source strings inline in English. Run `deno task translate` (`gt generate`) to refresh hash-keyed templates in `src/_gt/` (no API key). Translate `src/_gt/pl.json` values to Polish yourself — do not use `gt translate` / the GT cloud API.
+- Reuse the same English source string for shared UI words (“Cancel”, “Delete”, “Search”, …) instead of inventing near-duplicate copy.
 
 ---
 

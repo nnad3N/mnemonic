@@ -1,15 +1,15 @@
 import { TaggedError } from "better-result";
 
 import { authClient } from "@/lib/better-auth/auth-client";
-import { m } from "@/paraglide/messages";
+import type { GT } from "@/lib/gt";
 
 export const AUTH_ERROR_CODES = authClient.$ERROR_CODES;
 
 export type AuthErrorCode = keyof typeof AUTH_ERROR_CODES;
 
-export const getAuthErrorDescription = (code?: string): string => {
+export const getAuthErrorDescription = (gt: GT, code?: string): string => {
   if (code === undefined) {
-    return m.auth_error_generic_description();
+    return gt("We couldn't complete your request. Please try again.");
   }
 
   switch (code) {
@@ -17,39 +17,39 @@ export const getAuthErrorDescription = (code?: string): string => {
     case "INVALID_USER":
     case "USER_EMAIL_NOT_FOUND":
     case "USER_NOT_FOUND": {
-      return m.auth_error_user_not_found();
+      return gt("We couldn't find an account with that email.");
     }
     case "CREDENTIAL_ACCOUNT_NOT_FOUND": {
-      return m.auth_error_credential_account_not_found();
+      return gt("No password is set for this account. Try a different sign-in method.");
     }
     case "EMAIL_NOT_VERIFIED": {
-      return m.auth_error_email_not_verified();
+      return gt("Please verify your email address before signing in.");
     }
     case "INVALID_EMAIL": {
-      return m.auth_error_invalid_email();
+      return gt("Invalid email address.");
     }
     case "INVALID_EMAIL_OR_PASSWORD": {
-      return m.auth_error_invalid_email_or_password();
+      return gt("Invalid email or password.");
     }
     case "INVALID_PASSWORD": {
-      return m.auth_error_invalid_password();
+      return gt("Invalid password.");
     }
     case "PASSWORD_TOO_LONG": {
-      return m.auth_error_password_too_long();
+      return gt("Password is too long.");
     }
     case "PASSWORD_TOO_SHORT": {
-      return m.auth_error_password_too_short();
+      return gt("Password is too short.");
     }
     case "SESSION_EXPIRED":
     case "TOKEN_EXPIRED": {
-      return m.auth_error_session_expired();
+      return gt("Your session has expired. Please sign in again.");
     }
     case "USER_ALREADY_EXISTS":
     case "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL": {
-      return m.auth_error_user_already_exists();
+      return gt("An account with that email already exists.");
     }
     default: {
-      return m.auth_error_generic_description();
+      return gt("We couldn't complete your request. Please try again.");
     }
   }
 };

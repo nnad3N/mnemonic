@@ -1,7 +1,7 @@
 import type { ChatStatus } from "ai";
 import { getToolName, isToolUIPart } from "ai";
+import { T } from "gt-tanstack-start";
 
-import { m } from "@/paraglide/messages";
 import { AssistantMessage } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-message";
 import { ThreadMetaLine } from "@/routes/_protected.chat.$threadId/-thread-components/thread-meta-line";
 import { isKnownToolName } from "@/routes/_protected.chat.$threadId/-thread-components/tool-labels";
@@ -64,7 +64,7 @@ export const ThreadMessage = ({ message, index, messageCount, status }: ThreadMe
         <ThreadMetaLine
           className={status === "streaming" || status === "submitted" ? "shimmer" : ""}
         >
-          {m.chat_thread_pending_planning()}
+          <T>Planning next moves...</T>
         </ThreadMetaLine>
       ) : (
         <AssistantMessage

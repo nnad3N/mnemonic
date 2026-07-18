@@ -1,6 +1,7 @@
 import { getMentionOnSelectItem } from "@platejs/mention";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
+import { T } from "gt-tanstack-start";
 import type { TComboboxInputElement, TMentionElement } from "platejs";
 import type { PlateElementProps } from "platejs/react";
 import { PlateElement, useFocused, useSelected } from "platejs/react";
@@ -19,7 +20,6 @@ import {
   AutocompleteList,
 } from "@/components/plate/autocomplete";
 import { cn } from "@/lib/utils";
-import { m } from "@/paraglide/messages";
 
 import { mentionByIdQuery, mentionsQuery } from "../../-thread-api/get-mentions";
 import { threadQuery } from "../../-thread-api/get-thread";
@@ -303,7 +303,7 @@ export const ThreadMentionInputElement = (props: PlateElementProps<TComboboxInpu
         <AutocompleteInput />
         <AutocompleteContent side="top">
           <AutocompleteEmpty>
-            {mentions.isLoading ? m.common_loading() : m.common_no_results()}
+            {mentions.isLoading ? <T>Loading…</T> : <T>No results</T>}
           </AutocompleteEmpty>
           <AutocompleteList>
             {(item) => (

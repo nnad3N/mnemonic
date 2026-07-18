@@ -1,4 +1,3 @@
-import { paraglideVitePlugin } from "@inlang/paraglide-js";
 import babel from "@rolldown/plugin-babel";
 import tailwindcss from "@tailwindcss/vite";
 import { devtools } from "@tanstack/devtools-vite";
@@ -12,11 +11,6 @@ const isVitest = Boolean(process.env.VITEST);
 const config = defineConfig({
   plugins: [
     devtools(),
-    paraglideVitePlugin({
-      outdir: "./src/paraglide",
-      project: "./project.inlang",
-      strategy: ["url", "baseLocale"],
-    }),
     // Nitro's Vite plugin conflicts with Vitest (CJS React load + hung teardown).
     !isVitest && nitro({ preset: "deno-server" }),
     tailwindcss(),

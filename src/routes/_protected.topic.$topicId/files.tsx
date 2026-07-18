@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { T, useGT } from "gt-tanstack-start";
 import { produce } from "immer";
 import { AlertCircleIcon } from "lucide-react";
 import type { PropsWithChildren } from "react";
@@ -26,7 +27,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { m } from "@/paraglide/messages";
 import { filesQuery } from "@/routes/_protected.topic.$topicId/-files-api/list-files";
 import { FileRow } from "@/routes/_protected.topic.$topicId/-files-components/file-row";
 import { FileSearch } from "@/routes/_protected.topic.$topicId/-files-components/file-search";
@@ -58,10 +58,8 @@ const getVisiblePageNumbers = (current: number, total: number) => {
   return Array.from({ length: end - start + 1 }, (_, index) => start + index);
 };
 
-const getColumns = () =>
-  [m.common_name(), m.common_status(), m.common_size(), m.common_created(), null] as const;
-
 function RouteComponent() {
+  const gt = useGT();
   const topicId = Route.useParams({ select: (params) => params.topicId });
   const { page, q } = Route.useSearch();
   const navigate = Route.useNavigate();
@@ -76,7 +74,7 @@ function RouteComponent() {
     }),
   );
 
-  const columns = getColumns();
+  const columns = [gt("Name"), gt("Status"), gt("Size"), gt("Created"), null] as const;
 
   const totalCount = data?.totalCount ?? 0;
   const items = data?.items ?? [];
@@ -133,9 +131,14 @@ function RouteComponent() {
                       <AlertCircleIcon className="text-destructive" />
                     </EmptyMedia>
                     <EmptyTitle className="text-destructive">
-                      {m.files_load_error_title()}
+                      <T>Could not load files</T>
                     </EmptyTitle>
-                    <EmptyDescription>{m.files_load_error_description()}</EmptyDescription>
+                    <EmptyDescription>
+                      <T>
+                        We couldn't load the files for this topic. Check your connection and try
+                        again.
+                      </T>
+                    </EmptyDescription>
                   </EmptyHeader>
                   <EmptyContent>
                     <Button
@@ -144,7 +147,7 @@ function RouteComponent() {
                       }}
                       variant="outline"
                     >
-                      {m.common_try_again()}
+                      <T>Try again</T>
                     </Button>
                   </EmptyContent>
                 </Empty>
@@ -156,7 +159,11 @@ function RouteComponent() {
                 <Empty>
                   <EmptyHeader>
                     <EmptyTitle>
-                      {debouncedQuery.trim().length > 0 ? m.files_no_results() : m.files_empty()}
+                      {debouncedQuery.trim().length > 0 ? (
+                        <T>No files match your search</T>
+                      ) : (
+                        <T>No files in this topic yet</T>
+                      )}
                     </EmptyTitle>
                   </EmptyHeader>
                 </Empty>

@@ -1,52 +1,48 @@
 import type { MnemonicUITools } from "@/mastra/mnemonic-tool-types";
-import { m } from "@/paraglide/messages";
 
 export type ToolLabels = {
-  done: () => string;
-  error: () => string;
-  pending: () => string;
+  done: string;
+  error: string;
+  pending: string;
 };
 
 export const TOOL_LABELS = {
   fileGraphRag: {
-    done: m.chat_thread_tool_search_connections_done,
-    error: m.chat_thread_tool_search_connections_error,
-    pending: m.chat_thread_tool_search_connections_pending,
+    done: "Searched file connections",
+    error: "Could not search file connections",
+    pending: "Searching file connections",
   },
   fileVectorSearch: {
-    done: m.chat_thread_tool_search_files_done,
-    error: m.chat_thread_tool_search_files_error,
-    pending: m.chat_thread_tool_search_files_pending,
+    done: "Searched files",
+    error: "Could not search files",
+    pending: "Searching files",
   },
   accessTopic: {
-    done: m.chat_thread_tool_access_topic_done,
-    error: m.chat_thread_tool_access_topic_error,
-    pending: m.chat_thread_tool_access_topic_pending,
+    done: "Accessed topic",
+    error: "Could not access topic",
+    pending: "Accessing topic",
   },
   getFileFromS3: {
-    done: m.chat_thread_tool_read_file_done,
-    error: m.chat_thread_tool_read_file_error,
-    pending: m.chat_thread_tool_read_file_pending,
+    done: "Read file",
+    error: "Could not read file",
+    pending: "Reading file",
   },
   recall: {
-    done: m.chat_thread_tool_recall_done,
-    error: m.chat_thread_tool_recall_error,
-    pending: m.chat_thread_tool_recall_pending,
+    done: "Recalled memories",
+    error: "Could not recall memories",
+    pending: "Recalling memories",
   },
   webFetch: {
-    done: m.chat_thread_tool_web_fetch_done,
-    error: m.chat_thread_tool_web_fetch_error,
-    pending: m.chat_thread_tool_web_fetch_pending,
+    done: "Fetched the web page",
+    error: "Could not fetch the web page",
+    pending: "Fetching the web page",
   },
   webSearch: {
-    done: m.chat_thread_tool_web_search_done,
-    error: m.chat_thread_tool_web_search_error,
-    pending: m.chat_thread_tool_web_search_pending,
+    done: "Searched the web",
+    error: "Could not search the web",
+    pending: "Searching the web",
   },
-} satisfies Record<keyof MnemonicUITools, ToolLabels>;
+} as const satisfies Record<keyof MnemonicUITools, ToolLabels>;
 
 export const isKnownToolName = (toolName: string): toolName is keyof typeof TOOL_LABELS =>
   toolName in TOOL_LABELS;
-
-export const getToolLabels = (toolName: string): ToolLabels | null =>
-  isKnownToolName(toolName) ? TOOL_LABELS[toolName] : null;

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { T, useGT } from "gt-tanstack-start";
 import { produce } from "immer";
 import {
   AlertCircleIcon,
@@ -29,7 +30,6 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { Skeleton } from "@/components/ui/skeleton";
-import { m } from "@/paraglide/messages";
 import { searchQuery } from "@/routes/_protected.search/-search-api";
 import type {
   SearchConversationResult,
@@ -84,8 +84,12 @@ function RouteComponent() {
               <EmptyMedia variant="icon">
                 <AlertCircleIcon className="text-destructive" />
               </EmptyMedia>
-              <EmptyTitle className="text-destructive">{m.search_load_error_title()}</EmptyTitle>
-              <EmptyDescription>{m.search_load_error_description()}</EmptyDescription>
+              <EmptyTitle className="text-destructive">
+                <T>Could not load search results</T>
+              </EmptyTitle>
+              <EmptyDescription>
+                <T>We couldn't load search results. Check your connection and try again.</T>
+              </EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
               <Button
@@ -94,7 +98,7 @@ function RouteComponent() {
                 }}
                 variant="outline"
               >
-                {m.common_try_again()}
+                <T>Try again</T>
               </Button>
             </EmptyContent>
           </Empty>
@@ -103,10 +107,10 @@ function RouteComponent() {
 
       {search.isLoading && (
         <>
-          <SearchSection title={m.search_conversations_title()}>
+          <SearchSection title={<T>Conversations</T>}>
             <SearchSkeleton />
           </SearchSection>
-          <SearchSection title={m.search_topics_title()}>
+          <SearchSection title={<T>Topics</T>}>
             <SearchSkeleton />
           </SearchSection>
         </>
@@ -115,29 +119,27 @@ function RouteComponent() {
       {search.isSuccess && (
         <>
           {(conversations.length > 0 || hasNoResults) && (
-            <SearchSection
-              title={
-                hasQuery ? m.search_conversations_title() : m.search_latest_conversations_title()
-              }
-            >
+            <SearchSection title={hasQuery ? <T>Conversations</T> : <T>Latest conversations</T>}>
               {conversations.length > 0 ? (
                 conversations.map((conversation) => (
                   <ConversationResult conversation={conversation} key={conversation.id} />
                 ))
               ) : (
-                <SearchSectionEmpty>{m.search_no_conversations()}</SearchSectionEmpty>
+                <SearchSectionEmpty>
+                  <T>No conversations found</T>
+                </SearchSectionEmpty>
               )}
             </SearchSection>
           )}
 
           {(topics.length > 0 || hasNoResults) && (
-            <SearchSection
-              title={hasQuery ? m.search_topics_title() : m.search_latest_topics_title()}
-            >
+            <SearchSection title={hasQuery ? <T>Topics</T> : <T>Latest topics</T>}>
               {topics.length > 0 ? (
                 topics.map((topic) => <TopicResult key={topic.id} topic={topic} />)
               ) : (
-                <SearchSectionEmpty>{m.search_no_topics()}</SearchSectionEmpty>
+                <SearchSectionEmpty>
+                  <T>No topics found</T>
+                </SearchSectionEmpty>
               )}
             </SearchSection>
           )}
@@ -152,38 +154,41 @@ type SearchInputProps = {
   value: string;
 };
 
-const SearchInput = ({ onChange, value }: SearchInputProps) => (
-  <InputGroup>
-    <InputGroupAddon align="inline-start">
-      <SearchIcon />
-    </InputGroupAddon>
-    <InputGroupInput
-      autoFocus
-      onChange={(event) => {
-        onChange(event.target.value);
-      }}
-      placeholder={m.search_placeholder()}
-      value={value}
-    />
-    {value.length > 0 && (
-      <InputGroupAddon align="inline-end">
-        <InputGroupButton
-          aria-label={m.common_cancel()}
-          onClick={() => {
-            onChange("");
-          }}
-          size="icon-xs"
-          variant="ghost"
-        >
-          <XIcon />
-        </InputGroupButton>
+const SearchInput = ({ onChange, value }: SearchInputProps) => {
+  const gt = useGT();
+
+  return (
+    <InputGroup>
+      <InputGroupAddon align="inline-start">
+        <SearchIcon />
       </InputGroupAddon>
-    )}
-  </InputGroup>
-);
+      <InputGroupInput
+        autoFocus
+        onChange={(event) => {
+          onChange(event.target.value);
+        }}
+        placeholder={gt("Search conversations and topics…")}
+        value={value}
+      />
+      {value.length > 0 && (
+        <InputGroupAddon align="inline-end">
+          <InputGroupButton
+            onClick={() => {
+              onChange("");
+            }}
+            size="icon-xs"
+            variant="ghost"
+          >
+            <XIcon />
+          </InputGroupButton>
+        </InputGroupAddon>
+      )}
+    </InputGroup>
+  );
+};
 
 type SearchSectionProps = PropsWithChildren<{
-  title: string;
+  title: ReactNode;
 }>;
 
 const SearchSection = ({ children, title }: SearchSectionProps) => (
@@ -197,7 +202,7 @@ type SearchResultContentProps = {
   icon: ReactNode;
   meta?: ReactNode;
   trailing?: ReactNode;
-  title: string;
+  title: ReactNode;
 };
 
 const SearchResultContent = ({ icon, meta, trailing, title }: SearchResultContentProps) => (
@@ -230,7 +235,7 @@ const ConversationResult = ({ conversation }: ConversationResultProps) => (
     <SearchResultContent
       icon={<MessageSquareTextIcon className="size-4.5" />}
       meta={<span>{formatUpdatedAt(conversation.updatedAt)}</span>}
-      title={conversation.title || m.search_untitled_conversation()}
+      title={conversation.title || <T>Untitled conversation</T>}
     />
   </Link>
 );
@@ -267,7 +272,7 @@ const TopicResult = ({ topic }: TopicResultProps) => (
           >
             <MessageSquareTextIcon className="size-4 shrink-0 text-muted-foreground" />
             <span className="min-w-0 flex-1 truncate">
-              {conversation.title || m.search_untitled_conversation()}
+              {conversation.title || <T>Untitled conversation</T>}
             </span>
             <span className="shrink-0 text-xs text-muted-foreground">
               {formatUpdatedAt(conversation.updatedAt)}
@@ -276,7 +281,7 @@ const TopicResult = ({ topic }: TopicResultProps) => (
         ))
       ) : (
         <div className="px-3 py-3 pl-14 text-sm text-muted-foreground">
-          {m.search_no_conversations()}
+          <T>No conversations found</T>
         </div>
       )}
     </div>

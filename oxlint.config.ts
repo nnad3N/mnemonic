@@ -2,7 +2,10 @@ import { defineConfig } from "oxlint";
 
 export default defineConfig({
   plugins: ["eslint", "typescript", "oxc", "react", "import", "jsx-a11y", "vitest"],
-  jsPlugins: [{ name: "eslint-js", specifier: "oxlint-plugin-eslint" }],
+  jsPlugins: [
+    { name: "eslint-js", specifier: "oxlint-plugin-eslint" },
+    { name: "gt", specifier: "@generaltranslation/react-core-linter" },
+  ],
   ignorePatterns: [
     "**/.nx/**",
     "**/snap/**",
@@ -28,6 +31,9 @@ export default defineConfig({
     },
   ],
   rules: {
+    "gt/static-jsx": ["error", { libs: ["gt-tanstack-start"] }],
+    "gt/static-string": ["error", { libs: ["gt-tanstack-start"] }],
+    "gt/no-data-attrs-on-branch": ["error", { libs: ["gt-tanstack-start"] }],
     "typescript/consistent-return": "off",
     "no-shadow": "off",
     "react/react-in-jsx-scope": "off",

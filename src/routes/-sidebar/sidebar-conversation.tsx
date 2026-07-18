@@ -1,5 +1,6 @@
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { T } from "gt-tanstack-start";
 import { PencilIcon, Trash2Icon } from "lucide-react";
 import { useState } from "react";
 import type * as React from "react";
@@ -18,7 +19,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { m } from "@/paraglide/messages";
 
 import { sidebarConversationsQuery } from "../_protected.chat.$threadId/-thread-api/sidebar-data";
 import type { SidebarThread } from "../_protected.chat.$threadId/-thread-api/types";
@@ -36,7 +36,9 @@ export const SidebarConversations = () => {
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>{m.nav_recent_conversations()}</SidebarGroupLabel>
+      <SidebarGroupLabel>
+        <T>Recent conversations</T>
+      </SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
           {conversations.isSuccess ? (
@@ -52,7 +54,9 @@ export const SidebarConversations = () => {
             <SidebarConversationsSkeleton count={4} />
           )}
           {conversations.isSuccess && conversationItems.length === 0 && (
-            <SidebarGroupEmpty>{m.nav_no_conversations()}</SidebarGroupEmpty>
+            <SidebarGroupEmpty>
+              <T>No conversations yet</T>
+            </SidebarGroupEmpty>
           )}
           {conversations.isSuccess && (conversations.hasNextPage || hasMultiplePages) && (
             <SidebarMenuItem>
@@ -122,7 +126,7 @@ export const SidebarConversationItem = ({ renderButton, thread }: SidebarConvers
             }}
           >
             <PencilIcon />
-            {m.common_rename()}
+            <T>Rename</T>
           </ContextMenuItem>
           <ContextMenuItem
             onClick={() => {
@@ -131,7 +135,7 @@ export const SidebarConversationItem = ({ renderButton, thread }: SidebarConvers
             variant="destructive"
           >
             <Trash2Icon />
-            {m.common_delete()}
+            <T>Delete</T>
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>

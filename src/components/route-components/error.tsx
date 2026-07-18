@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import type { ErrorComponentProps } from "@tanstack/react-router";
+import { T, useGT } from "gt-tanstack-start";
 import { AlertCircle } from "lucide-react";
 import { useTransition } from "react";
 
@@ -15,7 +16,6 @@ import {
 } from "@/components/ui/empty";
 import { authClient } from "@/lib/better-auth/auth-client";
 import { AuthError, getAuthErrorDescription } from "@/lib/errors/auth-error";
-import { m } from "@/paraglide/messages";
 
 export const ErrorComponent = (props: ErrorComponentProps) => {
   if (AuthError.is(props.error)) {
@@ -30,6 +30,7 @@ type AuthErrorProps = {
 };
 
 export const AuthErrorComponent = ({ reset, error }: AuthErrorProps) => {
+  const gt = useGT();
   const navigate = useNavigate();
   const { data, isRefetching, refetch } = authClient.useSession();
 
@@ -39,8 +40,10 @@ export const AuthErrorComponent = ({ reset, error }: AuthErrorProps) => {
         <EmptyMedia variant="icon">
           <AlertCircle className="text-destructive" />
         </EmptyMedia>
-        <EmptyTitle className="text-destructive">{m.route_error_session_title()}</EmptyTitle>
-        <EmptyDescription>{getAuthErrorDescription(error.code)}</EmptyDescription>
+        <EmptyTitle className="text-destructive">
+          <T>Session error</T>
+        </EmptyTitle>
+        <EmptyDescription>{getAuthErrorDescription(gt, error.code)}</EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
         <div className="flex flex-wrap justify-center gap-2">
@@ -52,7 +55,7 @@ export const AuthErrorComponent = ({ reset, error }: AuthErrorProps) => {
             }}
             variant="default"
           >
-            {m.common_try_again()}
+            <T>Try again</T>
           </Button>
           {data ? (
             <Button
@@ -62,7 +65,7 @@ export const AuthErrorComponent = ({ reset, error }: AuthErrorProps) => {
               }}
               variant="outline"
             >
-              {m.common_sign_out()}
+              <T>Sign out</T>
             </Button>
           ) : (
             <Button
@@ -71,7 +74,7 @@ export const AuthErrorComponent = ({ reset, error }: AuthErrorProps) => {
               }}
               variant="outline"
             >
-              {m.auth_sign_in()}
+              <T>Sign in</T>
             </Button>
           )}
         </div>
@@ -90,8 +93,12 @@ export const GenericErrorComponent = ({ reset }: ErrorComponentProps) => {
         <EmptyMedia variant="icon">
           <AlertCircle className="text-destructive" />
         </EmptyMedia>
-        <EmptyTitle className="text-destructive">{m.auth_error_generic_title()}</EmptyTitle>
-        <EmptyDescription>{m.route_error_contact_support_if_persists()}</EmptyDescription>
+        <EmptyTitle className="text-destructive">
+          <T>Something went wrong</T>
+        </EmptyTitle>
+        <EmptyDescription>
+          <T>If this problem persists, please contact support.</T>
+        </EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
         <Button
@@ -107,7 +114,7 @@ export const GenericErrorComponent = ({ reset }: ErrorComponentProps) => {
           }}
           variant="default"
         >
-          {m.common_try_again()}
+          <T>Try again</T>
         </Button>
       </EmptyContent>
     </Empty>
