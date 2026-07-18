@@ -1,3 +1,4 @@
+import { createCodePlugin } from "@streamdown/code";
 import { createMathPlugin } from "@streamdown/math";
 import type { FileUIPart, SourceDocumentUIPart, SourceUrlUIPart } from "ai";
 import { isToolUIPart } from "ai";
@@ -13,6 +14,7 @@ import type {
 } from "@/routes/_protected.chat.$threadId/-thread-types";
 
 const streamdownPlugins = {
+  code: createCodePlugin(),
   math: createMathPlugin({ singleDollarTextMath: true }),
 };
 
