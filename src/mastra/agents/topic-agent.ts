@@ -3,7 +3,7 @@ import { Memory } from "@mastra/memory";
 
 import { baseInstructions, sharedSourceInstructions } from "@/mastra/agents/base-instructions";
 import { models } from "@/mastra/models";
-import { pgVector, postgresStore } from "@/mastra/storage";
+import { libsqlStore, libsqlVector } from "@/mastra/storage";
 import { fileGraphRagTool } from "@/mastra/tools/file-graph-rag-tool";
 import { fileVectorSearchTool } from "@/mastra/tools/file-vector-search-tool";
 import { getFileFromS3Tool } from "@/mastra/tools/get-file-from-s3-tool";
@@ -25,8 +25,8 @@ export const topicMemory = new Memory({
       temporalMarkers: true,
     },
   },
-  storage: postgresStore,
-  vector: pgVector,
+  storage: libsqlStore,
+  vector: libsqlVector,
 });
 
 export const topicAgentTools = {

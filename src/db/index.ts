@@ -1,4 +1,5 @@
-import { drizzle } from "drizzle-orm/postgres-js";
+import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/libsql";
 
 import { env } from "@/env";
 
@@ -9,6 +10,12 @@ import { appRelations } from "./schema.ts";
 
 export const schema = { ...appSchema, ...authSchema };
 
-export const drizzleDb = drizzle(env.DATABASE_URL, {
+const client = createClient({
+  url: env.DATABASE_URL,
+  authToken: env.DATABASE_AUTH_TOKEN,
+});
+
+export const drizzleDb = drizzle({
+  client,
   relations: { ...appRelations, ...authRelations },
 });

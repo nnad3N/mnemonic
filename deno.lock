@@ -13,10 +13,11 @@
     "npm:@inlang/paraglide-js@^2.22.0": "2.22.0_typescript@7.0.2_vite@8.1.4__esbuild@0.28.1",
     "npm:@kreuzberg/node@^4.10.2": "4.10.2",
     "npm:@libpdf/core@~0.4.1": "0.4.1",
+    "npm:@libsql/client@~0.17.4": "0.17.4",
     "npm:@mastra/ai-sdk@^1.6.2": "1.6.2_@mastra+core@1.51.0__zod@4.4.3__ai@6.0.180___zod@4.4.3__express@5.2.1_zod@4.4.3_ai@6.0.180__zod@4.4.3_express@5.2.1",
     "npm:@mastra/core@^1.51.0": "1.51.0_zod@4.4.3_ai@6.0.180__zod@4.4.3_express@5.2.1",
+    "npm:@mastra/libsql@^1.16.0": "1.16.0_@mastra+core@1.51.0__zod@4.4.3__ai@6.0.180___zod@4.4.3__express@5.2.1_ai@6.0.180__zod@4.4.3",
     "npm:@mastra/memory@^1.23.0": "1.23.0_@mastra+core@1.51.0__zod@4.4.3__ai@6.0.180___zod@4.4.3__express@5.2.1_ai@6.0.180__zod@4.4.3_express@5.2.1",
-    "npm:@mastra/pg@^1.16.0": "1.16.0_@mastra+core@1.51.0__zod@4.4.3__ai@6.0.180___zod@4.4.3__express@5.2.1_ai@6.0.180__zod@4.4.3_express@5.2.1_zod@4.4.3",
     "npm:@mastra/rag@^2.4.1": "2.4.1_@mastra+core@1.51.0__zod@4.4.3__ai@6.0.180___zod@4.4.3__express@5.2.1_zod@4.4.3_ai@6.0.180__zod@4.4.3_express@5.2.1",
     "npm:@platejs/basic-nodes@53": "53.0.0_platejs@53.2.4__react@19.2.7__react-dom@19.2.7___react@19.2.7__@types+react@19.2.17__immer@11.1.11__scheduler@0.27.0_react@19.2.7_react-dom@19.2.7__react@19.2.7_@types+react@19.2.17_immer@11.1.11_scheduler@0.27.0",
     "npm:@platejs/combobox@53.0.0": "53.0.0_platejs@53.2.4__react@19.2.7__react-dom@19.2.7___react@19.2.7__@types+react@19.2.17__immer@11.1.11__scheduler@0.27.0_react@19.2.7_react-dom@19.2.7__react@19.2.7_@types+react@19.2.17_immer@11.1.11_scheduler@0.27.0",
@@ -48,12 +49,12 @@
     "npm:@vitejs/plugin-react@^6.0.3": "6.0.3_@rolldown+plugin-babel@0.2.3__@babel+core@7.29.7__rolldown@1.1.5__vite@8.1.4___esbuild@0.28.1__esbuild@0.28.1_babel-plugin-react-compiler@1.0.0_vite@8.1.4__esbuild@0.28.1",
     "npm:ai@6.0.180": "6.0.180_zod@4.4.3",
     "npm:babel-plugin-react-compiler@1": "1.0.0",
-    "npm:better-auth@^1.6.23": "1.6.23_@tanstack+react-start@1.168.28__react@19.2.7__react-dom@19.2.7___react@19.2.7__vite@8.1.4___esbuild@0.28.1__esbuild@0.28.1__rolldown@1.1.5__rollup@4.62.2_drizzle-kit@1.0.0-rc.4-ca0f029_drizzle-orm@1.0.0-rc.4-5d5b77c__pg@8.22.0__postgres@3.4.9__valibot@1.4.2___typescript@7.0.2__zod@4.4.3__typescript@7.0.2_pg@8.22.0_react@19.2.7_react-dom@19.2.7__react@19.2.7_vitest@4.1.10__vite@8.1.4___esbuild@0.28.1_vite@8.1.4__esbuild@0.28.1",
+    "npm:better-auth@^1.6.23": "1.6.23_@tanstack+react-start@1.168.28__react@19.2.7__react-dom@19.2.7___react@19.2.7__vite@8.1.4___esbuild@0.28.1__esbuild@0.28.1__rolldown@1.1.5__rollup@4.62.2_drizzle-kit@1.0.0-rc.4-ca0f029_drizzle-orm@1.0.0-rc.4-5d5b77c__@libsql+client@0.17.4__pg@8.22.0__postgres@3.4.9__valibot@1.4.2___typescript@7.0.2__zod@4.4.3_react@19.2.7_react-dom@19.2.7__react@19.2.7_vitest@4.1.10__vite@8.1.4___esbuild@0.28.1_@libsql+client@0.17.4",
     "npm:better-result@^2.9.2": "2.9.2",
     "npm:class-variance-authority@~0.7.1": "0.7.1",
     "npm:clsx@^2.1.1": "2.1.1",
     "npm:drizzle-kit@^1.0.0-rc.2-e38a2ba": "1.0.0-rc.4-ca0f029",
-    "npm:drizzle-orm@^1.0.0-rc.2-e38a2ba": "1.0.0-rc.4-5d5b77c_pg@8.22.0_postgres@3.4.9_valibot@1.4.2__typescript@7.0.2_zod@4.4.3_typescript@7.0.2",
+    "npm:drizzle-orm@^1.0.0-rc.2-e38a2ba": "1.0.0-rc.4-5d5b77c_@libsql+client@0.17.4_pg@8.22.0_postgres@3.4.9_valibot@1.4.2__typescript@7.0.2_zod@4.4.3",
     "npm:firecrawl@^4.30.0": "4.30.0",
     "npm:immer@^11.1.8": "11.1.11",
     "npm:katex@0.17": "0.17.0",
@@ -61,13 +62,12 @@
     "npm:mastra@^1.19.0": "1.19.0_@mastra+core@1.51.0__zod@4.4.3__ai@6.0.180___zod@4.4.3__express@5.2.1_@hono+node-server@1.19.14__hono@4.12.30_ai@6.0.180__zod@4.4.3_express@5.2.1_typescript@7.0.2_zod@4.4.3",
     "npm:nanoid@6": "6.0.0",
     "npm:next-themes@~0.4.6": "0.4.6_react@19.2.7_react-dom@19.2.7__react@19.2.7",
-    "npm:nitro-nightly@3.0.1-20260715-190547-7af4fee3": "3.0.1-20260715-190547-7af4fee3_rollup@4.62.2_vite@8.1.4__esbuild@0.28.1",
+    "npm:nitro-nightly@3.0.1-20260715-190547-7af4fee3": "3.0.1-20260715-190547-7af4fee3_vite@8.1.4__esbuild@0.28.1_@libsql+client@0.17.4",
     "npm:oxfmt@0.59": "0.59.0",
     "npm:oxlint-plugin-eslint@^1.74.0": "1.74.0",
     "npm:oxlint-tsgolint@~0.22.1": "0.22.1",
     "npm:oxlint@^1.74.0": "1.74.0_oxlint-tsgolint@0.22.1",
     "npm:platejs@^53.2.4": "53.2.4_react@19.2.7_react-dom@19.2.7__react@19.2.7_@types+react@19.2.17_immer@11.1.11_scheduler@0.27.0",
-    "npm:postgres@^3.4.9": "3.4.9",
     "npm:react-day-picker@^10.0.1": "10.0.1_@types+react@19.2.17_react@19.2.7",
     "npm:react-dom@^19.2.7": "19.2.7_react@19.2.7",
     "npm:react@^19.2.7": "19.2.7",
@@ -788,7 +788,7 @@
         "zod@4.4.3"
       ]
     },
-    "@better-auth/drizzle-adapter@1.6.23_@better-auth+core@1.6.23__@better-auth+utils@0.4.2__@better-fetch+fetch@1.3.1__better-call@1.3.7___zod@4.4.3__jose@6.2.3__kysely@0.28.17__nanostores@1.4.0_@better-auth+utils@0.4.2_drizzle-orm@1.0.0-rc.4-5d5b77c__pg@8.22.0__postgres@3.4.9__valibot@1.4.2___typescript@7.0.2__zod@4.4.3__typescript@7.0.2_@better-fetch+fetch@1.3.1_better-call@1.3.7__zod@4.4.3_jose@6.2.3_kysely@0.28.17_nanostores@1.4.0": {
+    "@better-auth/drizzle-adapter@1.6.23_@better-auth+core@1.6.23__@better-auth+utils@0.4.2__@better-fetch+fetch@1.3.1__better-call@1.3.7___zod@4.4.3__jose@6.2.3__kysely@0.28.17__nanostores@1.4.0_@better-auth+utils@0.4.2_drizzle-orm@1.0.0-rc.4-5d5b77c__@libsql+client@0.17.4__pg@8.22.0__postgres@3.4.9__valibot@1.4.2___typescript@7.0.2__zod@4.4.3_@libsql+client@0.17.4": {
       "integrity": "sha512-2+/PTVfIP9E7iz6af8TB3lhnowHUj9ljC66kECmHaFEdUqPgzHoWux9epotKwO7XDg2ui4ttWQ8CMeNFLvQeKQ==",
       "dependencies": [
         "@better-auth/core",
@@ -1374,6 +1374,81 @@
         "pkijs"
       ]
     },
+    "@libsql/client@0.17.4": {
+      "integrity": "sha512-lYayFWasDV78A+TjlEhr6ubb3odBV6OHjb+wdp8VQcyWWAEIjuwbCHaraEUS4m4yWoo0BvZo96It4VdzZRmRWw==",
+      "dependencies": [
+        "@libsql/core",
+        "@libsql/hrana-client",
+        "js-base64",
+        "libsql",
+        "promise-limit"
+      ]
+    },
+    "@libsql/core@0.17.4": {
+      "integrity": "sha512-LqF9gIvnJ38nmAH1y/ChizHqDO/MO1wLgA96XrraulEEbqXxLjleSH92YWTolbuJKgPUmGu4aJk9W3UnAcxLOQ==",
+      "dependencies": [
+        "js-base64"
+      ]
+    },
+    "@libsql/darwin-arm64@0.5.29": {
+      "integrity": "sha512-K+2RIB1OGFPYQbfay48GakLhqf3ArcbHqPFu7EZiaUcRgFcdw8RoltsMyvbj5ix2fY0HV3Q3Ioa/ByvQdaSM0A==",
+      "os": ["darwin"],
+      "cpu": ["arm64"]
+    },
+    "@libsql/darwin-x64@0.5.29": {
+      "integrity": "sha512-OtT+KFHsKFy1R5FVadr8FJ2Bb1mghtXTyJkxv0trocq7NuHntSki1eUbxpO5ezJesDvBlqFjnWaYYY516QNLhQ==",
+      "os": ["darwin"],
+      "cpu": ["x64"]
+    },
+    "@libsql/hrana-client@0.10.0": {
+      "integrity": "sha512-OoA4EMqRAC7kn7V2P6EQqRcpZf2W+AjsNIyCizBg339Tq/aMC7sRnzs3SklderhmQWAqEzvv8A2vhxVmWpkVvw==",
+      "dependencies": [
+        "@libsql/isomorphic-ws",
+        "js-base64"
+      ]
+    },
+    "@libsql/isomorphic-ws@0.1.5": {
+      "integrity": "sha512-DtLWIH29onUYR00i0GlQ3UdcTRC6EP4u9w/h9LxpUZJWRMARk6dQwZ6Jkd+QdwVpuAOrdxt18v0K2uIYR3fwFg==",
+      "dependencies": [
+        "@types/ws",
+        "ws"
+      ]
+    },
+    "@libsql/linux-arm-gnueabihf@0.5.29": {
+      "integrity": "sha512-CD4n4zj7SJTHso4nf5cuMoWoMSS7asn5hHygsDuhRl8jjjCTT3yE+xdUvI4J7zsyb53VO5ISh4cwwOtf6k2UhQ==",
+      "os": ["linux"],
+      "cpu": ["arm"]
+    },
+    "@libsql/linux-arm-musleabihf@0.5.29": {
+      "integrity": "sha512-2Z9qBVpEJV7OeflzIR3+l5yAd4uTOLxklScYTwpZnkm2vDSGlC1PRlueLaufc4EFITkLKXK2MWBpexuNJfMVcg==",
+      "os": ["linux"],
+      "cpu": ["arm"]
+    },
+    "@libsql/linux-arm64-gnu@0.5.29": {
+      "integrity": "sha512-gURBqaiXIGGwFNEaUj8Ldk7Hps4STtG+31aEidCk5evMMdtsdfL3HPCpvys+ZF/tkOs2MWlRWoSq7SOuCE9k3w==",
+      "os": ["linux"],
+      "cpu": ["arm64"]
+    },
+    "@libsql/linux-arm64-musl@0.5.29": {
+      "integrity": "sha512-fwgYZ0H8mUkyVqXZHF3mT/92iIh1N94Owi/f66cPVNsk9BdGKq5gVpoKO+7UxaNzuEH1roJp2QEwsCZMvBLpqg==",
+      "os": ["linux"],
+      "cpu": ["arm64"]
+    },
+    "@libsql/linux-x64-gnu@0.5.29": {
+      "integrity": "sha512-y14V0vY0nmMC6G0pHeJcEarcnGU2H6cm21ZceRkacWHvQAEhAG0latQkCtoS2njFOXiYIg+JYPfAoWKbi82rkg==",
+      "os": ["linux"],
+      "cpu": ["x64"]
+    },
+    "@libsql/linux-x64-musl@0.5.29": {
+      "integrity": "sha512-gquqwA/39tH4pFl+J9n3SOMSymjX+6kZ3kWgY3b94nXFTwac9bnFNMffIomgvlFaC4ArVqMnOZD3nuJ3H3VO1w==",
+      "os": ["linux"],
+      "cpu": ["x64"]
+    },
+    "@libsql/win32-x64-msvc@0.5.29": {
+      "integrity": "sha512-4/0CvEdhi6+KjMxMaVbFM2n2Z44escBRoEYpR+gZg64DdetzGnYm8mcNLcoySaDJZNaBd6wz5DNdgRmcI4hXcg==",
+      "os": ["win32"],
+      "cpu": ["x64"]
+    },
     "@lix-js/sdk@0.4.10": {
       "integrity": "sha512-0dMInAJK/67guTG5rRZaCEhvzC5cCXENOjaePA5AqMXrCE97kaY7SRor9e2vnoGsFIiGqXKlT0MCIoZj36G0gg==",
       "dependencies": [
@@ -1477,6 +1552,13 @@
         "ws"
       ]
     },
+    "@mastra/libsql@1.16.0_@mastra+core@1.51.0__zod@4.4.3__ai@6.0.180___zod@4.4.3__express@5.2.1_ai@6.0.180__zod@4.4.3": {
+      "integrity": "sha512-Rxnt1wm4XTthsYTQGkj221u2UqJDk/XqJfbtYIF03Cly2d1BoWrF8v4VX6t4SeghHNPsJAwVVG95sK6iw9EZnw==",
+      "dependencies": [
+        "@libsql/client",
+        "@mastra/core"
+      ]
+    },
     "@mastra/loggers@1.2.0_@mastra+core@1.51.0__zod@4.4.3__ai@6.0.180___zod@4.4.3__express@5.2.1_ai@6.0.180__zod@4.4.3_express@5.2.1_zod@4.4.3": {
       "integrity": "sha512-1RJO8XsMgVsTC+NviJ0jGMK01Y5zCqSzFNnOH9D1swOUfX8DMviyAJzxJUmkWbhSrDxmeo/KKmFzRK8zzk4XYA==",
       "dependencies": [
@@ -1499,16 +1581,6 @@
         "tokenx",
         "xxhash-wasm",
         "zod@4.4.3"
-      ]
-    },
-    "@mastra/pg@1.16.0_@mastra+core@1.51.0__zod@4.4.3__ai@6.0.180___zod@4.4.3__express@5.2.1_ai@6.0.180__zod@4.4.3_express@5.2.1_zod@4.4.3": {
-      "integrity": "sha512-Gk5DlxReKmopjYdKwcjRIB5JwC1bzxaAssnL4+qQ0GyoW+0UQZJHmHY817QmKKn0zhamfI7AUl39T272D8dQtw==",
-      "dependencies": [
-        "@mastra/core",
-        "async-mutex",
-        "pg",
-        "pg-connection-string",
-        "xxhash-wasm"
       ]
     },
     "@mastra/rag@2.4.1_@mastra+core@1.51.0__zod@4.4.3__ai@6.0.180___zod@4.4.3__express@5.2.1_zod@4.4.3_ai@6.0.180__zod@4.4.3_express@5.2.1": {
@@ -1604,6 +1676,9 @@
         "@emnapi/runtime@1.11.2",
         "@tybys/wasm-util"
       ]
+    },
+    "@neon-rs/load@0.0.4": {
+      "integrity": "sha512-kTPhdZyTQxB+2wpiRcFWrDcejc4JI6tkPuS7UZCG4l6Zvc5kU/gGQ/ozvHTh1XR5tS+UlfAfGuPajjzQjCiHCw=="
     },
     "@noble/ciphers@2.2.0": {
       "integrity": "sha512-Z6pjIZ/8IJcCGzb2S/0Px5J81yij85xASuk1teLNeg75bfT07MV3a/O2Mtn1I2se43k3lkVEcFaR10N4cgQcZA=="
@@ -3378,6 +3453,12 @@
     "@types/validate-npm-package-name@4.0.2": {
       "integrity": "sha512-lrpDziQipxCEeK5kWxvljWYhUvOiB2A9izZd9B2AFarYAkqZshb4lPbRs7zKEic6eGtH8V/2qJW+dPp9OtF6bw=="
     },
+    "@types/ws@8.18.1": {
+      "integrity": "sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==",
+      "dependencies": [
+        "@types/node"
+      ]
+    },
     "@typescript/typescript-aix-ppc64@7.0.2": {
       "integrity": "sha512-MTKKkWB7p/0E9xi1d1tHtZ5PiLkGEMIq88pK2CubZjOsLtYTLqhgIgi6zepFa+9GHZ6h05NMCkQxGKiPXMxXtQ==",
       "os": ["aix"],
@@ -3868,7 +3949,7 @@
       "integrity": "sha512-AjYpR78kDWAY3Efj+cDTFH9t9SCoL7OoTp1BOb0mQV7S+6CiLwnWM3FyxhJtdPufDFKzmCSFoUncKjWgJEZTCQ==",
       "bin": true
     },
-    "better-auth@1.6.23_@tanstack+react-start@1.168.28__react@19.2.7__react-dom@19.2.7___react@19.2.7__vite@8.1.4___esbuild@0.28.1__esbuild@0.28.1__rolldown@1.1.5__rollup@4.62.2_drizzle-kit@1.0.0-rc.4-ca0f029_drizzle-orm@1.0.0-rc.4-5d5b77c__pg@8.22.0__postgres@3.4.9__valibot@1.4.2___typescript@7.0.2__zod@4.4.3__typescript@7.0.2_pg@8.22.0_react@19.2.7_react-dom@19.2.7__react@19.2.7_vitest@4.1.10__vite@8.1.4___esbuild@0.28.1_vite@8.1.4__esbuild@0.28.1": {
+    "better-auth@1.6.23_@tanstack+react-start@1.168.28__react@19.2.7__react-dom@19.2.7___react@19.2.7__vite@8.1.4___esbuild@0.28.1__esbuild@0.28.1__rolldown@1.1.5__rollup@4.62.2_drizzle-kit@1.0.0-rc.4-ca0f029_drizzle-orm@1.0.0-rc.4-5d5b77c__@libsql+client@0.17.4__pg@8.22.0__postgres@3.4.9__valibot@1.4.2___typescript@7.0.2__zod@4.4.3_react@19.2.7_react-dom@19.2.7__react@19.2.7_vitest@4.1.10__vite@8.1.4___esbuild@0.28.1_@libsql+client@0.17.4": {
       "integrity": "sha512-4vOaRd9UiKGKm9R+ej0jjU1es3MiJIiNc9Qq3VCnYqOZ4/nb5272QqTxWYoDxyUXl5x6A2x2we5KZKQO9teTQQ==",
       "dependencies": [
         "@better-auth/core",
@@ -4585,12 +4666,14 @@
     "dayjs@1.11.21": {
       "integrity": "sha512-98IT+HOahAisibz/yjKbzuOBwYcjJ7BCLPzARyHiyEBmRz4fatF+KPJszEHXsGYjUG234aH/cOjW1wwTbKUZlA=="
     },
-    "db0@0.3.4_drizzle-orm@1.0.0-rc.4-5d5b77c__pg@8.22.0__postgres@3.4.9__valibot@1.4.2___typescript@7.0.2__zod@4.4.3__typescript@7.0.2": {
+    "db0@0.3.4_@libsql+client@0.17.4_drizzle-orm@1.0.0-rc.4-5d5b77c__@libsql+client@0.17.4__pg@8.22.0__postgres@3.4.9__valibot@1.4.2___typescript@7.0.2__zod@4.4.3": {
       "integrity": "sha512-RiXXi4WaNzPTHEOu8UPQKMooIbqOEyqA1t7Z6MsdxSCeb8iUC9ko3LcmsLmeUt2SM5bctfArZKkRQggKZz7JNw==",
       "dependencies": [
+        "@libsql/client",
         "drizzle-orm"
       ],
       "optionalPeers": [
+        "@libsql/client",
         "drizzle-orm"
       ]
     },
@@ -4670,6 +4753,9 @@
     "dequal@2.0.3": {
       "integrity": "sha512-0je+qPKHEMohvfRTCEo3CrPG6cAzAYgmzKyxRiYSSDkS6eGJdyVJm7WaYA5ECaAD9wLB2T4EEeymA5aFVcYXCA=="
     },
+    "detect-libc@2.0.2": {
+      "integrity": "sha512-UX6sGumvvqSaXgdKGUsgZWqcUyIXZ/vZTrlRT/iobiKhGL0zL4d3osHj3uqllWJK+i+sixDS/3COVEOFbupFyw=="
+    },
     "detect-libc@2.1.2": {
       "integrity": "sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ=="
     },
@@ -4715,15 +4801,17 @@
       ],
       "bin": true
     },
-    "drizzle-orm@1.0.0-rc.4-5d5b77c_pg@8.22.0_postgres@3.4.9_valibot@1.4.2__typescript@7.0.2_zod@4.4.3_typescript@7.0.2": {
+    "drizzle-orm@1.0.0-rc.4-5d5b77c_@libsql+client@0.17.4_pg@8.22.0_postgres@3.4.9_valibot@1.4.2__typescript@7.0.2_zod@4.4.3": {
       "integrity": "sha512-Oq9W4B11PracWY9cuCLTFT+JA5kXqR6rBmWcM8oh0xwLgCviVl9wh6ZuWX7Zpv1Jir/8W+M37syvjSYtj1f5iA==",
       "dependencies": [
+        "@libsql/client",
         "pg",
         "postgres",
         "valibot",
         "zod@4.4.3"
       ],
       "optionalPeers": [
+        "@libsql/client",
         "pg",
         "postgres",
         "valibot",
@@ -5764,6 +5852,9 @@
     "jpeg-js@0.4.4": {
       "integrity": "sha512-WZzeDOEtTOBK4Mdsar0IqEU5sMr3vSV2RqkAIzUEV2BHnUfKGyswWFPFwK5EeDo93K3FohSHbLAjj0s1Wzd+dg=="
     },
+    "js-base64@3.9.1": {
+      "integrity": "sha512-U73qptcvf/HIOauFOmqT3a0mDUp0MYlfd15oqoe9kqZt5XhiXVb+HG09sLvI9PQ9tZIBFS4nlErai8zbWazP0g=="
+    },
     "js-sha256@0.11.1": {
       "integrity": "sha512-o6WSo/LUvY2uC4j7mO50a2ms7E/EAdbP0swigLV+nzHKTTaYnaLIWJ02VdXrsJX0vGedDESQnLsOekr94ryfjg=="
     },
@@ -5878,6 +5969,26 @@
         "readable-stream@2.3.8"
       ]
     },
+    "libsql@0.5.29": {
+      "integrity": "sha512-8lMP8iMgiBzzoNbAPQ59qdVcj6UaE/Vnm+fiwX4doX4Narook0a4GPKWBEv+CR8a1OwbfkgL18uBfBjWdF0Fzg==",
+      "dependencies": [
+        "@neon-rs/load",
+        "detect-libc@2.0.2"
+      ],
+      "optionalDependencies": [
+        "@libsql/darwin-arm64",
+        "@libsql/darwin-x64",
+        "@libsql/linux-arm-gnueabihf",
+        "@libsql/linux-arm-musleabihf",
+        "@libsql/linux-arm64-gnu",
+        "@libsql/linux-arm64-musl",
+        "@libsql/linux-x64-gnu",
+        "@libsql/linux-x64-musl",
+        "@libsql/win32-x64-msvc"
+      ],
+      "os": ["darwin", "linux", "win32"],
+      "cpu": ["x64", "arm64", "wasm32", "arm"]
+    },
     "lightningcss-android-arm64@1.32.0": {
       "integrity": "sha512-YK7/ClTt4kAK0vo6w3X+Pnm0D2cf2vPHbhOXdoNti1Ga0al1P4TBZhwjATvjNwLEBCnKvjJc2jQgHXH0NEwlAg==",
       "os": ["android"],
@@ -5936,7 +6047,7 @@
     "lightningcss@1.32.0": {
       "integrity": "sha512-NXYBzinNrblfraPGyrbPoD19C1h9lfI/1mzgWYvXUTe414Gz/X1FD2XBZSZM7rRTrMA8JL3OtAaGifrIKhQ5yQ==",
       "dependencies": [
-        "detect-libc"
+        "detect-libc@2.1.2"
       ],
       "optionalDependencies": [
         "lightningcss-android-arm64",
@@ -6746,7 +6857,7 @@
     "nf3@0.3.22": {
       "integrity": "sha512-NOcqlHu22X1rUakd0SrqllP8kb3LWFmSAi1svTxaKxz+yB604xlaOmUfI3oO+RkODvaocKDDy8bgthnZL8hrkw=="
     },
-    "nitro-nightly@3.0.1-20260715-190547-7af4fee3_rollup@4.62.2_vite@8.1.4__esbuild@0.28.1": {
+    "nitro-nightly@3.0.1-20260715-190547-7af4fee3_vite@8.1.4__esbuild@0.28.1_@libsql+client@0.17.4": {
       "integrity": "sha512-icXJjrzSDNpFGGf7G5dKkf7R61PTEPR5ASjgWosc8cHeZipVlKv/26RjjeSzB4oQfjNz944qnFcrLs46R8/Dkw==",
       "dependencies": [
         "consola@3.4.2",
@@ -7353,6 +7464,9 @@
     },
     "process@0.11.10": {
       "integrity": "sha512-cdGef/drWFoydD1JsMzuFf8100nZl+GT+yacc2bEced5f9Rjk4z+WtFUTBu9PhOi9j/jfmBPu0mMEY4wIdAF8A=="
+    },
+    "promise-limit@2.7.0": {
+      "integrity": "sha512-7nJ6v5lnJsXwGprnGXga4wx6d1POjvi5Qmf1ivTRxTjH4Z/9Czja/UCMLVmB9N93GeWOU93XaFaEt6jbuoagNw=="
     },
     "prompts@2.4.2": {
       "integrity": "sha512-NxNv/kLguCA7p3jE8oL2aEBsrJWgAakBpgmgK6lpPWV+WuOmY6r2/zbAVnP+T8bQlA0nzHXSJSJW0Hq7ylaD2Q==",
@@ -8542,7 +8656,7 @@
         "vite"
       ]
     },
-    "unstorage@2.0.0-alpha.7_db0@0.3.4__drizzle-orm@1.0.0-rc.4-5d5b77c___pg@8.22.0___postgres@3.4.9___valibot@1.4.2____typescript@7.0.2___zod@4.4.3___typescript@7.0.2_ofetch@2.0.0-alpha.3_drizzle-orm@1.0.0-rc.4-5d5b77c__pg@8.22.0__postgres@3.4.9__valibot@1.4.2___typescript@7.0.2__zod@4.4.3__typescript@7.0.2": {
+    "unstorage@2.0.0-alpha.7_db0@0.3.4__@libsql+client@0.17.4__drizzle-orm@1.0.0-rc.4-5d5b77c___@libsql+client@0.17.4___pg@8.22.0___postgres@3.4.9___valibot@1.4.2____typescript@7.0.2___zod@4.4.3_ofetch@2.0.0-alpha.3_@libsql+client@0.17.4": {
       "integrity": "sha512-ELPztchk2zgFJnakyodVY3vJWGW9jy//keJ32IOJVGUMyaPydwcA1FtVvWqT0TNRch9H+cMNEGllfVFfScImog==",
       "dependencies": [
         "db0",
@@ -8925,10 +9039,11 @@
         "npm:@inlang/paraglide-js@^2.22.0",
         "npm:@kreuzberg/node@^4.10.2",
         "npm:@libpdf/core@~0.4.1",
+        "npm:@libsql/client@~0.17.4",
         "npm:@mastra/ai-sdk@^1.6.2",
         "npm:@mastra/core@^1.51.0",
+        "npm:@mastra/libsql@^1.16.0",
         "npm:@mastra/memory@^1.23.0",
-        "npm:@mastra/pg@^1.16.0",
         "npm:@mastra/rag@^2.4.1",
         "npm:@platejs/basic-nodes@53",
         "npm:@platejs/combobox@53.0.0",
@@ -8979,7 +9094,6 @@
         "npm:oxlint-tsgolint@~0.22.1",
         "npm:oxlint@^1.74.0",
         "npm:platejs@^53.2.4",
-        "npm:postgres@^3.4.9",
         "npm:react-day-picker@^10.0.1",
         "npm:react-dom@^19.2.7",
         "npm:react@^19.2.7",

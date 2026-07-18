@@ -3,7 +3,7 @@ import { Memory } from "@mastra/memory";
 
 import { baseInstructions, sharedSourceInstructions } from "@/mastra/agents/base-instructions";
 import { models } from "@/mastra/models";
-import { pgVector, postgresStore } from "@/mastra/storage";
+import { libsqlStore, libsqlVector } from "@/mastra/storage";
 import { accessTopicTool } from "@/mastra/tools/access-topic-tool";
 import { webFetchTool } from "@/mastra/tools/web-fetch-tool";
 import { webSearchTool } from "@/mastra/tools/web-search-tool";
@@ -23,8 +23,8 @@ export const conversationMemory = new Memory({
       temporalMarkers: true,
     },
   },
-  storage: postgresStore,
-  vector: pgVector,
+  storage: libsqlStore,
+  vector: libsqlVector,
 });
 
 export const conversationAgentTools = {

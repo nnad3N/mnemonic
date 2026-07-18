@@ -170,7 +170,6 @@ const processForRagFn = Kit.gen(async function* (
 
   yield* await ctx.vector.createIndex({
     dimension: FILE_EMBEDDING_DIMENSION,
-    metadataIndexes: ["topicId", "fileId"],
   });
 
   yield* await ctx.vector.upsert({

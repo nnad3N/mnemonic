@@ -2,7 +2,7 @@ import { createVectorQueryTool } from "@mastra/rag";
 
 import { FILE_EMBEDDINGS_INDEX, fileEmbeddingModel } from "@/mastra/file-rag-config";
 
-import { PG_VECTOR_STORE_NAME } from "../storage";
+import { VECTOR_STORE_NAME } from "../storage";
 
 export const fileVectorSearchTool = createVectorQueryTool({
   description: [
@@ -16,5 +16,5 @@ export const fileVectorSearchTool = createVectorQueryTool({
   id: "file-vector-search",
   indexName: FILE_EMBEDDINGS_INDEX,
   model: fileEmbeddingModel,
-  vectorStoreName: PG_VECTOR_STORE_NAME,
+  vectorStoreName: VECTOR_STORE_NAME,
 });

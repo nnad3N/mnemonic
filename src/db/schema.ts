@@ -1,14 +1,15 @@
 import { defineRelationsPart } from "drizzle-orm";
-import { integer, pgTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/pg-core";
+import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { nanoid } from "nanoid";
 
 import { user } from "@/db/auth-schema";
+import { now } from "@/db/sql";
 import type { SafeId } from "@/lib/safe-id";
 
 export type FileStatus = "uploading" | "processing" | "ready" | "failed";
 
-export const topic = pgTable("topic", {
-  id: varchar("id", { length: 21 })
+export const topic = sqliteTable("topic", {
+  id: text("id")
     .$type<SafeId<"topic">>()
     .primaryKey()
     .$defaultFn(() => nanoid()),
@@ -17,19 +18,19 @@ export const topic = pgTable("topic", {
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
 
-  title: varchar("title", { length: 255 }).notNull(),
+  title: text("title").notNull(),
 
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at")
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
     .notNull()
     .$onUpdate(() => new Date())
-    .defaultNow(),
+    .default(now),
 });
 
-export const file = pgTable(
+export const file = sqliteTable(
   "file",
   {
-    id: varchar("id", { length: 21 })
+    id: text("id")
       .$type<SafeId<"file">>()
       .primaryKey()
       .$defaultFn(() => nanoid()),
@@ -37,25 +38,25 @@ export const file = pgTable(
       .$type<SafeId<"user">>()
       .notNull()
       .references(() => user.id, { onDelete: "restrict" }),
-    topicId: varchar("topic_id", { length: 21 })
+    topicId: text("topic_id")
       .$type<SafeId<"topic">>()
       .notNull()
       .references(() => topic.id, { onDelete: "restrict" }),
 
-    displayName: varchar("display_name", { length: 255 }).notNull(),
-    mimeType: varchar("mime_type", { length: 255 }).notNull(),
+    displayName: text("display_name").notNull(),
+    mimeType: text("mime_type").notNull(),
     sizeBytes: integer("size_bytes").notNull(),
-    sha256: varchar("sha256", { length: 64 }).notNull(),
+    sha256: text("sha256").notNull(),
 
     s3Key: text("s3_key").notNull(),
 
-    status: varchar("status", { length: 32 }).$type<FileStatus>().notNull().default("uploading"),
+    status: text("status").$type<FileStatus>().notNull().default("uploading"),
 
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at")
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
       .notNull()
       .$onUpdate(() => new Date())
-      .defaultNow(),
+      .default(now),
   },
   (table) => [uniqueIndex("file_topic_sha256_unique").on(table.topicId, table.sha256)],
 );

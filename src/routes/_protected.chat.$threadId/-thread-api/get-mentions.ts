@@ -1,10 +1,11 @@
 import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { matchError, Result } from "better-result";
-import { and, desc, eq, ilike } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { file, topic } from "@/db/schema";
+import { ilike } from "@/db/sql";
 import { dbKit } from "@/lib/db-kit";
 import type { DbKit } from "@/lib/db-kit";
 import { Kit, toServerFnError } from "@/lib/kit";

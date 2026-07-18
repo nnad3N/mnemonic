@@ -3,7 +3,7 @@ import type { Result as ResultType } from "better-result";
 
 import { Kit } from "@/lib/kit";
 import { FILE_EMBEDDINGS_INDEX } from "@/mastra/file-rag-config";
-import { pgVector } from "@/mastra/storage";
+import { libsqlVector } from "@/mastra/storage";
 
 export class VectorError extends TaggedError("VectorError")<{
   cause: unknown;
@@ -16,9 +16,9 @@ const toVectorError = (cause: unknown): VectorError =>
     message: "Vector operation failed",
   });
 
-type DeleteVectorsParams = Parameters<typeof pgVector.deleteVectors>[0];
-type CreateIndexInput = Omit<Parameters<typeof pgVector.createIndex>[0], "indexName">;
-type UpsertInput = Omit<Parameters<typeof pgVector.upsert>[0], "indexName">;
+type DeleteVectorsParams = Parameters<typeof libsqlVector.deleteVectors>[0];
+type CreateIndexInput = Omit<Parameters<typeof libsqlVector.createIndex>[0], "indexName">;
+type UpsertInput = Omit<Parameters<typeof libsqlVector.upsert>[0], "indexName">;
 
 type DeleteVectorsInput = {
   filter: NonNullable<DeleteVectorsParams["filter"]>;
@@ -36,7 +36,7 @@ export const vectorKit = createVectorKit({
   createIndex: async (input) =>
     Result.tryPromise({
       try: async () => {
-        await pgVector.createIndex({
+        await libsqlVector.createIndex({
           ...input,
           indexName: FILE_EMBEDDINGS_INDEX,
         });
@@ -46,7 +46,7 @@ export const vectorKit = createVectorKit({
   deleteVectors: async (input) =>
     Result.tryPromise({
       try: async () => {
-        await pgVector.deleteVectors({
+        await libsqlVector.deleteVectors({
           indexName: FILE_EMBEDDINGS_INDEX,
           filter: input.filter,
         });
@@ -56,7 +56,7 @@ export const vectorKit = createVectorKit({
   upsert: async (input) =>
     Result.tryPromise({
       try: async () => {
-        await pgVector.upsert({
+        await libsqlVector.upsert({
           ...input,
           indexName: FILE_EMBEDDINGS_INDEX,
         });

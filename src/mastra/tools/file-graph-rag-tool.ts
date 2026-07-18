@@ -6,7 +6,7 @@ import {
   fileEmbeddingModel,
 } from "@/mastra/file-rag-config";
 
-import { PG_VECTOR_STORE_NAME } from "../storage";
+import { VECTOR_STORE_NAME } from "../storage";
 
 export const fileGraphRagTool = createGraphRAGTool({
   description: [
@@ -24,5 +24,5 @@ export const fileGraphRagTool = createGraphRAGTool({
   id: "file-graph-rag",
   indexName: FILE_EMBEDDINGS_INDEX,
   model: fileEmbeddingModel,
-  vectorStoreName: PG_VECTOR_STORE_NAME,
+  vectorStoreName: VECTOR_STORE_NAME,
 });
