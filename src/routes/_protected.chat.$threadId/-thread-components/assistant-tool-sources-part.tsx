@@ -58,7 +58,7 @@ export const AssistantToolSourcesPart = ({ part }: AssistantToolSourcesPartProps
       <PopoverContent align="start" className="w-96 p-1 text-sm">
         <ScrollArea className="h-96 p-1">
           <p className="flex items-center gap-1.5 px-2 py-1 text-muted-foreground">
-            <GlobeIcon className="size-4" /> <T>Sources</T>
+            <GlobeIcon className="size-4" /> <T>Search results</T>
           </p>
           <ul className="flex flex-col">
             {links.map((link) => (

@@ -28,7 +28,7 @@ function RouteComponent() {
     <StickToBottom className="flex h-full min-h-0 w-full flex-col p-3" instance={stickToBottom}>
       <ScrollArea className="h-full min-h-0" viewportRef={stickToBottom.scrollRef}>
         <div
-          className="mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-2.5 pb-4"
+          className="mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-2.5 pb-64"
           ref={stickToBottom.contentRef}
         >
           {chat.messages.map((message, index) => (
