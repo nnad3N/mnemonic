@@ -12,7 +12,7 @@ import type { PropsWithChildren } from "react";
 
 import { cn } from "@/lib/utils";
 
-export type MentionVariant = "error" | "neutral" | "teal";
+export type MentionVariant = "error" | "neutral" | "cyan";
 
 type MentionRootProps = PropsWithChildren<{
   className?: string;
@@ -20,15 +20,18 @@ type MentionRootProps = PropsWithChildren<{
   variant?: MentionVariant;
 }>;
 
-export const MentionRoot = ({ render, className, children, variant = "teal" }: MentionRootProps) =>
+export const MentionRoot = ({ render, className, children, variant = "cyan" }: MentionRootProps) =>
   useRender({
     render,
     props: {
       className: cn(
         "mx-px inline-block translate-y-0.25 rounded-sm border px-1 py-0.5 align-baseline",
-        variant === "teal" && "border-teal-200 bg-teal-100",
-        variant === "error" && "border-destructive/15 bg-destructive/10",
-        variant === "neutral" && "border-gray-300 bg-gray-200/50",
+        variant === "cyan" &&
+          "border-f-cyan-200 bg-f-cyan-100 dark:border-f-cyan-700 dark:bg-f-cyan-800",
+        variant === "error" &&
+          "border-f-red-200 bg-f-red-100 dark:border-f-red-700 dark:bg-f-red-800",
+        variant === "neutral" &&
+          "border-f-base-200 bg-f-base-100/50 dark:border-f-base-700 dark:bg-f-base-800/50",
         className,
       ),
       children,

@@ -49,7 +49,7 @@ const getMentionVariant = (status: MentionStatus): MentionVariant => {
     return "neutral";
   }
 
-  return "teal";
+  return "cyan";
 };
 
 export const ThreadMentionElement = (props: PlateElementProps<TMentionElement>) => {
@@ -231,7 +231,7 @@ export const ThreadMentionElementStatic = (props: SlateElementProps<TMentionElem
 
   return (
     <MentionRoot
-      variant="teal"
+      variant="cyan"
       render={(renderProps) => <SlateElement {...props} {...renderProps} />}
     >
       <MentionContent>

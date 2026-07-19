@@ -268,10 +268,10 @@ const FileStatusChip = ({ status }: { status: FileStatus }) => {
         aria-hidden="true"
         className={cn(
           "size-1.5 rounded-full",
-          status === "ready" && "bg-green-500",
-          status === "failed" && "bg-red-500",
-          status === "uploading" && "bg-yellow-500",
-          status === "processing" && "bg-blue-500",
+          status === "ready" && "bg-f-green",
+          status === "failed" && "bg-f-red",
+          status === "uploading" && "bg-f-yellow",
+          status === "processing" && "bg-f-blue",
         )}
       />
       {label}

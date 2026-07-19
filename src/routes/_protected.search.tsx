@@ -158,7 +158,7 @@ const SearchInput = ({ onChange, value }: SearchInputProps) => {
   const gt = useGT();
 
   return (
-    <InputGroup>
+    <InputGroup className="border-border">
       <InputGroupAddon align="inline-start">
         <SearchIcon />
       </InputGroupAddon>
