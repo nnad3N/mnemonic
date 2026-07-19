@@ -6,6 +6,7 @@ import {
   SidebarInset,
   SidebarProvider,
   SidebarRail,
+  SidebarTrigger,
 } from "@/components/ui/sidebar";
 
 import { SidebarConversations } from "./-sidebar/sidebar-conversation";
@@ -46,7 +47,12 @@ function LayoutComponent() {
         <SidebarRail />
       </Sidebar>
       <SidebarInset className="min-h-0 overflow-hidden">
-        <Outlet />
+        <header className="flex h-10 shrink-0 items-center gap-2 px-3 md:hidden">
+          <SidebarTrigger />
+        </header>
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <Outlet />
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );
