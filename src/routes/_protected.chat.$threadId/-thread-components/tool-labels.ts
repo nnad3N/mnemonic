@@ -22,6 +22,11 @@ export const TOOL_LABELS = {
     error: "Could not access topic",
     pending: "Accessing topic",
   },
+  executeCode: {
+    done: "Executed code",
+    error: "Could not execute code",
+    pending: "Executing code",
+  },
   getFileFromS3: {
     done: "Read file",
     error: "Could not read file",

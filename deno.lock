@@ -11,6 +11,7 @@
     "npm:@fontsource-variable/geist@^5.2.9": "5.2.9",
     "npm:@fontsource/geist-sans@^5.2.5": "5.2.5",
     "npm:@generaltranslation/react-core-linter@~0.1.12": "0.1.12_@typescript-eslint+eslint-plugin@8.64.0__@typescript-eslint+parser@8.64.0___eslint@10.7.0___typescript@7.0.2__eslint@10.7.0__typescript@7.0.2_@typescript-eslint+parser@8.64.0__eslint@10.7.0__typescript@7.0.2_eslint@10.7.0_typescript@7.0.2",
+    "npm:@jitl/quickjs-ng-wasmfile-release-sync@0.32": "0.32.0",
     "npm:@kreuzberg/node@^4.10.2": "4.10.2",
     "npm:@libpdf/core@~0.4.1": "0.4.1",
     "npm:@libsql/client@~0.17.4": "0.17.4",
@@ -24,6 +25,7 @@
     "npm:@platejs/markdown@^53.2.2": "53.2.2_platejs@53.2.4__react@19.2.7__react-dom@19.2.7___react@19.2.7__@types+react@19.2.17__immer@11.1.11__scheduler@0.27.0_react@19.2.7_react-dom@19.2.7__react@19.2.7_typescript@7.0.2",
     "npm:@platejs/mention@53": "53.0.0_platejs@53.2.4__react@19.2.7__react-dom@19.2.7___react@19.2.7__@types+react@19.2.17__immer@11.1.11__scheduler@0.27.0_react@19.2.7_react-dom@19.2.7__react@19.2.7_@types+react@19.2.17_immer@11.1.11_scheduler@0.27.0",
     "npm:@rolldown/plugin-babel@~0.2.3": "0.2.3_@babel+core@7.29.7_rolldown@1.1.5_vite@8.1.4__esbuild@0.28.1_esbuild@0.28.1",
+    "npm:@sebastianwessel/quickjs@^3.1.0": "3.1.0_typescript@7.0.2_tslib@2.8.1",
     "npm:@shadcn/react@~0.2.1": "0.2.1_@types+react@19.2.17_react@19.2.7",
     "npm:@streamdown/code@^1.1.1": "1.1.1_react@19.2.7",
     "npm:@streamdown/math@^1.0.2": "1.0.2_react@19.2.7",
@@ -1563,6 +1565,15 @@
     "@isaacs/ttlcache@2.1.5": {
       "integrity": "sha512-VwGZqqjAWPICTmxUZnbpEfO60LhPWzquik+bmyXGY7pYRn6diEvCI5i6Ca+J6o2y4vS73HrpuMTo2dOvUevH8w=="
     },
+    "@jitl/quickjs-ffi-types@0.32.0": {
+      "integrity": "sha512-v9T+GQpmk43VDJ7d72sf0Nexhk+ArvtUihW27dy7lqAl0zBObFKtSBBIm5RBjwIhE8VwsPPm9PNuvPvNqLWUEg=="
+    },
+    "@jitl/quickjs-ng-wasmfile-release-sync@0.32.0": {
+      "integrity": "sha512-XAX2jjZWWh3M0YaRqi82xMKNW/gkF6mo3MpW3UY2cmVxnQai1JuboVsJQVoLU629iEL4XWvHtO4h5lo7NRnAcg==",
+      "dependencies": [
+        "@jitl/quickjs-ffi-types"
+      ]
+    },
     "@jridgewell/gen-mapping@0.3.13": {
       "integrity": "sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==",
       "dependencies": [
@@ -1606,6 +1617,174 @@
       "integrity": "sha512-q7qL4Mgjs1vByCaTnDFcBnV9HS7GVPJX5vyVoCgZHNSC9rjwIlmbXG5sUuorR5ndfHAIlJ8pVStxvjXHbNvtUg==",
       "dependencies": [
         "jsep"
+      ]
+    },
+    "@jsonjoy.com/base64@1.1.2_tslib@2.8.1": {
+      "integrity": "sha512-q6XAnWQDIMA3+FTiOYajoYqySkO+JSat0ytXGSuRdq9uXE7o92gzuQwQM14xaCRlBLGq3v5miDGC4vkVTn54xA==",
+      "dependencies": [
+        "tslib"
+      ]
+    },
+    "@jsonjoy.com/base64@17.67.0_tslib@2.8.1": {
+      "integrity": "sha512-5SEsJGsm15aP8TQGkDfJvz9axgPwAEm98S5DxOuYe8e1EbfajcDmgeXXzccEjh+mLnjqEKrkBdjHWS5vFNwDdw==",
+      "dependencies": [
+        "tslib"
+      ]
+    },
+    "@jsonjoy.com/buffers@1.2.1_tslib@2.8.1": {
+      "integrity": "sha512-12cdlDwX4RUM3QxmUbVJWqZ/mrK6dFQH4Zxq6+r1YXKXYBNgZXndx2qbCJwh3+WWkCSn67IjnlG3XYTvmvYtgA==",
+      "dependencies": [
+        "tslib"
+      ]
+    },
+    "@jsonjoy.com/buffers@17.67.0_tslib@2.8.1": {
+      "integrity": "sha512-tfExRpYxBvi32vPs9ZHaTjSP4fHAfzSmcahOfNxtvGHcyJel+aibkPlGeBB+7AoC6hL7lXIE++8okecBxx7lcw==",
+      "dependencies": [
+        "tslib"
+      ]
+    },
+    "@jsonjoy.com/codegen@1.0.0_tslib@2.8.1": {
+      "integrity": "sha512-E8Oy+08cmCf0EK/NMxpaJZmOxPqM+6iSe2S4nlSBrPZOORoDJILxtbSUEDKQyTamm/BVAhIGllOBNU79/dwf0g==",
+      "dependencies": [
+        "tslib"
+      ]
+    },
+    "@jsonjoy.com/codegen@17.67.0_tslib@2.8.1": {
+      "integrity": "sha512-idnkUplROpdBOV0HMcwhsCUS5TRUi9poagdGs70A6S4ux9+/aPuKbh8+UYRTLYQHtXvAdNfQWXDqZEx5k4Dj2Q==",
+      "dependencies": [
+        "tslib"
+      ]
+    },
+    "@jsonjoy.com/fs-core@4.64.0_tslib@2.8.1": {
+      "integrity": "sha512-zs2TAq7Six5jgMuoMNjpspAvOP3mhtgq/k1UyQodEzCtQi/N83y2/y+zcvnZSGp/Rxq96DBN+bValOBQAyn/ew==",
+      "dependencies": [
+        "@jsonjoy.com/fs-node-builtins",
+        "@jsonjoy.com/fs-node-utils",
+        "thingies",
+        "tslib"
+      ]
+    },
+    "@jsonjoy.com/fs-fsa@4.64.0_tslib@2.8.1": {
+      "integrity": "sha512-nMWOVbkLFyEgmXZih3wyvxA9XpgyyqyfrINMHvEFqhi7uqfRl7c9ERJt6yX7vgMPrB9Uo+OJO+Spa0cFzPD01w==",
+      "dependencies": [
+        "@jsonjoy.com/fs-core",
+        "@jsonjoy.com/fs-node-builtins",
+        "@jsonjoy.com/fs-node-utils",
+        "thingies",
+        "tslib"
+      ]
+    },
+    "@jsonjoy.com/fs-node-builtins@4.64.0_tslib@2.8.1": {
+      "integrity": "sha512-/o7WRFhUWaM/fOrslwLZGnzn4RmRILykn+lAL+mNObqqRNw+CQSiij6hpCeZ+C7buhdoVo7go/OYqzaSUfDYmA==",
+      "dependencies": [
+        "tslib"
+      ]
+    },
+    "@jsonjoy.com/fs-node-to-fsa@4.64.0_tslib@2.8.1": {
+      "integrity": "sha512-WDD9WVs0hb7UAEKTgZW2f66WDrbj7gIIWwpP3spbLyXa0rghtUaFTB8L4gdR3ZCWwiKIsj38/CNijpVmpnuPUw==",
+      "dependencies": [
+        "@jsonjoy.com/fs-fsa",
+        "@jsonjoy.com/fs-node-builtins",
+        "@jsonjoy.com/fs-node-utils",
+        "tslib"
+      ]
+    },
+    "@jsonjoy.com/fs-node-utils@4.64.0_tslib@2.8.1": {
+      "integrity": "sha512-k5Indsx9hWW9xSF7Y6oSKKwtCUNhzZxadub3owhIlitc+iMRVlPPdX2duTKQWBL3qNWpXya8jykgaaWpheeS4w==",
+      "dependencies": [
+        "@jsonjoy.com/fs-node-builtins",
+        "glob-to-regex.js",
+        "tslib"
+      ]
+    },
+    "@jsonjoy.com/fs-node@4.64.0_tslib@2.8.1": {
+      "integrity": "sha512-dO+NNkODbUli4uV42bcNrrLvq5rE7SNpdZ5TNd0dtbLsAaNK3MDiIC9lUi+brboGoIjW6vd2fB1qao60nrk5xA==",
+      "dependencies": [
+        "@jsonjoy.com/fs-core",
+        "@jsonjoy.com/fs-node-builtins",
+        "@jsonjoy.com/fs-node-utils",
+        "@jsonjoy.com/fs-print",
+        "@jsonjoy.com/fs-snapshot",
+        "glob-to-regex.js",
+        "thingies",
+        "tslib"
+      ]
+    },
+    "@jsonjoy.com/fs-print@4.64.0_tslib@2.8.1": {
+      "integrity": "sha512-PHZFccchvkhWrwPWHjmVAhbC3vSHCtyZvlZfJJ3ho2bnzl450hXri6/8e6pbkWdH+SkmLXNml0sV8e5HDAfxKw==",
+      "dependencies": [
+        "@jsonjoy.com/fs-node-utils",
+        "tree-dump",
+        "tslib"
+      ]
+    },
+    "@jsonjoy.com/fs-snapshot@4.64.0_tslib@2.8.1": {
+      "integrity": "sha512-oM7UDeL83q6NBzzsfKAsYKXKVXlykKFqqOLh4xZZKAzzROTlInkPbc6LTDGThEOnPiFiUzA7tYziHG9xavd76Q==",
+      "dependencies": [
+        "@jsonjoy.com/buffers@17.67.0_tslib@2.8.1",
+        "@jsonjoy.com/fs-node-utils",
+        "@jsonjoy.com/json-pack@17.67.0_tslib@2.8.1",
+        "@jsonjoy.com/util@17.67.0_tslib@2.8.1",
+        "tslib"
+      ]
+    },
+    "@jsonjoy.com/json-pack@1.21.0_tslib@2.8.1": {
+      "integrity": "sha512-+AKG+R2cfZMShzrF2uQw34v3zbeDYUqnQ+jg7ORic3BGtfw9p/+N6RJbq/kkV8JmYZaINknaEQ2m0/f693ZPpg==",
+      "dependencies": [
+        "@jsonjoy.com/base64@1.1.2_tslib@2.8.1",
+        "@jsonjoy.com/buffers@1.2.1_tslib@2.8.1",
+        "@jsonjoy.com/codegen@1.0.0_tslib@2.8.1",
+        "@jsonjoy.com/json-pointer@1.0.2_tslib@2.8.1",
+        "@jsonjoy.com/util@1.9.0_tslib@2.8.1",
+        "hyperdyperid",
+        "thingies",
+        "tree-dump",
+        "tslib"
+      ]
+    },
+    "@jsonjoy.com/json-pack@17.67.0_tslib@2.8.1": {
+      "integrity": "sha512-t0ejURcGaZsn1ClbJ/3kFqSOjlryd92eQY465IYrezsXmPcfHPE/av4twRSxf6WE+TkZgLY+71vCZbiIiFKA/w==",
+      "dependencies": [
+        "@jsonjoy.com/base64@17.67.0_tslib@2.8.1",
+        "@jsonjoy.com/buffers@17.67.0_tslib@2.8.1",
+        "@jsonjoy.com/codegen@17.67.0_tslib@2.8.1",
+        "@jsonjoy.com/json-pointer@17.67.0_tslib@2.8.1",
+        "@jsonjoy.com/util@17.67.0_tslib@2.8.1",
+        "hyperdyperid",
+        "thingies",
+        "tree-dump",
+        "tslib"
+      ]
+    },
+    "@jsonjoy.com/json-pointer@1.0.2_tslib@2.8.1": {
+      "integrity": "sha512-Fsn6wM2zlDzY1U+v4Nc8bo3bVqgfNTGcn6dMgs6FjrEnt4ZCe60o6ByKRjOGlI2gow0aE/Q41QOigdTqkyK5fg==",
+      "dependencies": [
+        "@jsonjoy.com/codegen@1.0.0_tslib@2.8.1",
+        "@jsonjoy.com/util@1.9.0_tslib@2.8.1",
+        "tslib"
+      ]
+    },
+    "@jsonjoy.com/json-pointer@17.67.0_tslib@2.8.1": {
+      "integrity": "sha512-+iqOFInH+QZGmSuaybBUNdh7yvNrXvqR+h3wjXm0N/3JK1EyyFAeGJvqnmQL61d1ARLlk/wJdFKSL+LHJ1eaUA==",
+      "dependencies": [
+        "@jsonjoy.com/util@17.67.0_tslib@2.8.1",
+        "tslib"
+      ]
+    },
+    "@jsonjoy.com/util@1.9.0_tslib@2.8.1": {
+      "integrity": "sha512-pLuQo+VPRnN8hfPqUTLTHk126wuYdXVxE6aDmjSeV4NCAgyxWbiOIeNJVtID3h1Vzpoi9m4jXezf73I6LgabgQ==",
+      "dependencies": [
+        "@jsonjoy.com/buffers@1.2.1_tslib@2.8.1",
+        "@jsonjoy.com/codegen@1.0.0_tslib@2.8.1",
+        "tslib"
+      ]
+    },
+    "@jsonjoy.com/util@17.67.0_tslib@2.8.1": {
+      "integrity": "sha512-6+8xBaz1rLSohlGh68D1pdw3AwDi9xydm8QNlAFkvnavCJYSze+pxoW2VKP8p308jtlMRLs5NTHfPlZLd4w7ew==",
+      "dependencies": [
+        "@jsonjoy.com/buffers@17.67.0_tslib@2.8.1",
+        "@jsonjoy.com/codegen@17.67.0_tslib@2.8.1",
+        "tslib"
       ]
     },
     "@juggle/resize-observer@3.4.0": {
@@ -2792,6 +2971,18 @@
     },
     "@scure/base@2.2.0": {
       "integrity": "sha512-b8XEupJibegiXV+tDUseI8oLQc8ei3d/4Jkb2RpbHh3MfE054ov3uIz2dhFkB3FI8iwYkEh0gGCApkrYggkPNg=="
+    },
+    "@sebastianwessel/quickjs@3.1.0_typescript@7.0.2_tslib@2.8.1": {
+      "integrity": "sha512-ljpJyk02VbctmsRMedczsjMcRfgeZSwvBsAY9G8f5VWWPjpX1kuJ5zqJ0FtYqX0yRCMzYd3ASkLegLgz695Yhw==",
+      "dependencies": [
+        "memfs",
+        "quickjs-emscripten-core",
+        "rate-limiter-flexible",
+        "typescript"
+      ],
+      "optionalPeers": [
+        "typescript"
+      ]
     },
     "@sec-ant/readable-stream@0.4.1": {
       "integrity": "sha512-831qok9r2t8AlxLko40y2ebgSDhenenCatLVeW/uBtnHPyhHOvG0C7TvfgecV+wHzIm5KUICgzmVpWS+IMEAeg=="
@@ -5984,6 +6175,12 @@
         "is-glob"
       ]
     },
+    "glob-to-regex.js@1.2.0_tslib@2.8.1": {
+      "integrity": "sha512-QMwlOQKU/IzqMUOAZWubUOT8Qft+Y0KQWnX9nK3ch0CJg0tTp4TvGZsTfudYKv2NzoQSyPcnA6TYeIQ3jGichQ==",
+      "dependencies": [
+        "tslib"
+      ]
+    },
     "goober@2.1.19_csstype@3.2.3": {
       "integrity": "sha512-U7veizMqxyKlM58+Z5j2ngJBH/r9siDmxpvNxSw0PylF6WQvrASJEZrxh1hidRBJc2jqoBVSyOban5u8m+6Rxg==",
       "dependencies": [
@@ -6348,6 +6545,9 @@
       "dependencies": [
         "ms@2.1.3"
       ]
+    },
+    "hyperdyperid@1.2.0": {
+      "integrity": "sha512-Y93lCzHYgGWdrJ66yIktxiaGULYc6oGiABxhcO5AufBeOyoIdZF7bIfLaOrbM0iGIOXQQgxxRrFEnb+Y6w1n4A=="
     },
     "iconv-lite@0.4.24": {
       "integrity": "sha512-v3MXnZAcvnywkTUEZomIActle7RXXeedOR31wwl7VlyoXO4Qi9arvSenNQWne1TcRwhCL1HwLI21bEqdpj8/rA==",
@@ -7238,6 +7438,25 @@
     },
     "media-typer@1.1.0": {
       "integrity": "sha512-aisnrDP4GNe06UcKFnV5bfMNPBUw4jsLGaWwWfnH3v02GnBuXX2MCVn5RbrWo0j3pczUilYblq7fQ7Nw2t5XKw=="
+    },
+    "memfs@4.64.0_tslib@2.8.1": {
+      "integrity": "sha512-Kw72fgY7Wn+sD8KmtNWSafl1dz0UvAsE/PHs3YVfLiaZuA3HxNm9sRLqAu0ATiBGJvME1PxZXbBZPv5GycDeAw==",
+      "dependencies": [
+        "@jsonjoy.com/fs-core",
+        "@jsonjoy.com/fs-fsa",
+        "@jsonjoy.com/fs-node",
+        "@jsonjoy.com/fs-node-builtins",
+        "@jsonjoy.com/fs-node-to-fsa",
+        "@jsonjoy.com/fs-node-utils",
+        "@jsonjoy.com/fs-print",
+        "@jsonjoy.com/fs-snapshot",
+        "@jsonjoy.com/json-pack@1.21.0_tslib@2.8.1",
+        "@jsonjoy.com/util@1.9.0_tslib@2.8.1",
+        "glob-to-regex.js",
+        "thingies",
+        "tree-dump",
+        "tslib"
+      ]
     },
     "merge-descriptors@2.0.0": {
       "integrity": "sha512-Snk314V5ayFLhp3fkUREub6WtjBfPdCPY1Ln8/8munuLuiYhsABgBVWsozAG+MWMbVEvcdcpbi9R7ww22l9Q3g=="
@@ -8476,11 +8695,20 @@
     "quick-format-unescaped@4.0.4": {
       "integrity": "sha512-tYC1Q1hgyRuHgloV/YXs2w15unPVh8qfu/qCTfhTYamaw7fyhumKa2yGpdSo87vY32rIclj+4fWYQXUMs9EHvg=="
     },
+    "quickjs-emscripten-core@0.32.0": {
+      "integrity": "sha512-QFnPfjFey8EqknSrSxe1hZrf1/8z7/6s1QzGOmKo6++02r7QRRX7ZoyNaZh7JuVjWsVW87KnQrbZqnHkOAzUyg==",
+      "dependencies": [
+        "@jitl/quickjs-ffi-types"
+      ]
+    },
     "range-parser@1.2.0": {
       "integrity": "sha512-kA5WQoNVo4t9lNx2kQNFCxKeBl5IbbSNBl1M/tLkw9WCn+hxNBAW5Qh8gdhs63CJnhjJ2zQWFoqPJP2sK1AV5A=="
     },
     "range-parser@1.3.0": {
       "integrity": "sha512-hek2mFQpPuI4E1BBKrSto+BU3e3x4xuarsbiwr3+lf7p44juvFMV0XFWQAP3xUyqXA4RrXLIoaSUGbSt056ZMw=="
+    },
+    "rate-limiter-flexible@11.2.0": {
+      "integrity": "sha512-L0eIK+BmFMi6NcvmtEg7RSswOFKi9MMD5RhBIypFfOve+G6Jl1Xbb8qEHgK3uRzNtkOFYF0L9f7P4rSf2PnUVw=="
     },
     "raw-body@3.0.2": {
       "integrity": "sha512-K5zQjDllxWkf7Z5xJdV0/B0WTNqx6vxG70zJE4N0kBs4LovmEYWJzQGxC9bS9RAKu3bgM40lrd5zoLJ12MQ5BA==",
@@ -9420,6 +9648,12 @@
         "b4a"
       ]
     },
+    "thingies@2.6.0_tslib@2.8.1": {
+      "integrity": "sha512-rMHRjmlFLM1R96UYPvpmnc3LYtdFrT33JIB7L9hetGue1qAPfn1N2LJeEjxUSidu1Iku+haLZXDuEXUHNGO/lg==",
+      "dependencies": [
+        "tslib"
+      ]
+    },
     "thread-stream@4.2.0": {
       "integrity": "sha512-e2zZ96wSChazBsbENf/Pcm/4swHt2cEKQ92rhUjkL9GCKiTDJIaTBenjE/m9DXi0QBmTMDkFDdOomUy20A1tDQ==",
       "dependencies": [
@@ -9468,6 +9702,12 @@
     },
     "tr46@0.0.3": {
       "integrity": "sha512-N3WMsuqV66lT30CrXNbEjx4GEwlow3v6rr4mCcv6prnfwhS01rkgyFdjPNBYd9br7LpXV1+Emh01fHnq2Gdgrw=="
+    },
+    "tree-dump@1.1.0_tslib@2.8.1": {
+      "integrity": "sha512-rMuvhU4MCDbcbnleZTFezWsaZXRFemSqAM+7jPnzUl1fo9w3YEKOxAeui0fz3OI4EU4hf23iyA7uQRVko+UaBA==",
+      "dependencies": [
+        "tslib"
+      ]
     },
     "tree-sitter-python@0.25.0": {
       "integrity": "sha512-eCmJx6zQa35GxaCtQD+wXHOhYqBxEL+bp71W/s3fcDMu06MrtzkVXR437dRrCrbrDbyLuUDJpAgycs7ncngLXw==",
@@ -9751,12 +9991,6 @@
       "integrity": "sha512-94iG+dEdEP/Sl3WWde+w9StIunlV8Dgj+vkt5wTwMoFQLaijiEZSXXy8KtcStpmEDtIptRJiNeD4ACTtVvnIKA==",
       "dependencies": [
         "dequal",
-        "react@19.2.7"
-      ]
-    },
-    "use-stick-to-bottom@1.1.6_react@19.2.7": {
-      "integrity": "sha512-z3Up8jYQGTkUCsGBnwg6/wj70KgXoW5Kz1AAc1j8MtQuYMBo6ZsdhrIXoegxa7gaMMilgQYyTohTrt3p94jHog==",
-      "dependencies": [
         "react@19.2.7"
       ]
     },
@@ -10109,6 +10343,7 @@
         "npm:@fontsource-variable/geist@^5.2.9",
         "npm:@fontsource/geist-sans@^5.2.5",
         "npm:@generaltranslation/react-core-linter@~0.1.12",
+        "npm:@jitl/quickjs-ng-wasmfile-release-sync@0.32",
         "npm:@kreuzberg/node@^4.10.2",
         "npm:@libpdf/core@~0.4.1",
         "npm:@libsql/client@~0.17.4",
@@ -10122,6 +10357,7 @@
         "npm:@platejs/markdown@^53.2.2",
         "npm:@platejs/mention@53",
         "npm:@rolldown/plugin-babel@~0.2.3",
+        "npm:@sebastianwessel/quickjs@^3.1.0",
         "npm:@shadcn/react@~0.2.1",
         "npm:@streamdown/code@^1.1.1",
         "npm:@streamdown/math@^1.0.2",

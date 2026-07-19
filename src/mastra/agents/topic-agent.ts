@@ -4,6 +4,7 @@ import { Memory } from "@mastra/memory";
 import { baseInstructions, sharedSourceInstructions } from "@/mastra/agents/base-instructions";
 import { models } from "@/mastra/models";
 import { libsqlStore, libsqlVector } from "@/mastra/storage";
+import { executeCodeTool } from "@/mastra/tools/execute-code-tool";
 import { fileGraphRagTool } from "@/mastra/tools/file-graph-rag-tool";
 import { fileVectorSearchTool } from "@/mastra/tools/file-vector-search-tool";
 import { getFileFromS3Tool } from "@/mastra/tools/get-file-from-s3-tool";
@@ -30,6 +31,7 @@ export const topicMemory = new Memory({
 });
 
 export const topicAgentTools = {
+  executeCode: executeCodeTool,
   fileGraphRag: fileGraphRagTool,
   fileVectorSearch: fileVectorSearchTool,
   getFileFromS3: getFileFromS3Tool,
@@ -50,6 +52,7 @@ Available sources:
 - Topic files: uploaded files in the current topic. Prefer these for questions about the user's documents.
 - Web: external or current information via webSearch (discover pages) or webFetch (read a known URL).
 - Conversation recall: past messages within the current topic. Use when the answer may already appear in prior chat.
+- Code execution: run JavaScript in an isolated sandbox via executeCode for calculations, parsing, data transforms, or HTTPS API reads.
 
 When sources conflict, prefer topic files over web, and web over conversation recall.
 
@@ -58,6 +61,10 @@ When sources conflict, prefer topic files over web, and web over conversation re
 - Use webFetch when the user provided a URL or a prior search already identified the page to read.
 - Prefer these for current events, external documentation, explicit web requests, or when topic file tools plus conversation recall did not fully answer.
 - Tool descriptions own exact input requirements and result shapes.
+
+## Code execution
+- Use executeCode for calculations, parsing, formatting, algorithmic checks, or calling HTTPS APIs with fetch (GET/HEAD, no auth headers).
+- Do not use it for authenticated APIs, filesystem access, or HTML pages better handled by webFetch/webSearch.
 
 ## Topic file access
 When gathering from topic files, pick the tool that fits the question. You do not need to run every file tool.
