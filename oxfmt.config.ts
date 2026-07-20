@@ -11,6 +11,7 @@ export default defineConfig({
     "**/coverage",
     "**/*.gen.*",
     "**/*.generated.*",
+    "**/src/lib/sandbox/modules/**",
   ],
   sortImports: true,
   sortTailwindcss: {

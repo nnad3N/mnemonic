@@ -4,6 +4,8 @@ import type { SandboxOptions } from "@sebastianwessel/quickjs";
 import type { JSONValue } from "ai";
 import { Result, TaggedError } from "better-result";
 
+import mathjsBundle from "./modules/math.js" with { type: "text" };
+
 const EXECUTION_TIMEOUT_MS = 5_000;
 const FETCH_TIMEOUT_MS = 5_000;
 const MEMORY_LIMIT_BYTES = 64 * 1024 * 1024;
@@ -78,27 +80,32 @@ const fetchAdapter = async (input: RequestInfo | URL, init?: RequestInit) => {
 const formatConsoleArgs = (args: unknown[]): string =>
   args.map((value) => Deno.inspect(value, { colors: false })).join(" ");
 
-const createExecuteSandboxOptions = (mutStdout: string[]): SandboxOptions => ({
+const createExecuteSandboxOptions = (mutLogs: string[]): SandboxOptions => ({
   allowFetch: true,
   allowFs: false,
   console: {
     error: (...args) => {
-      mutStdout.push(formatConsoleArgs(args));
+      mutLogs.push(formatConsoleArgs(args));
     },
     info: (...args) => {
-      mutStdout.push(formatConsoleArgs(args));
+      mutLogs.push(formatConsoleArgs(args));
     },
     log: (...args) => {
-      mutStdout.push(formatConsoleArgs(args));
+      mutLogs.push(formatConsoleArgs(args));
     },
     warn: (...args) => {
-      mutStdout.push(formatConsoleArgs(args));
+      mutLogs.push(formatConsoleArgs(args));
     },
   },
   fetchAdapter,
   executionTimeout: EXECUTION_TIMEOUT_MS,
   maxStackSize: MAX_STACK_SIZE_BYTES,
   memoryLimit: MEMORY_LIMIT_BYTES,
+  nodeModules: {
+    mathjs: {
+      "index.js": mathjsBundle,
+    },
+  },
   transformTypescript: false,
 });
 
@@ -116,7 +123,7 @@ const serializeResult = (value: unknown): JSONValue | undefined => {
   return undefined;
 };
 
-type RunTypeScriptInSandboxResult = Result<
+type RunCodeResult = Result<
   {
     output: JSONValue | undefined;
     logs: string;
@@ -124,9 +131,7 @@ type RunTypeScriptInSandboxResult = Result<
   SandboxError
 >;
 
-export const runTypeScriptInSandbox = async (
-  code: string,
-): Promise<RunTypeScriptInSandboxResult> => {
+export const runCode = async (code: string): Promise<RunCodeResult> => {
   const sandboxResult = await Result.tryPromise({
     try: async () => getQuickJsSandbox(),
     catch: (cause) =>
@@ -140,13 +145,13 @@ export const runTypeScriptInSandbox = async (
     return Result.err(sandboxResult.error);
   }
 
-  const mutStdout: string[] = [];
+  const mutLogs: string[] = [];
 
   const evalResult = await Result.tryPromise({
     try: async () =>
       sandboxResult.value.runSandboxed(
         async ({ evalCode }) => evalCode(code),
-        createExecuteSandboxOptions(mutStdout),
+        createExecuteSandboxOptions(mutLogs),
       ),
     catch: (cause) =>
       new SandboxRunError({
@@ -174,5 +179,5 @@ export const runTypeScriptInSandbox = async (
 
   const output = serializeResult(evalResult.value.data);
 
-  return Result.ok({ output, logs: mutStdout.join("\n") });
+  return Result.ok({ output, logs: mutLogs.join("\n") });
 };

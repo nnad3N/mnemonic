@@ -46,7 +46,7 @@ Available sources:
 - Conversation recall: past messages in the current conversation only. Prefer this when the answer may already appear in prior chat.
 - Web: current or external information via webSearch (discover pages) or webFetch (read a known URL).
 - Access topic: topic files and topic-scoped conversation history. Use when the user asks for information from a topic, topic files, or prior topic conversations.
-- Code execution: run JavaScript in an isolated sandbox via executeCode for calculations, parsing, data transforms, or HTTPS API reads.
+- Code execution: run JavaScript in an isolated sandbox via executeCode for calculations (including bundled mathjs), parsing, data transforms, or HTTPS API reads.
 
 ## Access topic
 Use accessTopic only when the topic is clear. If the user asks about a topic but no topic can be identified, ask which topic to use.

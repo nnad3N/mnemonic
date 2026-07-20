@@ -3,14 +3,14 @@ import { toStandardJsonSchema } from "@valibot/to-json-schema";
 import { Result } from "better-result";
 import * as v from "valibot";
 
-import { SandboxExecuteError, runTypeScriptInSandbox } from "@/lib/sandbox.ts";
+import { SandboxExecuteError, runCode } from "@/lib/sandbox/run-code.ts";
 
 const inputSchema = v.object({
   code: v.pipe(
     v.string(),
     v.nonEmpty(),
     v.description(
-      "JavaScript source to run in an isolated sandbox. Use `export default` to return a JSON-serializable value to the tool result.",
+      'JavaScript source to run in the sandbox. Import mathjs with `import { evaluate, unit } from "mathjs"` or `import math from "mathjs"` (already bundled; do not install). Use `export default` to return a JSON-serializable value.',
     ),
   ),
 });
@@ -40,14 +40,16 @@ export const executeCodeTool = createTool({
   outputSchema: toStandardJsonSchema(outputSchema),
   description: [
     "Executes JavaScript in an isolated QuickJS sandbox with no filesystem access.",
-    "Use for calculations, data transforms, parsing, formatting, quick algorithmic checks, or reading HTTPS APIs with fetch.",
-    "Do not use for authenticated APIs, HTML pages, file access, or long-running jobs; use webFetch to read pages, webSearch to discover sources, or topic file tools for uploaded files.",
+    "Use for calculations (including unit-aware math, matrices, and expression evaluation via the preloaded mathjs package), data transforms, parsing, formatting, quick algorithmic checks, or reading HTTPS APIs with fetch.",
+    "Import mathjs in the code; it is already bundled in the sandbox.",
+    "Do not use for authenticated APIs, HTML pages, file access, long-running jobs, discrete-event simulation, or full symbolic CAS work; use webFetch to read pages, webSearch to discover sources, or topic file tools for uploaded files.",
     "Network access is limited to HTTPS GET/HEAD requests with Accept or Accept-Language headers; Authorization and cookies are unavailable.",
-    "On success, returns output captured from console.log and the JSON-serialized default export when present.",
+    "On success, returns console output and the JSON-serialized default export when present.",
     "On failure, returns execution error details.",
+    "If mathjs is insufficient for a formula, fall back to plain JavaScript Math or ask for clarification.",
   ].join(" "),
   execute: async ({ code }) => {
-    const executionResult = await runTypeScriptInSandbox(code);
+    const executionResult = await runCode(code);
 
     if (Result.isOk(executionResult)) {
       return {

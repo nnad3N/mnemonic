@@ -13,6 +13,7 @@ export default defineConfig({
     "**.gen.ts",
     "**/src/components/ui/**",
     "**/src/components/assistant-ui/**",
+    "**/src/lib/sandbox/modules/**",
   ],
   options: {
     typeAware: true,

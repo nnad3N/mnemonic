@@ -52,7 +52,7 @@ Available sources:
 - Topic files: uploaded files in the current topic. Prefer these for questions about the user's documents.
 - Web: external or current information via webSearch (discover pages) or webFetch (read a known URL).
 - Conversation recall: past messages within the current topic. Use when the answer may already appear in prior chat.
-- Code execution: run JavaScript in an isolated sandbox via executeCode for calculations, parsing, data transforms, or HTTPS API reads.
+- Code execution: run JavaScript in an isolated sandbox via executeCode for calculations (including bundled mathjs), parsing, data transforms, or HTTPS API reads.
 
 When sources conflict, prefer topic files over web, and web over conversation recall.
 
@@ -61,10 +61,6 @@ When sources conflict, prefer topic files over web, and web over conversation re
 - Use webFetch when the user provided a URL or a prior search already identified the page to read.
 - Prefer these for current events, external documentation, explicit web requests, or when topic file tools plus conversation recall did not fully answer.
 - Tool descriptions own exact input requirements and result shapes.
-
-## Code execution
-- Use executeCode for calculations, parsing, formatting, algorithmic checks, or calling HTTPS APIs with fetch (GET/HEAD, no auth headers).
-- Do not use it for authenticated APIs, filesystem access, or HTML pages better handled by webFetch/webSearch.
 
 ## Topic file access
 When gathering from topic files, pick the tool that fits the question. You do not need to run every file tool.
