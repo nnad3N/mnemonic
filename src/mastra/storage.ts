@@ -18,4 +18,4 @@ export const libsqlVector = new LibSQLVector({
 });
 
 /** Mastra vector store key; includes embedder id so model changes can reindex into a new store. */
-export const VECTOR_STORE_NAME = "libsql-vector-v1";
+export const VECTOR_STORE_NAME = "libsql-vector-v001";

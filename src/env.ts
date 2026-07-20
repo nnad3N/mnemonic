@@ -10,6 +10,8 @@ export const env = createEnv({
 
   runtimeEnv: { ...import.meta.env, ...process.env },
 
+  skipValidation: process.env.SKIP_ENV_VALIDATION === "1",
+
   server: {
     DATABASE_AUTH_TOKEN: v.optional(v.pipe(v.string(), v.nonEmpty())),
     DATABASE_URL: v.pipe(v.string(), v.nonEmpty()),

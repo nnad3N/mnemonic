@@ -26,6 +26,8 @@ This project is not vibe-coded, and I am putting real engineering effort into it
 
 ## Status
 
-I hope to have a working beta ready soon. The beta should be available for anyone who wants to self-host it and try it out.
+Mnemonic is in **alpha**. Some core features are unfinished.
+
+For **local self-hosting** (Docker; OpenRouter API key required), see [docs/self-hosting.md](docs/self-hosting.md). Deployment docs are local-only for now — not a production guide.
 
 A roadmap and a broader README update should be published by the end of July 2026.
