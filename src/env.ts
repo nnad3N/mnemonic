@@ -14,7 +14,7 @@ export const env = createEnv({
     DATABASE_AUTH_TOKEN: v.optional(v.pipe(v.string(), v.nonEmpty())),
     DATABASE_URL: v.pipe(v.string(), v.nonEmpty()),
     FIRECRAWL_API_URL: v.pipe(v.string(), v.url()),
-    GOOGLE_GENERATIVE_AI_API_KEY: v.pipe(v.string(), v.nonEmpty()),
+    OPENROUTER_API_KEY: v.pipe(v.string(), v.nonEmpty()),
     S3_ACCESS_KEY_ID: v.pipe(v.string(), v.nonEmpty()),
     S3_BUCKET: v.pipe(v.string(), v.nonEmpty()),
     S3_ENDPOINT: v.pipe(v.string(), v.url()),

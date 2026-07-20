@@ -1,37 +1,14 @@
-import { defaultEmbeddingSettingsMiddleware, wrapEmbeddingModel } from "ai";
+import { openrouter } from "@/mastra/openrouter";
 
-import { google } from "@/mastra/google";
+/** Qwen3 Embedding 8B native output size. */
+export const FILE_EMBEDDING_DIMENSION = 4096;
 
-export const FILE_EMBEDDING_DIMENSION = 1536;
-
-/** Google batchEmbedContents accepts at most 100 requests per call. */
-const GEMINI_BATCH_EMBED_LIMIT = 100;
-
-const baseEmbedding = google.embedding("gemini-embedding-2");
-
-const embedding = wrapEmbeddingModel({
-  middleware: [
-    defaultEmbeddingSettingsMiddleware({
-      settings: {
-        providerOptions: {
-          google: {
-            outputDimensionality: FILE_EMBEDDING_DIMENSION,
-          },
-        },
-      },
-    }),
-    {
-      specificationVersion: "v3",
-      overrideMaxEmbeddingsPerCall: () => GEMINI_BATCH_EMBED_LIMIT,
-    },
-  ],
-  model: baseEmbedding,
-});
+const chatModel = openrouter("xiaomi/mimo-v2.5");
 
 export const models = {
-  embedding,
-  conversationAgent: google("gemini-flash-lite-latest"),
-  topicAgent: google("gemini-flash-lite-latest"),
-  observationalMemory: google("gemini-flash-lite-latest"),
-  threadTitle: google("gemini-flash-lite-latest"),
+  embedding: openrouter.textEmbeddingModel("qwen/qwen3-embedding-8b"),
+  conversationAgent: chatModel,
+  topicAgent: chatModel,
+  observationalMemory: chatModel,
+  threadTitle: chatModel,
 } as const;

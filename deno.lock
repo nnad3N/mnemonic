@@ -1,7 +1,6 @@
 {
   "version": "5",
   "specifiers": {
-    "npm:@ai-sdk/google@3.0.94": "3.0.94_zod@4.4.3",
     "npm:@ai-sdk/provider-utils@5.0.10": "5.0.10_zod@4.4.3",
     "npm:@ai-sdk/react@^3.0.195": "3.0.230_react@19.2.7_zod@4.4.3",
     "npm:@aws-sdk/client-s3@3.1073.0": "3.1073.0",
@@ -20,6 +19,7 @@
     "npm:@mastra/libsql@^1.16.0": "1.16.0_@mastra+core@1.51.0__zod@4.4.3__ai@6.0.180___zod@4.4.3__express@5.2.1_ai@6.0.180__zod@4.4.3",
     "npm:@mastra/memory@^1.23.0": "1.23.0_@mastra+core@1.51.0__zod@4.4.3__ai@6.0.180___zod@4.4.3__express@5.2.1_ai@6.0.180__zod@4.4.3_express@5.2.1",
     "npm:@mastra/rag@^2.4.1": "2.4.1_@mastra+core@1.51.0__zod@4.4.3__ai@6.0.180___zod@4.4.3__express@5.2.1_zod@4.4.3_ai@6.0.180__zod@4.4.3_express@5.2.1",
+    "npm:@openrouter/ai-sdk-provider@2.9.1": "2.9.1_ai@6.0.180__zod@4.4.3",
     "npm:@platejs/basic-nodes@53": "53.0.0_platejs@53.2.4__react@19.2.7__react-dom@19.2.7___react@19.2.7__@types+react@19.2.17__immer@11.1.11__scheduler@0.27.0_react@19.2.7_react-dom@19.2.7__react@19.2.7_@types+react@19.2.17_immer@11.1.11_scheduler@0.27.0",
     "npm:@platejs/combobox@53.0.0": "53.0.0_platejs@53.2.4__react@19.2.7__react-dom@19.2.7___react@19.2.7__@types+react@19.2.17__immer@11.1.11__scheduler@0.27.0_react@19.2.7_react-dom@19.2.7__react@19.2.7_@types+react@19.2.17_immer@11.1.11_scheduler@0.27.0",
     "npm:@platejs/markdown@^53.2.2": "53.2.2_platejs@53.2.4__react@19.2.7__react-dom@19.2.7___react@19.2.7__@types+react@19.2.17__immer@11.1.11__scheduler@0.27.0_react@19.2.7_react-dom@19.2.7__react@19.2.7_typescript@7.0.2",
@@ -121,14 +121,6 @@
         "@ai-sdk/provider@3.0.14",
         "@ai-sdk/provider-utils@4.0.39_zod@4.4.3",
         "@vercel/oidc",
-        "zod@4.4.3"
-      ]
-    },
-    "@ai-sdk/google@3.0.94_zod@4.4.3": {
-      "integrity": "sha512-s9vWtsReWMElsmL0R/JfLuBPvgS64pwS4D/8AOGu8fvqBhRkGegsG4q1aNZn30SEox2yfQi76aAFLB5J542Rmg==",
-      "dependencies": [
-        "@ai-sdk/provider@3.0.14",
-        "@ai-sdk/provider-utils@4.0.39_zod@4.4.3",
         "zod@4.4.3"
       ]
     },
@@ -2177,6 +2169,13 @@
     },
     "@oozcitak/util@10.0.0": {
       "integrity": "sha512-hAX0pT/73190NLqBPPWSdBVGtbY6VOhWYK3qqHqtXQ1gK7kS2yz4+ivsN07hpJ6I3aeMtKP6J6npsEKOAzuTLA=="
+    },
+    "@openrouter/ai-sdk-provider@2.9.1_ai@6.0.180__zod@4.4.3": {
+      "integrity": "sha512-okgq07Vdkro4CB5INbfhwa0e6VR1HS7sidNcfHN/MeXLJvX1JmQCff/vem6tcxwT9r1avyFrXSlfv9B28D/Pag==",
+      "dependencies": [
+        "ai@6.0.180_zod@4.4.3",
+        "zod@4.4.3"
+      ]
     },
     "@opentelemetry/api@1.9.1": {
       "integrity": "sha512-gLyJlPHPZYdAk1JENA9LeHejZe1Ti77/pTeFm/nMXmQH/HFZlcS/O2XJB+L8fkbrNSqhdtlvjBVjxwUYanNH5Q=="
@@ -10370,7 +10369,6 @@
   "workspace": {
     "packageJson": {
       "dependencies": [
-        "npm:@ai-sdk/google@3.0.94",
         "npm:@ai-sdk/provider-utils@5.0.10",
         "npm:@ai-sdk/react@^3.0.195",
         "npm:@aws-sdk/client-s3@3.1073.0",
@@ -10389,6 +10387,7 @@
         "npm:@mastra/libsql@^1.16.0",
         "npm:@mastra/memory@^1.23.0",
         "npm:@mastra/rag@^2.4.1",
+        "npm:@openrouter/ai-sdk-provider@2.9.1",
         "npm:@platejs/basic-nodes@53",
         "npm:@platejs/combobox@53.0.0",
         "npm:@platejs/markdown@^53.2.2",

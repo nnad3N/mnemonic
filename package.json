@@ -28,7 +28,6 @@
     "sandbox:modules": "deno bundle --minify --platform=browser --packages=bundle -o ./src/lib/sandbox/modules/mathjs.txt ./src/lib/sandbox/modules/mathjs-entry.ts"
   },
   "dependencies": {
-    "@ai-sdk/google": "3.0.94",
     "@ai-sdk/provider-utils": "5.0.10",
     "@ai-sdk/react": "^3.0.195",
     "@aws-sdk/client-s3": "3.1073.0",
@@ -46,6 +45,7 @@
     "@mastra/libsql": "^1.16.0",
     "@mastra/memory": "^1.23.0",
     "@mastra/rag": "^2.4.1",
+    "@openrouter/ai-sdk-provider": "2.9.1",
     "@platejs/basic-nodes": "^53.0.0",
     "@platejs/combobox": "53.0.0",
     "@platejs/markdown": "^53.2.2",
