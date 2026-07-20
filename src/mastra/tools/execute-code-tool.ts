@@ -17,15 +17,23 @@ const inputSchema = v.object({
 
 const successOutputSchema = v.object({
   type: v.literal("success"),
-  result: v.optional(v.unknown()),
-  logs: v.string(),
+  result: v.optional(
+    v.union([
+      v.string(),
+      v.number(),
+      v.boolean(),
+      v.record(v.string(), v.unknown()),
+      v.array(v.unknown()),
+      v.null(),
+    ]),
+  ),
+  logs: v.optional(v.string()),
 });
 
 const errorOutputSchema = v.object({
   type: v.literal("error"),
   message: v.string(),
   name: v.optional(v.string()),
-  stack: v.optional(v.string()),
   isSyntaxError: v.optional(v.boolean()),
 });
 
@@ -39,9 +47,9 @@ export const executeCodeTool = createTool({
   inputSchema: toStandardJsonSchema(inputSchema),
   outputSchema: toStandardJsonSchema(outputSchema),
   description: [
-    "Executes JavaScript in an isolated QuickJS sandbox with no filesystem or network access.",
+    "Executes code in an isolated ES6 JavaScript sandbox with no filesystem or network access.",
     "Use for calculations, data transforms, parsing, formatting, or quick algorithmic checks.",
-    "You can use mathjs after importing it. If uncertain about what functions are available, research it on the official mathjs docs.",
+    'You can use mathjs after importing with `import mathjs from "mathjs"`. If uncertain about what functions are available, research it on the official mathjs docs.',
     "The tool result is `export default` (JSON-serialized into `result`). Example: `export default { answer: value }`.",
     "On success, `result` is the default export and `logs` is console output.",
     "On failure, returns execution error details.",
@@ -64,7 +72,6 @@ export const executeCodeTool = createTool({
         type: "error",
         name: error.name,
         message: error.message,
-        stack: error.stack,
         isSyntaxError: error.isSyntaxError,
       } satisfies ExecuteCodeError;
     }

@@ -25,7 +25,7 @@
     "db:pull": "drizzle-kit pull",
     "db:studio": "drizzle-kit studio",
     "mastra:dev": "mastra dev",
-    "sandbox:modules": "deno bundle --minify --platform=browser --packages=bundle -o ./src/lib/sandbox/modules/math.js ./src/lib/sandbox/modules/mathjs-entry.ts"
+    "sandbox:modules": "deno bundle --minify --platform=browser --packages=bundle -o ./src/lib/sandbox/modules/mathjs.txt ./src/lib/sandbox/modules/mathjs-entry.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "3.0.94",

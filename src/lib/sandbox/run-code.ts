@@ -4,7 +4,7 @@ import type { SandboxOptions } from "@sebastianwessel/quickjs";
 import type { JSONValue } from "ai";
 import { Result, TaggedError } from "better-result";
 
-import mathjsBundle from "./modules/math.js" with { type: "text" };
+import mathjsBundle from "./modules/mathjs.txt?raw";
 
 const EXECUTION_TIMEOUT_MS = 5_000;
 const MEMORY_LIMIT_BYTES = 64 * 1024 * 1024;
@@ -86,7 +86,7 @@ const serializeResult = (value: unknown): JSONValue | undefined => {
 type RunCodeResult = Result<
   {
     output: JSONValue | undefined;
-    logs: string;
+    logs: string | undefined;
   },
   SandboxError
 >;
@@ -138,6 +138,7 @@ export const runCode = async (code: string): Promise<RunCodeResult> => {
   }
 
   const output = serializeResult(evalResult.value.data);
+  const logs = mutLogs.join("\n").trim();
 
-  return Result.ok({ output, logs: mutLogs.join("\n") });
+  return Result.ok({ output, logs: logs.length > 0 ? logs : undefined });
 };

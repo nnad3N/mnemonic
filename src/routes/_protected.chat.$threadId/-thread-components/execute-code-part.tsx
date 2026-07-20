@@ -17,11 +17,31 @@ type ExecuteCodePartProps = {
   part: ExecuteCodeToolPart;
 };
 
+const toExecuteCodeMarkdown = (code: string, output: ExecuteCodeToolPart["output"]): string => {
+  const sections = [`\`\`\`javascript\n${code}\n\`\`\``];
+
+  if (output?.type === "success") {
+    if (output.result !== undefined) {
+      sections.push(`\`\`\`json\n${JSON.stringify(output.result, null, 2)}\n\`\`\``);
+    }
+
+    if (output.logs) {
+      sections.push(`\`\`\`logs\n${output.logs}\n\`\`\``);
+    }
+  }
+
+  if (output?.type === "error") {
+    sections.push(`\`\`\`error\n${output.name}: ${output.message}\n\`\`\``);
+  }
+
+  return sections.join("\n\n");
+};
+
 export const ExecuteCodePart = ({ part }: ExecuteCodePartProps) => {
   const code = part.input?.code;
 
   if (!code) {
-    return <AssistantToolPart part={part} />;
+    return <AssistantToolPart part={part} interactive={false} />;
   }
 
   return (
@@ -34,7 +54,7 @@ export const ExecuteCodePart = ({ part }: ExecuteCodePartProps) => {
       </CollapsibleTrigger>
       <CollapsibleContent className="pt-2">
         <Streamdown mode="static" plugins={streamdownPlugins}>
-          {`\`\`\`javascript\n${code}\n\`\`\``}
+          {toExecuteCodeMarkdown(code, part.output)}
         </Streamdown>
       </CollapsibleContent>
     </Collapsible>
