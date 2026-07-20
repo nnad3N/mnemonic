@@ -6,9 +6,9 @@ import { Result, TaggedError } from "better-result";
 
 import mathjsBundle from "./modules/mathjs.txt?raw";
 
-const EXECUTION_TIMEOUT_MS = 5_000;
-const MEMORY_LIMIT_BYTES = 64 * 1024 * 1024;
-const MAX_STACK_SIZE_BYTES = 1024 * 1024;
+const EXECUTION_TIMEOUT_MS = 10_000;
+const MEMORY_LIMIT_BYTES = 128 * 1024 * 1024;
+const MAX_STACK_SIZE_BYTES = 4 * 1024 * 1024;
 
 export class SandboxInitError extends TaggedError("SandboxInitError")<{
   cause: unknown;
