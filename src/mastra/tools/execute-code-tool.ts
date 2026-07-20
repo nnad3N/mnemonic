@@ -48,8 +48,8 @@ export const executeCodeTool = createTool({
   outputSchema: toStandardJsonSchema(outputSchema),
   description: [
     "Executes code in an isolated ES6 JavaScript sandbox with no filesystem or network access.",
-    "Use for calculations, data transforms, parsing, formatting, or quick algorithmic checks.",
-    'You can use mathjs after importing with `import mathjs from "mathjs"`. If uncertain about what functions are available, research it on the official mathjs docs.',
+    "Use for calculations (prefer using mathjs over plain code), data transforms, parsing, formatting, or quick algorithmic checks.",
+    "You can use mathjs after importing it. If uncertain about what functions are available, research it on the official mathjs docs.",
     "The tool result is `export default` (JSON-serialized into `result`). Example: `export default { answer: value }`.",
     "On success, `result` is the default export and `logs` is console output.",
     "On failure, returns execution error details.",
