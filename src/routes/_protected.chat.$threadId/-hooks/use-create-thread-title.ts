@@ -68,6 +68,13 @@ const createThreadTitleFn = Kit.gen(async function* (
         abortSignal: AbortSignal.timeout(TITLE_GENERATION_TIMEOUT_MS),
         model: models.threadTitle,
         prompt: input.text,
+        providerOptions: {
+          openrouter: {
+            reasoning: {
+              effort: "none",
+            },
+          },
+        },
         system: TITLE_SYSTEM_PROMPT,
       });
 
