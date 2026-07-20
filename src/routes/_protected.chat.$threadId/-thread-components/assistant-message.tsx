@@ -32,7 +32,7 @@ type AssistantMessageProps = {
 export const AssistantMessage = ({ isAnimating = false, message }: AssistantMessageProps) => {
   return (
     <MessageStateContext.Provider value={{ isAnimating }}>
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-2">
         {message.parts.map((part, i) => (
           <AssistantMessagePart key={`${part.type}-${i}`} part={part} />
         ))}

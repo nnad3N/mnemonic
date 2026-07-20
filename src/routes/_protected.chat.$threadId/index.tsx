@@ -27,7 +27,13 @@ function RouteComponent() {
   const isBusy = chat.status === "submitted" || chat.status === "streaming";
 
   return (
-    <MessageScrollerProvider autoScroll defaultScrollPosition="end" key={threadId}>
+    <MessageScrollerProvider
+      autoScroll
+      defaultScrollPosition="end"
+      key={threadId}
+      scrollMargin={0}
+      scrollPreviousItemPeek={0}
+    >
       <div className="flex h-full min-h-0 w-full flex-col p-3">
         <MessageScroller className="min-h-0 flex-1">
           <MessageScrollerViewport>
