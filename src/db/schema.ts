@@ -4,6 +4,7 @@ import { nanoid } from "nanoid";
 
 import { user } from "@/db/auth-schema";
 import { now } from "@/db/sql";
+import type { ModelCapability } from "@/lib/model-capability";
 import type { SafeId } from "@/lib/safe-id";
 
 export type FileStatus = "uploading" | "processing" | "ready" | "failed";
@@ -61,7 +62,20 @@ export const file = sqliteTable(
   (table) => [uniqueIndex("file_topic_sha256_unique").on(table.topicId, table.sha256)],
 );
 
-export const appRelations = defineRelationsPart({ file, topic, user }, (r) => ({
+export const settings = sqliteTable("settings", {
+  userId: text("user_id")
+    .$type<SafeId<"user">>()
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+  modelCapability: text("model_capability").$type<ModelCapability>().notNull().default("standard"),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+    .notNull()
+    .$onUpdate(() => new Date())
+    .default(now),
+});
+
+export const appRelations = defineRelationsPart({ file, settings, topic, user }, (r) => ({
   file: {
     topic: r.one.topic({
       from: r.file.topicId,
@@ -72,6 +86,15 @@ export const appRelations = defineRelationsPart({ file, topic, user }, (r) => ({
     files: r.many.file(),
     user: r.one.user({
       from: r.topic.userId,
+      to: r.user.id,
+    }),
+  },
+  user: {
+    settings: r.one.settings(),
+  },
+  settings: {
+    user: r.one.user({
+      from: r.settings.userId,
       to: r.user.id,
     }),
   },

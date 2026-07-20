@@ -1,9 +1,7 @@
 import { createCodePlugin } from "@streamdown/code";
 import { createMathPlugin } from "@streamdown/math";
 import { createMermaidPlugin } from "@streamdown/mermaid";
-import type { FileUIPart, SourceDocumentUIPart, SourceUrlUIPart } from "ai";
 import { isToolUIPart } from "ai";
-import { FileIcon, FileTextIcon, LinkIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Streamdown } from "streamdown";
 
@@ -12,7 +10,6 @@ import { MessageStateContext } from "@/routes/_protected.chat.$threadId/-message
 import { AssistantReasoningPart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-reasoning-part";
 import { AssistantToolPart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-tool-part";
 import { ExecuteCodePart } from "@/routes/_protected.chat.$threadId/-thread-components/execute-code-part.tsx";
-import { ThreadMetaLine } from "@/routes/_protected.chat.$threadId/-thread-components/thread-meta-line";
 import { WebSourcesPart } from "@/routes/_protected.chat.$threadId/-thread-components/web-sources-part.tsx";
 import type {
   ThreadUIMessage,
@@ -70,15 +67,6 @@ const AssistantMessagePart = ({ part }: AssistantMessagePartProps) => {
     case "reasoning": {
       return <AssistantReasoningPart part={part} />;
     }
-    case "file": {
-      return <FilePart part={part} />;
-    }
-    case "source-url": {
-      return <SourceUrlPart part={part} />;
-    }
-    case "source-document": {
-      return <SourceDocumentPart part={part} />;
-    }
     case "tool-webSearch":
     case "tool-webFetch": {
       return <WebSourcesPart part={part} />;
@@ -96,38 +84,3 @@ const AssistantMessagePart = ({ part }: AssistantMessagePartProps) => {
     }
   }
 };
-
-type FilePartProps = {
-  part: FileUIPart;
-};
-
-const FilePart = ({ part }: FilePartProps) => (
-  <ThreadMetaLine>
-    <FileIcon className="size-4 shrink-0" />
-    {part.filename ?? part.mediaType}
-  </ThreadMetaLine>
-);
-
-type SourceUrlPartProps = {
-  part: SourceUrlUIPart;
-};
-
-const SourceUrlPart = ({ part }: SourceUrlPartProps) => (
-  <ThreadMetaLine>
-    <LinkIcon className="size-4 shrink-0" />
-    <a href={part.url} rel="noopener" target="_blank">
-      {part.title ?? part.url}
-    </a>
-  </ThreadMetaLine>
-);
-
-type SourceDocumentPartProps = {
-  part: SourceDocumentUIPart;
-};
-
-const SourceDocumentPart = ({ part }: SourceDocumentPartProps) => (
-  <ThreadMetaLine>
-    <FileTextIcon className="size-4 shrink-0" />
-    {part.title}
-  </ThreadMetaLine>
-);

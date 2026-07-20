@@ -9,6 +9,7 @@ import { useComposerActions } from "../../-hooks/use-composer-actions";
 import { useComposerUpload } from "../../-hooks/use-composer-upload";
 import { useThreadChat } from "../../-thread-chat-provider";
 import type { ThreadInputLocation } from "../../../-chat-store";
+import { CapabilityPicker } from "./capability-picker";
 
 type ComposerFooterProps = {
   location: ThreadInputLocation;
@@ -20,8 +21,9 @@ export const ComposerFooter = ({ location }: ComposerFooterProps) => {
 
   return (
     <div className="flex w-full items-center justify-between">
-      <UploadButton location={location} />
-      <div className="ml-auto">
+      <CapabilityPicker />
+      <div className="ml-auto flex items-center gap-1">
+        <UploadButton location={location} />
         {chat.status === "streaming" || chat.status === "submitted" ? (
           <Button
             onClick={async () => {

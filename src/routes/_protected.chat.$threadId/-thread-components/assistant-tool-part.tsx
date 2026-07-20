@@ -1,5 +1,3 @@
-import { mergeProps } from "@base-ui/react/merge-props";
-import { useRender } from "@base-ui/react/use-render";
 import type { DynamicToolUIPart, ToolUIPart } from "ai";
 import { getToolName } from "ai";
 import { T } from "gt-tanstack-start";
@@ -7,7 +5,10 @@ import type { ReactNode } from "react";
 
 import { getToolPartStatus } from "@/lib/ai-sdk/tool-parts";
 import { cn } from "@/lib/utils";
-import { useMessageState } from "@/routes/_protected.chat.$threadId/-hooks/use-message-state";
+import {
+  ToolIndicator,
+  type ToolIndicatorProps,
+} from "@/routes/_protected.chat.$threadId/-thread-components/tool-indicator";
 import { isKnownToolName } from "@/routes/_protected.chat.$threadId/-thread-components/tool-labels";
 import type { ThreadUITools } from "@/routes/_protected.chat.$threadId/-thread-types";
 
@@ -98,7 +99,7 @@ const renderToolLabel = (toolName: keyof ThreadUITools, status: ToolStatus): Rea
   }
 };
 
-type AssistantToolPartProps = Omit<useRender.ComponentProps<"button">, "part"> & {
+type AssistantToolPartProps = Omit<ToolIndicatorProps, "part" | "pending"> & {
   part: DynamicToolUIPart | ToolUIPart<ThreadUITools>;
   interactive?: boolean;
 };
@@ -111,32 +112,21 @@ export const AssistantToolPart = ({
   children,
   ...props
 }: AssistantToolPartProps) => {
-  const { isAnimating } = useMessageState();
   const toolName = getToolName(part);
   const isKnown = isKnownToolName(toolName);
   const status = getToolPartStatus(part);
 
-  return useRender({
-    enabled: isKnown,
-    defaultTagName: interactive ? "button" : "div",
-    props: mergeProps<"button">(
-      {
-        className: cn(
-          "flex items-center gap-1.5 text-muted-foreground",
-          status === "pending" && isAnimating && "shimmer",
-          status === "error" && "text-destructive",
-          interactive && "transition-colors hover:text-foreground",
-          className,
-        ),
-        children: (
-          <>
-            {isKnown ? renderToolLabel(toolName, status) : null}
-            {children}
-          </>
-        ),
-      },
-      props,
-    ),
-    render,
-  });
+  return (
+    <ToolIndicator
+      enabled={isKnown}
+      interactive={interactive}
+      pending={status === "pending"}
+      className={cn(status === "error" && "text-destructive", className)}
+      render={render}
+      {...props}
+    >
+      {isKnown ? renderToolLabel(toolName, status) : null}
+      {children}
+    </ToolIndicator>
+  );
 };

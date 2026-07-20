@@ -2,8 +2,9 @@ import type { ChatStatus } from "ai";
 import { getToolName, isToolUIPart } from "ai";
 import { T } from "gt-tanstack-start";
 
+import { MessageStateContext } from "@/routes/_protected.chat.$threadId/-message-state-context";
 import { AssistantMessage } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-message";
-import { ThreadMetaLine } from "@/routes/_protected.chat.$threadId/-thread-components/thread-meta-line";
+import { ToolIndicator } from "@/routes/_protected.chat.$threadId/-thread-components/tool-indicator";
 import { isKnownToolName } from "@/routes/_protected.chat.$threadId/-thread-components/tool-labels";
 import { UserMessage } from "@/routes/_protected.chat.$threadId/-thread-components/user-message";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
@@ -61,11 +62,11 @@ export const ThreadMessage = ({ message, index, messageCount, status }: ThreadMe
         index,
         messageCount,
       }) ? (
-        <ThreadMetaLine
-          className={status === "streaming" || status === "submitted" ? "shimmer" : ""}
-        >
-          <T>Planning next moves...</T>
-        </ThreadMetaLine>
+        <MessageStateContext.Provider value={{ isAnimating: true }}>
+          <ToolIndicator pending={status === "streaming" || status === "submitted"}>
+            <T>Planning next moves...</T>
+          </ToolIndicator>
+        </MessageStateContext.Provider>
       ) : (
         <AssistantMessage
           isAnimating={status === "streaming" && index === messageCount - 1}

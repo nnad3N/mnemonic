@@ -2,7 +2,8 @@ import { Agent } from "@mastra/core/agent";
 import { Memory } from "@mastra/memory";
 
 import { baseInstructions, sharedSourceInstructions } from "@/mastra/agents/base-instructions";
-import { models } from "@/mastra/models";
+import { getAgentModel, models } from "@/mastra/models";
+import { mnemonicRequestContextSchema } from "@/mastra/request-context";
 import { libsqlStore, libsqlVector } from "@/mastra/storage";
 import { accessTopicTool } from "@/mastra/tools/access-topic-tool";
 import { executeCodeTool } from "@/mastra/tools/execute-code-tool";
@@ -62,7 +63,8 @@ Use recall to browse past messages in the current conversation only:
 - mode "search" with query — find relevant messages in the current thread.
 `,
   memory: conversationMemory,
-  model: models.conversationAgent,
+  requestContextSchema: mnemonicRequestContextSchema,
+  model: getAgentModel,
   name: "Conversation",
   tools: conversationAgentTools,
 });

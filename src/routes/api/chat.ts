@@ -12,6 +12,7 @@ import type { Kits } from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit";
 import type { MemoryKit } from "@/lib/memory-kit";
 import { authMiddleware } from "@/lib/middleware/auth-middleware";
+import { DEFAULT_MODEL_CAPABILITY } from "@/lib/model-capability";
 import { toSafeId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
 import { mastra } from "@/mastra";
@@ -91,6 +92,12 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
   }
 
   const agentId = topic ? topicAgentId : conversationAgentId;
+  const userSettings = yield* await ctx.db.run((db) =>
+    db.query.settings.findFirst({
+      columns: { modelCapability: true },
+      where: { userId: input.userId },
+    }),
+  );
 
   if (input.body.messageId) {
     const { messages: storedMessages } = yield* await ctx.memory.listMessages({
@@ -112,6 +119,7 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
 
   const requestContext = new RequestContext<MnemonicRequestContext>();
   requestContext.set("userId", input.userId);
+  requestContext.set("modelCapability", userSettings?.modelCapability ?? DEFAULT_MODEL_CAPABILITY);
 
   if (topic) {
     requestContext.set("filter", { topicId: topic.id });

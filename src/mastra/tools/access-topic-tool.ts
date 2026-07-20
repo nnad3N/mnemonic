@@ -5,15 +5,16 @@ import { Result } from "better-result";
 import { nanoid } from "nanoid";
 import * as v from "valibot";
 
-import { dbKit } from "@/lib/db-kit";
 import type { DbKit } from "@/lib/db-kit";
-import { Kit } from "@/lib/kit";
+import { dbKit } from "@/lib/db-kit";
 import type { Kits } from "@/lib/kit";
-import { toSafeId } from "@/lib/safe-id";
+import { Kit } from "@/lib/kit";
+import { DEFAULT_MODEL_CAPABILITY, type ModelCapability } from "@/lib/model-capability";
 import type { SafeId } from "@/lib/safe-id";
+import { toSafeId } from "@/lib/safe-id";
 import { topicAgent } from "@/mastra/agents/topic-agent";
-import { mnemonicRequestContextSchema } from "@/mastra/request-context";
 import type { MnemonicRequestContext } from "@/mastra/request-context";
+import { mnemonicRequestContextSchema } from "@/mastra/request-context";
 
 const inputSchema = v.object({
   topicId: v.pipe(
@@ -46,6 +47,7 @@ type AccessTopicSuccess = v.InferOutput<typeof successOutputSchema>;
 type AccessTopicError = v.InferOutput<typeof errorOutputSchema>;
 
 type AccessTopicInput = {
+  modelCapability: ModelCapability;
   topicId: string;
   prompt: string;
   userId?: SafeId<"user">;
@@ -82,6 +84,7 @@ const accessTopicFn = Kit.gen(async function* (ctx: AccessTopicCtx, input: Acces
   const topicRequestContext = new RequestContext<MnemonicRequestContext>();
 
   topicRequestContext.set("userId", ownedTopic.userId);
+  topicRequestContext.set("modelCapability", input.modelCapability);
   topicRequestContext.set("filter", { topicId: ownedTopic.id });
 
   const result = yield* await Result.tryPromise(async () =>
@@ -124,6 +127,7 @@ export const accessTopicTool = createTool({
   ].join(" "),
   execute: async ({ topicId, prompt }, context) => {
     const result = await accessTopicFn(accessTopicCtx, {
+      modelCapability: context.requestContext?.get("modelCapability") ?? DEFAULT_MODEL_CAPABILITY,
       topicId,
       prompt,
       userId: context.requestContext?.get("userId"),

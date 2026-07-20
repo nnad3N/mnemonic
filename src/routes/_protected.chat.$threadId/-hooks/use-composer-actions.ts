@@ -6,7 +6,7 @@ import { ElementApi, TextApi } from "platejs";
 import type { PlateEditor } from "platejs/react";
 import { useEditorRef, useEditorSelector } from "platejs/react";
 
-import { useCreateThreadTitle } from "../-thread-api/create-thread-title";
+import { useCreateThreadTitle } from "./use-create-thread-title";
 import { threadQuery } from "../-thread-api/get-thread";
 import { useThreadChat } from "../-thread-chat-provider";
 import { getThreadEditorId, plateToMarkdown } from "../-thread-components/composer/plate";

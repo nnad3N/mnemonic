@@ -46,11 +46,8 @@ export const ExecuteCodePart = ({ part }: ExecuteCodePartProps) => {
 
   return (
     <Collapsible>
-      <CollapsibleTrigger
-        className="group/trigger flex items-center gap-0.5"
-        render={<AssistantToolPart part={part} />}
-      >
-        <ChevronRightIcon className="size-4 shrink-0 opacity-0 transition-opacity group-hover/trigger:opacity-100 group-data-panel-open/trigger:rotate-90 group-data-panel-open/trigger:opacity-100" />
+      <CollapsibleTrigger render={<AssistantToolPart part={part} interactive />}>
+        <ChevronRightIcon className="opacity-0 transition-opacity group-hover/tool:opacity-100 group-data-panel-open/tool:rotate-90 group-data-panel-open/tool:opacity-100" />
       </CollapsibleTrigger>
       <CollapsibleContent className="pt-2">
         <Streamdown mode="static" plugins={streamdownPlugins}>

@@ -2,7 +2,8 @@ import { Agent } from "@mastra/core/agent";
 import { Memory } from "@mastra/memory";
 
 import { baseInstructions, sharedSourceInstructions } from "@/mastra/agents/base-instructions";
-import { models } from "@/mastra/models";
+import { getAgentModel, models } from "@/mastra/models";
+import { mnemonicRequestContextSchema } from "@/mastra/request-context";
 import { libsqlStore, libsqlVector } from "@/mastra/storage";
 import { executeCodeTool } from "@/mastra/tools/execute-code-tool";
 import { fileGraphRagTool } from "@/mastra/tools/file-graph-rag-tool";
@@ -78,7 +79,8 @@ Use recall to browse past messages within the current topic:
 Threads from other topics or standalone conversations are not accessible.
 `,
   memory: topicMemory,
-  model: models.topicAgent,
+  requestContextSchema: mnemonicRequestContextSchema,
+  model: getAgentModel,
   name: "Topic",
   tools: topicAgentTools,
 });
