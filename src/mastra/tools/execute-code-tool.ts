@@ -10,7 +10,7 @@ const inputSchema = v.object({
     v.string(),
     v.nonEmpty(),
     v.description(
-      'JavaScript source to run in the sandbox. Import mathjs with `import { evaluate, unit } from "mathjs"` or `import math from "mathjs"` (already bundled; do not install). Use `export default` to return a JSON-serializable value.',
+      "JavaScript source to run in the sandbox. End with `export default <value>` so the tool returns that JSON-serializable value as `result`.",
     ),
   ),
 });
@@ -39,14 +39,12 @@ export const executeCodeTool = createTool({
   inputSchema: toStandardJsonSchema(inputSchema),
   outputSchema: toStandardJsonSchema(outputSchema),
   description: [
-    "Executes JavaScript in an isolated QuickJS sandbox with no filesystem access.",
-    "Use for calculations (including unit-aware math, matrices, and expression evaluation via the preloaded mathjs package), data transforms, parsing, formatting, quick algorithmic checks, or reading HTTPS APIs with fetch.",
-    "Import mathjs in the code; it is already bundled in the sandbox.",
-    "Do not use for authenticated APIs, HTML pages, file access, long-running jobs, discrete-event simulation, or full symbolic CAS work; use webFetch to read pages, webSearch to discover sources, or topic file tools for uploaded files.",
-    "Network access is limited to HTTPS GET/HEAD requests with Accept or Accept-Language headers; Authorization and cookies are unavailable.",
-    "On success, returns console output and the JSON-serialized default export when present.",
+    "Executes JavaScript in an isolated QuickJS sandbox with no filesystem or network access.",
+    "Use for calculations, data transforms, parsing, formatting, or quick algorithmic checks.",
+    "You can use mathjs after importing it. If uncertain about what functions are available, research it on the official mathjs docs.",
+    "The tool result is `export default` (JSON-serialized into `result`). Example: `export default { answer: value }`.",
+    "On success, `result` is the default export and `logs` is console output.",
     "On failure, returns execution error details.",
-    "If mathjs is insufficient for a formula, fall back to plain JavaScript Math or ask for clarification.",
   ].join(" "),
   execute: async ({ code }) => {
     const executionResult = await runCode(code);

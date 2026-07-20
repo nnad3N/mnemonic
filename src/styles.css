@@ -13,13 +13,11 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
 
-/* Compact rhythm for assistant chat prose (shadcn/typeset preset). */
 .typeset-chat {
   --typeset-size: 14px;
   --typeset-leading: 1.6;
   --typeset-flow: 1em;
 }
-
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

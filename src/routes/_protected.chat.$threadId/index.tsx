@@ -34,7 +34,7 @@ function RouteComponent() {
       scrollMargin={0}
       scrollPreviousItemPeek={0}
     >
-      <div className="flex h-full min-h-0 w-full flex-col p-3">
+      <div className="typeset typeset-chat flex h-full min-h-0 w-full flex-col p-3">
         <MessageScroller className="min-h-0 flex-1">
           <MessageScrollerViewport>
             <MessageScrollerContent

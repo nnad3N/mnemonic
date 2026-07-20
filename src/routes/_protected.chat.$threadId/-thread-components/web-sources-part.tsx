@@ -17,10 +17,6 @@ type ToolSourceLink = {
   title?: string;
 };
 
-type AssistantToolSourcesPartProps = {
-  part: WebSourcesToolPart;
-};
-
 const getSourceLinks = (part: WebSourcesToolPart): ToolSourceLink[] => {
   switch (part.type) {
     case "tool-webSearch": {
@@ -43,7 +39,11 @@ const getSourceLinks = (part: WebSourcesToolPart): ToolSourceLink[] => {
   }
 };
 
-export const AssistantToolSourcesPart = ({ part }: AssistantToolSourcesPartProps) => {
+type WebSourcesPartProps = {
+  part: WebSourcesToolPart;
+};
+
+export const WebSourcesPart = ({ part }: WebSourcesPartProps) => {
   const links = getSourceLinks(part);
 
   if (links.length === 0) {
@@ -52,11 +52,9 @@ export const AssistantToolSourcesPart = ({ part }: AssistantToolSourcesPartProps
 
   return (
     <Popover>
-      <PopoverTrigger>
-        <AssistantToolPart part={part} className="transition-colors hover:text-foreground" />
-      </PopoverTrigger>
+      <PopoverTrigger render={<AssistantToolPart part={part} />} />
       <PopoverContent align="start" className="w-96 p-1 text-sm">
-        <ScrollArea className="h-96 p-1">
+        <ScrollArea className="p-1 *:data-[slot=scroll-area-viewport]:h-auto *:data-[slot=scroll-area-viewport]:max-h-96">
           <p className="flex items-center gap-1.5 px-2 py-1 text-muted-foreground">
             <GlobeIcon className="size-4" /> <T>Search results</T>
           </p>

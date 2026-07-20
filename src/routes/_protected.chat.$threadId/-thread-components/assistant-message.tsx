@@ -11,8 +11,9 @@ import { useMessageState } from "@/routes/_protected.chat.$threadId/-hooks/use-m
 import { MessageStateContext } from "@/routes/_protected.chat.$threadId/-message-state-context";
 import { AssistantReasoningPart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-reasoning-part";
 import { AssistantToolPart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-tool-part";
-import { AssistantToolSourcesPart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-tool-sources-part";
+import { ExecuteCodePart } from "@/routes/_protected.chat.$threadId/-thread-components/execute-code-part.tsx";
 import { ThreadMetaLine } from "@/routes/_protected.chat.$threadId/-thread-components/thread-meta-line";
+import { WebSourcesPart } from "@/routes/_protected.chat.$threadId/-thread-components/web-sources-part.tsx";
 import type {
   ThreadUIMessage,
   ThreadUIMessagePart,
@@ -53,19 +54,17 @@ const AssistantMessagePart = ({ part }: AssistantMessagePartProps) => {
   switch (part.type) {
     case "text": {
       return (
-        <div className="typeset typeset-chat">
-          <Streamdown
-            isAnimating={isAnimating}
-            mermaid={{
-              config: {
-                theme: resolvedTheme === "dark" ? "dark" : "default",
-              },
-            }}
-            plugins={streamdownPlugins}
-          >
-            {part.text}
-          </Streamdown>
-        </div>
+        <Streamdown
+          isAnimating={isAnimating}
+          mermaid={{
+            config: {
+              theme: resolvedTheme === "dark" ? "dark" : "default",
+            },
+          }}
+          plugins={streamdownPlugins}
+        >
+          {part.text}
+        </Streamdown>
       );
     }
     case "reasoning": {
@@ -82,12 +81,15 @@ const AssistantMessagePart = ({ part }: AssistantMessagePartProps) => {
     }
     case "tool-webSearch":
     case "tool-webFetch": {
-      return <AssistantToolSourcesPart part={part} />;
+      return <WebSourcesPart part={part} />;
+    }
+    case "tool-executeCode": {
+      return <ExecuteCodePart part={part} />;
     }
 
     default: {
       if (isToolUIPart(part)) {
-        return <AssistantToolPart part={part} />;
+        return <AssistantToolPart part={part} interactive={false} />;
       }
 
       return null;

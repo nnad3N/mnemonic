@@ -52,7 +52,6 @@ Available sources:
 - Topic files: uploaded files in the current topic. Prefer these for questions about the user's documents.
 - Web: external or current information via webSearch (discover pages) or webFetch (read a known URL).
 - Conversation recall: past messages within the current topic. Use when the answer may already appear in prior chat.
-- Code execution: run JavaScript in an isolated sandbox via executeCode for calculations (including bundled mathjs), parsing, data transforms, or HTTPS API reads.
 
 When sources conflict, prefer topic files over web, and web over conversation recall.
 

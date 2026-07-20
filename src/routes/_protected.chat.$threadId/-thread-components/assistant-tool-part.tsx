@@ -1,3 +1,5 @@
+import { mergeProps } from "@base-ui/react/merge-props";
+import { useRender } from "@base-ui/react/use-render";
 import type { DynamicToolUIPart, ToolUIPart } from "ai";
 import { getToolName } from "ai";
 import { T } from "gt-tanstack-start";
@@ -6,7 +8,6 @@ import type { ReactNode } from "react";
 import { getToolPartStatus } from "@/lib/ai-sdk/tool-parts";
 import { cn } from "@/lib/utils";
 import { useMessageState } from "@/routes/_protected.chat.$threadId/-hooks/use-message-state";
-import { ThreadMetaLine } from "@/routes/_protected.chat.$threadId/-thread-components/thread-meta-line";
 import { isKnownToolName } from "@/routes/_protected.chat.$threadId/-thread-components/tool-labels";
 import type { ThreadUITools } from "@/routes/_protected.chat.$threadId/-thread-types";
 
@@ -97,30 +98,45 @@ const renderToolLabel = (toolName: keyof ThreadUITools, status: ToolStatus): Rea
   }
 };
 
-type AssistantToolPartProps = {
+type AssistantToolPartProps = Omit<useRender.ComponentProps<"button">, "part"> & {
   part: DynamicToolUIPart | ToolUIPart<ThreadUITools>;
-  className?: string;
+  interactive?: boolean;
 };
 
-export const AssistantToolPart = ({ part, className }: AssistantToolPartProps) => {
+export const AssistantToolPart = ({
+  part,
+  className,
+  interactive = true,
+  render,
+  children,
+  ...props
+}: AssistantToolPartProps) => {
   const { isAnimating } = useMessageState();
   const toolName = getToolName(part);
-
-  if (!isKnownToolName(toolName)) {
-    return null;
-  }
-
+  const isKnown = isKnownToolName(toolName);
   const status = getToolPartStatus(part);
 
-  return (
-    <ThreadMetaLine
-      className={cn(
-        status === "pending" && isAnimating && "shimmer",
-        status === "error" && "text-destructive",
-        className,
-      )}
-    >
-      {renderToolLabel(toolName, status)}
-    </ThreadMetaLine>
-  );
+  return useRender({
+    enabled: isKnown,
+    defaultTagName: interactive ? "button" : "div",
+    props: mergeProps<"button">(
+      {
+        className: cn(
+          "flex items-center gap-1.5 text-muted-foreground",
+          status === "pending" && isAnimating && "shimmer",
+          status === "error" && "text-destructive",
+          interactive && "transition-colors hover:text-foreground",
+          className,
+        ),
+        children: (
+          <>
+            {isKnown ? renderToolLabel(toolName, status) : null}
+            {children}
+          </>
+        ),
+      },
+      props,
+    ),
+    render,
+  });
 };
