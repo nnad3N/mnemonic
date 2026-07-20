@@ -26,7 +26,7 @@ export const ToolIndicator = ({
     props: mergeProps(
       {
         className: cn(
-          "flex items-center gap-0.5 text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+          "flex w-max items-center gap-0.5 text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
           pending && isAnimating
             ? "shimmer"
             : interactive

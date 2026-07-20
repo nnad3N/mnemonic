@@ -5,6 +5,7 @@ import { Streamdown } from "streamdown";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AssistantToolPart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-tool-part";
+import { streamdownLinkSafety } from "@/routes/_protected.chat.$threadId/-thread-components/streamdown-link-safety-modal";
 import type { ThreadUITools } from "@/routes/_protected.chat.$threadId/-thread-types";
 
 const streamdownPlugins = {
@@ -50,7 +51,7 @@ export const ExecuteCodePart = ({ part }: ExecuteCodePartProps) => {
         <ChevronRightIcon className="opacity-0 transition-opacity group-hover/tool:opacity-100 group-data-panel-open/tool:rotate-90 group-data-panel-open/tool:opacity-100" />
       </CollapsibleTrigger>
       <CollapsibleContent className="pt-2">
-        <Streamdown mode="static" plugins={streamdownPlugins}>
+        <Streamdown linkSafety={streamdownLinkSafety} mode="static" plugins={streamdownPlugins}>
           {toExecuteCodeMarkdown(code, part.output)}
         </Streamdown>
       </CollapsibleContent>

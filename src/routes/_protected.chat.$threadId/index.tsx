@@ -27,13 +27,7 @@ function RouteComponent() {
   const isBusy = chat.status === "submitted" || chat.status === "streaming";
 
   return (
-    <MessageScrollerProvider
-      autoScroll
-      defaultScrollPosition="end"
-      key={threadId}
-      scrollMargin={0}
-      scrollPreviousItemPeek={0}
-    >
+    <MessageScrollerProvider autoScroll defaultScrollPosition="end" key={threadId}>
       <div className="typeset typeset-chat flex h-full min-h-0 w-full flex-col p-3">
         <MessageScroller className="min-h-0 flex-1">
           <MessageScrollerViewport>
@@ -43,10 +37,12 @@ function RouteComponent() {
             >
               {chat.messages.map((message, index) => (
                 <MessageScrollerItem
-                  className={cn(index > editingMessageIndex && "opacity-50")}
+                  className={cn(
+                    index > editingMessageIndex && "opacity-50",
+                    message.role === "user" && index !== 0 && "pt-12",
+                  )}
                   key={message.id}
                   messageId={message.id}
-                  scrollAnchor={message.role === "user"}
                 >
                   <ThreadMessage
                     index={index}

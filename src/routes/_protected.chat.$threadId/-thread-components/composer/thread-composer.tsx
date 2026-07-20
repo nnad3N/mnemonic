@@ -1,6 +1,7 @@
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 import { getRouteApi } from "@tanstack/react-router";
+import { useGT } from "gt-tanstack-start";
 import { Plate, PlateContent, useEditorMounted, usePlateEditor } from "platejs/react";
 import { useEffect, useRef } from "react";
 
@@ -30,6 +31,7 @@ const isAllowedDrop = (types: readonly string[]) =>
 const Route = getRouteApi("/_protected/chat/$threadId");
 
 export const ThreadComposer = ({ location }: ThreadComposerProps) => {
+  const gt = useGT();
   const threadId = Route.useParams({
     select: (params) => params.threadId,
   });
@@ -149,7 +151,8 @@ export const ThreadComposer = ({ location }: ThreadComposerProps) => {
               e.preventDefault();
               return true;
             }}
-            className="p-1 outline-none"
+            placeholder={gt("Research, compute, @ for context…")}
+            className="p-1 outline-none **:data-slate-placeholder:text-muted-foreground **:data-slate-placeholder:opacity-100"
           />
         </Plate>
       </ScrollArea>

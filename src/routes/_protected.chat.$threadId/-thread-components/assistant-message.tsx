@@ -10,7 +10,9 @@ import { MessageStateContext } from "@/routes/_protected.chat.$threadId/-message
 import { AssistantReasoningPart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-reasoning-part";
 import { AssistantToolPart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-tool-part";
 import { ExecuteCodePart } from "@/routes/_protected.chat.$threadId/-thread-components/execute-code-part.tsx";
-import { WebSourcesPart } from "@/routes/_protected.chat.$threadId/-thread-components/web-sources-part.tsx";
+import { streamdownLinkSafety } from "@/routes/_protected.chat.$threadId/-thread-components/streamdown-link-safety-modal";
+import { WebFetchPart } from "@/routes/_protected.chat.$threadId/-thread-components/web-fetch-part";
+import { WebSearchPart } from "@/routes/_protected.chat.$threadId/-thread-components/web-search-part";
 import type {
   ThreadUIMessage,
   ThreadUIMessagePart,
@@ -53,6 +55,7 @@ const AssistantMessagePart = ({ part }: AssistantMessagePartProps) => {
       return (
         <Streamdown
           isAnimating={isAnimating}
+          linkSafety={streamdownLinkSafety}
           mermaid={{
             config: {
               theme: resolvedTheme === "dark" ? "dark" : "default",
@@ -67,9 +70,11 @@ const AssistantMessagePart = ({ part }: AssistantMessagePartProps) => {
     case "reasoning": {
       return <AssistantReasoningPart part={part} />;
     }
-    case "tool-webSearch":
+    case "tool-webSearch": {
+      return <WebSearchPart part={part} />;
+    }
     case "tool-webFetch": {
-      return <WebSourcesPart part={part} />;
+      return <WebFetchPart part={part} />;
     }
     case "tool-executeCode": {
       return <ExecuteCodePart part={part} />;

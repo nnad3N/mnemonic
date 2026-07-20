@@ -6,13 +6,13 @@ import { ElementApi, TextApi } from "platejs";
 import type { PlateEditor } from "platejs/react";
 import { useEditorRef, useEditorSelector } from "platejs/react";
 
-import { useCreateThreadTitle } from "./use-create-thread-title";
 import { threadQuery } from "../-thread-api/get-thread";
 import { useThreadChat } from "../-thread-chat-provider";
 import { getThreadEditorId, plateToMarkdown } from "../-thread-components/composer/plate";
 import type { ThreadMetadataAttachment, ThreadUIMessage } from "../-thread-types";
 import type { ThreadInputLocation } from "../../-chat-store";
 import { useChatStore } from "../../-chat-store";
+import { useCreateThreadTitle } from "./use-create-thread-title";
 
 const Route = getRouteApi("/_protected/chat/$threadId");
 

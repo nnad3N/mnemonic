@@ -32,6 +32,7 @@ export default defineConfig({
     },
   ],
   rules: {
+    "no-console": ["warn", { allow: ["warn", "error"] }],
     "gt/static-jsx": ["error", { libs: ["gt-tanstack-start"] }],
     "gt/static-string": ["error", { libs: ["gt-tanstack-start"] }],
     "gt/no-data-attrs-on-branch": ["error", { libs: ["gt-tanstack-start"] }],
