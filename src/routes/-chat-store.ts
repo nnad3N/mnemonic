@@ -46,10 +46,7 @@ type State = {
 type Actions = {
   setEditingState: (data: EditingState | null) => void;
   setComposerValue: (threadId: ThreadId, value: Value) => void;
-  upsertAttachment: (
-    threadId: ThreadId,
-    attachment: Exclude<ThreadAttachment, { status: "persisted" }>,
-  ) => void;
+  upsertAttachment: (threadId: ThreadId, attachment: ThreadAttachment) => void;
   removeAttachment: (threadId: ThreadId, sha256: string) => void;
   hydrateAttachments: (threadId: ThreadId, messages: ThreadUIMessage[]) => void;
   removeComposerState: (threadId: ThreadId) => void;

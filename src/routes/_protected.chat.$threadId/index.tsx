@@ -43,18 +43,17 @@ function RouteComponent() {
             >
               {chat.messages.map((message, index) => (
                 <MessageScrollerItem
+                  className={cn(index > editingMessageIndex && "opacity-50")}
                   key={message.id}
                   messageId={message.id}
                   scrollAnchor={message.role === "user"}
                 >
-                  <div className={cn(index > editingMessageIndex && "opacity-50")}>
-                    <ThreadMessage
-                      index={index}
-                      messageCount={chat.messages.length}
-                      message={message}
-                      status={chat.status}
-                    />
-                  </div>
+                  <ThreadMessage
+                    index={index}
+                    messageCount={chat.messages.length}
+                    message={message}
+                    status={chat.status}
+                  />
                 </MessageScrollerItem>
               ))}
               <ThreadError />

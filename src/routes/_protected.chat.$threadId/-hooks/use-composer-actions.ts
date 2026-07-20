@@ -1,8 +1,8 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { convertFileListToFileUIParts } from "ai";
-import { ElementApi, TextApi } from "platejs";
 import type { Descendant } from "platejs";
+import { ElementApi, TextApi } from "platejs";
 import type { PlateEditor } from "platejs/react";
 import { useEditorRef, useEditorSelector } from "platejs/react";
 
@@ -10,7 +10,7 @@ import { useCreateThreadTitle } from "../-thread-api/create-thread-title";
 import { threadQuery } from "../-thread-api/get-thread";
 import { useThreadChat } from "../-thread-chat-provider";
 import { getThreadEditorId, plateToMarkdown } from "../-thread-components/composer/plate";
-import type { ThreadMetadataAttachment } from "../-thread-types";
+import type { ThreadMetadataAttachment, ThreadUIMessage } from "../-thread-types";
 import type { ThreadInputLocation } from "../../-chat-store";
 import { useChatStore } from "../../-chat-store";
 
@@ -35,23 +35,29 @@ const hasComposerContent = (editor: PlateEditor, node: Descendant): boolean => {
   return node.children.some((child) => hasComposerContent(editor, child));
 };
 
-const getThreadAttachments = async (threadId: string, location: ThreadInputLocation) => {
-  const attachments = useChatStore.getState().attachments.get(threadId);
+const getComposerAttachments = async (
+  threadId: string,
+  messages: ThreadUIMessage[],
+  location: ThreadInputLocation,
+) => {
+  const { attachments: storedAttachments, editingState } = useChatStore.getState();
+  const editedMessage = editingState
+    ? messages.find((message) => message.id === editingState.messageId)
+    : undefined;
 
-  if (!attachments) {
-    return {
-      files: undefined,
-      metadataAttachments: undefined,
-    };
+  const files = editedMessage?.parts.filter((part) => part.type === "file") ?? [];
+  const attachments: ThreadMetadataAttachment[] = [];
+
+  for (const attachment of editedMessage?.metadata?.attachments ?? []) {
+    attachments.push(attachment);
   }
 
-  const files: File[] = [];
-  const metadataAttachments: ThreadMetadataAttachment[] = [];
+  const readyFiles: File[] = [];
 
-  for (const attachment of attachments) {
+  for (const attachment of storedAttachments.get(threadId) ?? []) {
     if (attachment.location === location && attachment.status === "ready") {
-      files.push(attachment.file);
-      metadataAttachments.push({
+      readyFiles.push(attachment.file);
+      attachments.push({
         filename: attachment.filename,
         mediaType: attachment.file.type,
         sha256: attachment.sha256,
@@ -59,17 +65,21 @@ const getThreadAttachments = async (threadId: string, location: ThreadInputLocat
     }
   }
 
-  const dataTransfer = new DataTransfer();
+  if (readyFiles.length > 0) {
+    const dataTransfer = new DataTransfer();
 
-  for (const file of files) {
-    dataTransfer.items.add(file);
+    for (const file of readyFiles) {
+      dataTransfer.items.add(file);
+    }
+
+    for (const filePart of await convertFileListToFileUIParts(dataTransfer.files)) {
+      files.push(filePart);
+    }
   }
 
-  const fileParts = await convertFileListToFileUIParts(dataTransfer.files);
-
   return {
-    metadataAttachments,
-    files: fileParts,
+    files,
+    attachments: attachments.length > 0 ? attachments : undefined,
   };
 };
 
@@ -122,6 +132,7 @@ export const useComposerActions = (location: ThreadInputLocation) => {
     if (!canSend) return;
 
     const text = plateToMarkdown(editor).trim();
+    const { files, attachments } = await getComposerAttachments(threadId, chat.messages, location);
 
     if (location === "main") {
       useChatStore.getState().removeComposerState(threadId);
@@ -135,6 +146,14 @@ export const useComposerActions = (location: ThreadInputLocation) => {
       setEditingState(null);
     }
 
+    for (const attachment of attachments ?? []) {
+      useChatStore.getState().upsertAttachment(threadId, {
+        status: "persisted",
+        filename: attachment.filename,
+        sha256: attachment.sha256,
+      });
+    }
+
     editor.tf.setValue();
     editor.tf.focus({ edge: "endEditor" });
 
@@ -146,13 +165,11 @@ export const useComposerActions = (location: ThreadInputLocation) => {
       });
     }
 
-    const { files, metadataAttachments } = await getThreadAttachments(threadId, location);
-
     await chat.sendMessage({
       text,
       files,
       metadata: {
-        attachments: metadataAttachments,
+        attachments,
       },
       messageId: location === "edit" ? editingState?.messageId : undefined,
     });
