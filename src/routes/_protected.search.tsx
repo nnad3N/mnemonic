@@ -208,7 +208,7 @@ type SearchResultContentProps = {
 
 const SearchResultContent = ({ icon, meta, trailing, title }: SearchResultContentProps) => (
   <>
-    <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-input text-muted-foreground">
+    <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-secondary text-muted-foreground">
       {icon}
     </div>
     <div className="min-w-0 flex-1">
@@ -229,7 +229,7 @@ type ConversationResultProps = {
 
 const ConversationResult = ({ conversation }: ConversationResultProps) => (
   <Link
-    className="flex items-center gap-3 rounded-xl px-3 py-2 transition-colors hover:bg-input"
+    className="flex items-center gap-3 rounded-xl px-3 py-2 transition-colors hover:bg-muted"
     params={{ threadId: conversation.id }}
     to="/chat/$threadId"
   >
@@ -248,7 +248,7 @@ type TopicResultProps = {
 const TopicResult = ({ topic }: TopicResultProps) => (
   <div>
     <Link
-      className="flex items-center gap-3 rounded-xl px-3 py-1 transition-colors hover:bg-input"
+      className="flex items-center gap-3 rounded-xl px-3 py-1 transition-colors hover:bg-muted"
       params={{ topicId: topic.id }}
       to="/topic/$topicId/files"
     >
@@ -267,7 +267,7 @@ const TopicResult = ({ topic }: TopicResultProps) => (
       {topic.conversations.length > 0 ? (
         topic.conversations.map((conversation) => (
           <Link
-            className="flex items-center gap-3 rounded-xl px-3 py-2 pl-14 text-sm transition-colors hover:bg-input"
+            className="flex items-center gap-3 rounded-xl px-3 py-2 pl-14 text-sm transition-colors hover:bg-muted"
             key={conversation.id}
             params={{ threadId: conversation.id }}
             to="/chat/$threadId"
