@@ -10,5 +10,5 @@ export default defineConfig({
   dialect: "turso",
   out: "./drizzle",
   schema: ["./src/db/schema.ts", "./src/db/auth-schema.ts"],
-  tablesFilter: ["!mastra_*"],
+  tablesFilter: ["!mastra_*", "!memory_*", "!file_embeddings_*"],
 });
