@@ -29,6 +29,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group";
+import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { searchQuery } from "@/routes/_protected.search/-search-api";
 import type {
@@ -207,7 +208,7 @@ type SearchResultContentProps = {
 
 const SearchResultContent = ({ icon, meta, trailing, title }: SearchResultContentProps) => (
   <>
-    <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+    <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-input text-muted-foreground">
       {icon}
     </div>
     <div className="min-w-0 flex-1">
@@ -228,7 +229,7 @@ type ConversationResultProps = {
 
 const ConversationResult = ({ conversation }: ConversationResultProps) => (
   <Link
-    className="flex items-center gap-3 rounded-xl px-3 py-2 transition-colors hover:bg-muted"
+    className="flex items-center gap-3 rounded-xl px-3 py-2 transition-colors hover:bg-input"
     params={{ threadId: conversation.id }}
     to="/chat/$threadId"
   >
@@ -245,9 +246,9 @@ type TopicResultProps = {
 };
 
 const TopicResult = ({ topic }: TopicResultProps) => (
-  <div className="divide-y">
+  <div>
     <Link
-      className="flex items-center gap-3 rounded-xl px-3 py-1 transition-colors hover:bg-muted"
+      className="flex items-center gap-3 rounded-xl px-3 py-1 transition-colors hover:bg-input"
       params={{ topicId: topic.id }}
       to="/topic/$topicId/files"
     >
@@ -261,11 +262,12 @@ const TopicResult = ({ topic }: TopicResultProps) => (
         }
       />
     </Link>
+    <Separator />
     <div>
       {topic.conversations.length > 0 ? (
         topic.conversations.map((conversation) => (
           <Link
-            className="flex items-center gap-3 rounded-xl px-3 py-2 pl-14 text-sm transition-colors hover:bg-muted"
+            className="flex items-center gap-3 rounded-xl px-3 py-2 pl-14 text-sm transition-colors hover:bg-input"
             key={conversation.id}
             params={{ threadId: conversation.id }}
             to="/chat/$threadId"
