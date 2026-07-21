@@ -56,7 +56,7 @@ export const CapabilityPicker = () => {
         >
           <Slider.Label className="text-xs">{<T>Capability</T>}</Slider.Label>
           <Slider.Control className="w-36 data-dragging:cursor-grabbing">
-            <Slider.Track className="relative h-6 w-full rounded-full bg-secondary">
+            <Slider.Track className="relative h-6 w-full rounded-full bg-secondary dark:bg-muted">
               <Slider.Indicator
                 className={cn(
                   "rounded-l-full bg-muted-foreground group-not-data-starting-style/capability-popover:transition-[width]",
