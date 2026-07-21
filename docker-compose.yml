@@ -1,51 +1,56 @@
 services:
-  app:
-    build: .
-    ports:
-      - "3000:3000"
-      - "9000:9000"
-      - "9001:9001"
-    networks:
-      - default
-      - firecrawl
-    env_file: .env
-    environment:
-      DATABASE_URL: file:/data/mnemonic.db
-      BETTER_AUTH_URL: http://localhost:3000
-      FIRECRAWL_API_URL: http://firecrawl-api:3002
-    volumes:
-      - mnemonic_data:/data
-    restart: unless-stopped
-
   rustfs:
     image: rustfs/rustfs:latest
-    network_mode: service:app
+    profiles: ["host", "selfhost"]
     command: ["/data"]
     environment:
-      RUSTFS_ACCESS_KEY: rustfsadmin
-      RUSTFS_SECRET_KEY: rustfsadmin
+      RUSTFS_ACCESS_KEY: "${S3_ACCESS_KEY_ID:-rustfsadmin}"
+      RUSTFS_SECRET_KEY: "${S3_SECRET_ACCESS_KEY:-rustfsadmin}"
       RUSTFS_ADDRESS: "0.0.0.0:9000"
       RUSTFS_CONSOLE_ENABLE: "true"
       RUSTFS_CONSOLE_ADDRESS: "0.0.0.0:9001"
       RUSTFS_CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://127.0.0.1:3000"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    networks:
+      - default
     volumes:
       - rustfs_data:/data
-    depends_on:
-      - app
 
   rustfs-init:
     image: minio/mc:latest
     profiles: ["init"]
-    network_mode: service:app
+    environment:
+      S3_ACCESS_KEY_ID: "${S3_ACCESS_KEY_ID:-rustfsadmin}"
+      S3_BUCKET: "${S3_BUCKET:-mnemonic-files}"
+      S3_SECRET_ACCESS_KEY: "${S3_SECRET_ACCESS_KEY:-rustfsadmin}"
     depends_on:
-      - rustfs
+      rustfs:
+        condition: service_started
     entrypoint: >
       /bin/sh -c "
-      until mc alias set local http://127.0.0.1:9000 rustfsadmin rustfsadmin; do
+      until mc alias set local http://rustfs:9000 \"$${S3_ACCESS_KEY_ID}\" \"$${S3_SECRET_ACCESS_KEY}\"; do
         sleep 1;
       done;
-      mc mb --ignore-existing local/mnemonic-files;
+      mc mb --ignore-existing \"local/$${S3_BUCKET}\";
       "
+
+  app:
+    profiles: ["selfhost"]
+    build: .
+    network_mode: host
+    env_file: .env
+    environment:
+      DATABASE_URL: file:/data/mnemonic.db
+      BETTER_AUTH_URL: http://localhost:3000
+      FIRECRAWL_API_URL: http://localhost:3002
+    volumes:
+      - mnemonic_data:/data
+    restart: unless-stopped
+    depends_on:
+      rustfs:
+        condition: service_started
 
   searxng:
     image: searxng/searxng:latest

@@ -11,12 +11,16 @@ const isVitest = Boolean(process.env.VITEST);
 const config = defineConfig({
   plugins: [
     devtools(),
-    // Nitro's Vite plugin conflicts with Vitest (CJS React load + hung teardown).
-    !isVitest && nitro({ preset: "deno-server" }),
     tailwindcss(),
     tanstackStart(),
     viteReact(),
     babel({ presets: [reactCompilerPreset()] }),
+    // Nitro's Vite plugin conflicts with Vitest (CJS React load + hung teardown).
+    !isVitest &&
+      nitro({
+        preset: "deno-server",
+        traceDeps: ["@kreuzberg/node*"],
+      }),
   ],
   resolve: { tsconfigPaths: true },
 });

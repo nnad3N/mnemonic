@@ -282,7 +282,14 @@ export const DeleteTopicDialog = ({ onOpenChange, open, topic }: DeleteTopicDial
       if (activeThreadId && topic.threads.some((thread) => thread.id === activeThreadId)) {
         await navigate({ to: "/search" });
       }
-      await queryClient.invalidateQueries({ queryKey: threadKeys.sidebar() });
+      queryClient.removeQueries({
+        exact: true,
+        queryKey: threadKeys.sidebarTopicThreads(topic.id),
+      });
+      await queryClient.invalidateQueries({
+        exact: true,
+        queryKey: threadKeys.sidebarTopics(),
+      });
       onOpenChange(false);
     },
   });

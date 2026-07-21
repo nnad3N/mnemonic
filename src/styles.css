@@ -430,7 +430,7 @@
   --primary-foreground: var(--f-paper);
   --secondary: var(--f-base-150);
   --secondary-foreground: var(--f-black);
-  --muted: var(--f-base-50);
+  --muted: var(--f-base-100);
   --muted-foreground: var(--f-base-600);
   --accent: var(--f-base-100);
   --accent-foreground: var(--f-black);
@@ -484,12 +484,12 @@
   --primary-foreground: var(--f-black);
   --secondary: var(--f-base-850);
   --secondary-foreground: var(--f-base-200);
-  --muted: var(--f-base-950);
+  --muted: var(--f-base-900);
   --muted-foreground: var(--f-base-500);
   --accent: var(--f-base-900);
   --accent-foreground: var(--f-base-200);
   --border: var(--f-base-850);
-  --input: var(--f-base-850);
+  --input: var(--f-base-700);
   --code: var(--f-base-950);
   --code-highlight: --alpha(var(--f-base-200) / 6%);
   --sidebar: var(--f-black);

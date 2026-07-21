@@ -187,7 +187,7 @@ const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
                 <span className="truncate">{topic.title}</span>
               </ContextMenuTrigger>
               <Button
-                className="text-sidebar-foreground opacity-0 peer-hover/menu-button:opacity-100 hover:opacity-100"
+                className="text-sidebar-foreground opacity-0 peer-hover/menu-button:opacity-100 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:opacity-100 dark:hover:bg-sidebar-accent"
                 disabled={createConversationMutation.isPending}
                 onClick={(event) => {
                   event.stopPropagation();
