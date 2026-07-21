@@ -31,15 +31,7 @@ export const CapabilityPicker = () => {
 
   return (
     <Popover>
-      <PopoverTrigger
-        render={
-          <Button
-            size="xs"
-            className="bg-foreground/5 hover:bg-foreground/10 dark:bg-foreground/10 dark:hover:bg-foreground/15"
-            variant="ghost"
-          />
-        }
-      >
+      <PopoverTrigger render={<Button size="xs" variant="secondary" />}>
         {labels[displayCapability]}
         <ChevronDownIcon data-icon="inline-end" />
       </PopoverTrigger>
@@ -102,7 +94,7 @@ const CapabilitySlider = ({
     >
       <Slider.Label className={labelClassName}>{label}</Slider.Label>
       <Slider.Control className="w-36 data-dragging:cursor-grabbing">
-        <Slider.Track className="relative h-6 w-full rounded-full bg-foreground/10">
+        <Slider.Track className="relative h-6 w-full rounded-full bg-secondary">
           <Slider.Indicator
             className={cn(
               "rounded-l-full bg-muted-foreground group-not-data-starting-style/capability-popover:transition-[width]",

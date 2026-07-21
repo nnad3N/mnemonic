@@ -428,16 +428,16 @@
   --popover-foreground: var(--f-black);
   --primary: var(--f-black);
   --primary-foreground: var(--f-paper);
-  --secondary: var(--f-base-100);
+  --secondary: var(--f-base-150);
   --secondary-foreground: var(--f-black);
   --muted: var(--f-base-50);
   --muted-foreground: var(--f-base-600);
-  --accent: var(--f-base-50);
+  --accent: var(--f-base-100);
   --accent-foreground: var(--f-black);
   --destructive: var(--f-red);
   --destructive-foreground: var(--f-paper);
-  --border: var(--f-base-100);
-  --input: var(--f-base-100);
+  --border: var(--f-base-150);
+  --input: var(--f-base-150);
   --ring: var(--f-base-500);
   --info: var(--f-blue);
   --info-foreground: var(--f-blue);
@@ -457,7 +457,7 @@
   --sidebar: var(--f-base-50);
   --sidebar-accent: var(--f-base-100);
   --sidebar-accent-foreground: var(--f-black);
-  --sidebar-border: var(--f-base-100);
+  --sidebar-border: var(--f-base-150);
   --sidebar-foreground: var(--f-black);
   --sidebar-primary: var(--f-black);
   --sidebar-primary-foreground: var(--f-paper);
@@ -476,15 +476,15 @@
 
   --background: var(--f-black);
   --foreground: var(--f-base-200);
-  --card: var(--f-base-950);
+  --card: var(--f-black);
   --card-foreground: var(--f-base-200);
-  --popover: var(--f-base-950);
+  --popover: var(--f-black);
   --popover-foreground: var(--f-base-200);
   --primary: var(--f-base-200);
   --primary-foreground: var(--f-black);
-  --secondary: var(--f-base-900);
+  --secondary: var(--f-base-850);
   --secondary-foreground: var(--f-base-200);
-  --muted: var(--f-base-900);
+  --muted: var(--f-base-950);
   --muted-foreground: var(--f-base-500);
   --accent: var(--f-base-900);
   --accent-foreground: var(--f-base-200);
@@ -492,7 +492,7 @@
   --input: var(--f-base-850);
   --code: var(--f-base-950);
   --code-highlight: --alpha(var(--f-base-200) / 6%);
-  --sidebar: var(--f-base-950);
+  --sidebar: var(--f-black);
   --sidebar-accent: var(--f-base-900);
   --sidebar-accent-foreground: var(--f-base-200);
   --sidebar-border: var(--f-base-850);
