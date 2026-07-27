@@ -34,15 +34,6 @@ const renderToolLabel = (toolName: keyof ThreadUITools, status: ToolStatus): Rea
         case "error":
           return <T>Could not search files</T>;
       }
-    case "accessTopic":
-      switch (status) {
-        case "pending":
-          return <T>Accessing topic</T>;
-        case "done":
-          return <T>Accessed topic</T>;
-        case "error":
-          return <T>Could not access topic</T>;
-      }
     case "executeCode":
       switch (status) {
         case "pending":

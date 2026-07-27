@@ -5,7 +5,6 @@ import { baseInstructions, sharedSourceInstructions } from "@/mastra/agents/base
 import { getAgentModel, models, observationalMemoryOptions } from "@/mastra/models";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context";
 import { libsqlStore, libsqlVector } from "@/mastra/storage";
-import { accessTopicTool } from "@/mastra/tools/access-topic-tool";
 import { executeCodeTool } from "@/mastra/tools/execute-code-tool";
 import { webFetchTool } from "@/mastra/tools/web-fetch-tool";
 import { webSearchTool } from "@/mastra/tools/web-search-tool";
@@ -25,7 +24,6 @@ export const conversationMemory = new Memory({
 });
 
 export const conversationAgentTools = {
-  accessTopic: accessTopicTool,
   executeCode: executeCodeTool,
   webFetch: webFetchTool,
   webSearch: webSearchTool,
@@ -41,15 +39,11 @@ ${sharedSourceInstructions}
 Available sources:
 - Conversation recall: past messages in the current conversation only. Prefer this when the answer may already appear in prior chat.
 - Web: current or external information via webSearch (discover pages) or webFetch (read a known URL).
-- Access topic: topic files and topic-scoped conversation history. Use when the user asks for information from a topic, topic files, or prior topic conversations.
-
-## Access topic
-Use accessTopic only when the topic is clear. If the user asks about a topic but no topic can be identified, ask which topic to use.
 
 ## Web
 - Use webSearch to discover pages when no specific URL is known.
 - Use webFetch when the user provided a URL or a prior search already identified the page to read.
-- Prefer these when the question needs facts outside this conversation or up-to-date information from the web, or when conversation recall did not fully answer and topic context is not required.
+- Prefer these when the question needs facts outside this conversation or up-to-date information from the web, or when conversation recall did not fully answer.
 - Tool descriptions own exact input requirements and result shapes.
 
 ## Conversation history

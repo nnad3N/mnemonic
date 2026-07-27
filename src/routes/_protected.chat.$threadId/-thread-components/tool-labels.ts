@@ -17,11 +17,6 @@ export const TOOL_LABELS = {
     error: "Could not search files",
     pending: "Searching files",
   },
-  accessTopic: {
-    done: "Accessed topic",
-    error: "Could not access topic",
-    pending: "Accessing topic",
-  },
   executeCode: {
     done: "Executed code",
     error: "Could not execute code",
