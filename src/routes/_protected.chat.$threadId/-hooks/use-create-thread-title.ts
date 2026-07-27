@@ -62,26 +62,35 @@ const createThreadTitleFn = Kit.gen(async function* (
   ctx: CreateThreadTitleCtx,
   input: CreateThreadTitleInput,
 ) {
-  const text = yield* await Result.tryPromise({
-    try: async () => {
-      const result = await generateText({
-        abortSignal: AbortSignal.timeout(TITLE_GENERATION_TIMEOUT_MS),
-        model: models.threadTitle,
-        prompt: input.text,
-        providerOptions: {
-          openrouter: {
-            reasoning: {
-              effort: "none",
+  const text = yield* await Result.tryPromise(
+    {
+      try: async () => {
+        const result = await generateText({
+          abortSignal: AbortSignal.timeout(TITLE_GENERATION_TIMEOUT_MS),
+          model: models.threadTitle,
+          prompt: input.text,
+          providerOptions: {
+            openrouter: {
+              reasoning: {
+                effort: "none",
+              },
             },
           },
-        },
-        system: TITLE_SYSTEM_PROMPT,
-      });
+          system: TITLE_SYSTEM_PROMPT,
+        });
 
-      return result.text;
+        return result.text;
+      },
+      catch: () => toServerFnError.serverError("Failed to generate conversation title"),
     },
-    catch: () => toServerFnError.serverError("Failed to generate conversation title"),
-  });
+    {
+      retry: {
+        times: 3,
+        delayMs: 500,
+        backoff: "exponential",
+      },
+    },
+  );
 
   const title = sanitizeTitle(text);
 
