@@ -98,7 +98,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body className="overflow-hidden">
         <GTProvider locale={locale} translations={translations}>
           <ThemeProvider>
             <Toaster />

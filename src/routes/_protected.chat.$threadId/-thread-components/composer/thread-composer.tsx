@@ -15,7 +15,7 @@ import type { ThreadInputLocation } from "../../../-chat-store";
 import { useChatStore } from "../../../-chat-store";
 import { ComposerContext, type ComposerContextValue } from "./composer-context";
 import { ComposerFooter } from "./composer-footer";
-import { threadEditorPlugins, getThreadEditorId, markdownToPlate } from "./plate";
+import { getThreadEditorId, markdownToPlate, threadEditorPlugins } from "./plate";
 import { ThreadComposerFilePlugin } from "./plate-plugins/file";
 import { ThreadComposerKeyboardPlugin } from "./plate-plugins/keyboard";
 import { insertComposerClipboardText } from "./plate-plugins/paste";
@@ -42,9 +42,27 @@ export const ThreadComposer = ({ location }: ThreadComposerProps) => {
     id: editorId,
     plugins: threadEditorPlugins,
     autoSelect: "end",
+    value: (plate) => {
+      if (location === "edit") {
+        const markdown = useChatStore.getState().editingState?.markdown;
+
+        if (markdown) {
+          return markdownToPlate(plate, markdown);
+        }
+      }
+
+      if (location === "main") {
+        const draft = useChatStore.getState().composerState.get(threadId)?.value;
+
+        if (draft) {
+          return draft;
+        }
+      }
+
+      return plate.api.create.value();
+    },
   });
   const isEditorMounted = useEditorMounted(editorId);
-
   const { cancelEditing, sendMessage, stopStream } = useComposerActions(location);
   const { uploadFiles } = useComposerUpload(threadId, location);
   const composerRef = useRef<HTMLDivElement>(null);
@@ -60,6 +78,12 @@ export const ThreadComposer = ({ location }: ThreadComposerProps) => {
       portalElementsRef.current.delete(element);
     };
   }, []);
+
+  useEffect(() => {
+    if (editor.meta.isFallback || !isEditorMounted) return;
+
+    editor.tf.focus({ edge: "endEditor" });
+  }, [editor, isEditorMounted]);
 
   useEffect(() => {
     if (location !== "edit") return;
@@ -84,45 +108,20 @@ export const ThreadComposer = ({ location }: ThreadComposerProps) => {
   }, [cancelEditing, location]);
 
   useEffect(() => {
-    if (editor.meta.isFallback || !isEditorMounted) return;
-
-    const { editingState, composerState } = useChatStore.getState();
-    const persisted = composerState.get(threadId);
-
-    if (location === "main" && persisted) {
-      editor.tf.setValue(persisted.value);
-    }
-
-    if (location === "edit" && editingState?.markdown) {
-      editor.tf.setValue(markdownToPlate(editor, editingState.markdown));
-    }
-
-    editor.tf.focus({ edge: "endEditor" });
-  }, [editor, isEditorMounted, location, threadId]);
-
-  useEffect(() => {
     if (editor.meta.isFallback) return;
 
     editor.setOption(ThreadComposerKeyboardPlugin, "onEnter", sendMessage);
     editor.setOption(ThreadComposerKeyboardPlugin, "onEscape", cancelEditing);
     editor.setOption(ThreadComposerKeyboardPlugin, "onStopStream", stopStream);
+    editor.setOption(ThreadComposerFilePlugin, "onUploadFiles", uploadFiles);
 
     return () => {
       editor.setOption(ThreadComposerKeyboardPlugin, "onEnter", undefined);
       editor.setOption(ThreadComposerKeyboardPlugin, "onEscape", undefined);
       editor.setOption(ThreadComposerKeyboardPlugin, "onStopStream", undefined);
-    };
-  }, [cancelEditing, editor, sendMessage, stopStream]);
-
-  useEffect(() => {
-    if (editor.meta.isFallback) return;
-
-    editor.setOption(ThreadComposerFilePlugin, "onUploadFiles", uploadFiles);
-
-    return () => {
       editor.setOption(ThreadComposerFilePlugin, "onUploadFiles", undefined);
     };
-  }, [editor, uploadFiles]);
+  }, [cancelEditing, editor, sendMessage, stopStream, uploadFiles]);
 
   return (
     <ComposerContext.Provider value={{ registerPortal }}>

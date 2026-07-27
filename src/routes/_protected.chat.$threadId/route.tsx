@@ -6,6 +6,7 @@ import { threadQuery } from "@/routes/_protected.chat.$threadId/-thread-api/get-
 import { ThreadChatProvider } from "@/routes/_protected.chat.$threadId/-thread-chat-provider";
 
 export const Route = createFileRoute("/_protected/chat/$threadId")({
+  ssr: "data-only",
   component: RouteComponent,
   loader: async ({ context, params }) =>
     context.queryClient.ensureQueryData(threadQuery(params.threadId)),
