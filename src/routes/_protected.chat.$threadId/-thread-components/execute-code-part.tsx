@@ -1,11 +1,14 @@
 import { createCodePlugin } from "@streamdown/code";
 import type { ToolUIPart } from "ai";
-import { ChevronRightIcon } from "lucide-react";
 import { Streamdown } from "streamdown";
 
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AssistantToolPart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-tool-part";
 import { streamdownLinkSafety } from "@/routes/_protected.chat.$threadId/-thread-components/streamdown-link-safety-modal";
+import {
+  CollapsibleToolIndicator,
+  CollapsibleToolIndicatorContent,
+  CollapsibleToolIndicatorTrigger,
+} from "@/routes/_protected.chat.$threadId/-thread-components/tool-indicator";
 import type { ThreadUITools } from "@/routes/_protected.chat.$threadId/-thread-types";
 
 const streamdownPlugins = {
@@ -42,19 +45,19 @@ export const ExecuteCodePart = ({ part }: ExecuteCodePartProps) => {
   const code = part.input?.code;
 
   if (!code) {
-    return <AssistantToolPart part={part} interactive={false} />;
+    return <AssistantToolPart part={part} />;
   }
 
   return (
-    <Collapsible>
-      <CollapsibleTrigger render={<AssistantToolPart part={part} interactive />}>
-        <ChevronRightIcon className="opacity-0 transition-opacity group-hover/tool:opacity-100 group-data-panel-open/tool:rotate-90 group-data-panel-open/tool:opacity-100" />
-      </CollapsibleTrigger>
-      <CollapsibleContent className="pt-2">
+    <CollapsibleToolIndicator>
+      <CollapsibleToolIndicatorTrigger
+        render={<AssistantToolPart interactive="collapsible" part={part} />}
+      />
+      <CollapsibleToolIndicatorContent className="pt-2">
         <Streamdown linkSafety={streamdownLinkSafety} mode="static" plugins={streamdownPlugins}>
           {toExecuteCodeMarkdown(code, part.output)}
         </Streamdown>
-      </CollapsibleContent>
-    </Collapsible>
+      </CollapsibleToolIndicatorContent>
+    </CollapsibleToolIndicator>
   );
 };

@@ -21,7 +21,11 @@ export const WebFetchPart = ({ part }: WebFetchPartProps) => {
 
   return (
     <>
-      <AssistantToolPart interactive onClick={() => requestExternalLink(url)} part={part} />
+      <AssistantToolPart
+        interactive="button"
+        onClick={() => requestExternalLink(url)}
+        part={part}
+      />
       {externalLinkModal}
     </>
   );

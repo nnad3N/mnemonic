@@ -10,6 +10,7 @@ import { MessageStateContext } from "@/routes/_protected.chat.$threadId/-message
 import { AssistantReasoningPart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-reasoning-part";
 import { AssistantToolPart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-tool-part";
 import { ExecuteCodePart } from "@/routes/_protected.chat.$threadId/-thread-components/execute-code-part.tsx";
+import { OmPart } from "@/routes/_protected.chat.$threadId/-thread-components/om-part";
 import { streamdownLinkSafety } from "@/routes/_protected.chat.$threadId/-thread-components/streamdown-link-safety-modal";
 import { WebFetchPart } from "@/routes/_protected.chat.$threadId/-thread-components/web-fetch-part";
 import { WebSearchPart } from "@/routes/_protected.chat.$threadId/-thread-components/web-search-part";
@@ -25,16 +26,20 @@ const streamdownPlugins = {
 };
 
 type AssistantMessageProps = {
-  isAnimating?: boolean;
+  isStreaming: boolean;
   message: ThreadUIMessage;
 };
 
-export const AssistantMessage = ({ isAnimating = false, message }: AssistantMessageProps) => {
+export const AssistantMessage = ({ isStreaming, message }: AssistantMessageProps) => {
   return (
-    <MessageStateContext.Provider value={{ isAnimating }}>
+    <MessageStateContext.Provider value={{ isStreaming }}>
       <div className="flex flex-col gap-2">
         {message.parts.map((part, i) => (
-          <AssistantMessagePart key={`${part.type}-${i}`} part={part} />
+          <AssistantMessagePart
+            key={`${part.type}-${i}`}
+            messageParts={message.parts}
+            part={part}
+          />
         ))}
       </div>
     </MessageStateContext.Provider>
@@ -42,11 +47,12 @@ export const AssistantMessage = ({ isAnimating = false, message }: AssistantMess
 };
 
 type AssistantMessagePartProps = {
+  messageParts: ThreadUIMessagePart[];
   part: ThreadUIMessagePart;
 };
 
-const AssistantMessagePart = ({ part }: AssistantMessagePartProps) => {
-  const { isAnimating } = useMessageState();
+const AssistantMessagePart = ({ messageParts, part }: AssistantMessagePartProps) => {
+  const { isStreaming } = useMessageState();
   const { resolvedTheme } = useTheme();
 
   // oxlint-disable-next-line typescript/switch-exhaustiveness-check
@@ -54,7 +60,7 @@ const AssistantMessagePart = ({ part }: AssistantMessagePartProps) => {
     case "text": {
       return (
         <Streamdown
-          isAnimating={isAnimating}
+          isAnimating={isStreaming}
           linkSafety={streamdownLinkSafety}
           mermaid={{
             config: {
@@ -79,10 +85,22 @@ const AssistantMessagePart = ({ part }: AssistantMessagePartProps) => {
     case "tool-executeCode": {
       return <ExecuteCodePart part={part} />;
     }
+    case "tool-recall": {
+      return <AssistantToolPart part={part} />;
+    }
+    case "data-om-observation-start":
+    case "data-om-observation-end":
+    case "data-om-observation-failed":
+    case "data-om-buffering-start":
+    case "data-om-buffering-end":
+    case "data-om-buffering-failed":
+    case "data-om-activation": {
+      return <OmPart messageParts={messageParts} part={part} />;
+    }
 
     default: {
       if (isToolUIPart(part)) {
-        return <AssistantToolPart part={part} interactive={false} />;
+        return <AssistantToolPart part={part} />;
       }
 
       return null;

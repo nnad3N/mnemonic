@@ -2,7 +2,7 @@ import { Agent } from "@mastra/core/agent";
 import { Memory } from "@mastra/memory";
 
 import { baseInstructions, sharedSourceInstructions } from "@/mastra/agents/base-instructions";
-import { getAgentModel, models } from "@/mastra/models";
+import { getAgentModel, models, observationalMemoryOptions } from "@/mastra/models";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context";
 import { libsqlStore, libsqlVector } from "@/mastra/storage";
 import { accessTopicTool } from "@/mastra/tools/access-topic-tool";
@@ -15,15 +15,10 @@ export const conversationAgentId = "conversation-agent";
 export const conversationMemory = new Memory({
   embedder: models.embedding,
   options: {
-    observationalMemory: {
-      model: models.observationalMemory,
-      retrieval: {
-        scope: "thread",
-        vector: true,
-      },
+    observationalMemory: observationalMemoryOptions({
       scope: "thread",
-      temporalMarkers: true,
-    },
+      vector: true,
+    }),
   },
   storage: libsqlStore,
   vector: libsqlVector,

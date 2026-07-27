@@ -25,7 +25,6 @@ const renderToolLabel = (toolName: keyof ThreadUITools, status: ToolStatus): Rea
         case "error":
           return <T>Could not search file connections</T>;
       }
-      break;
     case "fileVectorSearch":
       switch (status) {
         case "pending":
@@ -35,7 +34,6 @@ const renderToolLabel = (toolName: keyof ThreadUITools, status: ToolStatus): Rea
         case "error":
           return <T>Could not search files</T>;
       }
-      break;
     case "accessTopic":
       switch (status) {
         case "pending":
@@ -45,7 +43,6 @@ const renderToolLabel = (toolName: keyof ThreadUITools, status: ToolStatus): Rea
         case "error":
           return <T>Could not access topic</T>;
       }
-      break;
     case "executeCode":
       switch (status) {
         case "pending":
@@ -55,7 +52,6 @@ const renderToolLabel = (toolName: keyof ThreadUITools, status: ToolStatus): Rea
         case "error":
           return <T>Could not execute code</T>;
       }
-      break;
     case "getFileFromS3":
       switch (status) {
         case "pending":
@@ -65,7 +61,6 @@ const renderToolLabel = (toolName: keyof ThreadUITools, status: ToolStatus): Rea
         case "error":
           return <T>Could not read file</T>;
       }
-      break;
     case "recall":
       switch (status) {
         case "pending":
@@ -75,7 +70,6 @@ const renderToolLabel = (toolName: keyof ThreadUITools, status: ToolStatus): Rea
         case "error":
           return <T>Could not recall memories</T>;
       }
-      break;
     case "webFetch":
       switch (status) {
         case "pending":
@@ -85,7 +79,6 @@ const renderToolLabel = (toolName: keyof ThreadUITools, status: ToolStatus): Rea
         case "error":
           return <T>Could not fetch the web page</T>;
       }
-      break;
     case "webSearch":
       switch (status) {
         case "pending":
@@ -95,37 +88,33 @@ const renderToolLabel = (toolName: keyof ThreadUITools, status: ToolStatus): Rea
         case "error":
           return <T>Could not search the web</T>;
       }
-      break;
   }
 };
 
-type AssistantToolPartProps = Omit<ToolIndicatorProps, "part" | "pending"> & {
+type AssistantToolPartProps = Omit<ToolIndicatorProps, "enabled" | "pending" | "part"> & {
   part: DynamicToolUIPart | ToolUIPart<ThreadUITools>;
-  interactive?: boolean;
 };
 
 export const AssistantToolPart = ({
   part,
   className,
-  interactive = true,
-  render,
   children,
   ...props
 }: AssistantToolPartProps) => {
   const toolName = getToolName(part);
-  const isKnown = isKnownToolName(toolName);
+  if (!isKnownToolName(toolName)) {
+    return null;
+  }
+
   const status = getToolPartStatus(part);
 
   return (
     <ToolIndicator
-      enabled={isKnown}
-      interactive={interactive}
-      pending={status === "pending"}
-      className={cn(status === "error" && "text-destructive", className)}
-      render={render}
       {...props}
+      className={cn(status === "error" && "text-destructive", className)}
+      pending={status === "pending"}
     >
-      {isKnown ? renderToolLabel(toolName, status) : null}
+      {renderToolLabel(toolName, status)}
       {children}
     </ToolIndicator>
   );

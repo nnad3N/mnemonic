@@ -1,30 +1,24 @@
 import type { ReasoningUIPart } from "ai";
 import { T } from "gt-tanstack-start";
-import { ChevronRightIcon } from "lucide-react";
 
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ScrollArea } from "@/components/ui/scroll-area";
-
-import { ToolIndicator } from "./tool-indicator";
+import {
+  CollapsibleToolIndicator,
+  CollapsibleToolIndicatorContent,
+  CollapsibleToolIndicatorTrigger,
+  ToolIndicator,
+} from "@/routes/_protected.chat.$threadId/-thread-components/tool-indicator";
 
 type AssistantReasoningPartProps = {
   part: ReasoningUIPart;
 };
 
-export const AssistantReasoningPart = ({ part }: AssistantReasoningPartProps) => {
-  return (
-    <Collapsible>
-      <CollapsibleTrigger
-        render={<ToolIndicator interactive pending={part.state === "streaming"} />}
-      >
-        {part.state === "streaming" ? <T>Thinking...</T> : <T>Thought</T>}
-        <ChevronRightIcon className="opacity-0 transition-opacity group-hover/tool:opacity-100 group-data-panel-open/tool:rotate-90 group-data-panel-open/tool:opacity-100" />
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <ScrollArea className="text-sm whitespace-pre-wrap text-muted-foreground *:data-[slot=scroll-area-viewport]:h-auto *:data-[slot=scroll-area-viewport]:max-h-24">
-          {part.text}
-        </ScrollArea>
-      </CollapsibleContent>
-    </Collapsible>
-  );
-};
+export const AssistantReasoningPart = ({ part }: AssistantReasoningPartProps) => (
+  <CollapsibleToolIndicator>
+    <CollapsibleToolIndicatorTrigger
+      render={<ToolIndicator interactive="collapsible" pending={part.state === "streaming"} />}
+    >
+      {part.state === "streaming" ? <T>Thinking...</T> : <T>Thought</T>}
+    </CollapsibleToolIndicatorTrigger>
+    <CollapsibleToolIndicatorContent>{part.text}</CollapsibleToolIndicatorContent>
+  </CollapsibleToolIndicator>
+);

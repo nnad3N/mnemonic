@@ -1,41 +1,58 @@
 import { Slider } from "@base-ui/react/slider";
-import { useQuery } from "@tanstack/react-query";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { T, useGT } from "gt-tanstack-start";
 import { ChevronDownIcon } from "lucide-react";
-import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { ModelCapability } from "@/lib/model-capability";
-import { DEFAULT_MODEL_CAPABILITY, modelCapabilityLevels } from "@/lib/model-capability";
+import { modelCapabilityLevels } from "@/lib/model-capability";
 import { cn } from "@/lib/utils";
 
-import { useSetModelCapability } from "../../-hooks/use-set-model-capability";
+import { useComposer } from "../../-hooks/use-composer";
+import { useUpsertCapability } from "../../-hooks/use-upsert-capability";
 import { settingsQuery } from "../../-thread-api/settings";
 
 const lastCapabilityIndex = modelCapabilityLevels.length - 1;
 
 export const CapabilityPicker = () => {
   const gt = useGT();
-  const { data } = useQuery({ ...settingsQuery(), select: (data) => data.modelCapability });
-  const capability = data ?? DEFAULT_MODEL_CAPABILITY;
-  const [index, setIndex] = useState(modelCapabilityLevels.indexOf(capability));
+  const queryClient = useQueryClient();
+  const { registerPortal } = useComposer();
+  const userSettingsQuery = settingsQuery();
+  const { data: capability } = useSuspenseQuery({
+    ...userSettingsQuery,
+    select: (data) => data.modelCapability,
+  });
+  const index = modelCapabilityLevels.indexOf(capability);
   const labels = {
     balanced: gt("Balanced"),
     max: gt("Max"),
     standard: gt("Standard"),
   } satisfies Record<ModelCapability, string>;
-  const updateCapability = useSetModelCapability();
-  const displayCapability = modelCapabilityLevels.at(index) ?? capability;
+  const upsertCapability = useUpsertCapability();
+
+  const setIndex = (index: number) => {
+    const nextCapability = modelCapabilityLevels.at(index);
+    if (!nextCapability) return;
+
+    queryClient.setQueryData(userSettingsQuery.queryKey, {
+      modelCapability: nextCapability,
+    });
+  };
 
   return (
     <Popover>
       <PopoverTrigger render={<Button size="xs" variant="secondary" />}>
-        {labels[displayCapability]}
+        {labels[capability]}
         <ChevronDownIcon data-icon="inline-end" />
       </PopoverTrigger>
-      <PopoverContent align="start" className="group/capability-popover w-auto p-3">
+      <PopoverContent
+        align="start"
+        className="group/capability-popover w-auto p-3"
+        ref={registerPortal}
+      >
         <Slider.Root
           className="flex flex-col gap-2"
           max={lastCapabilityIndex}
@@ -45,8 +62,8 @@ export const CapabilityPicker = () => {
           onValueCommitted={(index) => {
             const nextCapability = modelCapabilityLevels.at(index);
 
-            if (nextCapability && nextCapability !== capability) {
-              updateCapability.mutate(nextCapability);
+            if (nextCapability) {
+              upsertCapability.mutate(nextCapability);
             }
           }}
           step={1}
@@ -86,7 +103,10 @@ export const CapabilityPicker = () => {
                         )}
                       />
                     </TooltipTrigger>
-                    <TooltipContent className={cn(level === capability && "hidden")}>
+                    <TooltipContent
+                      className={cn(level === capability && "hidden")}
+                      ref={registerPortal}
+                    >
                       {labels[level]}
                     </TooltipContent>
                   </Tooltip>

@@ -6,9 +6,9 @@
     "@/*": "./src/*"
   },
   "scripts": {
-    "dev": "vite dev",
+    "dev": "deno run -A --unstable-no-legacy-abort npm:vite dev",
     "build": "vite build",
-    "preview": "vite preview",
+    "preview": "deno run -A --unstable-no-legacy-abort npm:vite preview",
     "test": "vitest run --typecheck",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint --fix",

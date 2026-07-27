@@ -1,3 +1,4 @@
+import type { ObservationalMemoryOptions } from "@mastra/core/memory";
 import type { RequestContext } from "@mastra/core/request-context";
 
 import { modelCapabilityLevels } from "@/lib/model-capability";
@@ -24,6 +25,35 @@ export const models = {
   observationalMemory: openrouter(modelCapabilityModels.standard),
   threadTitle: openrouter("google/gemma-4-26b-a4b-it"),
 } as const;
+
+const observationalMemoryReasoningOff = {
+  openrouter: {
+    reasoning: {
+      effort: "none",
+    },
+  },
+} as const;
+
+type ObservationalMemoryRetrieval = NonNullable<ObservationalMemoryOptions["retrieval"]>;
+
+export const observationalMemoryOptions = (
+  retrieval: ObservationalMemoryRetrieval,
+): ObservationalMemoryOptions => ({
+  activateAfterIdle: "auto",
+  activateOnProviderChange: true,
+  model: models.observationalMemory,
+  observation: {
+    providerOptions: observationalMemoryReasoningOff,
+  },
+  reflection: {
+    activateAfterIdle: "auto",
+    activateOnProviderChange: true,
+    providerOptions: observationalMemoryReasoningOff,
+  },
+  retrieval,
+  scope: "thread",
+  temporalMarkers: true,
+});
 
 type GetAgentModelInput = {
   requestContext: RequestContext<MnemonicRequestContext>;

@@ -11,12 +11,12 @@ import { modelCapabilityLevels } from "@/lib/model-capability";
 
 import { settingsQuery } from "../-thread-api/settings";
 
-const updateModelCapabilitySchema = v.object({
+const upsertCapabilitySchema = v.object({
   modelCapability: v.picklist(modelCapabilityLevels),
 });
 
-export const setModelCapability = createServerFn({ method: "POST" })
-  .validator(updateModelCapabilitySchema)
+export const upsertCapability = createServerFn({ method: "POST" })
+  .validator(upsertCapabilitySchema)
   .middleware([authMiddleware])
   .handler(async ({ context, data }) => {
     await Kit.run(async () =>
@@ -33,17 +33,15 @@ export const setModelCapability = createServerFn({ method: "POST" })
           }),
       ),
     ).throws(() => toServerFnError.serverError("Failed to save settings"));
-
-    return { modelCapability: data.modelCapability };
   });
 
-export const useSetModelCapability = () => {
+export const useUpsertCapability = () => {
   const queryClient = useQueryClient();
   const userSettingsQuery = settingsQuery();
 
   return useMutation({
     mutationFn: async (nextCapability: ModelCapability) =>
-      setModelCapability({
+      upsertCapability({
         data: { modelCapability: nextCapability },
       }),
     onMutate: async (nextCapability) => {

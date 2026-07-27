@@ -1,7 +1,7 @@
 import { createContext } from "react";
 
 type MessageStateContextValue = {
-  isAnimating: boolean;
+  isStreaming: boolean;
 };
 
 export const MessageStateContext = createContext<MessageStateContextValue | null>(null);

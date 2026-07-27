@@ -21,6 +21,7 @@ import {
 } from "@/components/plate/autocomplete";
 import { cn } from "@/lib/utils";
 
+import { useComposer } from "../../-hooks/use-composer";
 import { mentionByIdQuery, mentionsQuery } from "../../-thread-api/get-mentions";
 import { threadQuery } from "../../-thread-api/get-thread";
 import type { MentionQueryType } from "../../-thread-api/query-keys";
@@ -256,6 +257,7 @@ export const ThreadMentionInputElement = (props: PlateElementProps<TComboboxInpu
     select: (data) => data.resourceId,
   }).data;
   const attachments = useChatStore((state) => state.attachments.get(threadId));
+  const { registerPortal } = useComposer();
   const [search, setSearch] = useState("");
   const [debouncedSearch] = useDebounce(search, 100);
   const mentions = useQuery({
@@ -301,7 +303,7 @@ export const ThreadMentionInputElement = (props: PlateElementProps<TComboboxInpu
     <PlateElement {...props} as="span">
       <Autocomplete element={element} items={items} setValue={setSearch} trigger="@" value={search}>
         <AutocompleteInput />
-        <AutocompleteContent side="top">
+        <AutocompleteContent ref={registerPortal} side="top">
           <AutocompleteEmpty>
             {mentions.isLoading ? <T>Loading…</T> : <T>No results</T>}
           </AutocompleteEmpty>

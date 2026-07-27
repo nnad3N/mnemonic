@@ -1,11 +1,10 @@
 import type { ChatStatus } from "ai";
-import { getToolName, isToolUIPart } from "ai";
 import { T } from "gt-tanstack-start";
 
+import { isVisibleToolPart } from "@/lib/ai-sdk/tool-parts";
 import { MessageStateContext } from "@/routes/_protected.chat.$threadId/-message-state-context";
 import { AssistantMessage } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-message";
 import { ToolIndicator } from "@/routes/_protected.chat.$threadId/-thread-components/tool-indicator";
-import { isKnownToolName } from "@/routes/_protected.chat.$threadId/-thread-components/tool-labels";
 import { UserMessage } from "@/routes/_protected.chat.$threadId/-thread-components/user-message";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 
@@ -34,12 +33,7 @@ const isWithoutVisibleParts = ({
     return false;
   }
 
-  return !message.parts.some(
-    (part) =>
-      part.type === "reasoning" ||
-      part.type === "text" ||
-      (isToolUIPart(part) && isKnownToolName(getToolName(part))),
-  );
+  return !message.parts.some((part) => isVisibleToolPart(part));
 };
 
 type ThreadMessageProps = {
@@ -62,14 +56,14 @@ export const ThreadMessage = ({ message, index, messageCount, status }: ThreadMe
         index,
         messageCount,
       }) ? (
-        <MessageStateContext.Provider value={{ isAnimating: true }}>
+        <MessageStateContext.Provider value={{ isStreaming: true }}>
           <ToolIndicator pending={status === "streaming" || status === "submitted"}>
             <T>Planning next moves...</T>
           </ToolIndicator>
         </MessageStateContext.Provider>
       ) : (
         <AssistantMessage
-          isAnimating={status === "streaming" && index === messageCount - 1}
+          isStreaming={status === "streaming" && index === messageCount - 1}
           message={message}
         />
       )}

@@ -31,7 +31,10 @@ export const WebSearchPart = ({ part }: WebSearchPartProps) => {
   return (
     <>
       <Popover modal={false} onOpenChange={setPopoverOpen} open={popoverOpen}>
-        <PopoverTrigger openOnHover render={<AssistantToolPart interactive part={part} />} />
+        <PopoverTrigger
+          openOnHover
+          render={<AssistantToolPart interactive="button" part={part} />}
+        />
         <PopoverContent align="start" className="w-96 p-1 text-sm">
           <ScrollArea className="p-1 *:data-[slot=scroll-area-viewport]:h-auto *:data-[slot=scroll-area-viewport]:max-h-96">
             <p className="flex items-center gap-1.5 px-2 py-1 text-muted-foreground">

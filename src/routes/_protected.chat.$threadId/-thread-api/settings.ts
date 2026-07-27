@@ -8,20 +8,24 @@ import { settingsKeys } from "@/lib/query-keys";
 
 export const getSettings = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
-  .handler(async ({ context }) =>
-    Kit.run(async () =>
-      Kit.get(dbKit).run(async (db) => {
-        const userSettings = await db.query.settings.findFirst({
+  .handler(async ({ context }) => {
+    const userSettings = await Kit.run(async () =>
+      Kit.get(dbKit).run((db) =>
+        db.query.settings.findFirst({
           columns: { modelCapability: true },
           where: { userId: context.user.id },
-        });
+        }),
+      ),
+    ).throws(() => toServerFnError.serverError("Failed to load settings"));
 
-        return {
-          modelCapability: userSettings?.modelCapability,
-        };
-      }),
-    ).throws(() => toServerFnError.serverError("Failed to load settings")),
-  );
+    if (!userSettings) {
+      throw toServerFnError.notFound();
+    }
+
+    return {
+      modelCapability: userSettings.modelCapability,
+    };
+  });
 
 export const settingsQuery = () =>
   queryOptions({

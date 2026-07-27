@@ -38,7 +38,7 @@ Architecture notes for agents live in [`.agents/architecture`](.agents/architect
 - Prefer template literals over string concatenation
 - Use destructuring for object and array assignments
 - Use `const` by default, `let` only when reassignment is needed, never `var`
-- Bare early returns are more readable as a one-liner without braces: `if (condition) return;`. Always use curly braces when returning a value: `if (condition) { return value; }`
+- Bare early returns without braces are only for empty returns — literally `return;`: `if (condition) return;`. Always use curly braces when returning a value: `if (condition) { return value; }`
 
 ### Async & Promises
 
