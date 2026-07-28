@@ -25,7 +25,10 @@ type DeleteTopicInput = {
   topicId: SafeId<"topic">;
 };
 
-const deleteTopicFn = Kit.gen(async function* (ctx: DeleteThreadCtx, input: DeleteTopicInput) {
+export const deleteTopicFn = Kit.gen(async function* (
+  ctx: DeleteThreadCtx,
+  input: DeleteTopicInput,
+) {
   const [files, { threads }] = yield* await Kit.promiseAll([
     ctx.db.run((db) =>
       db.query.file.findMany({
@@ -46,10 +49,16 @@ const deleteTopicFn = Kit.gen(async function* (ctx: DeleteThreadCtx, input: Dele
     ctx.vector.deleteVectors({
       filter: { topicId: input.topicId },
     }),
-    ctx.db.run((db) => db.delete(file).where(eq(file.topicId, input.topicId))),
-    ctx.db.run((db) => db.delete(topic).where(eq(topic.id, input.topicId))),
     ...threads.map(async (thread) => ctx.memory.deleteThread({ threadId: thread.id })),
   ]);
+  // Keep durable rows until external deletes succeed so a failed S3/vector/memory
+  // call can be retried.
+  yield* await ctx.db.transaction(async (tx) =>
+    Promise.all([
+      tx.delete(file).where(eq(file.topicId, input.topicId)),
+      tx.delete(topic).where(eq(topic.id, input.topicId)),
+    ]),
+  );
 
   return Result.ok({ id: input.topicId });
 });

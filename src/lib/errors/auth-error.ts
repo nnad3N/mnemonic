@@ -68,11 +68,13 @@ export type ToAuthErrorProps = {
   statusText: string;
 };
 
-export const toAuthError = (props: ToAuthErrorProps): AuthError => {
-  const { code, status, statusText } = props;
-  const message = props.message ?? "Unknown better-auth error";
-
-  if (!props.code) {
+export const toAuthError = ({
+  code,
+  status,
+  statusText,
+  message = "Unknown better-auth error",
+}: ToAuthErrorProps): AuthError => {
+  if (!code) {
     return new AuthError({ message, status, statusText });
   }
 

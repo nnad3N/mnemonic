@@ -10,7 +10,7 @@ type ThreadComposerFileConfig = PluginConfig<
 >;
 
 /** Browsers label clipboard images `image.png` (and similar); append a short id so names stay unique. */
-const withUniqueClipboardImageName = (file: File): File => {
+export const withUniqueClipboardImageName = (file: File): File => {
   const parts = file.name.split(".");
   const extension = parts.pop();
   const id = nanoid(4);

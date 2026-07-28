@@ -33,7 +33,7 @@ type GetPresignedUrlInput = {
   userId: SafeId<"user">;
 };
 
-const getPresignedUrlFn = Kit.gen(async function* (
+export const getPresignedUrlFn = Kit.gen(async function* (
   ctx: UploadFileCtx,
   input: GetPresignedUrlInput,
 ) {

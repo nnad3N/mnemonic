@@ -26,3 +26,8 @@ export const env = createEnv({
     SERVER_URL: v.optional(v.pipe(v.string(), v.url())),
   },
 });
+
+/** Required server env keys as plain strings — keep Vitest `TEST_ENV` in sync. */
+export type RequiredServerEnv = {
+  [K in keyof typeof env as undefined extends (typeof env)[K] ? never : K]: string;
+};

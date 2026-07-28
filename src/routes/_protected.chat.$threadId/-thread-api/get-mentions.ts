@@ -15,6 +15,7 @@ import type { MemoryKit } from "@/lib/memory-kit";
 import { authMiddleware } from "@/lib/middleware/auth-middleware";
 import type { SafeId } from "@/lib/safe-id";
 import { rawId, toSafeId } from "@/lib/safe-id";
+import { matchesQuery } from "@/lib/string-match";
 
 import type { MentionQueryType } from "./query-keys";
 import { threadKeys } from "./query-keys";
@@ -37,12 +38,6 @@ const buildFileMentionsWhereClause = (topicId: SafeId<"topic">, query: string) =
   return and(eq(file.topicId, topicId), ilike(file.displayName, `%${trimmedQuery}%`));
 };
 
-const titleMatchesQuery = (title: string, query: string) => {
-  const trimmedQuery = query.trim().toLowerCase();
-
-  return trimmedQuery.length === 0 || title.toLowerCase().includes(trimmedQuery);
-};
-
 const getMentionsInputSchema = v.object({
   resourceId: v.pipe(v.string(), v.nonEmpty()),
   query: v.optional(v.string(), ""),
@@ -61,7 +56,7 @@ type GetMentionsInput = {
   userId: SafeId<"user">;
 };
 
-const getMentionsFn = Kit.gen(async function* (ctx: MentionsCtx, input: GetMentionsInput) {
+export const getMentionsFn = Kit.gen(async function* (ctx: MentionsCtx, input: GetMentionsInput) {
   const ownedTopic = yield* await ctx.db.run((db) =>
     db.query.topic.findFirst({
       columns: { id: true },
@@ -105,7 +100,7 @@ const getMentionsFn = Kit.gen(async function* (ctx: MentionsCtx, input: GetMenti
   for (const thread of threads.threads) {
     const title = thread.title ?? "";
 
-    if (titleMatchesQuery(title, input.query) && mentions.length < MENTIONS_QUERY_LIMIT) {
+    if (matchesQuery(title, input.query) && mentions.length < MENTIONS_QUERY_LIMIT) {
       mentions.push({
         displayName: title,
         id: thread.id,

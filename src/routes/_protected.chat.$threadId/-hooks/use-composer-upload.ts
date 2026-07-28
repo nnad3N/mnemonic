@@ -19,7 +19,8 @@ import { useIsUploadingFile, useUploadFile } from "./use-upload-file";
 
 const insertMentionItem = getMentionOnSelectItem();
 
-const findAttachmentFilename = (
+/** Same content hash → same mention label (clipboard paste renames the File, not the attachment). */
+export const findAttachmentFilename = (
   threadId: string,
   messages: ThreadUIMessage[],
   sha256: string,

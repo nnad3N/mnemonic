@@ -8,7 +8,7 @@ This project uses **Oxlint** and **Oxfmt** for linting and formatting.
 - **Lint and autofix**: `deno task lint`
 - **Format and lint**: `deno task fix`
 - **Typecheck only**: `deno task typecheck`
-- **Run tests**: `deno task test`
+- **Run tests**: `deno task test` (includes Vitest typecheck)
 
 Oxlint + Oxfmt provide robust linting and formatting. Most issues are automatically fixable.
 
@@ -158,6 +158,7 @@ Use an `async` block body only when the callback performs multiple awaited opera
 - Group related code together and separate concerns
 - Do not export types, constants, functions, or components unless another module needs to import them. Keep module-local implementation details unexported.
 - **Do not create new files unless necessary** — prefer editing an existing module when the change fits there (a local `const`, a helper in the same file, an export on an existing module). Only add a file when the code is reused across modules, the existing file is already too large, or the user explicitly asks for a new file. Example: a subagent tool name used only in [`tool-parts.ts`](src/lib/ai-sdk/tool-parts.ts) belongs as an inline constant in that file, not in a new `*.constants.ts`.
+- **Component helpers stay private by default** — keep non-JSX helpers (`const getVisiblePageNumbers`, …) as unexported locals inside the `.tsx` file. Do **not** export them “just in case,” and do **not** preemptively create a `*-logic.ts` sibling. Prefer testing the component (or a real editor/DOM harness) over extracting tiny branch helpers solely for unit tests. Only when a pure helper is reused across modules, or a focused pure-function test is clearly more valuable than a component test: move it into a shared module under `src/lib/` (or a co-located `-{name}-logic.ts` with the TanStack route-ignore `-` prefix when it stays route-local), export it from there, and import it from the component and the test. Example: [`pagination.ts`](src/lib/pagination.ts) used by [`files.tsx`](src/routes/_protected.topic.$topicId/files.tsx).
 
 ### Security
 

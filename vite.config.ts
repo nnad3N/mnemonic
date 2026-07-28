@@ -6,23 +6,17 @@ import viteReact, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { nitro } from "nitro/vite";
 import { defineConfig } from "vite";
 
-const isVitest = Boolean(process.env.VITEST);
-
-const config = defineConfig({
+export default defineConfig({
   plugins: [
     devtools(),
     tailwindcss(),
     tanstackStart(),
     viteReact(),
     babel({ presets: [reactCompilerPreset()] }),
-    // Nitro's Vite plugin conflicts with Vitest (CJS React load + hung teardown).
-    !isVitest &&
-      nitro({
-        preset: "deno-server",
-        traceDeps: ["@kreuzberg/node*"],
-      }),
+    nitro({
+      preset: "deno-server",
+      traceDeps: ["@kreuzberg/node*"],
+    }),
   ],
   resolve: { tsconfigPaths: true },
 });
-
-export default config;

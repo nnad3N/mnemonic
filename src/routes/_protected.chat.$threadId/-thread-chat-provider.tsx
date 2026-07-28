@@ -1,6 +1,6 @@
 import { Chat, useChat } from "@ai-sdk/react";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { DefaultChatTransport, type PrepareSendMessagesRequest, type UIMessage } from "ai";
+import { DefaultChatTransport } from "ai";
 import { panic } from "better-result";
 import type { PropsWithChildren } from "react";
 import { use, useEffect, useState } from "react";
@@ -10,28 +10,7 @@ import { FilesSync } from "../_protected.topic.$topicId/-topic-components/files-
 import { threadQuery } from "./-thread-api/get-thread";
 import { threadKeys } from "./-thread-api/query-keys";
 import { ThreadChatContext } from "./-thread-chat-context";
-
-type ChatSendTrigger = Parameters<PrepareSendMessagesRequest<UIMessage>>[0]["trigger"];
-
-const getMessagesToSend = <TMessage extends UIMessage>(
-  messages: TMessage[],
-  trigger: ChatSendTrigger,
-): TMessage[] => {
-  const lastMessage = messages.at(-1);
-  if (!lastMessage) {
-    return [];
-  }
-
-  const previousMessage = messages.at(-2);
-  const isRegenerateAssistant =
-    trigger === "regenerate-message" && lastMessage.role === "assistant";
-
-  if (isRegenerateAssistant && previousMessage) {
-    return [previousMessage, lastMessage];
-  }
-
-  return [lastMessage];
-};
+import { getMessagesToSend } from "./-thread-chat-provider-logic";
 
 type ThreadChatProviderProps = {
   threadId: string;

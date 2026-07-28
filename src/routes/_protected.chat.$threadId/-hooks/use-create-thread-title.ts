@@ -31,7 +31,7 @@ Rules:
 const MAX_TITLE_LENGTH = 255;
 const TITLE_GENERATION_TIMEOUT_MS = 10_000;
 
-const sanitizeTitle = (value: string) => {
+export const sanitizeTitle = (value: string) => {
   const title = value
     .replaceAll(/^["'`]+|["'`]+$/g, "")
     .replaceAll(/\s+/g, " ")

@@ -50,7 +50,7 @@ type WebSearchResult = v.InferOutput<typeof searchResultSchema>;
 
 const isDocumentResult = (item: SearchResultWeb | Document): item is Document => "html" in item;
 
-const toSearchResult = (item: SearchResultWeb | Document): WebSearchResult | undefined => {
+export const toSearchResult = (item: SearchResultWeb | Document): WebSearchResult | undefined => {
   if (isDocumentResult(item)) {
     const url = item.metadata?.sourceURL ?? item.metadata?.url;
     if (!url) return;

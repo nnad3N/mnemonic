@@ -21,7 +21,7 @@ type DeleteFileInput = {
   s3Key: string;
 };
 
-const deleteFileFn = Kit.gen(async function* (ctx: DeleteFileCtx, input: DeleteFileInput) {
+export const deleteFileFn = Kit.gen(async function* (ctx: DeleteFileCtx, input: DeleteFileInput) {
   yield* await Kit.promiseAll([
     ctx.s3.deleteObject(input.s3Key),
     ctx.vector.deleteVectors({

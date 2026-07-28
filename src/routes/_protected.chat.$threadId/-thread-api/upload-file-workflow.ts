@@ -36,7 +36,7 @@ const validatedFileSchema = v.object({
 
 type FileProcessingErrorReason = "file-not-found" | "invalid-status" | "size-mismatch";
 
-class FileProcessingError extends TaggedError("FileProcessingError")<{
+export class FileProcessingError extends TaggedError("FileProcessingError")<{
   actualSize?: number;
   expectedSize?: number;
   message: string;
@@ -45,7 +45,7 @@ class FileProcessingError extends TaggedError("FileProcessingError")<{
 
 type ProcessFileCtx = Kits<[DbKit, S3Kit, VectorKit]>;
 
-const validateFileFn = Kit.gen(async function* (
+export const validateFileFn = Kit.gen(async function* (
   ctx: ProcessFileCtx,
   input: v.InferOutput<typeof workflowInputSchema>,
 ) {
@@ -129,7 +129,7 @@ const workflowOutputSchema = v.object({
   fileId: v.pipe(v.string(), v.nanoid()),
 });
 
-const processForRagFn = Kit.gen(async function* (
+export const processForRagFn = Kit.gen(async function* (
   ctx: ProcessFileCtx,
   input: v.InferOutput<typeof validatedFileSchema>,
 ) {

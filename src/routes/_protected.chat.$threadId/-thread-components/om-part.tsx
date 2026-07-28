@@ -32,8 +32,8 @@ type OmPartProps = {
 type OmOperationType = "observation" | "reflection";
 type OmIndicatorStatus = "pending" | "success" | "error";
 
-const hasCompletedOmCycle = (messageParts: ThreadUIMessagePart[], cycleId: string): boolean =>
-  messageParts.some((part) => {
+const hasCompletedOmCycle = (parts: ThreadUIMessagePart[], cycleId: string): boolean =>
+  parts.some((part) => {
     if (
       part.type !== "data-om-observation-end" &&
       part.type !== "data-om-observation-failed" &&

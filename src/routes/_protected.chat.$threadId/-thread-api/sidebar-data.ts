@@ -62,7 +62,7 @@ type ListSidebarConversationsInput = {
   userId: SafeId<"user">;
 };
 
-const listSidebarConversationsFn = Kit.gen(async function* (
+export const listSidebarConversationsFn = Kit.gen(async function* (
   ctx: SidebarCtx,
   input: ListSidebarConversationsInput,
 ) {
@@ -99,7 +99,7 @@ type ListSidebarTopicsInput = {
   userId: SafeId<"user">;
 };
 
-const listSidebarTopicsFn = Kit.gen(async function* (
+export const listSidebarTopicsFn = Kit.gen(async function* (
   ctx: SidebarCtx,
   input: ListSidebarTopicsInput,
 ) {
@@ -231,7 +231,7 @@ export const sidebarConversationsQuery = () =>
     placeholderData: keepPreviousData,
   });
 
-const getSidebarTopicsPageRequest = (pageIndex: number) => {
+export const getSidebarTopicsPageRequest = (pageIndex: number) => {
   if (pageIndex === 0) {
     return {
       limit: SIDEBAR_INITIAL_TOPICS_LIMIT,

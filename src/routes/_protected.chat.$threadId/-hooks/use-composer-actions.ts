@@ -16,7 +16,7 @@ import { useCreateThreadTitle } from "./use-create-thread-title";
 
 const Route = getRouteApi("/_protected/chat/$threadId");
 
-const hasComposerContent = (editor: PlateEditor, node: Descendant): boolean => {
+export const hasComposerContent = (editor: PlateEditor, node: Descendant): boolean => {
   // editor.api.isEmpty() treats whitespace text as content. We need whitespace
   // to stay empty, while void nodes still count because they render visible
   // chips with empty text children.
@@ -35,7 +35,7 @@ const hasComposerContent = (editor: PlateEditor, node: Descendant): boolean => {
   return node.children.some((child) => hasComposerContent(editor, child));
 };
 
-const getComposerAttachments = async (
+export const getComposerAttachments = async (
   threadId: string,
   messages: ThreadUIMessage[],
   location: ThreadInputLocation,

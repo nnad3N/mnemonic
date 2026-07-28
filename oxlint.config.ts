@@ -30,6 +30,12 @@ export default defineConfig({
         "vitest/expect-expect": "off",
       },
     },
+    {
+      files: ["**/*.{test,test-d}.{ts,tsx}"],
+      rules: {
+        "eslint-js/no-restricted-syntax": "off",
+      },
+    },
   ],
   rules: {
     "no-console": ["warn", { allow: ["warn", "error"] }],
