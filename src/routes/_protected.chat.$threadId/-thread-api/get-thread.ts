@@ -1,5 +1,4 @@
 import { toAISdkMessages } from "@mastra/ai-sdk/ui";
-import { queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import type { TsrSerializable } from "@tanstack/router-core";
 import { matchError, Result } from "better-result";
@@ -13,7 +12,6 @@ import type { MemoryKit } from "@/lib/memory-kit";
 import { threadAccessMiddleware } from "@/lib/middleware/assert-thread-access";
 import type { SafeId } from "@/lib/safe-id";
 import { toSafeId } from "@/lib/safe-id";
-import { threadKeys } from "@/routes/_protected.chat.$threadId/-thread-api/query-keys";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 
 type GetThreadCtx = Kits<[DbKit, MemoryKit]>;
@@ -71,20 +69,3 @@ export const getThread = createServerFn({ method: "GET" })
       }),
     ),
   );
-
-export const threadQuery = (threadId: string) =>
-  queryOptions({
-    queryFn: async () => {
-      const data = await getThread({
-        data: { threadId },
-      });
-
-      return {
-        resourceId: data.resourceId,
-        messages: data.messages as ThreadUIMessage[],
-        topicId: data.topicId,
-      };
-    },
-    queryKey: threadKeys.byId(threadId),
-    staleTime: Infinity,
-  });

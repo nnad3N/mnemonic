@@ -2,7 +2,7 @@ export type MentionQueryType = "file" | "thread" | "topic";
 
 export const threadKeys = {
   all: ["threads"] as const,
-  byId: (threadId: string) => [...threadKeys.all, threadId] as const,
+  chat: (threadId: string) => [...threadKeys.all, threadId, "chat"] as const,
   mentions: (topicId: string) => [...threadKeys.all, topicId, "mentions"] as const,
   mention: (type: MentionQueryType, id: string) =>
     [...threadKeys.all, "mention", type, id] as const,

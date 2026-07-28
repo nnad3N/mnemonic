@@ -6,13 +6,12 @@ import { ElementApi, TextApi } from "platejs";
 import type { PlateEditor } from "platejs/react";
 import { useEditorRef, useEditorSelector } from "platejs/react";
 
-import { threadQuery } from "../-thread-api/get-thread";
-import { useThreadChat } from "../-thread-chat-provider";
 import { getThreadEditorId, plateToMarkdown } from "../-thread-components/composer/plate";
 import type { ThreadMetadataAttachment, ThreadUIMessage } from "../-thread-types";
 import type { ThreadInputLocation } from "../../-chat-store";
 import { useChatStore } from "../../-chat-store";
 import { useCreateThreadTitle } from "./use-create-thread-title";
+import { threadChatQuery, useThreadChat } from "./use-thread-chat";
 
 const Route = getRouteApi("/_protected/chat/$threadId");
 
@@ -103,7 +102,7 @@ export const useComposerActions = (location: ThreadInputLocation) => {
 
   const chat = useThreadChat();
   const { data: topicId } = useSuspenseQuery({
-    ...threadQuery(threadId),
+    ...threadChatQuery(threadId),
     select: (data) => data.topicId,
   });
   const createThreadTitleMutation = useCreateThreadTitle();

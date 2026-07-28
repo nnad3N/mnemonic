@@ -103,6 +103,10 @@ const createKitRunResult = <TValue, TError extends Error>(
       return result.value;
     }
 
+    if (!ServerFnError.is(result.error)) {
+      console.error(result.error);
+    }
+
     if (!mapError) {
       throw result.error;
     }

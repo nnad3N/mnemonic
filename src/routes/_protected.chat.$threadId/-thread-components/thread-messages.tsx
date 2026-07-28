@@ -1,12 +1,16 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useLayoutEffect, useRef, useState } from "react";
 
-import { MessageScrollerContent, MessageScrollerViewport } from "@/components/ui/message-scroller";
+import {
+  MessageScrollerContent,
+  MessageScrollerViewport,
+  useMessageScroller,
+} from "@/components/ui/message-scroller";
 import { cn } from "@/lib/utils";
 import { ThreadError } from "@/routes/_protected.chat.$threadId/-thread-components/thread-error";
 import { ThreadMessage } from "@/routes/_protected.chat.$threadId/-thread-components/thread-message";
 
-import { useThreadChat } from "../-thread-chat-provider";
+import { useThreadChat } from "../-hooks/use-thread-chat";
 import { useChatStore } from "../../-chat-store";
 
 const USER_MESSAGE_ESTIMATED_SIZE = 80;
@@ -20,6 +24,7 @@ export const ThreadMessages = () => {
   const isBusy = chat.status === "submitted" || chat.status === "streaming";
   const viewportRef = useRef<HTMLDivElement>(null);
   const [isLayoutReady, setIsLayoutReady] = useState(chat.messages.length === 0);
+  const { scrollToEnd } = useMessageScroller();
 
   const virtualizer = useVirtualizer({
     count: chat.messages.length,
@@ -36,7 +41,6 @@ export const ThreadMessages = () => {
     getItemKey: (index) => chat.messages.at(index)?.id ?? index,
     indexAttribute: "data-test-index",
     overscan: MESSAGE_OVERSCAN,
-    anchorTo: "end",
   });
 
   useLayoutEffect(() => {
@@ -63,6 +67,9 @@ export const ThreadMessages = () => {
       }
 
       if (stableFrames > 0) {
+        scrollToEnd({
+          behavior: "instant",
+        });
         setIsLayoutReady(true);
         return;
       }
@@ -76,7 +83,7 @@ export const ThreadMessages = () => {
       cancelled = true;
       cancelAnimationFrame(frameId);
     };
-  }, []);
+  }, [scrollToEnd]);
 
   return (
     <MessageScrollerViewport data-test-id="message-scroller-viewport" ref={viewportRef}>

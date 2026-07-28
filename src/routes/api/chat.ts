@@ -5,27 +5,31 @@ import { createUIMessageStreamResponse } from "ai";
 import { matchError, Result, TaggedError } from "better-result";
 import * as v from "valibot";
 
-import { dbKit } from "@/lib/db-kit";
 import type { DbKit } from "@/lib/db-kit";
-import { Kit } from "@/lib/kit";
+import { dbKit } from "@/lib/db-kit";
 import type { Kits } from "@/lib/kit";
-import { memoryKit } from "@/lib/memory-kit";
+import { Kit } from "@/lib/kit";
 import type { MemoryKit } from "@/lib/memory-kit";
+import { memoryKit } from "@/lib/memory-kit";
 import { authMiddleware } from "@/lib/middleware/auth-middleware";
 import { DEFAULT_MODEL_CAPABILITY } from "@/lib/model-capability";
-import { toSafeId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
+import { toSafeId } from "@/lib/safe-id";
 import { mastra } from "@/mastra";
-import { conversationAgentId } from "@/mastra/agents/conversation-agent";
-import { topicAgentId } from "@/mastra/agents/topic-agent";
 import type { MnemonicRequestContext } from "@/mastra/request-context";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 
-const uiMessageSchema = v.object({
+type GetChatAgentIdInput = {
+  topicId: SafeId<"topic"> | undefined;
+};
+export const getChatAgentId = ({ topicId }: GetChatAgentIdInput) =>
+  topicId ? "topic-agent" : "conversation-agent";
+
+export const uiMessageSchema = v.object({
   id: v.pipe(v.string(), v.nanoid()),
   role: v.picklist(["system", "user", "assistant"]),
-  parts: v.array(v.looseObject({})),
-  metadata: v.optional(v.unknown()),
+  parts: v.array(v.any()),
+  metadata: v.optional(v.any()),
 });
 
 const chatRequestSchema = v.pipe(
@@ -91,7 +95,7 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
     return Result.err(new ChatNotFoundError({ message: "Thread not found" }));
   }
 
-  const agentId = topic ? topicAgentId : conversationAgentId;
+  const agentId = getChatAgentId({ topicId: topic?.id });
   const userSettings = yield* await ctx.db.run((db) =>
     db.query.settings.findFirst({
       columns: { modelCapability: true },

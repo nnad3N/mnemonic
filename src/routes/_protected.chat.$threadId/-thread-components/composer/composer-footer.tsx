@@ -7,7 +7,7 @@ import { SUPPORTED_MIME_TYPES } from "@/lib/file-validation";
 
 import { useComposerActions } from "../../-hooks/use-composer-actions";
 import { useComposerUpload } from "../../-hooks/use-composer-upload";
-import { useThreadChat } from "../../-thread-chat-provider";
+import { useThreadChat } from "../../-hooks/use-thread-chat";
 import type { ThreadInputLocation } from "../../../-chat-store";
 import { CapabilityPicker } from "./capability-picker";
 

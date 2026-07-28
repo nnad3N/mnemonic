@@ -2,11 +2,11 @@ import { createCodePlugin } from "@streamdown/code";
 import type { ToolUIPart } from "ai";
 import { Streamdown } from "streamdown";
 
+import { CollapsibleContent } from "@/components/ui/collapsible";
 import { AssistantToolPart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-tool-part";
 import { streamdownLinkSafety } from "@/routes/_protected.chat.$threadId/-thread-components/streamdown-link-safety-modal";
 import {
   CollapsibleToolIndicator,
-  CollapsibleToolIndicatorContent,
   CollapsibleToolIndicatorTrigger,
 } from "@/routes/_protected.chat.$threadId/-thread-components/tool-indicator";
 import type { ThreadUITools } from "@/routes/_protected.chat.$threadId/-thread-types";
@@ -53,11 +53,11 @@ export const ExecuteCodePart = ({ part }: ExecuteCodePartProps) => {
       <CollapsibleToolIndicatorTrigger
         render={<AssistantToolPart interactive="collapsible" part={part} />}
       />
-      <CollapsibleToolIndicatorContent className="pt-2">
+      <CollapsibleContent className="overflow-hidden pt-2">
         <Streamdown linkSafety={streamdownLinkSafety} mode="static" plugins={streamdownPlugins}>
           {toExecuteCodeMarkdown(code, part.output)}
         </Streamdown>
-      </CollapsibleToolIndicatorContent>
+      </CollapsibleContent>
     </CollapsibleToolIndicator>
   );
 };

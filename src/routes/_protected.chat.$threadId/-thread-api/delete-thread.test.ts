@@ -116,6 +116,7 @@ const createFailingMemoryKit = () => {
       ),
     getThreadById: memory.getThreadById,
     listMessages: memory.listMessages,
+    saveMessages: memory.saveMessages,
     saveThread: memory.saveThread,
     updateThread: memory.updateThread,
   };

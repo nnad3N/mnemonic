@@ -14,7 +14,7 @@ const createTestFileEmbeddingModel = async () => {
 
   return new MockEmbeddingModelV3({
     maxEmbeddingsPerCall: 2048,
-    doEmbed:  async ({ values }) =>
+    doEmbed: async ({ values }) =>
       Promise.resolve({
         embeddings: values.map(() => unitVector),
         usage: { tokens: values.length },

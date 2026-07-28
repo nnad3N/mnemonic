@@ -1,3 +1,4 @@
+import type { MastraDBMessage } from "@mastra/core/agent/message-list";
 import type { MastraMemory } from "@mastra/core/memory";
 import type { MemoryStorage } from "@mastra/core/storage";
 import type {
@@ -17,6 +18,7 @@ import type { topicAgentId } from "@/mastra/agents/topic-agent";
 type AgentWithMemoryId = typeof conversationAgentId | typeof topicAgentId;
 type GetThreadInput = Parameters<MemoryStorage["getThreadById"]>[0];
 type GetThreadOutput = Awaited<ReturnType<MemoryStorage["getThreadById"]>>;
+type SaveMessagesOutput = Awaited<ReturnType<MastraMemory["saveMessages"]>>;
 type SaveThreadInput = Parameters<MemoryStorage["saveThread"]>[0];
 type SaveThreadOutput = Awaited<ReturnType<MemoryStorage["saveThread"]>>;
 type UpdateThreadInput = Parameters<MemoryStorage["updateThread"]>[0];
@@ -50,6 +52,10 @@ export type MemoryApi = {
   listMessages: (
     input: StorageListMessagesInput,
   ) => Promise<ResultType<StorageListMessagesOutput, MemoryError>>;
+  saveMessages: (input: {
+    agentId: AgentWithMemoryId;
+    messages: MastraDBMessage[];
+  }) => Promise<ResultType<SaveMessagesOutput, MemoryError>>;
   saveThread: (input: SaveThreadInput) => Promise<ResultType<SaveThreadOutput, MemoryError>>;
   updateThread: (input: UpdateThreadInput) => Promise<ResultType<UpdateThreadOutput, MemoryError>>;
 };
@@ -123,6 +129,14 @@ export const memoryKit = createMemoryKit({
       try: async () => {
         const memory = await getMemoryStore();
         return memory.listMessages(input);
+      },
+      catch: toMemoryError,
+    }),
+  saveMessages: async ({ agentId, messages }) =>
+    Result.tryPromise({
+      try: async () => {
+        const memory = await getAgentMemory(agentId);
+        return memory.saveMessages({ messages });
       },
       catch: toMemoryError,
     }),

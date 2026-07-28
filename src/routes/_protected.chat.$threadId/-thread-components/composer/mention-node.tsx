@@ -22,8 +22,8 @@ import {
 import { cn } from "@/lib/utils";
 
 import { useComposer } from "../../-hooks/use-composer";
+import { threadChatQuery } from "../../-hooks/use-thread-chat";
 import { mentionByIdQuery, mentionsQuery } from "../../-thread-api/get-mentions";
-import { threadQuery } from "../../-thread-api/get-thread";
 import type { MentionQueryType } from "../../-thread-api/query-keys";
 import type { ThreadAttachment } from "../../../-chat-store";
 import { useChatStore } from "../../../-chat-store";
@@ -253,7 +253,7 @@ export const ThreadMentionInputElement = (props: PlateElementProps<TComboboxInpu
     select: (params) => params.threadId,
   });
   const resourceId = useSuspenseQuery({
-    ...threadQuery(threadId),
+    ...threadChatQuery(threadId),
     select: (data) => data.resourceId,
   }).data;
   const attachments = useChatStore((state) => state.attachments.get(threadId));

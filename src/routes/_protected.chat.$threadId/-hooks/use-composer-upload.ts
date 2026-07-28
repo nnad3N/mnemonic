@@ -7,14 +7,13 @@ import { useCallback } from "react";
 import { hashFileContents } from "@/lib/hash";
 
 import { findFilesBySha256 } from "../-thread-api/find-files-by-sha256";
-import { threadQuery } from "../-thread-api/get-thread";
-import { useThreadChat } from "../-thread-chat-provider";
 import { getThreadEditorId } from "../-thread-components/composer/plate";
 import { getMentionKey } from "../-thread-components/composer/plate-plugins/mention-key";
 import type { ThreadUIMessage } from "../-thread-types";
 import type { ThreadInputLocation } from "../../-chat-store";
 import { useChatStore } from "../../-chat-store";
 import { useAddAttachment, useIsAddingAttachment } from "./use-add-attachment";
+import { threadChatQuery, useThreadChat } from "./use-thread-chat";
 import { useIsUploadingFile, useUploadFile } from "./use-upload-file";
 
 const insertMentionItem = getMentionOnSelectItem();
@@ -48,7 +47,7 @@ export const useComposerUpload = (threadId: string, location: ThreadInputLocatio
   const editor = useEditorRef(editorId);
   const chat = useThreadChat();
   const { data: topicId } = useSuspenseQuery({
-    ...threadQuery(threadId),
+    ...threadChatQuery(threadId),
     select: (data) => data.topicId,
   });
 
