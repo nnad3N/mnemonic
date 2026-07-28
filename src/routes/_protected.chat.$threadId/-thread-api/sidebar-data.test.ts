@@ -121,7 +121,7 @@ describe("listSidebarConversationsFn", () => {
 describe("listSidebarTopicsFn", () => {
   it("reports hasMore when more topics exist beyond the page", async () => {
     await Promise.all(
-      Array.from({ length: 3 }, (_, index) =>
+      Array.from({ length: 3 }, async (_, index) =>
         seedTopic({
           userId,
           title: `Topic ${String(index)}`,

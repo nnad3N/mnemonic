@@ -1,47 +1,10 @@
 import { cleanup } from "@testing-library/react";
-import { enableMapSet } from "immer";
-import { afterEach, vi } from "vitest";
+import { afterEach } from "vitest";
 // oxlint-disable-next-line import/no-unassigned-import -- registers jest-dom matchers for Vitest
 import "@testing-library/jest-dom/vitest";
 
-// Auto-mock Zustand so `__mocks__/zustand.ts` resets stores after each test.
-// See https://zustand.docs.pmnd.rs/learn/guides/testing
-vi.mock("zustand");
-
-const memoryStorage = (() => {
-  const store = new Map<string, string>();
-
-  return {
-    get length() {
-      return store.size;
-    },
-    clear: () => {
-      store.clear();
-    },
-    getItem: (key: string) => store.get(key) ?? null,
-    key: (index: number) => [...store.keys()].at(index) ?? null,
-    removeItem: (key: string) => {
-      store.delete(key);
-    },
-    setItem: (key: string, value: string) => {
-      store.set(key, value);
-    },
-  } satisfies Storage;
-})();
-
-Object.defineProperty(globalThis, "localStorage", {
-  configurable: true,
-  value: memoryStorage,
-});
-Object.defineProperty(window, "localStorage", {
-  configurable: true,
-  value: memoryStorage,
-});
-
-// Ensures GT is initialized and translations are ready before any test module imports.
-await import("./translations");
-
-enableMapSet();
+// oxlint-disable-next-line import/no-unassigned-import -- shared mocks / GT / immer
+import "./setup-common";
 
 declare global {
   // oxlint-disable-next-line typescript/consistent-type-definitions -- augmenting globalThis
@@ -74,5 +37,5 @@ window.dispatchEvent = ((event: Event) => {
 
 afterEach(() => {
   cleanup();
-  memoryStorage.clear();
+  localStorage.clear();
 });

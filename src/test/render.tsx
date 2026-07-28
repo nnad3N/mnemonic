@@ -1,17 +1,14 @@
-import { QueryClientProvider } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
-import { RouterProvider } from "@tanstack/react-router";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { render as rtlRender } from "@testing-library/react";
 import type { RenderOptions } from "@testing-library/react";
-import type { Session, User } from "better-auth";
 import { GTProvider } from "gt-tanstack-start";
 import type { ReactElement, ReactNode } from "react";
 
 import { ThemeProvider } from "@/components/theme-provider";
 
-import { createTestRouter } from "./create-test-router";
+import { createProviderTree } from "./create-test-router";
 import { createTestQueryClient } from "./create-test-query-client";
-import { createTestSession } from "./fixtures/session";
 import { testTranslations } from "./translations";
 
 type AppProvidersProps = {
@@ -19,7 +16,7 @@ type AppProvidersProps = {
   queryClient: QueryClient;
 };
 
-/** Shared app shell — keep in sync when production providers change. */
+/** Providers for isolated component renders (no router). Prefer `renderWithProviders` for routes. */
 const AppProviders = ({ children, queryClient }: AppProvidersProps) => (
   <QueryClientProvider client={queryClient}>
     <GTProvider locale="en" translations={testTranslations}>
@@ -34,7 +31,7 @@ type CustomRenderOptions = {
   queryClient?: QueryClient;
 } & Omit<RenderOptions, "wrapper">;
 
-/** Render UI under the shared app providers. */
+/** Render UI under app providers without a router. */
 export const render = (
   ui: ReactElement,
   { queryClient = createTestQueryClient(), ...renderOptions }: CustomRenderOptions = {},
@@ -48,64 +45,17 @@ export const render = (
   queryClient,
 });
 
-type ProviderTreeOptions = {
-  /** Caller owns cache fixtures — seed with `queryOptions` + `setQueryData` before render. */
+type RenderWithProvidersOptions = {
   queryClient?: QueryClient;
-  session?: Session;
-  user?: User;
-};
+} & Omit<RenderOptions, "wrapper">;
 
-type ProviderTreeResult = {
-  queryClient: QueryClient;
-  router: ReturnType<typeof createTestRouter>;
-  session: Session;
-  tree: ReactElement;
-  user: User;
-};
-
-export const createProviderTree = ({
-  queryClient = createTestQueryClient(),
-  session: sessionOverride,
-  user: userOverride,
-}: ProviderTreeOptions = {}): ProviderTreeResult => {
-  const { session, user } = createTestSession({
-    ...sessionOverride,
-    user: userOverride,
-  });
-
-  const router = createTestRouter({
-    queryClient,
-    session,
-    user,
-  });
-
-  const tree = (
-    <AppProviders queryClient={queryClient}>
-      <RouterProvider router={router} />
-    </AppProviders>
-  );
-
-  return {
-    queryClient,
-    router,
-    session,
-    tree,
-    user,
-  };
-};
-
-type RenderWithProvidersOptions = ProviderTreeOptions & Omit<RenderOptions, "wrapper">;
-
+/** Mount the real route tree (providers come from the test router shell). */
 export const renderWithProviders = ({
   queryClient,
-  session,
-  user,
   ...renderOptions
 }: RenderWithProvidersOptions = {}) => {
   const providers = createProviderTree({
     queryClient,
-    session,
-    user,
   });
 
   return {

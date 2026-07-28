@@ -1,8 +1,8 @@
 import { convertFileListToFileUIParts } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useChatStore } from "../../-chat-store";
 import type { ThreadUIMessage } from "../-thread-types";
+import { useChatStore } from "../../-chat-store";
 import { getComposerAttachments } from "./use-composer-actions";
 
 vi.mock("ai", async (importOriginal) => {
@@ -12,13 +12,15 @@ vi.mock("ai", async (importOriginal) => {
     ...actual,
     // happy-dom's DataTransfer.files is an Array, not a FileList — the real
     // converter rejects that. Stub the conversion so we can test selection/merge.
-    convertFileListToFileUIParts: vi.fn(async (files: FileList | undefined) =>
-      Array.from(files ?? []).map((file) => ({
-        type: "file" as const,
-        mediaType: file.type,
-        filename: file.name,
-        url: `data:${file.type};base64,stub`,
-      })),
+    convertFileListToFileUIParts: vi.fn<typeof convertFileListToFileUIParts>( async (files) =>
+      Promise.resolve(
+        Array.from(files ?? []).map((file) => ({
+          type: "file" as const,
+          mediaType: file.type,
+          filename: file.name,
+          url: `data:${file.type};base64,stub`,
+        })),
+      ),
     ),
   };
 });
@@ -194,11 +196,7 @@ describe("getComposerAttachments", () => {
       markdown: "hi",
     });
 
-    const result = await getComposerAttachments(
-      "thread-1",
-      [userMessage({ id: "other" })],
-      "edit",
-    );
+    const result = await getComposerAttachments("thread-1", [userMessage({ id: "other" })], "edit");
 
     expect(result).toEqual({ files: [], attachments: undefined });
   });

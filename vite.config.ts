@@ -18,5 +18,7 @@ export default defineConfig({
       traceDeps: ["@kreuzberg/node*"],
     }),
   ],
-  resolve: { tsconfigPaths: true },
+  resolve: {
+    tsconfigPaths: true,
+  },
 });

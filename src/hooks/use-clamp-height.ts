@@ -1,29 +1,32 @@
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 type UseClampHeightProps = {
   lineLimit?: number;
-  lineHeight?: number;
 };
 
 export const useClampHeight = <T extends HTMLElement>({
   lineLimit = 8,
-  lineHeight = 1.25,
 }: UseClampHeightProps = {}) => {
   const ref = useRef<T>(null);
   const [isHeightClamped, setIsHeightClamped] = useState(false);
+  const [lineHeight, setLineHeight] = useState<string | undefined>();
+  const [maxHeight, setMaxHeight] = useState<string | undefined>();
 
-  const maxHeight = lineLimit * lineHeight;
-
-  useEffect(() => {
+  useLayoutEffect(() => {
     const element = ref.current;
 
     if (!element) return;
 
     const updateClampedState = (target: Element) => {
-      const maxHeightPx = maxHeight * 16;
-      const lineHeightPx = lineHeight * 16;
+      const lineHeightPx = Number.parseFloat(getComputedStyle(target).lineHeight);
+
+      if (!Number.isFinite(lineHeightPx) || lineHeightPx <= 0) return;
+
+      const maxHeightPx = lineLimit * lineHeightPx;
       const overflowHeight = target.scrollHeight - maxHeightPx;
 
+      setLineHeight(`${lineHeightPx}px`);
+      setMaxHeight(`${maxHeightPx}px`);
       setIsHeightClamped(overflowHeight >= lineHeightPx);
     };
 
@@ -41,12 +44,12 @@ export const useClampHeight = <T extends HTMLElement>({
     return () => {
       observer.disconnect();
     };
-  }, [lineHeight, maxHeight]);
+  }, [lineLimit]);
 
   return {
     isHeightClamped,
-    lineHeight: `${lineHeight}rem`,
-    maxHeight: `${maxHeight}rem`,
+    lineHeight,
+    maxHeight,
     ref,
   };
 };

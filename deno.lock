@@ -55,9 +55,10 @@
     "npm:@types/react@^19.2.17": "19.2.17",
     "npm:@valibot/to-json-schema@^1.7.1": "1.7.1_valibot@1.4.2__typescript@7.0.2",
     "npm:@vitejs/plugin-react@^6.0.3": "6.0.3_@rolldown+plugin-babel@0.2.3__@babel+core@7.29.7__rolldown@1.1.5__vite@8.1.4___esbuild@0.28.1__esbuild@0.28.1_babel-plugin-react-compiler@1.0.0_vite@8.1.4__esbuild@0.28.1",
+    "npm:@vitest/browser-playwright@4.1.10": "4.1.10_playwright@1.62.0_vitest@4.1.10_vite@8.1.4__esbuild@0.28.1",
     "npm:ai@6.0.180": "6.0.180_zod@4.4.3",
     "npm:babel-plugin-react-compiler@1": "1.0.0",
-    "npm:better-auth@^1.6.23": "1.6.23_@tanstack+react-start@1.168.28__react@19.2.7__react-dom@19.2.7___react@19.2.7__vite@8.1.4___esbuild@0.28.1__esbuild@0.28.1__rolldown@1.1.5__rollup@4.62.2_drizzle-kit@1.0.0-rc.4-ca0f029_drizzle-orm@1.0.0-rc.4-5d5b77c__@libsql+client@0.17.4__pg@8.22.0__postgres@3.4.9__valibot@1.4.2___typescript@7.0.2__zod@4.4.3_react@19.2.7_react-dom@19.2.7__react@19.2.7_vitest@4.1.10__happy-dom@20.11.1__vite@8.1.4___esbuild@0.28.1_happy-dom@20.11.1",
+    "npm:better-auth@^1.6.23": "1.6.23_@tanstack+react-start@1.168.28__react@19.2.7__react-dom@19.2.7___react@19.2.7__vite@8.1.4___esbuild@0.28.1__esbuild@0.28.1__rolldown@1.1.5__rollup@4.62.2_drizzle-kit@1.0.0-rc.4-ca0f029_drizzle-orm@1.0.0-rc.4-5d5b77c__@libsql+client@0.17.4__pg@8.22.0__postgres@3.4.9__valibot@1.4.2___typescript@7.0.2__zod@4.4.3_react@19.2.7_react-dom@19.2.7__react@19.2.7_vitest@4.1.10__@vitest+browser-playwright@4.1.10__happy-dom@20.11.1__vite@8.1.4___esbuild@0.28.1__playwright@1.62.0_@vitest+browser-playwright@4.1.10__playwright@1.62.0__vitest@4.1.10__vite@8.1.4___esbuild@0.28.1_playwright@1.62.0",
     "npm:better-result@^2.9.2": "2.9.2",
     "npm:class-variance-authority@~0.7.1": "0.7.1",
     "npm:clsx@^2.1.1": "2.1.1",
@@ -81,6 +82,7 @@
     "npm:oxlint-tsgolint@~0.22.1": "0.22.1",
     "npm:oxlint@^1.74.0": "1.74.0_oxlint-tsgolint@0.22.1",
     "npm:platejs@^53.2.4": "53.2.4_react@19.2.7_react-dom@19.2.7__react@19.2.7_@types+react@19.2.17_immer@11.1.11_scheduler@0.27.0",
+    "npm:playwright@^1.62.0": "1.62.0",
     "npm:react-day-picker@^10.0.1": "10.0.1_@types+react@19.2.17_react@19.2.7",
     "npm:react-dom@^19.2.7": "19.2.7_react@19.2.7",
     "npm:react@^19.2.7": "19.2.7",
@@ -97,7 +99,8 @@
     "npm:use-debounce@^10.1.1": "10.1.1_react@19.2.7",
     "npm:valibot@^1.4.2": "1.4.2_typescript@7.0.2",
     "npm:vite@^8.0.11": "8.1.4_esbuild@0.28.1",
-    "npm:vitest@^4.1.10": "4.1.10_happy-dom@20.11.1_vite@8.1.4__esbuild@0.28.1",
+    "npm:vitest-browser-react@2.0.5": "2.0.5_@types+react@19.2.17_@types+react-dom@19.2.3__@types+react@19.2.17_react@19.2.7_react-dom@19.2.7__react@19.2.7_vitest@4.1.10__@vitest+browser-playwright@4.1.10__happy-dom@20.11.1__vite@8.1.4___esbuild@0.28.1__playwright@1.62.0_@vitest+browser-playwright@4.1.10__playwright@1.62.0__vitest@4.1.10__vite@8.1.4___esbuild@0.28.1_playwright@1.62.0",
+    "npm:vitest@^4.1.10": "4.1.10_@vitest+browser-playwright@4.1.10_happy-dom@20.11.1_vite@8.1.4__esbuild@0.28.1_playwright@1.62.0",
     "npm:zustand@^5.0.14": "5.0.14_@types+react@19.2.17_immer@11.1.11_react@19.2.7"
   },
   "npm": {
@@ -873,6 +876,9 @@
     },
     "@better-fetch/fetch@1.3.1": {
       "integrity": "sha512-ABkD1WhyfPZprKRQI3bhATjeiFuNWC9PXhfGWqL+sg/gKrM977oFrYkdb4msM3hgUGonr7KlOsOFT5TU2rht9g=="
+    },
+    "@blazediff/core@1.9.1": {
+      "integrity": "sha512-ehg3jIkYKulZh+8om/O25vkvSsXXwC+skXmyA87FFx6A/45eqOkZsBltMw/TVteb0mloiGT8oGRTcjRAz66zaA=="
     },
     "@braintree/sanitize-url@7.1.2": {
       "integrity": "sha512-jigsZK+sMF/cuiB7sERuo9V7N9jx+dhmHHnQyDSVdpZwVutaBu7WvNYqMDLSgFgfB30n452TP3vjDAvFC973mA=="
@@ -2647,6 +2653,9 @@
         "react-dom"
       ]
     },
+    "@polka/url@1.0.0-next.29": {
+      "integrity": "sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww=="
+    },
     "@posthog/core@1.42.1": {
       "integrity": "sha512-cZojBmvf92gZAn0MGf/J2S+3t2sZqb9E2/6mjY4jJsImwz7PuYqdNj870Wx2iwwlf++wfhRuH4K4bpDy9GIoCA==",
       "dependencies": [
@@ -4286,6 +4295,30 @@
         "babel-plugin-react-compiler"
       ]
     },
+    "@vitest/browser-playwright@4.1.10_playwright@1.62.0_vitest@4.1.10_vite@8.1.4__esbuild@0.28.1": {
+      "integrity": "sha512-nMoXGEiRpT7m3W7NsbvrM2aKNwiNHZf+zEpUCvMteGjZFvfT96Q9fh7QyB98dvDWXiKvrLxA7bJ1mCOOv+JQPw==",
+      "dependencies": [
+        "@vitest/browser",
+        "@vitest/mocker",
+        "playwright",
+        "tinyrainbow",
+        "vitest"
+      ]
+    },
+    "@vitest/browser@4.1.10_vitest@4.1.10__@vitest+browser-playwright@4.1.10__happy-dom@20.11.1__vite@8.1.4___esbuild@0.28.1__playwright@1.62.0_@vitest+browser-playwright@4.1.10__playwright@1.62.0__vitest@4.1.10__vite@8.1.4___esbuild@0.28.1_playwright@1.62.0_vite@8.1.4__esbuild@0.28.1": {
+      "integrity": "sha512-UDwuWGwXj646CBx/bQHOaJSX7np0I8JL/UKQYa1e4QrVHH8VdWtx8eaOuf8sy0ShwDgR6NjJAsp5eF6vjF6qng==",
+      "dependencies": [
+        "@blazediff/core",
+        "@vitest/mocker",
+        "@vitest/utils",
+        "magic-string",
+        "pngjs",
+        "sirv",
+        "tinyrainbow",
+        "vitest",
+        "ws"
+      ]
+    },
     "@vitest/expect@4.1.10": {
       "integrity": "sha512-YsCn+qAk1GWjQOWFEsEcL2gNQ0zmVmQu3T03qP6UyjhtmdtwtbuI+DASn/7iQB3HGTXkdBwGddzxPlmiql5vlA==",
       "dependencies": [
@@ -4637,7 +4670,7 @@
       "integrity": "sha512-AjYpR78kDWAY3Efj+cDTFH9t9SCoL7OoTp1BOb0mQV7S+6CiLwnWM3FyxhJtdPufDFKzmCSFoUncKjWgJEZTCQ==",
       "bin": true
     },
-    "better-auth@1.6.23_@tanstack+react-start@1.168.28__react@19.2.7__react-dom@19.2.7___react@19.2.7__vite@8.1.4___esbuild@0.28.1__esbuild@0.28.1__rolldown@1.1.5__rollup@4.62.2_drizzle-kit@1.0.0-rc.4-ca0f029_drizzle-orm@1.0.0-rc.4-5d5b77c__@libsql+client@0.17.4__pg@8.22.0__postgres@3.4.9__valibot@1.4.2___typescript@7.0.2__zod@4.4.3_react@19.2.7_react-dom@19.2.7__react@19.2.7_vitest@4.1.10__happy-dom@20.11.1__vite@8.1.4___esbuild@0.28.1_happy-dom@20.11.1": {
+    "better-auth@1.6.23_@tanstack+react-start@1.168.28__react@19.2.7__react-dom@19.2.7___react@19.2.7__vite@8.1.4___esbuild@0.28.1__esbuild@0.28.1__rolldown@1.1.5__rollup@4.62.2_drizzle-kit@1.0.0-rc.4-ca0f029_drizzle-orm@1.0.0-rc.4-5d5b77c__@libsql+client@0.17.4__pg@8.22.0__postgres@3.4.9__valibot@1.4.2___typescript@7.0.2__zod@4.4.3_react@19.2.7_react-dom@19.2.7__react@19.2.7_vitest@4.1.10__@vitest+browser-playwright@4.1.10__happy-dom@20.11.1__vite@8.1.4___esbuild@0.28.1__playwright@1.62.0_@vitest+browser-playwright@4.1.10__playwright@1.62.0__vitest@4.1.10__vite@8.1.4___esbuild@0.28.1_playwright@1.62.0": {
       "integrity": "sha512-4vOaRd9UiKGKm9R+ej0jjU1es3MiJIiNc9Qq3VCnYqOZ4/nb5272QqTxWYoDxyUXl5x6A2x2we5KZKQO9teTQQ==",
       "dependencies": [
         "@better-auth/core",
@@ -6163,6 +6196,11 @@
         "jsonfile",
         "universalify"
       ]
+    },
+    "fsevents@2.3.2": {
+      "integrity": "sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==",
+      "os": ["darwin"],
+      "scripts": true
     },
     "fsevents@2.3.3": {
       "integrity": "sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==",
@@ -8015,6 +8053,9 @@
         "ufo"
       ]
     },
+    "mrmime@2.0.1": {
+      "integrity": "sha512-Y3wQdFg2Va6etvQ5I82yUhGdsKrcYox6p7FfL1LbK2J4V01F9TGlepTIhnK24t7koZibmg82KGglhA1XK5IsLQ=="
+    },
     "ms@2.0.0": {
       "integrity": "sha512-Tpp60P6IUJDTuOq/5Z8cdskzJujfwqfOTkrwIwj7IRISpnkJnT6SyJ4PCPnGMoFjC9ddhal5KVIYtAt97ix05A=="
     },
@@ -8637,6 +8678,23 @@
         "react-dom"
       ]
     },
+    "playwright-core@1.62.0": {
+      "integrity": "sha512-nsNRyq0r2zsG8AcRHWknc9QRA5XCueC7gWMrs+Gx2tlZn9hcl8zudfh00lhJPY1DE7NmZ6bDsT9g2yey8mXljA==",
+      "bin": true
+    },
+    "playwright@1.62.0": {
+      "integrity": "sha512-Z14dG305dgaLu6foB1TXQagFiW8JfSUIUaUuPaKQ6NtBPKF1P/qXcqfh6c6K/icPqdy37JmjbiBXf6JNg6Sylw==",
+      "dependencies": [
+        "playwright-core"
+      ],
+      "optionalDependencies": [
+        "fsevents@2.3.2"
+      ],
+      "bin": true
+    },
+    "pngjs@7.0.0": {
+      "integrity": "sha512-LKWqWJRhstyYo9pGvgor/ivk2w94eSjE3RGVuzLGlr3NmD8bf7RcYGze1mNdEHRP6TRP6rMuDHk5t44hnTRyow=="
+    },
     "points-on-curve@0.2.0": {
       "integrity": "sha512-0mYKnYYe9ZcqMCWhUjItv/oHjvgEsfKvnUTg8sAtnHr3GVy7rGkXCb6d5cSyqrWqL4k81b9CPg3urd+T7aop3A=="
     },
@@ -9186,7 +9244,7 @@
         "@rollup/rollup-win32-ia32-msvc",
         "@rollup/rollup-win32-x64-gnu",
         "@rollup/rollup-win32-x64-msvc",
-        "fsevents"
+        "fsevents@2.3.3"
       ],
       "bin": true
     },
@@ -9460,6 +9518,14 @@
     },
     "signal-exit@4.1.0": {
       "integrity": "sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw=="
+    },
+    "sirv@3.0.2": {
+      "integrity": "sha512-2wcC/oGxHis/BoHkkPwldgiPSYcpZK3JU28WoMVv55yHJgcZ8rlXvuG9iZggz+sU1d4bRgIGASwyWqjxu3FM0g==",
+      "dependencies": [
+        "@polka/url",
+        "mrmime",
+        "totalist"
+      ]
     },
     "sisteransi@1.0.5": {
       "integrity": "sha512-bLGGlR1QxBcynn2d5YmDX4MGjlZvy2MRBDRNHLJ8VI6l6+9FUiyTFNJ0IveOSP0bcXgVDPRcfGqA0pjaqUpfVg=="
@@ -9824,6 +9890,9 @@
     },
     "tokenx@1.3.0": {
       "integrity": "sha512-NLdXTEZkKiO0gZuLtMoZKjCXTREXeZZt8nnnNeyoXtNZAfG/GKGSbQtLU5STspc0rMSwcA+UJfWZkbNU01iKmQ=="
+    },
+    "totalist@3.0.1": {
+      "integrity": "sha512-sf4i37nQ2LBx4m3wB74y+ubopq6W/dIzXg0FDGjsYnZHVa1Da8FH853wlL2gtUhg+xJXjfk3kUZS3BRoQeoQBQ=="
     },
     "tr46@0.0.3": {
       "integrity": "sha512-N3WMsuqV66lT30CrXNbEjx4GEwlow3v6rr4mCcv6prnfwhS01rkgyFdjPNBYd9br7LpXV1+Emh01fHnq2Gdgrw=="
@@ -10191,7 +10260,7 @@
         "tinyglobby"
       ],
       "optionalDependencies": [
-        "fsevents"
+        "fsevents@2.3.3"
       ],
       "optionalPeers": [
         "esbuild@0.28.1"
@@ -10207,9 +10276,24 @@
         "vite"
       ]
     },
-    "vitest@4.1.10_happy-dom@20.11.1_vite@8.1.4__esbuild@0.28.1": {
+    "vitest-browser-react@2.0.5_@types+react@19.2.17_@types+react-dom@19.2.3__@types+react@19.2.17_react@19.2.7_react-dom@19.2.7__react@19.2.7_vitest@4.1.10__@vitest+browser-playwright@4.1.10__happy-dom@20.11.1__vite@8.1.4___esbuild@0.28.1__playwright@1.62.0_@vitest+browser-playwright@4.1.10__playwright@1.62.0__vitest@4.1.10__vite@8.1.4___esbuild@0.28.1_playwright@1.62.0": {
+      "integrity": "sha512-YODQX8mHTJCyKNVYTWJrLEYrUtw+QfLl78owgvuE7C5ydgmGBq6v5s4jK2w6wdPhIZsN9PpV1rQbmAevWJjO9g==",
+      "dependencies": [
+        "@types/react",
+        "@types/react-dom",
+        "react@19.2.7",
+        "react-dom",
+        "vitest"
+      ],
+      "optionalPeers": [
+        "@types/react",
+        "@types/react-dom"
+      ]
+    },
+    "vitest@4.1.10_@vitest+browser-playwright@4.1.10_happy-dom@20.11.1_vite@8.1.4__esbuild@0.28.1_playwright@1.62.0": {
       "integrity": "sha512-R9jUTe5S4Qb0HCd4TNqpC7oGcrMssMRGXLW80ubjWsW9VH5GF8y1Y0SFLY9AbqSk6nt0PnOx4H4WNJYZ13GUPw==",
       "dependencies": [
+        "@vitest/browser-playwright",
         "@vitest/expect",
         "@vitest/mocker",
         "@vitest/pretty-format",
@@ -10233,6 +10317,7 @@
         "why-is-node-running"
       ],
       "optionalPeers": [
+        "@vitest/browser-playwright",
         "happy-dom"
       ],
       "bin": true
@@ -10525,6 +10610,7 @@
         "npm:@types/react@^19.2.17",
         "npm:@valibot/to-json-schema@^1.7.1",
         "npm:@vitejs/plugin-react@^6.0.3",
+        "npm:@vitest/browser-playwright@4.1.10",
         "npm:ai@6.0.180",
         "npm:babel-plugin-react-compiler@1",
         "npm:better-auth@^1.6.23",
@@ -10551,6 +10637,7 @@
         "npm:oxlint-tsgolint@~0.22.1",
         "npm:oxlint@^1.74.0",
         "npm:platejs@^53.2.4",
+        "npm:playwright@^1.62.0",
         "npm:react-day-picker@^10.0.1",
         "npm:react-dom@^19.2.7",
         "npm:react@^19.2.7",
@@ -10567,6 +10654,7 @@
         "npm:use-debounce@^10.1.1",
         "npm:valibot@^1.4.2",
         "npm:vite@^8.0.11",
+        "npm:vitest-browser-react@2.0.5",
         "npm:vitest@^4.1.10",
         "npm:zustand@^5.0.14"
       ]

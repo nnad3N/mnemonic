@@ -1,13 +1,15 @@
+import tailwindcss from "@tailwindcss/vite";
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
+import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
 
 const nodeOsForTypescript = (): string => {
-  switch (Deno.build.os) {
-    case "windows":
-      return "win32";
-    default:
-      return Deno.build.os;
+  if (Deno.build.os === "windows") {
+    return "win32";
   }
+
+  return Deno.build.os;
 };
 
 const nodeArchForTypescript = (): string => {
@@ -21,13 +23,7 @@ const nodeArchForTypescript = (): string => {
   }
 };
 
-/**
- * TypeScript 7 ships a native `tsc` binary via `@typescript/typescript-<os>-<arch>`.
- * Vitest's default checker resolves `node_modules/.bin/tsc`, which is a Node shebang
- * shim around that binary — fine under Node, fragile under Deno when `node` is not on
- * PATH. Pointing `typecheck.checker` at the native executable matches what the shim
- * would exec, without needing Node.
- */
+/** Native `tsc` binary — Vitest's `.bin/tsc` shim needs Node, which Deno may lack. */
 const resolveNativeTsc = (): string => {
   const root = import.meta.dirname;
   if (!root) {
@@ -46,27 +42,60 @@ const resolveNativeTsc = (): string => {
   }
 };
 
+const sharedResolve = {
+  tsconfigPaths: true,
+};
+
+const sharedTypecheck = {
+  checker: resolveNativeTsc(),
+} as const;
+
 export default defineConfig({
-  // Intentionally lean: do not load tanstackStart / nitro / babel / tailwind /
-  // devtools here. Those belong to the app Vite config; each Vitest fork under
-  // Deno is a full `deno run` process, so unused plugins multiply RSS for nothing.
-  plugins: [viteReact()],
-  resolve: { tsconfigPaths: true },
+  resolve: sharedResolve,
   test: {
-    environment: "happy-dom",
-    pool: "forks",
-    // Deno cannot use `pool: "threads"` for this suite yet (node-compat
-    // `ERR_NOT_IMPLEMENTED`, and DATABASE_URL is bound at module import time).
-    // Forks default to one worker per CPU; on a 20-core / 16GB WSL VM that
-    // already hosts the IDE, that oversubscribes memory. Vitest documents
-    // percentage caps for high-core hosts — half the CPUs is enough parallelism
-    // for this suite and keeps peak RSS off the OOM cliff.
-    maxWorkers: "50%",
-    globalSetup: ["./src/test/global-setup.ts"],
-    setupFiles: ["./src/test/setup-db.ts", "./src/test/setup.ts"],
     globals: false,
-    typecheck: {
-      checker: resolveNativeTsc(),
-    },
+    typecheck: sharedTypecheck,
+    projects: [
+      {
+        plugins: [viteReact()],
+        resolve: sharedResolve,
+        test: {
+          name: "unit",
+          environment: "happy-dom",
+          pool: "forks",
+          maxWorkers: "50%",
+          sequence: {
+            groupOrder: 0,
+          },
+          globalSetup: ["./src/test/global-setup.ts"],
+          setupFiles: ["./src/test/setup-db.ts", "./src/test/setup.ts"],
+          exclude: ["**/*.browser.test.{ts,tsx}", "**/node_modules/**"],
+          typecheck: sharedTypecheck,
+        },
+      },
+      {
+        plugins: [tailwindcss(), tanstackStart(), viteReact()],
+        resolve: sharedResolve,
+        optimizeDeps: {
+          include: ["@testing-library/react"],
+        },
+        test: {
+          name: "browser",
+          include: ["src/**/*.browser.test.{ts,tsx}"],
+          setupFiles: ["./src/test/setup-browser.ts"],
+          maxWorkers: 2,
+          sequence: {
+            groupOrder: 1,
+          },
+          browser: {
+            enabled: true,
+            headless: true,
+            provider: playwright(),
+            instances: [{ browser: "chromium" }],
+          },
+          typecheck: sharedTypecheck,
+        },
+      },
+    ],
   },
 });

@@ -88,7 +88,7 @@ describe("getMentionsFn", () => {
     // only appended while the list is under that same limit, so a topic with a
     // full page of files can never surface a conversation mention.
     await Promise.all([
-      ...Array.from({ length: MENTIONS_QUERY_LIMIT }, (_, index) =>
+      ...Array.from({ length: MENTIONS_QUERY_LIMIT }, async (_, index) =>
         seedFile({ userId, topicId, displayName: `needle-${String(index)}.pdf` }),
       ),
       seedThread({ resourceId: topicId, title: "needle conversation" }),

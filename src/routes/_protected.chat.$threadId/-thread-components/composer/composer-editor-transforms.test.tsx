@@ -33,10 +33,7 @@ const findLink = (nodes: readonly unknown[]): ComposerLinkElement | undefined =>
 };
 
 /** Collapsed caret at `point` — the editor model "focus" after insert/unlink. */
-const expectCollapsedCaret = (
-  editor: PlateEditor,
-  point: { path: number[]; offset: number },
-) => {
+const expectCollapsedCaret = (editor: PlateEditor, point: { path: number[]; offset: number }) => {
   expect(editor.selection).toEqual({
     anchor: point,
     focus: point,

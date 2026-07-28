@@ -44,13 +44,16 @@ export const CapabilityPicker = () => {
 
   return (
     <Popover>
-      <PopoverTrigger render={<Button size="xs" variant="secondary" />}>
+      <PopoverTrigger
+        render={<Button data-test-id="capability-picker-trigger" size="xs" variant="secondary" />}
+      >
         {labels[capability]}
         <ChevronDownIcon data-icon="inline-end" />
       </PopoverTrigger>
       <PopoverContent
         align="start"
         className="group/capability-popover w-auto p-3"
+        data-test-id="capability-picker-popover"
         ref={registerPortal}
       >
         <Slider.Root
@@ -88,6 +91,7 @@ export const CapabilityPicker = () => {
                       render={
                         <button
                           className="group absolute top-1/2 z-10 flex h-6 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center"
+                          data-test-id={`capability-option-${level}`}
                           onClick={() => {
                             setIndex(levelIndex);
                           }}

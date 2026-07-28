@@ -127,6 +127,7 @@ export const ThreadComposer = ({ location }: ThreadComposerProps) => {
     <ComposerContext.Provider value={{ registerPortal }}>
       <ComposerWrapper
         className={cn("bg-input/50 transition-colors", isDraggingOver && "border-ring")}
+        data-test-id={`thread-composer-${location}`}
         {...dragOverProps}
         onDragOverCapture={(e) => {
           e.preventDefault();
@@ -164,6 +165,7 @@ export const ThreadComposer = ({ location }: ThreadComposerProps) => {
             }}
           >
             <PlateContent
+              data-test-id="thread-composer-editor"
               onDrop={(e) => {
                 e.preventDefault();
                 return true;

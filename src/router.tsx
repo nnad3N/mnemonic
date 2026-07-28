@@ -1,6 +1,5 @@
 import { createRouter as createTanStackRouter } from "@tanstack/react-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
-import { enableMapSet } from "immer";
 
 import { getContext } from "./lib/tanstack-query/root-provider";
 import { routeTree } from "./routeTree.gen";
@@ -17,7 +16,6 @@ export const getRouter = () => {
   });
 
   setupRouterSsrQueryIntegration({ queryClient: context.queryClient, router });
-  enableMapSet();
 
   return router;
 };

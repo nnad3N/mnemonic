@@ -27,10 +27,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { getVisiblePageNumbers } from "@/lib/pagination";
 import { filesQuery } from "@/routes/_protected.topic.$topicId/-files-api/list-files";
 import { FileRow } from "@/routes/_protected.topic.$topicId/-files-components/file-row";
 import { FileSearch } from "@/routes/_protected.topic.$topicId/-files-components/file-search";
-import { getVisiblePageNumbers } from "@/lib/pagination";
 
 const PAGE_SIZE = 20;
 

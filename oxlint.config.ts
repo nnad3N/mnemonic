@@ -38,6 +38,12 @@ export default defineConfig({
     },
   ],
   rules: {
+    "vitest/expect-expect": [
+      "error",
+      {
+        assertFunctionNames: ["expect", "expect*", "assert*"],
+      },
+    ],
     "no-console": ["warn", { allow: ["warn", "error"] }],
     "gt/static-jsx": ["error", { libs: ["gt-tanstack-start"] }],
     "gt/static-string": ["error", { libs: ["gt-tanstack-start"] }],
