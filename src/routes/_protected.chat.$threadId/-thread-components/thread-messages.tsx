@@ -39,7 +39,7 @@ export const ThreadMessages = () => {
       return ASSISTANT_MESSAGE_ESTIMATED_SIZE;
     },
     getItemKey: (index) => chat.messages.at(index)?.id ?? index,
-    indexAttribute: "data-test-index",
+    indexAttribute: "data-index",
     overscan: MESSAGE_OVERSCAN,
   });
 
@@ -86,7 +86,7 @@ export const ThreadMessages = () => {
   }, [scrollToEnd]);
 
   return (
-    <MessageScrollerViewport data-test-id="message-scroller-viewport" ref={viewportRef}>
+    <MessageScrollerViewport ref={viewportRef}>
       <MessageScrollerContent
         aria-busy={isBusy}
         aria-hidden={!isLayoutReady}
@@ -94,7 +94,6 @@ export const ThreadMessages = () => {
           "mx-auto block w-full max-w-3xl min-w-0 pb-64 transition-opacity",
           isLayoutReady ? "opacity-100" : "opacity-0",
         )}
-        data-test-layout-ready={isLayoutReady ? "true" : "false"}
       >
         <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
           {virtualizer.getVirtualItems().map((virtualItem) => {
@@ -111,7 +110,7 @@ export const ThreadMessages = () => {
                   virtualItem.index > editingMessageIndex && "opacity-50",
                   message.role === "user" && virtualItem.index !== 0 && "pt-12",
                 )}
-                data-test-index={virtualItem.index}
+                data-index={virtualItem.index}
                 key={virtualItem.key}
                 ref={virtualizer.measureElement}
                 style={{
