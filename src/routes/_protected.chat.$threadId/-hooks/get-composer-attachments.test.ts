@@ -12,7 +12,7 @@ vi.mock("ai", async (importOriginal) => {
     ...actual,
     // happy-dom's DataTransfer.files is an Array, not a FileList — the real
     // converter rejects that. Stub the conversion so we can test selection/merge.
-    convertFileListToFileUIParts: vi.fn<typeof convertFileListToFileUIParts>( async (files) =>
+    convertFileListToFileUIParts: vi.fn<typeof convertFileListToFileUIParts>(async (files) =>
       Promise.resolve(
         Array.from(files ?? []).map((file) => ({
           type: "file" as const,

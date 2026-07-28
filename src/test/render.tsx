@@ -7,8 +7,8 @@ import type { ReactElement, ReactNode } from "react";
 
 import { ThemeProvider } from "@/components/theme-provider";
 
-import { createProviderTree } from "./create-test-router";
 import { createTestQueryClient } from "./create-test-query-client";
+import { createProviderTree } from "./create-test-router";
 import { testTranslations } from "./translations";
 
 type AppProvidersProps = {

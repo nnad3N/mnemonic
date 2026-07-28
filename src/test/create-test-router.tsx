@@ -4,13 +4,13 @@ import { RouterProvider, createMemoryHistory, createRouter } from "@tanstack/rea
 import type { Session, User } from "better-auth";
 import type { ReactNode } from "react";
 
+import { RootAppShell } from "@/routes/__root";
 import { authSessionQuery } from "@/routes/_auth/-auth.api";
 import { settingsQuery } from "@/routes/_protected.chat.$threadId/-thread-api/settings";
 import {
   sidebarConversationsQuery,
   sidebarTopicsQuery,
 } from "@/routes/_protected.chat.$threadId/-thread-api/sidebar-data";
-import { RootAppShell } from "@/routes/__root";
 import { routeTree } from "@/routeTree.gen";
 
 import { createTestQueryClient } from "./create-test-query-client";

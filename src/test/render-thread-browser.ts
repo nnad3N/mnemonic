@@ -3,8 +3,8 @@ import { render } from "vitest-browser-react";
 
 import { threadQuery } from "@/routes/_protected.chat.$threadId/-thread-api/get-thread";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
-import { createProviderTree } from "@/test/create-test-router";
 import { createTestQueryClient } from "@/test/create-test-query-client";
+import { createProviderTree } from "@/test/create-test-router";
 
 export const renderThreadBrowser = async (messages: ThreadUIMessage[]) => {
   const threadId = nanoid();

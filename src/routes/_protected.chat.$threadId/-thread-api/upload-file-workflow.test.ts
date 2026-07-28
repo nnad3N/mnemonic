@@ -1,14 +1,33 @@
+import { noopLogger } from "@mastra/core/logger";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { dbKit } from "@/lib/db-kit";
 import { Kit } from "@/lib/kit";
 import { createSafeId, toSafeId } from "@/lib/safe-id";
 import { vectorKit } from "@/lib/vector-kit";
+import { FILE_EMBEDDING_DIMENSION, FILE_EMBEDDINGS_INDEX } from "@/mastra/file-rag-config";
+import { libsqlVector } from "@/mastra/storage";
 import { createFakeS3 } from "@/test/fake-s3";
+import ragSampleXml from "@/test/fixtures/rag-sample.xml?raw";
 import { expectErr, expectOk } from "@/test/result";
 import { clearDatabase, seedFile, seedTopic, seedUser } from "@/test/seed";
 
-import { FileProcessingError, processForRagFn, validateFileFn } from "./upload-file-workflow";
+import {
+  FileProcessingError,
+  processFileWorkflow,
+  processForRagFn,
+  validateFileFn,
+} from "./upload-file-workflow";
+
+// oxlint-disable-next-line no-underscore-dangle
+processFileWorkflow.__setLogger(noopLogger);
+const XML_MIME = "application/xml";
+const RAG_SAMPLE_PHRASE = "Mnemonic RAG sample paragraph";
+
+/** Non-zero unit vector — cosine similarity of the zero vector is undefined and filters out. */
+const unitVector = Array.from({ length: FILE_EMBEDDING_DIMENSION }, (_, index) =>
+  index === 0 ? 1 : 0,
+);
 
 const db = Kit.get(dbKit);
 
@@ -26,6 +45,17 @@ const getFileStatus = async (fileId: string) => {
   );
 
   return expectOk(result)?.status;
+};
+
+const vectorsForFile = async (fileId: string) => {
+  const results = await libsqlVector.query({
+    indexName: FILE_EMBEDDINGS_INDEX,
+    queryVector: unitVector,
+    topK: 100,
+    filter: { fileId },
+  });
+
+  return results;
 };
 
 beforeEach(async () => {
@@ -182,5 +212,63 @@ describe("processForRagFn", () => {
     );
 
     expect(await getFileStatus(fileId)).toBe("processing");
+  });
+
+  it("extracts xml, embeds chunks, upserts vectors, and marks ready", async () => {
+    const body = new TextEncoder().encode(ragSampleXml);
+    const { fileId, s3Key } = await seedFile({
+      userId,
+      topicId,
+      status: "processing",
+      mimeType: XML_MIME,
+      sizeBytes: body.byteLength,
+      displayName: "rag-sample.xml",
+    });
+    fakeS3.put(s3Key, body);
+
+    expectOk(
+      await processForRagFn(ctx, {
+        fileId,
+        topicId,
+        displayName: "rag-sample.xml",
+        mimeType: XML_MIME,
+        s3Key,
+      }),
+    );
+
+    expect(fakeS3.calls.map((call) => call.method)).toEqual(["getObject"]);
+    expect(await getFileStatus(fileId)).toBe("ready");
+
+    const vectors = await vectorsForFile(fileId);
+    expect(vectors.map((hit) => hit.id)).toEqual([`${fileId}:0`]);
+    expect(vectors.at(0)?.metadata).toMatchObject({
+      topicId,
+      fileId,
+      chunkIndex: 0,
+      displayName: "rag-sample.xml",
+    });
+    expect(String(vectors.at(0)?.metadata?.text ?? "")).toContain(RAG_SAMPLE_PHRASE);
+  });
+});
+
+describe("processFileWorkflow", () => {
+  it("marks the file failed when a step throws", async () => {
+    const { fileId } = await seedFile({
+      userId,
+      topicId,
+      status: "processing",
+    });
+
+    const run = await processFileWorkflow.createRun();
+    const result = await run.start({
+      inputData: {
+        fileId,
+        topicId,
+        userId,
+      },
+    });
+
+    expect(result.status).toBe("failed");
+    expect(await getFileStatus(fileId)).toBe("failed");
   });
 });

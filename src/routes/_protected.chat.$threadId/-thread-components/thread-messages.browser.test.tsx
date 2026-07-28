@@ -11,9 +11,8 @@ const LONG_THREAD_MESSAGE_COUNT = 10;
 const POST_READY_OBSERVE_FRAMES = 12;
 
 const tallParagraph = (label: string, paragraphCount = LONG_MESSAGE_PARAGRAPHS) =>
-  Array.from(
-    { length: paragraphCount },
-    (_, index) => `${label} paragraph ${index + 1}.`.repeat(3),
+  Array.from({ length: paragraphCount }, (_, index) =>
+    `${label} paragraph ${index + 1}.`.repeat(3),
   ).join("\n\n");
 
 const clampedUserMarkdown = Array.from(

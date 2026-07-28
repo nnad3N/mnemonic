@@ -1,6 +1,13 @@
 import { createClient } from "@libsql/client";
 
-/** Wipes every non-internal SQLite table in the test database (app + Mastra). */
+const isVectorTable = (name: string, sql: string) =>
+  sql.includes("F32_BLOB") || name.includes("vector_idx") || name.includes("libsql_vector");
+
+/**
+ * Wipes the test database (app + Mastra).
+ * Vector / F32_BLOB tables must be DROPped — DELETE leaves LibSQL shadow state
+ * corrupt until the index is recreated via createIndex.
+ */
 export const clearDatabase = async () => {
   const url = Deno.env.get("DATABASE_URL");
   if (!url) {
@@ -11,27 +18,34 @@ export const clearDatabase = async () => {
 
   try {
     const tables = await client.execute(
-      `SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'`,
+      `SELECT name, sql FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'`,
     );
-    const deletable = tables.rows.flatMap((row) => {
+
+    const statements: string[] = [];
+
+    for (const row of tables.rows) {
       const name = row.name;
       if (typeof name !== "string") {
-        return [];
+        continue;
       }
 
-      // LibSQL vector shadow/meta tables are not safe to empty — wiping them leaves the
-      // index unusable until the process recreates it from scratch.
-      if (name.includes("vector_idx") || name.includes("libsql_vector")) {
-        return [];
+      const sql = typeof row.sql === "string" ? row.sql : "";
+
+      if (isVectorTable(name, sql)) {
+        statements.push(`DROP TABLE IF EXISTS "${name}";`);
+        continue;
       }
 
-      return [name];
-    });
-    const deletes = deletable.map((name) => `DELETE FROM "${name}";`).join("\n");
+      statements.push(`DELETE FROM "${name}";`);
+    }
+
+    if (statements.length === 0) {
+      return;
+    }
 
     await client.executeMultiple(`
       PRAGMA foreign_keys = OFF;
-      ${deletes}
+      ${statements.join("\n")}
       PRAGMA foreign_keys = ON;
     `);
   } finally {
