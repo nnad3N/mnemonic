@@ -17,12 +17,14 @@ const streamdownPlugins = {
 
 type ExecuteCodeToolPart = Extract<ToolUIPart<ThreadUITools>, { type: "tool-executeCode" }>;
 
-type ExecuteCodePartProps = {
-  part: ExecuteCodeToolPart;
+type ToExecuteCodeMarkdownInput = {
+  code: string;
+  args: NonNullable<ExecuteCodeToolPart["input"]>["args"];
+  output: ExecuteCodeToolPart["output"];
 };
 
-const toExecuteCodeMarkdown = (code: string, output: ExecuteCodeToolPart["output"]): string => {
-  const sections = [`\`\`\`javascript\n${code}\n\`\`\``];
+const toExecuteCodeMarkdown = ({ code, args, output }: ToExecuteCodeMarkdownInput): string => {
+  const sections: string[] = [];
 
   if (output?.type === "success") {
     if (output.result !== undefined) {
@@ -38,7 +40,17 @@ const toExecuteCodeMarkdown = (code: string, output: ExecuteCodeToolPart["output
     sections.push(`\`\`\`error\n${output.name}: ${output.message}\n\`\`\``);
   }
 
+  if (args !== undefined) {
+    sections.push(`\`\`\`json\n${JSON.stringify(args, null, 2)}\n\`\`\``);
+  }
+
+  sections.push(`\`\`\`javascript\n${code}\n\`\`\``);
+
   return sections.join("\n\n");
+};
+
+type ExecuteCodePartProps = {
+  part: ExecuteCodeToolPart;
 };
 
 export const ExecuteCodePart = ({ part }: ExecuteCodePartProps) => {
@@ -55,7 +67,11 @@ export const ExecuteCodePart = ({ part }: ExecuteCodePartProps) => {
       />
       <CollapsibleContent className="overflow-hidden pt-2">
         <Streamdown linkSafety={streamdownLinkSafety} mode="static" plugins={streamdownPlugins}>
-          {toExecuteCodeMarkdown(code, part.output)}
+          {toExecuteCodeMarkdown({
+            code,
+            args: part.input?.args,
+            output: part.output,
+          })}
         </Streamdown>
       </CollapsibleContent>
     </CollapsibleToolIndicator>

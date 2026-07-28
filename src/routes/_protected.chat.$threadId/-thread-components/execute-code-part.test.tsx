@@ -1,6 +1,6 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ToolUIPart } from "ai";
+import type { JSONValue, ToolUIPart } from "ai";
 import { describe, expect, it } from "vitest";
 
 import { render } from "@/test/render-message";
@@ -22,16 +22,17 @@ const pendingExecuteCode = (code?: string): ExecuteCodeToolPart =>
 const successExecuteCode = (
   code: string,
   output: {
-    result?: unknown;
+    result?: JSONValue;
     logs?: string;
   },
+  args?: JSONValue,
 ): ExecuteCodeToolPart =>
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- tool UI fixture for component render.
   ({
     type: "tool-executeCode",
     toolCallId: "call-1",
     state: "output-available",
-    input: { code },
+    input: { code, args },
     output: { type: "success", ...output },
   }) as ExecuteCodeToolPart;
 
@@ -66,6 +67,30 @@ describe("ExecuteCodePart", () => {
     expect(screen.getByText("1 + 1")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument();
     expect(screen.getByText("ok")).toBeInTheDocument();
+  });
+
+  it("renders args input as a JSON code block when present", async () => {
+    const user = userEvent.setup();
+    render(
+      <ExecuteCodePart
+        part={successExecuteCode("1 + 1", { result: 2, logs: "ok" }, { hello: "world" })}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Executed code/i }));
+
+    expect(screen.getByText(/"hello"/)).toBeInTheDocument();
+    expect(screen.getByText(/"world"/)).toBeInTheDocument();
+    expect(document.querySelectorAll('[data-streamdown="code-block"]')).toHaveLength(4);
+  });
+
+  it("does not render an args block when args are omitted", async () => {
+    const user = userEvent.setup();
+    render(<ExecuteCodePart part={successExecuteCode("1 + 1", { result: 2, logs: "ok" })} />);
+
+    await user.click(screen.getByRole("button", { name: /Executed code/i }));
+
+    expect(document.querySelectorAll('[data-streamdown="code-block"]')).toHaveLength(3);
   });
 
   it("renders error output details when expanded", async () => {

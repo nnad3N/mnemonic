@@ -27,7 +27,15 @@ export class SandboxExecuteError extends TaggedError("SandboxExecuteError")<{
   isSyntaxError?: boolean;
 }>() {}
 
-export type SandboxError = SandboxInitError | SandboxRunError | SandboxExecuteError;
+export class SandboxArgsError extends TaggedError("SandboxArgsError")<{
+  message: string;
+}>() {}
+
+export type SandboxError =
+  | SandboxInitError
+  | SandboxRunError
+  | SandboxExecuteError
+  | SandboxArgsError;
 
 type QuickJsSandbox = Awaited<ReturnType<typeof loadQuickJs>>;
 
@@ -41,22 +49,28 @@ const getQuickJsSandbox = async (): Promise<QuickJsSandbox> => {
 const formatConsoleArgs = (args: unknown[]): string =>
   args.map((value) => Deno.inspect(value, { colors: false })).join(" ");
 
-const createExecuteSandboxOptions = (mutLogs: string[]): SandboxOptions => ({
+const createExecuteSandboxOptions = (
+  mutLogs: string[],
+  args: JSONValue | null,
+): SandboxOptions => ({
   allowFetch: false,
   allowFs: false,
   console: {
-    error: (...args) => {
-      mutLogs.push(formatConsoleArgs(args));
+    error: (...values) => {
+      mutLogs.push(formatConsoleArgs(values));
     },
-    info: (...args) => {
-      mutLogs.push(formatConsoleArgs(args));
+    info: (...values) => {
+      mutLogs.push(formatConsoleArgs(values));
     },
-    log: (...args) => {
-      mutLogs.push(formatConsoleArgs(args));
+    log: (...values) => {
+      mutLogs.push(formatConsoleArgs(values));
     },
-    warn: (...args) => {
-      mutLogs.push(formatConsoleArgs(args));
+    warn: (...values) => {
+      mutLogs.push(formatConsoleArgs(values));
     },
+  },
+  env: {
+    args,
   },
   executionTimeout: EXECUTION_TIMEOUT_MS,
   maxStackSize: MAX_STACK_SIZE_BYTES,
@@ -69,18 +83,35 @@ const createExecuteSandboxOptions = (mutLogs: string[]): SandboxOptions => ({
   transformTypescript: false,
 });
 
+const serializeJson = (value: unknown): Result<JSONValue, unknown> =>
+  Result.try(() => JSON.parse(JSON.stringify(value)));
+
 const serializeResult = (value: unknown): JSONValue | undefined => {
   if (value === undefined) {
     return value;
   }
 
-  const serialized = Result.try(() => JSON.parse(JSON.stringify(value)));
+  const serialized = serializeJson(value);
 
   if (Result.isOk(serialized)) {
     return serialized.value;
   }
 
   return undefined;
+};
+
+const serializeArgs = (args: unknown): Result<JSONValue, SandboxArgsError> => {
+  const serialized = serializeJson(args);
+
+  if (Result.isOk(serialized)) {
+    return Result.ok(serialized.value);
+  }
+
+  return Result.err(
+    new SandboxArgsError({
+      message: "args must be JSON-serializable",
+    }),
+  );
 };
 
 type RunCodeResult = Result<
@@ -91,7 +122,13 @@ type RunCodeResult = Result<
   SandboxError
 >;
 
-export const runCode = async (code: string): Promise<RunCodeResult> => {
+export const runCode = async (code: string, args?: unknown): Promise<RunCodeResult> => {
+  const serializedArgs = args === undefined ? Result.ok(null) : serializeArgs(args);
+
+  if (Result.isError(serializedArgs)) {
+    return Result.err(serializedArgs.error);
+  }
+
   const sandboxResult = await Result.tryPromise({
     try: async () => getQuickJsSandbox(),
     catch: (cause) =>
@@ -111,7 +148,7 @@ export const runCode = async (code: string): Promise<RunCodeResult> => {
     try: async () =>
       sandboxResult.value.runSandboxed(
         async ({ evalCode }) => evalCode(code),
-        createExecuteSandboxOptions(mutLogs),
+        createExecuteSandboxOptions(mutLogs, serializedArgs.value),
       ),
     catch: (cause) =>
       new SandboxRunError({
