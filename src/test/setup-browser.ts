@@ -11,4 +11,6 @@ import "./setup-common";
 beforeAll(() => {
   // Mirrors `__root.tsx` `<body className="overflow-hidden">`.
   document.body.classList.add("overflow-hidden");
+  // So root `parseLocale()` finds a candidate and skips its client warn.
+  document.cookie = "generaltranslation.locale=en; path=/";
 });
