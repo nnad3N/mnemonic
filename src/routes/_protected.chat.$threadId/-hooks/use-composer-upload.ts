@@ -12,7 +12,6 @@ import { getThreadEditorId } from "../-thread-components/composer/plate";
 import type { ThreadUIMessage } from "../-thread-types";
 import type { ThreadInputLocation } from "../../-chat-store";
 import { useChatStore } from "../../-chat-store";
-import { useAddAttachment, useIsAddingAttachment } from "./use-add-attachment";
 import { threadChatQuery, useThreadChat } from "./use-thread-chat";
 import { useIsUploadingFile, useUploadFile } from "./use-upload-file";
 
@@ -52,9 +51,7 @@ export const useComposerUpload = (threadId: string, location: ThreadInputLocatio
   });
 
   const isUploading = useIsUploadingFile(threadId);
-  const isAttaching = useIsAddingAttachment(threadId);
   const { mutate: uploadFile } = useUploadFile(threadId);
-  const { mutate: addAttachment } = useAddAttachment(threadId, location);
   const { mutateAsync: findDuplicateFiles, isPending } = useMutation({
     mutationFn: async (sha256s: string[]) => {
       if (!topicId) {
@@ -67,8 +64,7 @@ export const useComposerUpload = (threadId: string, location: ThreadInputLocatio
     },
   });
 
-  const canUpload =
-    !editor.meta.isFallback && (topicId ? !isUploading && !isPending : !isAttaching);
+  const canUpload = !editor.meta.isFallback && (!topicId || (!isUploading && !isPending));
 
   const uploadFiles = useCallback(
     async (files: File[]) => {
@@ -102,7 +98,13 @@ export const useComposerUpload = (threadId: string, location: ThreadInputLocatio
           const existingFilename = findAttachmentFilename(threadId, chat.messages, sha256);
 
           if (!existingFilename) {
-            addAttachment({ file, sha256 });
+            useChatStore.getState().upsertAttachment(threadId, {
+              status: "draft",
+              location,
+              filename: file.name,
+              sha256,
+              file,
+            });
           }
 
           insertMentionItem(editor, {
@@ -115,11 +117,11 @@ export const useComposerUpload = (threadId: string, location: ThreadInputLocatio
       editor.tf.focus({ edge: "endEditor" });
     },
     [
-      addAttachment,
       canUpload,
       chat.messages,
       editor,
       findDuplicateFiles,
+      location,
       threadId,
       topicId,
       uploadFile,

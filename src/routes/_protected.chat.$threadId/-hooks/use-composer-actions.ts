@@ -51,11 +51,11 @@ export const getComposerAttachments = async (
     attachments.push(attachment);
   }
 
-  const readyFiles: File[] = [];
+  const draftFiles: File[] = [];
 
   for (const attachment of storedAttachments.get(threadId) ?? []) {
-    if (attachment.location === location && attachment.status === "ready") {
-      readyFiles.push(attachment.file);
+    if (attachment.location === location && attachment.status === "draft") {
+      draftFiles.push(attachment.file);
       attachments.push({
         filename: attachment.filename,
         mediaType: attachment.file.type,
@@ -64,10 +64,10 @@ export const getComposerAttachments = async (
     }
   }
 
-  if (readyFiles.length > 0) {
+  if (draftFiles.length > 0) {
     const dataTransfer = new DataTransfer();
 
-    for (const file of readyFiles) {
+    for (const file of draftFiles) {
       dataTransfer.items.add(file);
     }
 
@@ -109,21 +109,10 @@ export const useComposerActions = (location: ThreadInputLocation) => {
   const editingState = useChatStore((state) => state.editingState);
   const setEditingState = useChatStore((state) => state.setEditingState);
   const removeAttachment = useChatStore((state) => state.removeAttachment);
-  const hasBlockingAttachments = useChatStore(
-    (state) =>
-      state.attachments
-        .get(threadId)
-        ?.some(
-          (attachment) =>
-            (attachment.status === "pending" || attachment.status === "failed") &&
-            attachment.location === location,
-        ) ?? false,
-  );
 
   const canSend =
     !editor.meta.isFallback &&
     !isEditorEmpty &&
-    !hasBlockingAttachments &&
     chat.status !== "submitted" &&
     chat.status !== "streaming";
 

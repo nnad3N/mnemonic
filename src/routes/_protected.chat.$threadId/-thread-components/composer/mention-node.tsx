@@ -138,11 +138,7 @@ const ThreadLocalMentionElement = ({
       return undefined;
     }
 
-    if (attachment.status === "persisted") {
-      return "ready";
-    }
-
-    return attachment.status;
+    return "ready";
   }, [attachment, mentionType]);
 
   return (

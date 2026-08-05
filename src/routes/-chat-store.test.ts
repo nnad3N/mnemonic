@@ -17,29 +17,30 @@ describe("useChatStore attachments", () => {
   it("upserts and replaces an attachment by sha256", () => {
     const threadId = "thread-upsert";
     const file = new File(["a"], "a.txt");
+    const nextFile = new File(["b"], "a.txt");
 
     useChatStore.getState().upsertAttachment(threadId, {
-      status: "pending",
+      status: "draft",
       location: "main",
       filename: "a.txt",
       sha256: "abc",
       file,
     });
     useChatStore.getState().upsertAttachment(threadId, {
-      status: "ready",
+      status: "draft",
       location: "main",
       filename: "a.txt",
       sha256: "abc",
-      file,
+      file: nextFile,
     });
 
     expect(useChatStore.getState().attachments.get(threadId)).toEqual([
       {
-        status: "ready",
+        status: "draft",
         location: "main",
         filename: "a.txt",
         sha256: "abc",
-        file,
+        file: nextFile,
       },
     ]);
   });
@@ -57,12 +58,12 @@ describe("useChatStore attachments", () => {
     expect(useChatStore.getState().attachments.get(threadId)?.at(0)?.status).toBe("persisted");
   });
 
-  it("removes non-persisted attachments by sha256", () => {
+  it("removes draft attachments by sha256", () => {
     const threadId = "thread-remove";
     const file = new File(["x"], "draft.txt");
 
     useChatStore.getState().upsertAttachment(threadId, {
-      status: "pending",
+      status: "draft",
       location: "main",
       filename: "draft.txt",
       sha256: "draft",
@@ -73,12 +74,12 @@ describe("useChatStore attachments", () => {
     expect(useChatStore.getState().attachments.get(threadId) ?? []).toEqual([]);
   });
 
-  it("hydrates persisted attachments and keeps non-persisted orphans", () => {
+  it("hydrates persisted attachments and keeps draft orphans", () => {
     const threadId = "thread-hydrate";
     const file = new File(["x"], "draft.txt");
 
     useChatStore.getState().upsertAttachment(threadId, {
-      status: "pending",
+      status: "draft",
       location: "main",
       filename: "draft.txt",
       sha256: "draft",

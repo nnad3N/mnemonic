@@ -48,11 +48,11 @@ describe("getComposerAttachments", () => {
     expect(convertFileListToFileUIParts).not.toHaveBeenCalled();
   });
 
-  it("includes ready attachments for the requested location", async () => {
+  it("includes draft attachments for the requested location", async () => {
     const file = new File(["hello"], "notes.txt", { type: "text/plain" });
 
     useChatStore.getState().upsertAttachment("thread-1", {
-      status: "ready",
+      status: "draft",
       location: "main",
       filename: "notes.txt",
       sha256: "abc",
@@ -75,31 +75,15 @@ describe("getComposerAttachments", () => {
     expect(convertFileListToFileUIParts).toHaveBeenCalledOnce();
   });
 
-  it("skips pending, failed, persisted, and wrong-location attachments", async () => {
-    const readyEdit = new File(["edit"], "edit.txt", { type: "text/plain" });
-    const pending = new File(["pending"], "pending.txt", { type: "text/plain" });
-    const failed = new File(["failed"], "failed.txt", { type: "text/plain" });
+  it("skips persisted and wrong-location attachments", async () => {
+    const editDraft = new File(["edit"], "edit.txt", { type: "text/plain" });
 
     useChatStore.getState().upsertAttachment("thread-1", {
-      status: "ready",
+      status: "draft",
       location: "edit",
       filename: "edit.txt",
       sha256: "edit",
-      file: readyEdit,
-    });
-    useChatStore.getState().upsertAttachment("thread-1", {
-      status: "pending",
-      location: "main",
-      filename: "pending.txt",
-      sha256: "pending",
-      file: pending,
-    });
-    useChatStore.getState().upsertAttachment("thread-1", {
-      status: "failed",
-      location: "main",
-      filename: "failed.txt",
-      sha256: "failed",
-      file: failed,
+      file: editDraft,
     });
     useChatStore.getState().upsertAttachment("thread-1", {
       status: "persisted",
@@ -150,7 +134,7 @@ describe("getComposerAttachments", () => {
     ]);
   });
 
-  it("merges edited message attachments with new ready store attachments", async () => {
+  it("merges edited message attachments with new draft store attachments", async () => {
     const file = new File(["new"], "new.txt", { type: "text/plain" });
 
     useChatStore.getState().setEditingState({
@@ -159,7 +143,7 @@ describe("getComposerAttachments", () => {
       markdown: "hi",
     });
     useChatStore.getState().upsertAttachment("thread-1", {
-      status: "ready",
+      status: "draft",
       location: "edit",
       filename: "new.txt",
       sha256: "new",

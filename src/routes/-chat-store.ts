@@ -12,7 +12,7 @@ export type ThreadInputLocation = "main" | "edit";
 
 export type ThreadAttachment =
   | {
-      status: "ready" | "pending" | "failed";
+      status: "draft";
       location: ThreadInputLocation;
       filename: string;
       sha256: string;

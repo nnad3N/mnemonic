@@ -16,6 +16,4 @@ export const threadKeys = {
 export const threadMutationKeys = {
   all: ["thread-mutation"] as const,
   uploadFile: (threadId: string) => [...threadMutationKeys.all, "upload-file", threadId] as const,
-  addAttachment: (threadId: string) =>
-    [...threadMutationKeys.all, "add-attachment", threadId] as const,
 };

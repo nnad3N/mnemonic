@@ -20,7 +20,7 @@ describe("findAttachmentFilename", () => {
     expect(await hashFileContents(secondPaste)).toBe(sha256);
 
     useChatStore.getState().upsertAttachment("thread-1", {
-      status: "ready",
+      status: "draft",
       location: "main",
       filename: firstPaste.name,
       sha256,
