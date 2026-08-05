@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { expectErr, expectOk } from "@/test/result";
 
-import { runCode, SandboxArgsError, SandboxExecuteError } from "./run-code";
+import { runCode, SandboxExecuteError } from "./run-code";
 
 describe("runCode", () => {
   it("captures console logs and serializes the default export", async () => {
@@ -51,30 +51,26 @@ describe("runCode", () => {
     expect(result.output).toBe(3);
   });
 
-  it("injects omitted args as null on env.args", async () => {
-    const result = expectOk(await runCode(`export default env.args;`));
-
-    expect(result.output).toBeNull();
-  });
-
   it("injects structured args onto env.args", async () => {
     const args = {
       text: "hello",
       nums: [1, 2],
       flag: true,
     };
-    const result = expectOk(await runCode(`export default env.args;`, args));
+    const result = expectOk(await runCode(`export default env.args;`, { args }));
 
     expect(result.output).toEqual(args);
   });
 
-  it("returns a SandboxArgsError for non-JSON-serializable args", async () => {
-    const circular: Record<string, unknown> = {};
-    circular.self = circular;
+  it("injects file onto env.file", async () => {
+    const file = {
+      contents: "a,b\n1,2\n",
+      filename: "data.csv",
+      size: 8,
+      mimeType: "text/csv",
+    };
+    const result = expectOk(await runCode(`export default env.file;`, { file }));
 
-    const error = expectErr(await runCode(`export default env.args;`, circular));
-
-    expect(SandboxArgsError.is(error)).toBe(true);
-    expect(error).toMatchObject({ message: "args must be JSON-serializable" });
+    expect(result.output).toEqual(file);
   });
 });

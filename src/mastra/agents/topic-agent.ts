@@ -3,12 +3,13 @@ import { Memory } from "@mastra/memory";
 
 import { baseInstructions, sharedSourceInstructions } from "@/mastra/agents/base-instructions";
 import { getAgentModel, models, observationalMemoryOptions } from "@/mastra/models";
+import { stripNonNativeFilePartsProcessor } from "@/mastra/processors/strip-non-native-file-parts";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context";
 import { libsqlStore, libsqlVector } from "@/mastra/storage";
 import { executeCodeTool } from "@/mastra/tools/execute-code-tool";
 import { fileGraphRagTool } from "@/mastra/tools/file-graph-rag-tool";
 import { fileVectorSearchTool } from "@/mastra/tools/file-vector-search-tool";
-import { getFileFromS3Tool } from "@/mastra/tools/get-file-from-s3-tool";
+import { getFileTool } from "@/mastra/tools/get-file-tool";
 import { webFetchTool } from "@/mastra/tools/web-fetch-tool";
 import { webSearchTool } from "@/mastra/tools/web-search-tool";
 
@@ -30,7 +31,7 @@ export const topicAgentTools = {
   executeCode: executeCodeTool,
   fileGraphRag: fileGraphRagTool,
   fileVectorSearch: fileVectorSearchTool,
-  getFileFromS3: getFileFromS3Tool,
+  getFile: getFileTool,
   webFetch: webFetchTool,
   webSearch: webSearchTool,
 } as const;
@@ -62,7 +63,7 @@ When gathering from topic files, pick the tool that fits the question. You do no
 
 - fileVectorSearch — Direct facts, quotes, or specific passages in uploaded documents.
 - fileGraphRag — When information spans multiple files, connected passages matter, or relationships between concepts are important.
-- getFileFromS3 — Raw file inspection for images, or fallback direct inspection when search tools are insufficient.
+- getFile — Load specific referenced content by mention key in the shape \`TYPE::STRING\`. PDFs and images are returned for direct inspection; other content is returned as text.
 
 Search tools are automatically scoped to the current topic. Tool descriptions own exact input requirements and file-type limits.
 
@@ -73,6 +74,7 @@ Use recall to browse past messages within the current topic:
 - mode "search" with query — find relevant messages across threads in the current topic.
 Threads from other topics or standalone conversations are not accessible.
 `,
+  inputProcessors: [stripNonNativeFilePartsProcessor],
   memory: topicMemory,
   requestContextSchema: mnemonicRequestContextSchema,
   model: getAgentModel,

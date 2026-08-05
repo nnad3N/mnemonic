@@ -43,7 +43,7 @@ const renderToolLabel = (toolName: keyof ThreadUITools, status: ToolStatus): Rea
         case "error":
           return <T>Could not execute code</T>;
       }
-    case "getFileFromS3":
+    case "getFile":
       switch (status) {
         case "pending":
           return <T>Reading file</T>;

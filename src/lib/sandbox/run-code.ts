@@ -27,15 +27,7 @@ export class SandboxExecuteError extends TaggedError("SandboxExecuteError")<{
   isSyntaxError?: boolean;
 }>() {}
 
-export class SandboxArgsError extends TaggedError("SandboxArgsError")<{
-  message: string;
-}>() {}
-
-export type SandboxError =
-  | SandboxInitError
-  | SandboxRunError
-  | SandboxExecuteError
-  | SandboxArgsError;
+export type SandboxError = SandboxInitError | SandboxRunError | SandboxExecuteError;
 
 type QuickJsSandbox = Awaited<ReturnType<typeof loadQuickJs>>;
 
@@ -51,7 +43,7 @@ const formatConsoleArgs = (args: unknown[]): string =>
 
 const createExecuteSandboxOptions = (
   mutLogs: string[],
-  args: JSONValue | null,
+  env: SandboxOptions["env"],
 ): SandboxOptions => ({
   allowFetch: false,
   allowFs: false,
@@ -69,9 +61,7 @@ const createExecuteSandboxOptions = (
       mutLogs.push(formatConsoleArgs(values));
     },
   },
-  env: {
-    args,
-  },
+  env,
   executionTimeout: EXECUTION_TIMEOUT_MS,
   maxStackSize: MAX_STACK_SIZE_BYTES,
   memoryLimit: MEMORY_LIMIT_BYTES,
@@ -100,20 +90,6 @@ const serializeResult = (value: unknown): JSONValue | undefined => {
   return undefined;
 };
 
-const serializeArgs = (args: unknown): Result<JSONValue, SandboxArgsError> => {
-  const serialized = serializeJson(args);
-
-  if (Result.isOk(serialized)) {
-    return Result.ok(serialized.value);
-  }
-
-  return Result.err(
-    new SandboxArgsError({
-      message: "args must be JSON-serializable",
-    }),
-  );
-};
-
 type RunCodeResult = Result<
   {
     output: JSONValue | undefined;
@@ -122,13 +98,10 @@ type RunCodeResult = Result<
   SandboxError
 >;
 
-export const runCode = async (code: string, args?: unknown): Promise<RunCodeResult> => {
-  const serializedArgs = args === undefined ? Result.ok(null) : serializeArgs(args);
-
-  if (Result.isError(serializedArgs)) {
-    return Result.err(serializedArgs.error);
-  }
-
+export const runCode = async (
+  code: string,
+  env?: SandboxOptions["env"],
+): Promise<RunCodeResult> => {
   const sandboxResult = await Result.tryPromise({
     try: async () => getQuickJsSandbox(),
     catch: (cause) =>
@@ -148,7 +121,7 @@ export const runCode = async (code: string, args?: unknown): Promise<RunCodeResu
     try: async () =>
       sandboxResult.value.runSandboxed(
         async ({ evalCode }) => evalCode(code),
-        createExecuteSandboxOptions(mutLogs, serializedArgs.value),
+        createExecuteSandboxOptions(mutLogs, env),
       ),
     catch: (cause) =>
       new SandboxRunError({

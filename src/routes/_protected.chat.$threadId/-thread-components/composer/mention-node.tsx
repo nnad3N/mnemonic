@@ -19,6 +19,8 @@ import {
   AutocompleteItem,
   AutocompleteList,
 } from "@/components/plate/autocomplete";
+import type { MentionValue, ParseMentionKeyResult } from "@/lib/mention-key";
+import { getMentionKey, parseMentionKey } from "@/lib/mention-key";
 import { cn } from "@/lib/utils";
 
 import { useComposer } from "../../-hooks/use-composer";
@@ -35,8 +37,6 @@ import {
   MentionRemoveIcon,
 } from "./mention";
 import type { MentionVariant } from "./mention";
-import type { MentionValue, ParseMentionKeyResult } from "./plate-plugins/mention-key";
-import { getMentionKey, parseMentionKey } from "./plate-plugins/mention-key";
 
 type MentionStatus = "failed" | "pending" | "ready" | undefined;
 type MentionType = ParseMentionKeyResult["type"];

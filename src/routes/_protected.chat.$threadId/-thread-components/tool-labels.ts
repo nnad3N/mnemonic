@@ -22,7 +22,7 @@ export const TOOL_LABELS = {
     error: "Could not execute code",
     pending: "Executing code",
   },
-  getFileFromS3: {
+  getFile: {
     done: "Read file",
     error: "Could not read file",
     pending: "Reading file",

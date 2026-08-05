@@ -124,6 +124,7 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
   const requestContext = new RequestContext<MnemonicRequestContext>();
   requestContext.set("userId", input.userId);
   requestContext.set("modelCapability", userSettings?.modelCapability ?? DEFAULT_MODEL_CAPABILITY);
+  requestContext.set("threadId", input.body.threadId);
 
   if (topic) {
     requestContext.set("filter", { topicId: topic.id });

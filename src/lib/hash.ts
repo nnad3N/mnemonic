@@ -1,4 +1,8 @@
-export const hashFileContents = async (file: Blob): Promise<string> => {
-  const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
-  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+export const hashBytes = async (bytes: Uint8Array<ArrayBuffer>): Promise<string> => {
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 };
+
+export const hashFileContents = async (file: Blob): Promise<string> =>
+  hashBytes(new Uint8Array(await file.arrayBuffer()));

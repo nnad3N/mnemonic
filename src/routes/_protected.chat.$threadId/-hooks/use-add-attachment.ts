@@ -1,8 +1,5 @@
 import { useIsMutating, useMutation } from "@tanstack/react-query";
 
-import { isLLMNativeImageMimeType } from "@/lib/file-validation";
-
-import { extractFileText, getExtractFileTextData } from "../-thread-api/extract-file-text";
 import { threadMutationKeys } from "../-thread-api/query-keys";
 import type { ThreadInputLocation } from "../../-chat-store";
 import { useChatStore } from "../../-chat-store";
@@ -18,22 +15,14 @@ export const useAddAttachment = (threadId: string, location: ThreadInputLocation
   return useMutation({
     mutationKey: threadMutationKeys.addAttachment(threadId),
     mutationFn: async ({ file, sha256 }: AddAttachmentVars) => {
-      let fileToAttach = file;
-
-      if (!isLLMNativeImageMimeType(file.type)) {
-        const { text } = await extractFileText({
-          data: getExtractFileTextData({ file }),
-        });
-        fileToAttach = new File([text], file.name, { type: "text/plain" });
-      }
-
       upsertAttachment(threadId, {
         status: "ready",
         location,
-        filename: fileToAttach.name,
+        filename: file.name,
         sha256,
-        file: fileToAttach,
+        file,
       });
+      return Promise.resolve();
     },
     onMutate: ({ file, sha256 }) => {
       upsertAttachment(threadId, {

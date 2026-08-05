@@ -97,7 +97,7 @@ const TOOL_NAMES = [
   "executeCode",
   "fileGraphRag",
   "fileVectorSearch",
-  "getFileFromS3",
+  "getFile",
   "recall",
   "webFetch",
   "webSearch",

@@ -5,10 +5,10 @@ import { useEditorRef } from "platejs/react";
 import { useCallback } from "react";
 
 import { hashFileContents } from "@/lib/hash";
+import { getMentionKey } from "@/lib/mention-key";
 
 import { findFilesBySha256 } from "../-thread-api/find-files-by-sha256";
 import { getThreadEditorId } from "../-thread-components/composer/plate";
-import { getMentionKey } from "../-thread-components/composer/plate-plugins/mention-key";
 import type { ThreadUIMessage } from "../-thread-types";
 import type { ThreadInputLocation } from "../../-chat-store";
 import { useChatStore } from "../../-chat-store";

@@ -1,10 +1,10 @@
 import type { Value } from "platejs";
 import { describe, expect, it } from "vitest";
 
+import { getMentionKey } from "@/lib/mention-key";
 import { createComposerEditor } from "@/test/create-composer-editor";
 
 import { hasComposerContent } from "../../-hooks/use-composer-actions";
-import { getMentionKey } from "./plate-plugins/mention-key";
 
 const paragraphHasContent = (value: Value) => {
   const editor = createComposerEditor(value);

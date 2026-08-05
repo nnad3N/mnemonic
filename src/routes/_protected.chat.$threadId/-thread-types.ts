@@ -1,5 +1,6 @@
 import type { DataOmPart } from "@mastra/memory/processors";
 import type { UIMessage, UIMessagePart, DataUIPart } from "ai";
+import * as v from "valibot";
 
 import type { MnemonicUITools } from "@/mastra/mnemonic-tool-types";
 
@@ -11,15 +12,19 @@ export type ThreadUIDataTypes = {
 
 export type ThreadUITools = MnemonicUITools;
 
-export type ThreadMetadataAttachment = {
-  filename: string;
-  mediaType: string;
-  sha256: string;
-};
+export const threadMetadataAttachmentSchema = v.object({
+  filename: v.pipe(v.string(), v.nonEmpty()),
+  mediaType: v.pipe(v.string(), v.nonEmpty()),
+  sha256: v.pipe(v.string(), v.length(64)),
+});
 
-export type ThreadMessageMetadata = {
-  attachments?: ThreadMetadataAttachment[];
-};
+export const threadMessageMetadataSchema = v.object({
+  attachments: v.optional(v.array(threadMetadataAttachmentSchema)),
+});
+
+export type ThreadMetadataAttachment = v.InferOutput<typeof threadMetadataAttachmentSchema>;
+
+export type ThreadMessageMetadata = v.InferOutput<typeof threadMessageMetadataSchema>;
 
 export type ThreadUIMessage = UIMessage<ThreadMessageMetadata, ThreadUIDataTypes, ThreadUITools>;
 

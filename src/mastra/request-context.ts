@@ -6,6 +6,7 @@ import { safeId } from "@/lib/safe-id";
 export const mnemonicRequestContextSchema = v.object({
   userId: safeId<"user">(),
   modelCapability: v.picklist(modelCapabilityLevels),
+  threadId: v.pipe(v.string(), v.nanoid()),
   filter: v.optional(
     v.object({
       topicId: v.optional(safeId<"topic">()),
