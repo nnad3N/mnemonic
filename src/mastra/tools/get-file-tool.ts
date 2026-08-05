@@ -16,7 +16,6 @@ import { s3Kit } from "@/lib/s3-kit";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context";
 
 const getFileCtx = Kit.createContext(dbKit, s3Kit);
-const getAttachmentCtx = Kit.createContext(memoryKit);
 
 const inputSchema = v.object({
   fileKey: v.pipe(
@@ -168,7 +167,8 @@ export const getFileTool = createTool({
         return notFound();
       }
 
-      const result = await getAttachment(getAttachmentCtx, {
+      const result = await getAttachment(Kit.createContext(memoryKit), {
+        flushMessages: context.agent?.flushMessages,
         sha256: mention.value,
         threadId,
       });

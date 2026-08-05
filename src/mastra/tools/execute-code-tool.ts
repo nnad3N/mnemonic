@@ -108,11 +108,13 @@ const toSandboxFile = async (
 
 type LoadSandboxFileInput = {
   fileKey: string;
+  flushMessages: (() => Promise<void>) | undefined;
   requestContext: RequestContext<MnemonicRequestContext> | undefined;
 };
 
 const loadSandboxFile = async ({
   fileKey,
+  flushMessages,
   requestContext,
 }: LoadSandboxFileInput): Promise<Result<SandboxFile, { message: string }>> => {
   const mention = parseMentionKey(fileKey);
@@ -150,6 +152,7 @@ const loadSandboxFile = async ({
     }
 
     const result = await getAttachment(Kit.createContext(memoryKit), {
+      flushMessages,
       sha256: mention.value,
       threadId,
     });
@@ -189,6 +192,7 @@ export const executeCodeTool = createTool({
     if (fileKey) {
       const result = await loadSandboxFile({
         fileKey,
+        flushMessages: context.agent?.flushMessages,
         requestContext: context.requestContext,
       });
 
