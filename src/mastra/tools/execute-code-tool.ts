@@ -173,7 +173,7 @@ export const executeCodeTool = createTool({
   id: "execute-code",
   inputSchema: toStandardJsonSchema(inputSchema),
   outputSchema: toStandardJsonSchema(outputSchema),
-  requestContextSchema: mnemonicRequestContextSchema,
+  requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
   description: [
     "Executes code in an isolated ES6 JavaScript sandbox with no filesystem or network access.",
     "Use for calculations (prefer mathjs), data transforms, parsing, formatting, or quick algorithmic checks.",
