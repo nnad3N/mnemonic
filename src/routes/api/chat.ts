@@ -1,7 +1,8 @@
-import { handleChatStream } from "@mastra/ai-sdk";
+import { toAISdkStream } from "@mastra/ai-sdk";
 import { RequestContext } from "@mastra/core/request-context";
 import { createFileRoute } from "@tanstack/react-router";
-import { createUIMessageStreamResponse } from "ai";
+import type { InferUIMessageChunk } from "ai";
+import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import { matchError, Result, TaggedError } from "better-result";
 import { produce } from "immer";
 import * as v from "valibot";
@@ -30,29 +31,18 @@ export const uiMessageSchema = v.object({
   metadata: v.optional(v.any()),
 });
 
-const chatRequestSchema = v.pipe(
-  v.object({
-    threadId: v.pipe(v.string(), v.nanoid()),
-    messages: v.array(uiMessageSchema),
-    settings: v.object({
-      modelCapability: v.picklist(modelCapabilityLevels),
-    }),
-    trigger: v.optional(v.picklist(["submit-message", "regenerate-message"])),
-    runId: v.optional(v.pipe(v.string(), v.nanoid())),
-    resumeData: v.optional(v.record(v.string(), v.unknown())),
-    id: v.optional(v.pipe(v.string(), v.nanoid())),
-    messageId: v.optional(v.pipe(v.string(), v.nanoid())),
-    metadata: v.optional(v.unknown()),
-    resourceId: v.optional(v.pipe(v.string(), v.nanoid())),
+const chatRequestSchema = v.object({
+  threadId: v.pipe(v.string(), v.nanoid()),
+  messages: v.array(uiMessageSchema),
+  settings: v.object({
+    modelCapability: v.picklist(modelCapabilityLevels),
   }),
-  v.forward(
-    v.check(
-      (input) =>
-        input.resumeData === undefined || (input.runId !== undefined && input.runId.length > 0),
-    ),
-    ["runId"],
-  ),
-);
+  trigger: v.optional(v.picklist(["submit-message", "regenerate-message"])),
+  id: v.optional(v.pipe(v.string(), v.nanoid())),
+  messageId: v.optional(v.pipe(v.string(), v.nanoid())),
+  metadata: v.optional(v.unknown()),
+  resourceId: v.optional(v.pipe(v.string(), v.nanoid())),
+});
 
 type ChatRequest = v.InferOutput<typeof chatRequestSchema>;
 type ChatCtx = Kits<[DbKit, MemoryKit]>;
@@ -72,15 +62,15 @@ class ChatStreamError extends TaggedError("ChatStreamError")<{
   message: string;
 }>() {}
 
-type PersistSealedAssistantOnAbortInput = {
+type PersistSealedAssistantOnEndInput = {
   agentId: MnemonicAgentId;
   completedAt: Temporal.Instant;
   threadId: string;
 };
 
-export const persistSealedAssistantOnAbort = Kit.gen(async function* (
+export const persistSealedAssistantOnEnd = Kit.gen(async function* (
   ctx: ChatCtx,
-  input: PersistSealedAssistantOnAbortInput,
+  input: PersistSealedAssistantOnEndInput,
 ) {
   const { messages } = yield* await ctx.memory.listMessages({
     threadId: input.threadId,
@@ -160,46 +150,32 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
     }
   }
 
-  const { settings, ...streamParams } = input.body;
-
   const requestContext = new RequestContext<MnemonicRequestContext>();
   requestContext.set("userId", input.userId);
-  requestContext.set("modelCapability", settings.modelCapability);
+  requestContext.set("modelCapability", input.body.settings.modelCapability);
   requestContext.set("threadId", input.body.threadId);
 
   if (topic) {
     requestContext.set("filter", { topicId: topic.id });
   }
 
-  const stream = yield* await Result.tryPromise({
+  const lastMessage = input.body.messages.at(-1);
+  const lastMessageId = lastMessage?.role === "assistant" ? lastMessage.id : undefined;
+  const messagesToSend =
+    lastMessageId && input.body.trigger === "regenerate-message"
+      ? input.body.messages.slice(0, -1)
+      : input.body.messages;
+
+  const result = yield* await Result.tryPromise({
     try: async () =>
-      handleChatStream<ThreadUIMessage>({
-        agentId,
-        defaultOptions: {
-          maxSteps: 10,
+      mastra.getAgentById(agentId).stream(messagesToSend, {
+        abortSignal: input.abortSignal,
+        maxSteps: 10,
+        memory: {
+          resource: thread.resourceId,
+          thread: input.body.threadId,
         },
-        mastra,
-        params: {
-          ...streamParams,
-          abortSignal: input.abortSignal,
-          memory: {
-            resource: thread.resourceId,
-            thread: input.body.threadId,
-          },
-          // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-          messages: input.body.messages as ThreadUIMessage[],
-          onAbort: async () => {
-            await persistSealedAssistantOnAbort(ctx, {
-              agentId,
-              completedAt: Temporal.Now.instant(),
-              threadId: input.body.threadId,
-            });
-          },
-          requestContext,
-        },
-        sendReasoning: true,
-        sendSources: true,
-        version: "v6",
+        requestContext,
       }),
     catch: (cause) =>
       new ChatStreamError({
@@ -208,7 +184,49 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
       }),
   });
 
-  return Result.ok(stream);
+  const stream = toAISdkStream(result, {
+    from: "agent",
+    version: "v6",
+    lastMessageId,
+    sendReasoning: true,
+    sendSources: true,
+  });
+
+  return Result.ok(
+    createUIMessageStream<ThreadUIMessage>({
+      originalMessages: input.body.messages,
+      execute: async ({ writer }) => {
+        let endedAt: Temporal.Instant | undefined;
+
+        for await (const part of stream) {
+          if (part.type === "abort" || part.type === "error") {
+            endedAt = Temporal.Now.instant();
+          }
+
+          // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+          writer.write(part as InferUIMessageChunk<ThreadUIMessage>);
+        }
+
+        if (!endedAt) {
+          return;
+        }
+
+        // Mastra runs no persistence of its own once a run ends aborted or errored, so the
+        // work-segment output processor never closes the segment. Seal here rather than from
+        // an onAbort hook: onAbort fires before the abort reaches the stream and races
+        // observational memory's writes to the same row.
+        const sealed = await persistSealedAssistantOnEnd(ctx, {
+          agentId,
+          completedAt: endedAt,
+          threadId: input.body.threadId,
+        });
+
+        if (Result.isError(sealed)) {
+          console.error(sealed.error);
+        }
+      },
+    }),
+  );
 });
 
 const chatCtx = Kit.createContext(dbKit, memoryKit);

@@ -8,7 +8,7 @@ import * as Kit from "@/lib/kit";
 import { createMemoryKit, type MemoryApi } from "@/lib/memory-kit";
 import { expectOk } from "@/test/result";
 
-import { persistSealedAssistantOnAbort } from "./chat";
+import { persistSealedAssistantOnEnd } from "./chat";
 
 const THREAD_ID = "thread-seal-abort-test";
 const AGENT_ID = "conversation-agent" as const;
@@ -84,7 +84,7 @@ const createCtx = (input: {
     ),
   );
 
-describe("persistSealedAssistantOnAbort", () => {
+describe("persistSealedAssistantOnEnd", () => {
   it("seals open work segments on the latest assistant message and saves", async () => {
     const startedAt = "2026-01-01T00:00:00.000Z";
 
@@ -101,7 +101,7 @@ describe("persistSealedAssistantOnAbort", () => {
 
     let saved: MastraDBMessage[] | undefined;
 
-    const result = await persistSealedAssistantOnAbort(
+    const result = await persistSealedAssistantOnEnd(
       createCtx({
         messages: [
           createMessage({
@@ -164,7 +164,7 @@ describe("persistSealedAssistantOnAbort", () => {
       Promise.resolve(Result.ok({ messages: [] })),
     );
 
-    const result = await persistSealedAssistantOnAbort(
+    const result = await persistSealedAssistantOnEnd(
       createCtx({
         messages: [
           createMessage({
@@ -200,7 +200,7 @@ describe("persistSealedAssistantOnAbort", () => {
       Promise.resolve(Result.ok({ messages: [] })),
     );
 
-    const result = await persistSealedAssistantOnAbort(
+    const result = await persistSealedAssistantOnEnd(
       createCtx({
         messages: [
           createMessage({
