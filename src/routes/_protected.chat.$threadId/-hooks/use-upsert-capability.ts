@@ -4,6 +4,7 @@ import * as v from "valibot";
 
 import { threadSettings } from "@/db/schema";
 import { dbKit } from "@/lib/db-kit";
+import { toServerFnError } from "@/lib/errors/server-fn-error";
 import * as Kit from "@/lib/kit";
 import { threadAccessMiddleware } from "@/lib/middleware/assert-thread-access";
 import type { ModelCapability } from "@/lib/model-capability";
@@ -33,7 +34,7 @@ export const upsertThreadCapability = createServerFn({ method: "POST" })
             set: { modelCapability: data.modelCapability },
           }),
       ),
-    ).throws(() => Kit.toServerFnError.serverError("Failed to save thread settings"));
+    ).throws(() => toServerFnError.serverError("Failed to save thread settings"));
   });
 
 export const useUpsertCapability = (threadId: string) => {

@@ -5,6 +5,7 @@ import * as v from "valibot";
 
 import { file } from "@/db/schema";
 import { dbKit } from "@/lib/db-kit";
+import { toServerFnError } from "@/lib/errors/server-fn-error";
 import * as Kit from "@/lib/kit";
 import { fileAccessMiddleware } from "@/lib/middleware/assert-thread-access";
 
@@ -21,6 +22,6 @@ export const renameFile = createServerFn({ method: "POST" })
     );
 
     if (Result.isError(result)) {
-      throw Kit.toServerFnError.serverError("Failed to rename file");
+      throw toServerFnError.serverError("Failed to rename file");
     }
   });

@@ -4,6 +4,7 @@ import { and, eq, inArray, lt } from "drizzle-orm";
 
 import { file } from "@/db/schema";
 import { dbKit } from "@/lib/db-kit";
+import { toServerFnError } from "@/lib/errors/server-fn-error";
 import * as Kit from "@/lib/kit";
 import { topicAccessMiddleware } from "@/lib/middleware/assert-thread-access";
 import { rawId } from "@/lib/safe-id";
@@ -42,7 +43,7 @@ export const getPendingFiles = createServerFn({ method: "GET" })
     });
 
     if (Result.isError(result)) {
-      throw Kit.toServerFnError.serverError("Failed to list pending files");
+      throw toServerFnError.serverError("Failed to list pending files");
     }
 
     return result.value.map((pendingFile) => ({

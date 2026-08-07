@@ -2,6 +2,8 @@ import { Result, TaggedError } from "better-result";
 import type { Result as ResultType, TaggedErrorInstance } from "better-result";
 import { assertType, expectTypeOf, test } from "vitest";
 
+import { ServerFnError } from "@/lib/errors/server-fn-error";
+
 import * as Kit from ".";
 import type { KitModule, Kits } from "./utils";
 
@@ -73,10 +75,10 @@ test("Kit.run infers async Result values and errors", () => {
 
   expectTypeOf(run.throws()).toEqualTypeOf<Promise<string>>();
   expectTypeOf(
-    run.throws<Kit.ServerFnError>((error) => {
+    run.throws<ServerFnError>((error) => {
       expectTypeOf(error).toEqualTypeOf<TypeTestError | OtherTypeTestError>();
 
-      return new Kit.ServerFnError({
+      return new ServerFnError({
         message: error.message,
         status: "server-error",
       });

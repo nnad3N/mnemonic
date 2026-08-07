@@ -7,6 +7,7 @@ import { file } from "@/db/schema";
 import type { FileStatus } from "@/db/schema";
 import { ilike } from "@/db/sql";
 import { dbKit } from "@/lib/db-kit";
+import { toServerFnError } from "@/lib/errors/server-fn-error";
 import * as Kit from "@/lib/kit";
 import { topicAccessMiddleware } from "@/lib/middleware/assert-thread-access";
 import type { SafeId } from "@/lib/safe-id";
@@ -57,7 +58,7 @@ export const listFiles = createServerFn({ method: "GET" })
 
         return { items, totalCount };
       }),
-    ).throws(() => Kit.toServerFnError.serverError("Failed to list files"));
+    ).throws(() => toServerFnError.serverError("Failed to list files"));
   });
 
 export type FileItem = {

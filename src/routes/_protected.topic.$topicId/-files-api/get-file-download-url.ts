@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 
+import { toServerFnError } from "@/lib/errors/server-fn-error";
 import * as Kit from "@/lib/kit";
 import { fileAccessMiddleware } from "@/lib/middleware/assert-thread-access";
 import { s3Kit } from "@/lib/s3-kit";
@@ -10,7 +11,7 @@ export const getFileDownloadUrl = createServerFn({ method: "GET" })
   .middleware([fileAccessMiddleware])
   .handler(async ({ context }) => {
     if (context.file.status !== "ready") {
-      throw Kit.toServerFnError.notFound();
+      throw toServerFnError.notFound();
     }
 
     const result = await Kit.get(s3Kit).getPresignedGetUrl({
@@ -20,7 +21,7 @@ export const getFileDownloadUrl = createServerFn({ method: "GET" })
     });
 
     if (result.isErr()) {
-      throw Kit.toServerFnError.serverError("Failed to get file download URL");
+      throw toServerFnError.serverError("Failed to get file download URL");
     }
 
     return { url: result.value };

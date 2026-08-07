@@ -5,6 +5,7 @@ import { matchError, Result } from "better-result";
 import * as v from "valibot";
 
 import { dbKit } from "@/lib/db-kit";
+import { ToolError } from "@/lib/errors/tool-error";
 import { LlmNativeMimeType } from "@/lib/file-validation";
 import { getAttachment } from "@/lib/get-attachment";
 import type { FetchedFile } from "@/lib/get-file";
@@ -16,7 +17,6 @@ import { s3Kit } from "@/lib/s3-kit";
 import { runCode } from "@/lib/sandbox/run-code.ts";
 import type { MnemonicRequestContext } from "@/mastra/request-context";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context";
-import { ToolError } from "@/mastra/tools/tool-error";
 
 const getFileCtx = Kit.createContext(dbKit, s3Kit);
 

@@ -9,8 +9,10 @@ import * as v from "valibot";
 import { topic } from "@/db/schema";
 import { dbKit } from "@/lib/db-kit";
 import type { DbKit } from "@/lib/db-kit";
+import { toServerFnError } from "@/lib/errors/server-fn-error";
+import type { ServerFnError } from "@/lib/errors/server-fn-error";
 import * as Kit from "@/lib/kit";
-import type { Kits, ServerFnError } from "@/lib/kit";
+import type { Kits } from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit";
 import type { MemoryKit } from "@/lib/memory-kit";
 import { topicAccessMiddleware } from "@/lib/middleware/assert-thread-access";
@@ -171,7 +173,7 @@ export const listSidebarConversations = createServerFn({ method: "GET" })
       }),
     ).throws<ServerFnError>((error) =>
       matchError(error, {
-        MemoryError: () => Kit.toServerFnError.serverError("Failed to list conversations"),
+        MemoryError: () => toServerFnError.serverError("Failed to list conversations"),
       }),
     ),
   );
@@ -193,8 +195,8 @@ export const listSidebarTopics = createServerFn({ method: "GET" })
       }),
     ).throws<ServerFnError>((error) =>
       matchError(error, {
-        DatabaseError: () => Kit.toServerFnError.serverError("Failed to list topics"),
-        MemoryError: () => Kit.toServerFnError.serverError("Failed to list topic conversations"),
+        DatabaseError: () => toServerFnError.serverError("Failed to list topics"),
+        MemoryError: () => toServerFnError.serverError("Failed to list topic conversations"),
       }),
     ),
   );
@@ -216,7 +218,7 @@ export const listSidebarTopicThreads = createServerFn({ method: "GET" })
     });
 
     if (Result.isError(result)) {
-      throw Kit.toServerFnError.serverError("Failed to list topic conversations");
+      throw toServerFnError.serverError("Failed to list topic conversations");
     }
 
     return toTopicThreadsPage(result.value);

@@ -8,8 +8,10 @@ import * as v from "valibot";
 import { topic } from "@/db/schema";
 import { dbKit } from "@/lib/db-kit";
 import type { DbKit } from "@/lib/db-kit";
+import { toServerFnError } from "@/lib/errors/server-fn-error";
+import type { ServerFnError } from "@/lib/errors/server-fn-error";
 import * as Kit from "@/lib/kit";
-import type { Kits, ServerFnError } from "@/lib/kit";
+import type { Kits } from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit";
 import type { MemoryKit } from "@/lib/memory-kit";
 import { authMiddleware } from "@/lib/middleware/auth-middleware";
@@ -149,8 +151,8 @@ export const searchItems = createServerFn({ method: "GET" })
       }),
     ).throws<ServerFnError>((error) =>
       matchError(error, {
-        DatabaseError: () => Kit.toServerFnError.serverError("Database search failed"),
-        MemoryError: () => Kit.toServerFnError.serverError("Memory search failed"),
+        DatabaseError: () => toServerFnError.serverError("Database search failed"),
+        MemoryError: () => toServerFnError.serverError("Memory search failed"),
       }),
     ),
   );

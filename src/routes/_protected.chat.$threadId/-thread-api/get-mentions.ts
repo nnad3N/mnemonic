@@ -8,8 +8,10 @@ import { file } from "@/db/schema";
 import { ilike } from "@/db/sql";
 import { dbKit } from "@/lib/db-kit";
 import type { DbKit } from "@/lib/db-kit";
+import { toServerFnError } from "@/lib/errors/server-fn-error";
+import type { ServerFnError } from "@/lib/errors/server-fn-error";
 import * as Kit from "@/lib/kit";
-import type { Kits, ServerFnError } from "@/lib/kit";
+import type { Kits } from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit";
 import type { MemoryKit } from "@/lib/memory-kit";
 import { authMiddleware } from "@/lib/middleware/auth-middleware";
@@ -218,8 +220,8 @@ export const getMentions = createServerFn({ method: "GET" })
       }),
     ).throws<ServerFnError>((error) =>
       matchError(error, {
-        DatabaseError: () => Kit.toServerFnError.serverError("Failed to load mentions"),
-        MemoryError: () => Kit.toServerFnError.serverError("Failed to load conversation mentions"),
+        DatabaseError: () => toServerFnError.serverError("Failed to load mentions"),
+        MemoryError: () => toServerFnError.serverError("Failed to load conversation mentions"),
       }),
     ),
   );
@@ -251,8 +253,8 @@ export const getMentionById = createServerFn({ method: "GET" })
       }),
     ).throws<ServerFnError>((error) =>
       matchError(error, {
-        DatabaseError: () => Kit.toServerFnError.serverError("Failed to load mention"),
-        MemoryError: () => Kit.toServerFnError.serverError("Failed to load conversation mention"),
+        DatabaseError: () => toServerFnError.serverError("Failed to load mention"),
+        MemoryError: () => toServerFnError.serverError("Failed to load conversation mention"),
       }),
     ),
   );

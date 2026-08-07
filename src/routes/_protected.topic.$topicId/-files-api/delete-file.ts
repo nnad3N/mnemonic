@@ -5,8 +5,10 @@ import { eq } from "drizzle-orm";
 import { file } from "@/db/schema";
 import { dbKit } from "@/lib/db-kit";
 import type { DbKit } from "@/lib/db-kit";
+import { toServerFnError } from "@/lib/errors/server-fn-error";
+import type { ServerFnError } from "@/lib/errors/server-fn-error";
 import * as Kit from "@/lib/kit";
-import type { Kits, ServerFnError } from "@/lib/kit";
+import type { Kits } from "@/lib/kit";
 import { fileAccessMiddleware } from "@/lib/middleware/assert-thread-access";
 import { s3Kit } from "@/lib/s3-kit";
 import type { S3Kit } from "@/lib/s3-kit";
@@ -46,9 +48,9 @@ export const deleteFile = createServerFn({ method: "POST" })
       }),
     ).throws<ServerFnError>((error) =>
       matchError(error, {
-        DatabaseError: () => Kit.toServerFnError.serverError("Failed to delete file record"),
-        S3Error: () => Kit.toServerFnError.serverError("Failed to delete file from S3"),
-        VectorError: () => Kit.toServerFnError.serverError("Failed to delete file embedding"),
+        DatabaseError: () => toServerFnError.serverError("Failed to delete file record"),
+        S3Error: () => toServerFnError.serverError("Failed to delete file from S3"),
+        VectorError: () => toServerFnError.serverError("Failed to delete file embedding"),
       }),
     ),
   );

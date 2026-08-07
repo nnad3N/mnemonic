@@ -3,6 +3,7 @@ import { Result } from "better-result";
 import * as v from "valibot";
 
 import { dbKit } from "@/lib/db-kit";
+import { toServerFnError } from "@/lib/errors/server-fn-error";
 import * as Kit from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit";
 import { authMiddleware } from "@/lib/middleware/auth-middleware";
@@ -27,13 +28,13 @@ export const threadAccessMiddleware = createMiddleware({ type: "function" })
     const threadResult = await Kit.get(memoryKit).getThreadById({ threadId });
 
     if (Result.isError(threadResult)) {
-      throw Kit.toServerFnError.serverError("Failed to verify thread access");
+      throw toServerFnError.serverError("Failed to verify thread access");
     }
 
     const thread = threadResult.value;
 
     if (!thread) {
-      throw Kit.toServerFnError.notFound();
+      throw toServerFnError.notFound();
     }
 
     if (thread.resourceId !== context.user.id) {
@@ -49,11 +50,11 @@ export const threadAccessMiddleware = createMiddleware({ type: "function" })
       );
 
       if (Result.isError(topicResult)) {
-        throw Kit.toServerFnError.serverError("Failed to verify thread access");
+        throw toServerFnError.serverError("Failed to verify thread access");
       }
 
       if (!topicResult.value) {
-        throw Kit.toServerFnError.notFound();
+        throw toServerFnError.notFound();
       }
     }
 
@@ -87,13 +88,13 @@ export const topicAccessMiddleware = createMiddleware({ type: "function" })
     );
 
     if (Result.isError(topicResult)) {
-      throw Kit.toServerFnError.serverError("Failed to verify topic access");
+      throw toServerFnError.serverError("Failed to verify topic access");
     }
 
     const ownedTopic = topicResult.value;
 
     if (!ownedTopic) {
-      throw Kit.toServerFnError.notFound();
+      throw toServerFnError.notFound();
     }
 
     return next({
@@ -132,13 +133,13 @@ export const fileAccessMiddleware = createMiddleware({ type: "function" })
     );
 
     if (Result.isError(fileResult)) {
-      throw Kit.toServerFnError.serverError("Failed to verify file access");
+      throw toServerFnError.serverError("Failed to verify file access");
     }
 
     const ownedFile = fileResult.value;
 
     if (!ownedFile) {
-      throw Kit.toServerFnError.notFound();
+      throw toServerFnError.notFound();
     }
 
     return next({

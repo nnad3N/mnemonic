@@ -5,6 +5,7 @@ import * as v from "valibot";
 
 import { topic } from "@/db/schema";
 import { dbKit } from "@/lib/db-kit";
+import { toServerFnError } from "@/lib/errors/server-fn-error";
 import * as Kit from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit";
 import {
@@ -27,7 +28,7 @@ export const renameConversation = createServerFn({ method: "POST" })
     });
 
     if (Result.isError(result)) {
-      throw Kit.toServerFnError.serverError("Failed to rename conversation");
+      throw toServerFnError.serverError("Failed to rename conversation");
     }
 
     return { id: context.thread.id };
@@ -46,7 +47,7 @@ export const renameTopic = createServerFn({ method: "POST" })
     );
 
     if (Result.isError(result)) {
-      throw Kit.toServerFnError.serverError("Failed to rename topic");
+      throw toServerFnError.serverError("Failed to rename topic");
     }
 
     return { id: context.topic.id };

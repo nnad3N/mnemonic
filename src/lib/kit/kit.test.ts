@@ -1,6 +1,8 @@
 import { Panic, Result, TaggedError } from "better-result";
 import { describe, expect, it } from "vitest";
 
+import { ServerFnError } from "@/lib/errors/server-fn-error";
+
 import * as Kit from ".";
 import type { Kits } from ".";
 
@@ -90,13 +92,13 @@ describe("kit", () => {
 
   it("maps errors before throwing through Kit.run", async () => {
     const error = new TestKitError({ message: "kit failed" });
-    const serverError = new Kit.ServerFnError({
+    const serverError = new ServerFnError({
       message: "boundary failed",
       status: "server-error",
     });
 
     await expect(
-      Kit.run(async () => Promise.resolve(Result.err(error))).throws<Kit.ServerFnError>(
+      Kit.run(async () => Promise.resolve(Result.err(error))).throws<ServerFnError>(
         () => serverError,
       ),
     ).rejects.toBe(serverError);

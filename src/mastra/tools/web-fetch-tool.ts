@@ -3,8 +3,8 @@ import { toStandardJsonSchema } from "@valibot/to-json-schema";
 import { Result } from "better-result";
 import * as v from "valibot";
 
+import { ToolError } from "@/lib/errors/tool-error";
 import { firecrawl } from "@/mastra/tools/firecrawl-client";
-import { ToolError } from "@/mastra/tools/tool-error";
 
 const inputSchema = v.object({
   url: v.pipe(

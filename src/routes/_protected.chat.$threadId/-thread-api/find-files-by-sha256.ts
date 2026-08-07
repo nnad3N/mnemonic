@@ -4,6 +4,7 @@ import * as v from "valibot";
 
 import { file } from "@/db/schema";
 import { dbKit } from "@/lib/db-kit";
+import { toServerFnError } from "@/lib/errors/server-fn-error";
 import * as Kit from "@/lib/kit";
 import { topicAccessMiddleware } from "@/lib/middleware/assert-thread-access";
 
@@ -26,5 +27,5 @@ export const findFilesBySha256 = createServerFn({ method: "GET" })
           .from(file)
           .where(and(eq(file.topicId, context.topic.id), inArray(file.sha256, data.sha256s))),
       ),
-    ).throws(() => Kit.toServerFnError.serverError("Failed to find matching files")),
+    ).throws(() => toServerFnError.serverError("Failed to find matching files")),
   );

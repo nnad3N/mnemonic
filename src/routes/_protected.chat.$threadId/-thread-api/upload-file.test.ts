@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { dbKit } from "@/lib/db-kit";
 import { FileUploadError } from "@/lib/errors/file-upload-error";
+import { ServerFnError } from "@/lib/errors/server-fn-error";
 import { UPLOAD_MAX_BYTES } from "@/lib/file-validation";
 import * as Kit from "@/lib/kit";
 import { createSafeId, type SafeId } from "@/lib/safe-id";
@@ -167,7 +168,7 @@ describe("getPresignedUrlFn", () => {
       }),
     );
 
-    expect(Kit.ServerFnError.is(error)).toBe(true);
+    expect(ServerFnError.is(error)).toBe(true);
     expect(error).toMatchObject({ status: "bad-request" });
     expect(fakeS3.calls).toEqual([]);
   });

@@ -2,6 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 
 import { dbKit } from "@/lib/db-kit";
+import { toServerFnError } from "@/lib/errors/server-fn-error";
 import * as Kit from "@/lib/kit";
 import { threadAccessMiddleware } from "@/lib/middleware/assert-thread-access";
 import { DEFAULT_MODEL_CAPABILITY } from "@/lib/model-capability";
@@ -18,7 +19,7 @@ export const getThreadSettings = createServerFn({ method: "GET" })
           where: { threadId: context.thread.id },
         }),
       ),
-    ).throws(() => Kit.toServerFnError.serverError("Failed to load thread settings"));
+    ).throws(() => toServerFnError.serverError("Failed to load thread settings"));
 
     return {
       modelCapability: settings?.modelCapability ?? DEFAULT_MODEL_CAPABILITY,

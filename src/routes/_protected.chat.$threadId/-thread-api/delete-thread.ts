@@ -5,7 +5,9 @@ import { eq, inArray } from "drizzle-orm";
 import { file, threadSettings, topic } from "@/db/schema";
 import type { DbKit } from "@/lib/db-kit";
 import { dbKit } from "@/lib/db-kit";
-import type { Kits, ServerFnError } from "@/lib/kit";
+import { toServerFnError } from "@/lib/errors/server-fn-error";
+import type { ServerFnError } from "@/lib/errors/server-fn-error";
+import type { Kits } from "@/lib/kit";
 import * as Kit from "@/lib/kit";
 import type { MemoryKit } from "@/lib/memory-kit";
 import { memoryKit } from "@/lib/memory-kit";
@@ -101,8 +103,8 @@ export const deleteConversation = createServerFn({ method: "POST" })
       }),
     ).throws<ServerFnError>((error) =>
       matchError(error, {
-        DatabaseError: () => Kit.toServerFnError.serverError("Failed to delete conversation"),
-        MemoryError: () => Kit.toServerFnError.serverError("Failed to delete conversation"),
+        DatabaseError: () => toServerFnError.serverError("Failed to delete conversation"),
+        MemoryError: () => toServerFnError.serverError("Failed to delete conversation"),
       }),
     ),
   );
@@ -116,6 +118,6 @@ export const deleteTopic = createServerFn({ method: "POST" })
     const input = { topicId };
 
     return Kit.run(async () => deleteTopicFn(deleteThreadCtx, input)).throws<ServerFnError>(() =>
-      Kit.toServerFnError.serverError("Failed to delete topic"),
+      toServerFnError.serverError("Failed to delete topic"),
     );
   });

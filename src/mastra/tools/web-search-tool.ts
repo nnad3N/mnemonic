@@ -4,8 +4,8 @@ import { Result } from "better-result";
 import type { Document, SearchResultWeb } from "firecrawl";
 import * as v from "valibot";
 
+import { ToolError } from "@/lib/errors/tool-error";
 import { firecrawl } from "@/mastra/tools/firecrawl-client";
-import { ToolError } from "@/mastra/tools/tool-error";
 
 const DEFAULT_SEARCH_LIMIT = 10;
 

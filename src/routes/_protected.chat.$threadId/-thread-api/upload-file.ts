@@ -6,6 +6,7 @@ import * as v from "valibot";
 import { file } from "@/db/schema";
 import { dbKit } from "@/lib/db-kit";
 import type { DbKit } from "@/lib/db-kit";
+import { ServerFnError, toServerFnError } from "@/lib/errors/server-fn-error";
 import { validateUploadFile } from "@/lib/file-validation";
 import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
@@ -55,7 +56,7 @@ export const getPresignedUrlFn = Kit.gen(async function* (
 
   if (!ownedTopic) {
     return Result.err(
-      new Kit.ServerFnError({
+      new ServerFnError({
         message: "File uploads are only supported in topic threads",
         status: "bad-request",
       }),
@@ -142,16 +143,15 @@ export const getPresignedUrl = createServerFn({ method: "POST" })
         sizeBytes: data.sizeBytes,
         userId: context.user.id,
       }),
-    ).throws<Kit.ServerFnError>((error) => {
-      if (Kit.ServerFnError.is(error)) {
+    ).throws<ServerFnError>((error) => {
+      if (ServerFnError.is(error)) {
         return error;
       }
 
       return matchError(error, {
-        DatabaseError: () => Kit.toServerFnError.serverError("Failed to prepare file upload"),
-        FileUploadError: (fileUploadError) =>
-          Kit.toServerFnError.serverError(fileUploadError.message),
-        S3Error: () => Kit.toServerFnError.serverError("Failed to prepare file upload"),
+        DatabaseError: () => toServerFnError.serverError("Failed to prepare file upload"),
+        FileUploadError: (fileUploadError) => toServerFnError.serverError(fileUploadError.message),
+        S3Error: () => toServerFnError.serverError("Failed to prepare file upload"),
       });
     }),
   );
@@ -169,7 +169,7 @@ export const updateFileStatus = createServerFn({ method: "POST" })
     );
 
     if (result.isErr()) {
-      throw Kit.toServerFnError.serverError("Failed to update file status");
+      throw toServerFnError.serverError("Failed to update file status");
     }
   });
 
@@ -190,13 +190,13 @@ export const processFile = createServerFn({ method: "POST" })
     });
 
     if (Result.isError(workflowResult)) {
-      throw Kit.toServerFnError.serverError("File processing could not be started");
+      throw toServerFnError.serverError("File processing could not be started");
     }
 
     const result = workflowResult.value;
 
     if (result.status === "failed") {
-      throw new Kit.ServerFnError({
+      throw new ServerFnError({
         message: "File processing failed",
         status: "server-error",
         cause: result.error,
@@ -204,7 +204,7 @@ export const processFile = createServerFn({ method: "POST" })
     }
 
     if (result.status !== "success") {
-      throw new Kit.ServerFnError({
+      throw new ServerFnError({
         message: "File processing did not complete",
         status: "server-error",
       });
