@@ -1,33 +1,33 @@
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
 
-import {
-  MessageScroller,
-  MessageScrollerButton,
-  MessageScrollerProvider,
-} from "@/components/ui/message-scroller";
-import { ThreadComposer } from "@/routes/_protected.chat.$threadId/-thread-components/composer/thread-composer";
+import { useChatStore } from "@/routes/-chat-store";
+import { threadChatQuery } from "@/routes/_protected.chat.$threadId/-hooks/use-thread-chat";
 import { ThreadMessages } from "@/routes/_protected.chat.$threadId/-thread-components/thread-messages";
+import { FilesSync } from "@/routes/_protected.topic.$topicId/-topic-components/files-sync";
 
 export const Route = createFileRoute("/_protected/chat/$threadId/")({
+  // threadChatQuery holds a Chat class instance, which cannot be dehydrated.
+  ssr: false,
   component: RouteComponent,
+  loader: async ({ context, params }) => {
+    await context.queryClient.prefetchQuery(threadChatQuery(params.threadId));
+  },
 });
 
 function RouteComponent() {
   const threadId = Route.useParams({ select: (params) => params.threadId });
+  const { data } = useSuspenseQuery(threadChatQuery(threadId));
+
+  useEffect(() => {
+    useChatStore.getState().hydrateAttachments(threadId, data.chat.messages);
+  }, [data.chat, threadId]);
 
   return (
-    <MessageScrollerProvider
-      className="typeset typeset-chat flex h-full min-h-0 w-full flex-col p-3"
-      key={threadId}
-    >
-      <MessageScroller className="min-h-0 flex-1">
-        <ThreadMessages />
-        <MessageScrollerButton />
-      </MessageScroller>
-
-      <div className="relative mx-auto flex w-full max-w-3xl justify-center">
-        <ThreadComposer location="main" />
-      </div>
-    </MessageScrollerProvider>
+    <>
+      {data.topicId && <FilesSync topicId={data.topicId} />}
+      <ThreadMessages />
+    </>
   );
 }

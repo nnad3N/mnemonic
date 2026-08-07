@@ -38,6 +38,19 @@ export const hasComposerContent = (editor: PlateEditor, node: Descendant): boole
   return node.children.some((child) => hasComposerContent(editor, child));
 };
 
+export const useIsComposerEmpty = (editorId?: string): boolean =>
+  useEditorSelector(
+    (plate) => {
+      if (plate === undefined || plate.meta.isFallback) {
+        return true;
+      }
+
+      return !plate.children.some((node) => hasComposerContent(plate, node));
+    },
+    [],
+    { id: editorId },
+  );
+
 export const getComposerAttachments = async (
   threadId: string,
   messages: ThreadUIMessage[],
@@ -92,17 +105,7 @@ export const useComposerActions = (location: ThreadInputLocation) => {
   });
   const editorId = getThreadEditorId(threadId, location);
   const editor = useEditorRef(editorId);
-  const isEditorEmpty = useEditorSelector(
-    (plate) => {
-      if (plate === undefined || plate.meta.isFallback) {
-        return true;
-      }
-
-      return !plate.children.some((node) => hasComposerContent(plate, node));
-    },
-    [],
-    { id: editorId },
-  );
+  const isEditorEmpty = useIsComposerEmpty(editorId);
 
   const chat = useThreadChat();
   const { scrollToBottom } = useStickToBottomContext();
@@ -220,7 +223,6 @@ export const useComposerActions = (location: ThreadInputLocation) => {
   return {
     canSend,
     cancelEditing,
-    isEditorEmpty,
     sendMessage,
     stopStream,
   };
