@@ -35,12 +35,15 @@ type EditingState = {
   markdown: string;
 };
 
+export type ThreadIndicator = "error" | "pending" | "ready";
+
 type State = {
   composerState: Map<ThreadId, ComposerState>;
   editingState: EditingState | null;
   attachments: Map<ThreadId, ThreadAttachment[]>;
   pollingTopicIds: Set<TopicId>;
   collapsedTopicIds: TopicId[];
+  threadIndicators: Map<ThreadId, ThreadIndicator>;
 };
 
 type Actions = {
@@ -53,6 +56,8 @@ type Actions = {
   addPollingTopicId: (topicId: TopicId) => void;
   removePollingTopicId: (topicId: TopicId) => void;
   setTopicCollapsed: (topicId: TopicId, isCollapsed: boolean) => void;
+  setThreadIndicator: (threadId: ThreadId, indicator: ThreadIndicator) => void;
+  clearThreadIndicator: (threadId: ThreadId) => void;
 };
 
 export const useChatStore = create<State & Actions>()(
@@ -63,6 +68,7 @@ export const useChatStore = create<State & Actions>()(
       attachments: new Map(),
       pollingTopicIds: new Set(),
       collapsedTopicIds: [],
+      threadIndicators: new Map(),
       setEditingState: (data) => {
         set((state) => {
           state.editingState = data;
@@ -171,6 +177,20 @@ export const useChatStore = create<State & Actions>()(
           if (!isCollapsed && topicIndex !== -1) {
             state.collapsedTopicIds.splice(topicIndex, 1);
           }
+        });
+      },
+      setThreadIndicator: (threadId, indicator) => {
+        set((state) => {
+          state.threadIndicators.set(threadId, indicator);
+        });
+      },
+      clearThreadIndicator: (threadId) => {
+        set((state) => {
+          // A running stream keeps its indicator: viewing the thread only
+          // acknowledges a settled result.
+          if (state.threadIndicators.get(threadId) === "pending") return;
+
+          state.threadIndicators.delete(threadId);
         });
       },
     })),

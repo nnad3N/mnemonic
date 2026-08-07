@@ -104,3 +104,23 @@ describe("useChatStore attachments", () => {
     expect(attachments.find((item) => item.sha256 === "old")).toBeUndefined();
   });
 });
+
+describe("useChatStore thread indicators", () => {
+  it("clears a settled indicator", () => {
+    const threadId = "thread-settled";
+
+    useChatStore.getState().setThreadIndicator(threadId, "ready");
+    useChatStore.getState().clearThreadIndicator(threadId);
+
+    expect(useChatStore.getState().threadIndicators.get(threadId)).toBeUndefined();
+  });
+
+  it("keeps a pending indicator while the stream is still running", () => {
+    const threadId = "thread-pending";
+
+    useChatStore.getState().setThreadIndicator(threadId, "pending");
+    useChatStore.getState().clearThreadIndicator(threadId);
+
+    expect(useChatStore.getState().threadIndicators.get(threadId)).toBe("pending");
+  });
+});

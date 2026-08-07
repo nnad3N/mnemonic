@@ -1,4 +1,4 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { convertFileListToFileUIParts } from "ai";
 import { produce } from "immer";
@@ -10,6 +10,7 @@ import { useStickToBottomContext } from "use-stick-to-bottom";
 
 import { closeWorkSegments } from "@/lib/ai-sdk/close-work-segments";
 
+import { moveSidebarThreadToTop } from "../-thread-api/sidebar-cache";
 import { getThreadEditorId, plateToMarkdown } from "../-thread-components/composer/plate";
 import type { ThreadMetadataAttachment, ThreadUIMessage } from "../-thread-types";
 import type { ThreadInputLocation } from "../../-chat-store";
@@ -108,6 +109,7 @@ export const useComposerActions = (location: ThreadInputLocation) => {
   const isEditorEmpty = useIsComposerEmpty(editorId);
 
   const chat = useThreadChat();
+  const queryClient = useQueryClient();
   const { scrollToBottom } = useStickToBottomContext();
   const { data: topicId } = useSuspenseQuery({
     ...threadChatQuery(threadId),
@@ -162,6 +164,8 @@ export const useComposerActions = (location: ThreadInputLocation) => {
     }
 
     void scrollToBottom({ animation: "smooth", ignoreEscapes: true });
+
+    moveSidebarThreadToTop(queryClient, { threadId, topicId });
 
     await chat.sendMessage({
       text,

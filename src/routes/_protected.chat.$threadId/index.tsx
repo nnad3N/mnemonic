@@ -11,6 +11,12 @@ export const Route = createFileRoute("/_protected/chat/$threadId/")({
   // threadChatQuery holds a Chat class instance, which cannot be dehydrated.
   ssr: false,
   component: RouteComponent,
+  beforeLoad: ({ params, preload }) => {
+    // defaultPreload is "intent", so hovering a sidebar link must not acknowledge the result.
+    if (preload) return;
+
+    useChatStore.getState().clearThreadIndicator(params.threadId);
+  },
   loader: async ({ context, params }) => {
     await context.queryClient.prefetchQuery(threadChatQuery(params.threadId));
   },

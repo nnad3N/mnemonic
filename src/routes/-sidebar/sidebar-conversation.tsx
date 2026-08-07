@@ -19,7 +19,9 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 
+import { useChatStore } from "../-chat-store";
 import { sidebarConversationsQuery } from "../_protected.chat.$threadId/-thread-api/sidebar-data";
 import type { SidebarThread } from "../_protected.chat.$threadId/-thread-api/types";
 import { DeleteThreadDialog, RenameField } from "./sidebar-context-menu";
@@ -96,6 +98,7 @@ type SidebarConversationItemProps = {
 export const SidebarConversationItem = ({ renderButton, thread }: SidebarConversationItemProps) => {
   const [isRenaming, setIsRenaming] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const indicator = useChatStore((state) => state.threadIndicators.get(thread.id));
 
   if (isRenaming) {
     return (
@@ -115,7 +118,16 @@ export const SidebarConversationItem = ({ renderButton, thread }: SidebarConvers
         <Link params={{ threadId: thread.id }} to="/chat/$threadId">
           {({ isActive }) => (
             <ContextMenuTrigger render={renderButton(isActive)}>
-              <span className="min-w-0 truncate">{thread.title}</span>
+              <span
+                className={cn(
+                  "min-w-0 truncate",
+                  indicator === "pending" && "shimmer",
+                  !isActive && indicator === "ready" && "text-f-blue",
+                  !isActive && indicator === "error" && "text-f-red",
+                )}
+              >
+                {thread.title}
+              </span>
             </ContextMenuTrigger>
           )}
         </Link>

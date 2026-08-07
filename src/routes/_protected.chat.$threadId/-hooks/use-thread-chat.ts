@@ -49,8 +49,9 @@ export const threadChatQuery = (threadId: string) =>
       const chat = new Chat({
         id: threadId,
         messages: data.messages as ThreadUIMessage[],
-        onFinish: ({ messages }) => {
+        onFinish: ({ isError, messages }) => {
           useChatStore.getState().hydrateAttachments(threadId, messages);
+          useChatStore.getState().setThreadIndicator(threadId, isError ? "error" : "ready");
         },
         onError: (error) => {
           console.error(error);
@@ -58,6 +59,7 @@ export const threadChatQuery = (threadId: string) =>
         transport: new DefaultChatTransport({
           api: "/api/chat",
           prepareSendMessagesRequest: async ({ messages: requestMessages, ...body }) => {
+            useChatStore.getState().setThreadIndicator(threadId, "pending");
             const settings = await client.ensureQueryData(threadSettingsQuery(threadId));
 
             return {
