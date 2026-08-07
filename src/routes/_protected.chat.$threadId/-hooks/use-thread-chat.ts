@@ -6,6 +6,7 @@ import { DefaultChatTransport } from "ai";
 
 import { getThread } from "../-thread-api/get-thread";
 import { threadKeys } from "../-thread-api/query-keys";
+import { threadSettingsQuery } from "../-thread-api/settings";
 import type { ThreadUIMessage } from "../-thread-types";
 import { useChatStore } from "../../-chat-store";
 
@@ -40,7 +41,7 @@ export const threadChatQuery = (threadId: string) =>
     staleTime: Infinity,
     structuralSharing: false,
     queryKey: threadKeys.chat(threadId),
-    queryFn: async () => {
+    queryFn: async ({ client }) => {
       const data = await getThread({
         data: { threadId },
       });
@@ -56,14 +57,19 @@ export const threadChatQuery = (threadId: string) =>
         },
         transport: new DefaultChatTransport({
           api: "/api/chat",
-          prepareSendMessagesRequest: ({ messages: requestMessages, ...body }) => ({
-            body: {
-              ...body,
-              messages: getMessagesToSend(requestMessages, body.trigger),
-              resourceId: data.resourceId,
-              threadId,
-            },
-          }),
+          prepareSendMessagesRequest: async ({ messages: requestMessages, ...body }) => {
+            const settings = await client.ensureQueryData(threadSettingsQuery(threadId));
+
+            return {
+              body: {
+                ...body,
+                messages: getMessagesToSend(requestMessages, body.trigger),
+                resourceId: data.resourceId,
+                settings: { modelCapability: settings.modelCapability },
+                threadId,
+              },
+            };
+          },
         }),
       });
 

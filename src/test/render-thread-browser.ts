@@ -3,6 +3,7 @@ import { nanoid } from "nanoid";
 import { render } from "vitest-browser-react";
 
 import { threadChatQuery } from "@/routes/_protected.chat.$threadId/-hooks/use-thread-chat";
+import { threadSettingsQuery } from "@/routes/_protected.chat.$threadId/-thread-api/settings";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 import { createTestQueryClient } from "@/test/create-test-query-client";
 import { createProviderTree } from "@/test/create-test-router";
@@ -18,6 +19,9 @@ export const renderThreadBrowser = async (messages: ThreadUIMessage[]) => {
     }),
     resourceId: "user_test",
     topicId: undefined,
+  });
+  queryClient.setQueryData(threadSettingsQuery(threadId).queryKey, {
+    modelCapability: "standard",
   });
 
   const { router, tree } = createProviderTree({ queryClient });

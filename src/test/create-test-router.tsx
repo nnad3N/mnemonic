@@ -6,7 +6,6 @@ import type { ReactNode } from "react";
 
 import { RootAppShell } from "@/routes/__root";
 import { authSessionQuery } from "@/routes/_auth/-auth.api";
-import { settingsQuery } from "@/routes/_protected.chat.$threadId/-thread-api/settings";
 import {
   sidebarConversationsQuery,
   sidebarTopicsQuery,
@@ -46,9 +45,6 @@ export const createTestRouter = ({ queryClient, session, user }: CreateTestRoute
   queryClient.setQueryData(authSessionQuery.queryKey, {
     data: { session, user },
     error: null,
-  });
-  queryClient.setQueryData(settingsQuery().queryKey, {
-    modelCapability: "standard",
   });
   queryClient.setQueryData(sidebarConversationsQuery().queryKey, {
     pageParams: [0],

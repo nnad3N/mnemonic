@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 
 import { useChatStore } from "@/routes/-chat-store";
-import { settingsQuery } from "@/routes/_protected.chat.$threadId/-thread-api/settings";
+import { threadSettingsQuery } from "@/routes/_protected.chat.$threadId/-thread-api/settings";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 import { renderThreadBrowser } from "@/test/render-thread-browser";
 import { waitForFrames } from "@/test/utils";
@@ -112,7 +112,7 @@ describe("UserMessage browser", () => {
   });
 
   it("keeps edit state when changing capability from the picker", async () => {
-    const { queryClient } = await renderThreadBrowser([userMessage]);
+    const { queryClient, threadId } = await renderThreadBrowser([userMessage]);
 
     await expect.element(page.getByText("Line 1 of the user message")).toBeVisible();
     await userEvent.click(page.getByText("Line 1 of the user message"));
@@ -135,7 +135,7 @@ describe("UserMessage browser", () => {
     await userEvent.click(page.elementLocator(balancedButton!));
 
     expect(useChatStore.getState().editingState?.messageId).toBe(MESSAGE_ID);
-    expect(queryClient.getQueryData(settingsQuery().queryKey)).toEqual({
+    expect(queryClient.getQueryData(threadSettingsQuery(threadId).queryKey)).toEqual({
       modelCapability: "balanced",
     });
     expect(getEditCapabilityTrigger()?.textContent).toMatch(/Balanced/);

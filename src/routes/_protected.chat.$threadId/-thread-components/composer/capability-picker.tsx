@@ -1,5 +1,6 @@
 import { Slider } from "@base-ui/react/slider";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useParams } from "@tanstack/react-router";
 import { T, useGT } from "gt-tanstack-start";
 import { ChevronDownIcon } from "lucide-react";
 
@@ -12,7 +13,7 @@ import { cn } from "@/lib/utils";
 
 import { useComposer } from "../../-hooks/use-composer";
 import { useUpsertCapability } from "../../-hooks/use-upsert-capability";
-import { settingsQuery } from "../../-thread-api/settings";
+import { threadSettingsQuery } from "../../-thread-api/settings";
 
 const lastCapabilityIndex = modelCapabilityLevels.length - 1;
 
@@ -20,9 +21,13 @@ export const CapabilityPicker = () => {
   const gt = useGT();
   const queryClient = useQueryClient();
   const { registerPortal } = useComposer();
-  const userSettingsQuery = settingsQuery();
+  const threadId = useParams({
+    from: "/_protected/chat/$threadId",
+    select: (params) => params.threadId,
+  });
+  const settingsQuery = threadSettingsQuery(threadId);
   const { data: capability } = useSuspenseQuery({
-    ...userSettingsQuery,
+    ...settingsQuery,
     select: (data) => data.modelCapability,
   });
   const index = modelCapabilityLevels.indexOf(capability);
@@ -31,13 +36,13 @@ export const CapabilityPicker = () => {
     max: gt("Max"),
     standard: gt("Standard"),
   } satisfies Record<ModelCapability, string>;
-  const upsertCapability = useUpsertCapability();
+  const upsertCapability = useUpsertCapability(threadId);
 
   const setIndex = (index: number) => {
     const nextCapability = modelCapabilityLevels.at(index);
     if (!nextCapability) return;
 
-    queryClient.setQueryData(userSettingsQuery.queryKey, {
+    queryClient.setQueryData(settingsQuery.queryKey, {
       modelCapability: nextCapability,
     });
   };

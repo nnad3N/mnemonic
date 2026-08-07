@@ -1,8 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
-import { Result } from "better-result";
-import { eq } from "drizzle-orm";
+import { matchError, Result } from "better-result";
+import { eq, inArray } from "drizzle-orm";
 
-import { file, topic } from "@/db/schema";
+import { file, threadSettings, topic } from "@/db/schema";
 import type { DbKit } from "@/lib/db-kit";
 import { dbKit } from "@/lib/db-kit";
 import type { Kits, ServerFnError } from "@/lib/kit";
@@ -56,6 +56,12 @@ export const deleteTopicFn = Kit.gen(async function* (
   yield* await ctx.db.transaction(async (tx) =>
     Promise.all([
       tx.delete(file).where(eq(file.topicId, input.topicId)),
+      tx.delete(threadSettings).where(
+        inArray(
+          threadSettings.threadId,
+          threads.map((thread) => thread.id),
+        ),
+      ),
       tx.delete(topic).where(eq(topic.id, input.topicId)),
     ]),
   );
@@ -63,19 +69,43 @@ export const deleteTopicFn = Kit.gen(async function* (
   return Result.ok({ id: input.topicId });
 });
 
+type DeleteConversationCtx = Kits<[DbKit, MemoryKit]>;
+
+type DeleteConversationInput = {
+  threadId: string;
+};
+
+const deleteConversationFn = Kit.gen(async function* (
+  ctx: DeleteConversationCtx,
+  input: DeleteConversationInput,
+) {
+  yield* await ctx.memory.deleteThread({
+    threadId: input.threadId,
+  });
+
+  yield* await ctx.db.run((db) =>
+    db.delete(threadSettings).where(eq(threadSettings.threadId, input.threadId)),
+  );
+
+  return Result.ok({ id: input.threadId });
+});
+
+const deleteConversationCtx = Kit.createContext(dbKit, memoryKit);
+
 export const deleteConversation = createServerFn({ method: "POST" })
   .middleware([threadAccessMiddleware])
-  .handler(async ({ context }) => {
-    const result = await Kit.get(memoryKit).deleteThread({
-      threadId: context.thread.id,
-    });
-
-    if (result.isErr()) {
-      throw toServerFnError.serverError("Failed to delete conversation");
-    }
-
-    return { id: context.thread.id };
-  });
+  .handler(async ({ context }) =>
+    Kit.run(async () =>
+      deleteConversationFn(deleteConversationCtx, {
+        threadId: context.thread.id,
+      }),
+    ).throws<ServerFnError>((error) =>
+      matchError(error, {
+        DatabaseError: () => toServerFnError.serverError("Failed to delete conversation"),
+        MemoryError: () => toServerFnError.serverError("Failed to delete conversation"),
+      }),
+    ),
+  );
 
 const deleteThreadCtx = Kit.createContext(dbKit, s3Kit, memoryKit, vectorKit);
 

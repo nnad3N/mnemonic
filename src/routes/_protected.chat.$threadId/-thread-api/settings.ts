@@ -3,32 +3,30 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { dbKit } from "@/lib/db-kit";
 import { Kit, toServerFnError } from "@/lib/kit";
-import { authMiddleware } from "@/lib/middleware/auth-middleware";
-import { settingsKeys } from "@/lib/query-keys";
+import { threadAccessMiddleware } from "@/lib/middleware/assert-thread-access";
+import { DEFAULT_MODEL_CAPABILITY } from "@/lib/model-capability";
 
-export const getSettings = createServerFn({ method: "GET" })
-  .middleware([authMiddleware])
+import { threadKeys } from "./query-keys";
+
+export const getThreadSettings = createServerFn({ method: "GET" })
+  .middleware([threadAccessMiddleware])
   .handler(async ({ context }) => {
-    const userSettings = await Kit.run(async () =>
+    const settings = await Kit.run(async () =>
       Kit.get(dbKit).run((db) =>
-        db.query.settings.findFirst({
+        db.query.threadSettings.findFirst({
           columns: { modelCapability: true },
-          where: { userId: context.user.id },
+          where: { threadId: context.thread.id },
         }),
       ),
-    ).throws(() => toServerFnError.serverError("Failed to load settings"));
-
-    if (!userSettings) {
-      throw toServerFnError.notFound();
-    }
+    ).throws(() => toServerFnError.serverError("Failed to load thread settings"));
 
     return {
-      modelCapability: userSettings.modelCapability,
+      modelCapability: settings?.modelCapability ?? DEFAULT_MODEL_CAPABILITY,
     };
   });
 
-export const settingsQuery = () =>
+export const threadSettingsQuery = (threadId: string) =>
   queryOptions({
-    queryFn: async () => getSettings(),
-    queryKey: settingsKeys.all,
+    queryFn: async () => getThreadSettings({ data: { threadId } }),
+    queryKey: threadKeys.settings(threadId),
   });

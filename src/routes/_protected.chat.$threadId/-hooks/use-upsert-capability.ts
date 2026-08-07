@@ -2,67 +2,68 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import * as v from "valibot";
 
-import { settings } from "@/db/schema";
+import { threadSettings } from "@/db/schema";
 import { dbKit } from "@/lib/db-kit";
 import { Kit, toServerFnError } from "@/lib/kit";
-import { authMiddleware } from "@/lib/middleware/auth-middleware";
+import { threadAccessMiddleware } from "@/lib/middleware/assert-thread-access";
 import type { ModelCapability } from "@/lib/model-capability";
 import { modelCapabilityLevels } from "@/lib/model-capability";
 
-import { settingsQuery } from "../-thread-api/settings";
+import { threadSettingsQuery } from "../-thread-api/settings";
 
 const upsertCapabilitySchema = v.object({
   modelCapability: v.picklist(modelCapabilityLevels),
 });
 
-export const upsertCapability = createServerFn({ method: "POST" })
+export const upsertThreadCapability = createServerFn({ method: "POST" })
   .validator(upsertCapabilitySchema)
-  .middleware([authMiddleware])
+  .middleware([threadAccessMiddleware])
   .handler(async ({ context, data }) => {
     await Kit.run(async () =>
       Kit.get(dbKit).run((db) =>
         db
-          .insert(settings)
+          .insert(threadSettings)
           .values({
             modelCapability: data.modelCapability,
+            threadId: context.thread.id,
             userId: context.user.id,
           })
           .onConflictDoUpdate({
-            target: settings.userId,
+            target: threadSettings.threadId,
             set: { modelCapability: data.modelCapability },
           }),
       ),
-    ).throws(() => toServerFnError.serverError("Failed to save settings"));
+    ).throws(() => toServerFnError.serverError("Failed to save thread settings"));
   });
 
-export const useUpsertCapability = () => {
+export const useUpsertCapability = (threadId: string) => {
   const queryClient = useQueryClient();
-  const userSettingsQuery = settingsQuery();
+  const settingsQuery = threadSettingsQuery(threadId);
 
   return useMutation({
     mutationFn: async (nextCapability: ModelCapability) =>
-      upsertCapability({
-        data: { modelCapability: nextCapability },
+      upsertThreadCapability({
+        data: { modelCapability: nextCapability, threadId },
       }),
     onMutate: async (nextCapability) => {
       await queryClient.cancelQueries({
-        queryKey: userSettingsQuery.queryKey,
+        queryKey: settingsQuery.queryKey,
       });
 
-      const previousSettings = queryClient.getQueryData(userSettingsQuery.queryKey);
+      const previousSettings = queryClient.getQueryData(settingsQuery.queryKey);
 
-      queryClient.setQueryData(userSettingsQuery.queryKey, {
+      queryClient.setQueryData(settingsQuery.queryKey, {
         modelCapability: nextCapability,
       });
 
       return { previousSettings };
     },
     onError: (_error, _nextCapability, context) => {
-      queryClient.setQueryData(userSettingsQuery.queryKey, context?.previousSettings);
+      queryClient.setQueryData(settingsQuery.queryKey, context?.previousSettings);
     },
     onSettled: async () =>
       queryClient.invalidateQueries({
-        queryKey: userSettingsQuery.queryKey,
+        queryKey: settingsQuery.queryKey,
       }),
   });
 };

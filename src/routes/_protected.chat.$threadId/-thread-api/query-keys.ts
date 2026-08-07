@@ -6,6 +6,7 @@ export const threadKeys = {
   mentions: (topicId: string) => [...threadKeys.all, topicId, "mentions"] as const,
   mention: (type: MentionQueryType, id: string) =>
     [...threadKeys.all, "mention", type, id] as const,
+  settings: (threadId: string) => [...threadKeys.all, threadId, "settings"] as const,
   sidebar: () => [...threadKeys.all, "sidebar"] as const,
   sidebarConversations: () => [...threadKeys.sidebar(), "conversations"] as const,
   sidebarTopics: () => [...threadKeys.sidebar(), "topics"] as const,

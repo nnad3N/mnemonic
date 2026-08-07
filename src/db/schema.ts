@@ -5,6 +5,7 @@ import { nanoid } from "nanoid";
 import { user } from "@/db/auth-schema";
 import { now } from "@/db/sql";
 import type { ModelCapability } from "@/lib/model-capability";
+import { DEFAULT_MODEL_CAPABILITY } from "@/lib/model-capability";
 import type { SafeId } from "@/lib/safe-id";
 
 export type FileStatus = "uploading" | "processing" | "ready" | "failed";
@@ -62,12 +63,18 @@ export const file = sqliteTable(
   (table) => [uniqueIndex("file_topic_sha256_unique").on(table.topicId, table.sha256)],
 );
 
-export const settings = sqliteTable("settings", {
+export const threadSettings = sqliteTable("thread_settings", {
+  threadId: text("thread_id").primaryKey(),
   userId: text("user_id")
     .$type<SafeId<"user">>()
-    .primaryKey()
+    .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-  modelCapability: text("model_capability").$type<ModelCapability>().notNull().default("standard"),
+
+  modelCapability: text("model_capability")
+    .$type<ModelCapability>()
+    .notNull()
+    .default(DEFAULT_MODEL_CAPABILITY),
+
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" })
     .notNull()
@@ -75,7 +82,7 @@ export const settings = sqliteTable("settings", {
     .default(now),
 });
 
-export const appRelations = defineRelationsPart({ file, settings, topic, user }, (r) => ({
+export const appRelations = defineRelationsPart({ file, threadSettings, topic, user }, (r) => ({
   file: {
     topic: r.one.topic({
       from: r.file.topicId,
@@ -90,11 +97,11 @@ export const appRelations = defineRelationsPart({ file, settings, topic, user },
     }),
   },
   user: {
-    settings: r.one.settings(),
+    threadSettings: r.many.threadSettings(),
   },
-  settings: {
+  threadSettings: {
     user: r.one.user({
-      from: r.settings.userId,
+      from: r.threadSettings.userId,
       to: r.user.id,
     }),
   },

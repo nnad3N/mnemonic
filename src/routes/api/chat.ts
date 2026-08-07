@@ -14,7 +14,7 @@ import { Kit } from "@/lib/kit";
 import type { MemoryKit } from "@/lib/memory-kit";
 import { memoryKit } from "@/lib/memory-kit";
 import { authMiddleware } from "@/lib/middleware/auth-middleware";
-import { DEFAULT_MODEL_CAPABILITY } from "@/lib/model-capability";
+import { modelCapabilityLevels } from "@/lib/model-capability";
 import type { SafeId } from "@/lib/safe-id";
 import { toSafeId } from "@/lib/safe-id";
 import { mastra } from "@/mastra";
@@ -34,6 +34,9 @@ const chatRequestSchema = v.pipe(
   v.object({
     threadId: v.pipe(v.string(), v.nanoid()),
     messages: v.array(uiMessageSchema),
+    settings: v.object({
+      modelCapability: v.picklist(modelCapabilityLevels),
+    }),
     trigger: v.optional(v.picklist(["submit-message", "regenerate-message"])),
     runId: v.optional(v.pipe(v.string(), v.nanoid())),
     resumeData: v.optional(v.record(v.string(), v.unknown())),
@@ -138,12 +141,6 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
   }
 
   const agentId = getMnemonicAgentId({ topicId: topic?.id });
-  const userSettings = yield* await ctx.db.run((db) =>
-    db.query.settings.findFirst({
-      columns: { modelCapability: true },
-      where: { userId: input.userId },
-    }),
-  );
 
   if (input.body.messageId) {
     const { messages: storedMessages } = yield* await ctx.memory.listMessages({
@@ -163,9 +160,11 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
     }
   }
 
+  const { settings, ...streamParams } = input.body;
+
   const requestContext = new RequestContext<MnemonicRequestContext>();
   requestContext.set("userId", input.userId);
-  requestContext.set("modelCapability", userSettings?.modelCapability ?? DEFAULT_MODEL_CAPABILITY);
+  requestContext.set("modelCapability", settings.modelCapability);
   requestContext.set("threadId", input.body.threadId);
 
   if (topic) {
@@ -181,7 +180,7 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
         },
         mastra,
         params: {
-          ...input.body,
+          ...streamParams,
           abortSignal: input.abortSignal,
           memory: {
             resource: thread.resourceId,
