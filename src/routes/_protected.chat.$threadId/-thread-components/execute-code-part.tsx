@@ -1,8 +1,10 @@
 import { createCodePlugin } from "@streamdown/code";
 import type { ToolUIPart } from "ai";
+import { useGT } from "gt-tanstack-start";
 import { Streamdown } from "streamdown";
 
 import { CollapsibleContent } from "@/components/ui/collapsible";
+import type { GT } from "@/lib/gt";
 import { AssistantToolPart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-tool-part";
 import { streamdownLinkSafety } from "@/routes/_protected.chat.$threadId/-thread-components/streamdown-link-safety-modal";
 import {
@@ -20,28 +22,29 @@ type ExecuteCodeToolPart = Extract<ToolUIPart<ThreadUITools>, { type: "tool-exec
 type ToExecuteCodeMarkdownInput = {
   code: string;
   args: NonNullable<ExecuteCodeToolPart["input"]>["args"];
+  gt: GT;
   output: ExecuteCodeToolPart["output"];
 };
 
-const toExecuteCodeMarkdown = ({ code, args, output }: ToExecuteCodeMarkdownInput): string => {
+const toExecuteCodeMarkdown = ({ code, args, gt, output }: ToExecuteCodeMarkdownInput): string => {
   const sections: string[] = [];
 
   if (output?.type === "success") {
     if (output.result !== undefined) {
-      sections.push(`\`\`\`json\n${JSON.stringify(output.result, null, 2)}\n\`\`\``);
+      sections.push(`\`\`\`${gt("output")}\n${JSON.stringify(output.result, null, 2)}\n\`\`\``);
     }
 
     if (output.logs) {
-      sections.push(`\`\`\`logs\n${output.logs}\n\`\`\``);
+      sections.push(`\`\`\`${gt("logs")}\n${output.logs}\n\`\`\``);
     }
   }
 
   if (output?.type === "error") {
-    sections.push(`\`\`\`error\n${output.name}: ${output.message}\n\`\`\``);
+    sections.push(`\`\`\`${gt("error")}\n${output.name}: ${output.message}\n\`\`\``);
   }
 
   if (args !== undefined) {
-    sections.push(`\`\`\`json\n${JSON.stringify(args, null, 2)}\n\`\`\``);
+    sections.push(`\`\`\`${gt("input")}\n${JSON.stringify(args, null, 2)}\n\`\`\``);
   }
 
   sections.push(`\`\`\`javascript\n${code}\n\`\`\``);
@@ -54,6 +57,7 @@ type ExecuteCodePartProps = {
 };
 
 export const ExecuteCodePart = ({ part }: ExecuteCodePartProps) => {
+  const gt = useGT();
   const code = part.input?.code;
 
   if (!code) {
@@ -70,6 +74,7 @@ export const ExecuteCodePart = ({ part }: ExecuteCodePartProps) => {
           {toExecuteCodeMarkdown({
             code,
             args: part.input?.args,
+            gt,
             output: part.output,
           })}
         </Streamdown>

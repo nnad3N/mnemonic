@@ -64,12 +64,7 @@ export const CollapsibleToolIndicatorContent = ({
   ...props
 }: PropsWithChildren<ComponentProps<typeof CollapsibleContent>>) => (
   <CollapsibleContent {...props}>
-    <ScrollArea
-      className={cn(
-        "text-sm whitespace-pre-wrap text-muted-foreground *:data-[slot=scroll-area-viewport]:h-auto *:data-[slot=scroll-area-viewport]:max-h-24",
-        className,
-      )}
-    >
+    <ScrollArea className={cn("text-sm whitespace-pre-wrap text-muted-foreground", className)}>
       {children}
     </ScrollArea>
   </CollapsibleContent>
