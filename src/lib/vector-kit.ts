@@ -1,7 +1,7 @@
 import { Result, TaggedError } from "better-result";
 import type { Result as ResultType } from "better-result";
 
-import { Kit } from "@/lib/kit";
+import * as Kit from "@/lib/kit";
 import { FILE_EMBEDDINGS_INDEX } from "@/mastra/file-rag-config";
 import { libsqlVector } from "@/mastra/storage";
 

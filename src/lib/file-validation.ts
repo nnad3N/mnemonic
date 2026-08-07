@@ -1,10 +1,20 @@
 import { Result } from "better-result";
 
 import { FileUploadError } from "@/lib/errors/file-upload-error";
+import * as Kit from "@/lib/kit";
 
 export type MimeType = `${string}/${string}`;
 
-export const SUPPORTED_MIME_TYPES: MimeType[] = [
+export const ImageMimeType = Kit.literals.from<MimeType>()([
+  "image/gif",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+
+export type ImageMimeType = Kit.LiteralMember<typeof ImageMimeType>;
+
+export const SupportedMimeType = Kit.literals.from<MimeType>()([
   "application/docbook+xml",
   "application/epub+zip",
   "application/gzip",
@@ -43,10 +53,7 @@ export const SUPPORTED_MIME_TYPES: MimeType[] = [
   "application/xhtml+xml",
   "application/xml",
   "application/zip",
-  "image/gif",
-  "image/jpeg",
-  "image/png",
-  "image/webp",
+  ...ImageMimeType.values,
   "message/rfc822",
   "text/csv",
   "text/html",
@@ -61,30 +68,21 @@ export const SUPPORTED_MIME_TYPES: MimeType[] = [
   "text/x-org",
   "text/xml",
   "text/yaml",
-];
+]);
 
-const SUPPORTED_IMAGE_MIME_TYPES = SUPPORTED_MIME_TYPES.filter((mimeType) =>
-  mimeType.startsWith("image/"),
-);
+export type SupportedMimeType = Kit.LiteralMember<typeof SupportedMimeType>;
 
-export const LLM_NATIVE_MIME_TYPES: MimeType[] = ["application/pdf", ...SUPPORTED_IMAGE_MIME_TYPES];
+export const LlmNativeMimeType = Kit.literals.from<MimeType>()([
+  "application/pdf",
+  ...ImageMimeType.values,
+]);
 
-export const isSupportedMimeType = (mimeType: string): boolean =>
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-  SUPPORTED_MIME_TYPES.includes(mimeType as MimeType);
-
-export const isLLMNativeMimeType = (mimeType: string): boolean =>
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-  LLM_NATIVE_MIME_TYPES.includes(mimeType as MimeType);
-
-export const isImageMimeType = (mimeType: string): boolean =>
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-  SUPPORTED_IMAGE_MIME_TYPES.includes(mimeType as MimeType);
+export type LlmNativeMimeType = Kit.LiteralMember<typeof LlmNativeMimeType>;
 
 export const UPLOAD_MAX_BYTES = 50 * 1024 * 1024;
 
 export const validateUploadFile = (input: { mimeType: string; sizeBytes: number }) => {
-  if (!isSupportedMimeType(input.mimeType)) {
+  if (!SupportedMimeType.is(input.mimeType)) {
     return Result.err(
       new FileUploadError({
         reason: "unsupported-mime-type",

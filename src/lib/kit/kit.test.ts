@@ -1,7 +1,7 @@
 import { Panic, Result, TaggedError } from "better-result";
 import { describe, expect, it } from "vitest";
 
-import { Kit, ServerFnError } from ".";
+import * as Kit from ".";
 import type { Kits } from ".";
 
 class TestKitError extends TaggedError("TestKitError")<{
@@ -90,13 +90,13 @@ describe("kit", () => {
 
   it("maps errors before throwing through Kit.run", async () => {
     const error = new TestKitError({ message: "kit failed" });
-    const serverError = new ServerFnError({
+    const serverError = new Kit.ServerFnError({
       message: "boundary failed",
       status: "server-error",
     });
 
     await expect(
-      Kit.run(async () => Promise.resolve(Result.err(error))).throws<ServerFnError>(
+      Kit.run(async () => Promise.resolve(Result.err(error))).throws<Kit.ServerFnError>(
         () => serverError,
       ),
     ).rejects.toBe(serverError);

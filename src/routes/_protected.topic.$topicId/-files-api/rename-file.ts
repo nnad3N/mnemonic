@@ -5,7 +5,7 @@ import * as v from "valibot";
 
 import { file } from "@/db/schema";
 import { dbKit } from "@/lib/db-kit";
-import { Kit, toServerFnError } from "@/lib/kit";
+import * as Kit from "@/lib/kit";
 import { fileAccessMiddleware } from "@/lib/middleware/assert-thread-access";
 
 const renameFileInputSchema = v.object({
@@ -21,6 +21,6 @@ export const renameFile = createServerFn({ method: "POST" })
     );
 
     if (Result.isError(result)) {
-      throw toServerFnError.serverError("Failed to rename file");
+      throw Kit.toServerFnError.serverError("Failed to rename file");
     }
   });

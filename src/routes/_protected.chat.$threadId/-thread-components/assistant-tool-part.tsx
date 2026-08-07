@@ -3,7 +3,7 @@ import { getToolName } from "ai";
 import { T } from "gt-tanstack-start";
 import type { ReactNode } from "react";
 
-import { isKnownToolName } from "@/lib/ai-sdk/tool-labels";
+import { KnownToolName } from "@/lib/ai-sdk/known-tool-name";
 import { getToolPartStatus } from "@/lib/ai-sdk/tool-parts";
 import { cn } from "@/lib/utils";
 import {
@@ -93,7 +93,7 @@ export const AssistantToolPart = ({
   ...props
 }: AssistantToolPartProps) => {
   const toolName = getToolName(part);
-  if (!isKnownToolName(toolName)) {
+  if (!KnownToolName.is(toolName)) {
     return null;
   }
 

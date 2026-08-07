@@ -12,7 +12,7 @@ import { Result, TaggedError } from "better-result";
 import type { Result as ResultType } from "better-result";
 
 import { env } from "@/env";
-import { Kit } from "@/lib/kit";
+import * as Kit from "@/lib/kit";
 
 const S3_RETRY = {
   times: 3,

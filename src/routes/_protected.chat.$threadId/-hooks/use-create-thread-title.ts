@@ -5,7 +5,7 @@ import { matchError, Result } from "better-result";
 import { produce } from "immer";
 import * as v from "valibot";
 
-import { Kit, ServerFnError, toServerFnError } from "@/lib/kit";
+import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit";
 import type { MemoryKit } from "@/lib/memory-kit";
@@ -81,7 +81,7 @@ const createThreadTitleFn = Kit.gen(async function* (
 
         return result.text;
       },
-      catch: () => toServerFnError.serverError("Failed to generate conversation title"),
+      catch: () => Kit.toServerFnError.serverError("Failed to generate conversation title"),
     },
     {
       retry: {
@@ -123,13 +123,13 @@ export const createThreadTitle = createServerFn({ method: "POST" })
         text: data.text,
         threadId: context.thread.id,
       }),
-    ).throws<ServerFnError>((error) => {
-      if (ServerFnError.is(error)) {
+    ).throws<Kit.ServerFnError>((error) => {
+      if (Kit.ServerFnError.is(error)) {
         return error;
       }
 
       return matchError(error, {
-        MemoryError: () => toServerFnError.serverError("Failed to save conversation title"),
+        MemoryError: () => Kit.toServerFnError.serverError("Failed to save conversation title"),
       });
     }),
   );

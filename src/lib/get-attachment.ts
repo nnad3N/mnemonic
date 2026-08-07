@@ -5,7 +5,7 @@ import { decodeBase64DataUrl } from "@/lib/base64";
 import type { FetchedFile } from "@/lib/get-file";
 import { hashBytes } from "@/lib/hash";
 import type { Kits } from "@/lib/kit";
-import { Kit } from "@/lib/kit";
+import * as Kit from "@/lib/kit";
 import type { MemoryKit } from "@/lib/memory-kit";
 import { threadMessageMetadataSchema } from "@/routes/_protected.chat.$threadId/-thread-types";
 

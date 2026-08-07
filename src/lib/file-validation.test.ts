@@ -3,14 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { expectErr } from "@/test/result";
 
-import { isImageMimeType, UPLOAD_MAX_BYTES, validateUploadFile } from "./file-validation";
-
-describe("isImageMimeType", () => {
-  it("accepts image/png and rejects other mime types", () => {
-    expect(isImageMimeType("image/png")).toBe(true);
-    expect(isImageMimeType("application/pdf")).toBe(false);
-  });
-});
+import { UPLOAD_MAX_BYTES, validateUploadFile } from "./file-validation";
 
 describe("validateUploadFile", () => {
   it("accepts a supported mime type under the size limit", () => {

@@ -1,7 +1,7 @@
 import type { DynamicToolUIPart } from "ai";
 import { getToolName, isToolUIPart } from "ai";
 
-import { isKnownToolName } from "@/lib/ai-sdk/tool-labels";
+import { KnownToolName } from "@/lib/ai-sdk/known-tool-name";
 import type { ThreadUIMessagePart } from "@/routes/_protected.chat.$threadId/-thread-types";
 
 export type ToolPartStatus = "done" | "error" | "pending";
@@ -67,7 +67,7 @@ export const isVisibleToolPart = (part: ThreadUIMessagePart): boolean => {
     return false;
   }
 
-  return isKnownToolName(getToolName(part));
+  return KnownToolName.is(getToolName(part));
 };
 
 export const isVisibleIntermediatePart = (part: ThreadUIMessagePart): boolean =>

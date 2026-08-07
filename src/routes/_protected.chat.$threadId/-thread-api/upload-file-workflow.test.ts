@@ -2,7 +2,7 @@ import { noopLogger } from "@mastra/core/logger";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { dbKit } from "@/lib/db-kit";
-import { Kit } from "@/lib/kit";
+import * as Kit from "@/lib/kit";
 import { createSafeId, toSafeId } from "@/lib/safe-id";
 import { vectorKit } from "@/lib/vector-kit";
 import { FILE_EMBEDDING_DIMENSION, FILE_EMBEDDINGS_INDEX } from "@/mastra/file-rag-config";

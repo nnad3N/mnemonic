@@ -6,7 +6,7 @@ import * as v from "valibot";
 import { topic } from "@/db/schema";
 import { dbKit } from "@/lib/db-kit";
 import type { DbKit } from "@/lib/db-kit";
-import { Kit, toServerFnError } from "@/lib/kit";
+import * as Kit from "@/lib/kit";
 import type { Kits, ServerFnError } from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit";
 import type { MemoryKit } from "@/lib/memory-kit";
@@ -70,7 +70,7 @@ export const createConversation = createServerFn({ method: "POST" })
     });
 
     if (Result.isError(result)) {
-      throw toServerFnError.serverError("Failed to create conversation");
+      throw Kit.toServerFnError.serverError("Failed to create conversation");
     }
 
     return {
@@ -95,8 +95,8 @@ export const createTopic = createServerFn({ method: "POST" })
       }),
     ).throws<ServerFnError>((error) =>
       matchError(error, {
-        DatabaseError: () => toServerFnError.serverError("Failed to create topic"),
-        MemoryError: () => toServerFnError.serverError("Failed to create topic conversation"),
+        DatabaseError: () => Kit.toServerFnError.serverError("Failed to create topic"),
+        MemoryError: () => Kit.toServerFnError.serverError("Failed to create topic conversation"),
       }),
     ),
   );
@@ -121,7 +121,7 @@ export const createTopicConversation = createServerFn({ method: "POST" })
     });
 
     if (Result.isError(result)) {
-      throw toServerFnError.serverError("Failed to create topic conversation");
+      throw Kit.toServerFnError.serverError("Failed to create topic conversation");
     }
 
     return { id: result.value.id };

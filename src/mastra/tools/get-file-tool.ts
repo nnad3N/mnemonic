@@ -5,11 +5,11 @@ import { matchError, Result } from "better-result";
 import * as v from "valibot";
 
 import { dbKit } from "@/lib/db-kit";
-import { isLLMNativeMimeType } from "@/lib/file-validation";
+import { LlmNativeMimeType } from "@/lib/file-validation";
 import { getAttachment } from "@/lib/get-attachment";
 import type { FetchedFile } from "@/lib/get-file";
 import { getFile, toFileText } from "@/lib/get-file";
-import { Kit } from "@/lib/kit";
+import * as Kit from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit";
 import { parseMentionKey } from "@/lib/mention-key";
 import { s3Kit } from "@/lib/s3-kit";
@@ -56,7 +56,7 @@ type GetFileToolError = v.InferOutput<typeof errorOutputSchema>;
 const toToolOutput = async (
   file: FetchedFile,
 ): Promise<GetFileToolFile | GetFileToolText | GetFileToolError> => {
-  if (isLLMNativeMimeType(file.mimeType)) {
+  if (LlmNativeMimeType.is(file.mimeType)) {
     return {
       type: "file",
       fileId: file.fileId,

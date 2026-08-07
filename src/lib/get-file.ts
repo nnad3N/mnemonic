@@ -2,7 +2,7 @@ import { extractBytes } from "@kreuzberg/node";
 import { Result, TaggedError } from "better-result";
 
 import type { DbKit } from "@/lib/db-kit";
-import { Kit } from "@/lib/kit";
+import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
 import type { S3Kit } from "@/lib/s3-kit";
 import { toSafeId } from "@/lib/safe-id";

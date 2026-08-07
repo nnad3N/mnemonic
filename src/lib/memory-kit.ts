@@ -10,7 +10,7 @@ import type {
 import { panic, Result, TaggedError } from "better-result";
 import type { Result as ResultType } from "better-result";
 
-import { Kit } from "@/lib/kit";
+import * as Kit from "@/lib/kit";
 import { mastra } from "@/mastra";
 import type { MnemonicAgentId } from "@/mastra/agents/id";
 

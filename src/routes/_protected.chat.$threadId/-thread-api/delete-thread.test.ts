@@ -2,7 +2,7 @@ import { Result } from "better-result";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { dbKit } from "@/lib/db-kit";
-import { Kit } from "@/lib/kit";
+import * as Kit from "@/lib/kit";
 import { createMemoryKit, type MemoryApi, MemoryError, memoryKit } from "@/lib/memory-kit";
 import { createSafeId, toSafeId } from "@/lib/safe-id";
 import { createVectorKit, type VectorApi, VectorError, vectorKit } from "@/lib/vector-kit";

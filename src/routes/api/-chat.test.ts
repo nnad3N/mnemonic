@@ -4,7 +4,7 @@ import { Result } from "better-result";
 import { describe, expect, it, vi } from "vitest";
 
 import { dbKit } from "@/lib/db-kit";
-import { Kit } from "@/lib/kit";
+import * as Kit from "@/lib/kit";
 import { createMemoryKit, type MemoryApi } from "@/lib/memory-kit";
 import { expectOk } from "@/test/result";
 

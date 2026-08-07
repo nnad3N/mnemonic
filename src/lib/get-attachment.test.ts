@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { GetAttachmentError, getAttachment } from "@/lib/get-attachment";
 import { hashBytes } from "@/lib/hash";
-import { Kit } from "@/lib/kit";
+import * as Kit from "@/lib/kit";
 import { createMemoryKit, type MemoryApi } from "@/lib/memory-kit";
 import { expectErr, expectOk } from "@/test/result";
 

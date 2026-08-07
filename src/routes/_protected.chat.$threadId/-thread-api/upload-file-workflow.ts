@@ -10,8 +10,8 @@ import * as v from "valibot";
 import { file } from "@/db/schema";
 import { dbKit } from "@/lib/db-kit";
 import type { DbKit } from "@/lib/db-kit";
-import { isImageMimeType } from "@/lib/file-validation";
-import { Kit } from "@/lib/kit";
+import { ImageMimeType } from "@/lib/file-validation";
+import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
 import { s3Kit } from "@/lib/s3-kit";
 import type { S3Kit } from "@/lib/s3-kit";
@@ -133,7 +133,7 @@ export const processForRagFn = Kit.gen(async function* (
   ctx: ProcessFileCtx,
   input: v.InferOutput<typeof validatedFileSchema>,
 ) {
-  if (isImageMimeType(input.mimeType)) {
+  if (ImageMimeType.is(input.mimeType)) {
     yield* await ctx.db.run((db) =>
       db.update(file).set({ status: "ready" }).where(eq(file.id, input.fileId)),
     );

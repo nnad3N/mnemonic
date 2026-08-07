@@ -4,7 +4,7 @@ import type {
   Processor,
 } from "@mastra/core/processors";
 
-import { isLLMNativeMimeType } from "@/lib/file-validation";
+import { LlmNativeMimeType } from "@/lib/file-validation";
 
 export const stripNonNativeFilePartsProcessor = {
   id: "strip-non-native-file-parts",
@@ -16,7 +16,7 @@ export const stripNonNativeFilePartsProcessor = {
         }
 
         const content = message.content.filter(
-          (part) => part.type !== "file" || isLLMNativeMimeType(part.mediaType),
+          (part) => part.type !== "file" || LlmNativeMimeType.is(part.mediaType),
         );
 
         if (content.length === message.content.length) {

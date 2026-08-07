@@ -1,6 +1,6 @@
 import { getToolName, isToolUIPart } from "ai";
 
-import { isKnownToolName } from "@/lib/ai-sdk/tool-labels";
+import { KnownToolName } from "@/lib/ai-sdk/known-tool-name";
 import { isVisibleIntermediatePart } from "@/lib/ai-sdk/tool-parts";
 import type { MnemonicToolName } from "@/mastra/mnemonic-tool-types";
 import type {
@@ -103,7 +103,7 @@ export const getDominantWorkActivityKind = (parts: ThreadUIMessagePart[]): WorkA
     }
 
     const toolName = getToolName(part);
-    if (!isKnownToolName(toolName)) {
+    if (!KnownToolName.is(toolName)) {
       continue;
     }
 

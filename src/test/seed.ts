@@ -5,7 +5,7 @@ import { user } from "@/db/auth-schema";
 import { file, topic } from "@/db/schema";
 import type { FileStatus } from "@/db/schema";
 import { dbKit } from "@/lib/db-kit";
-import { Kit } from "@/lib/kit";
+import * as Kit from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit";
 import type { SafeId } from "@/lib/safe-id";
 import { toSafeId } from "@/lib/safe-id";

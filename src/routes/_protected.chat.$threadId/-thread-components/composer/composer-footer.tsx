@@ -3,7 +3,7 @@ import { ArrowUpIcon, PaperclipIcon, SquareIcon } from "lucide-react";
 import { useRef } from "react";
 
 import { Button } from "@/components/ui/button";
-import { SUPPORTED_MIME_TYPES } from "@/lib/file-validation";
+import { SupportedMimeType } from "@/lib/file-validation";
 
 import { useComposerActions } from "../../-hooks/use-composer-actions";
 import { useComposerUpload } from "../../-hooks/use-composer-upload";
@@ -46,7 +46,7 @@ type UploadButtonProps = {
   location: ThreadInputLocation;
 };
 
-const UPLOAD_ACCEPT = SUPPORTED_MIME_TYPES.join(",");
+const UPLOAD_ACCEPT = SupportedMimeType.values.join(",");
 
 const UploadButton = ({ location }: UploadButtonProps) => {
   const inputRef = useRef<HTMLInputElement>(null);

@@ -6,7 +6,7 @@ import { file, threadSettings, topic } from "@/db/schema";
 import type { DbKit } from "@/lib/db-kit";
 import { dbKit } from "@/lib/db-kit";
 import type { Kits, ServerFnError } from "@/lib/kit";
-import { Kit, toServerFnError } from "@/lib/kit";
+import * as Kit from "@/lib/kit";
 import type { MemoryKit } from "@/lib/memory-kit";
 import { memoryKit } from "@/lib/memory-kit";
 import {
@@ -101,8 +101,8 @@ export const deleteConversation = createServerFn({ method: "POST" })
       }),
     ).throws<ServerFnError>((error) =>
       matchError(error, {
-        DatabaseError: () => toServerFnError.serverError("Failed to delete conversation"),
-        MemoryError: () => toServerFnError.serverError("Failed to delete conversation"),
+        DatabaseError: () => Kit.toServerFnError.serverError("Failed to delete conversation"),
+        MemoryError: () => Kit.toServerFnError.serverError("Failed to delete conversation"),
       }),
     ),
   );
@@ -116,6 +116,6 @@ export const deleteTopic = createServerFn({ method: "POST" })
     const input = { topicId };
 
     return Kit.run(async () => deleteTopicFn(deleteThreadCtx, input)).throws<ServerFnError>(() =>
-      toServerFnError.serverError("Failed to delete topic"),
+      Kit.toServerFnError.serverError("Failed to delete topic"),
     );
   });

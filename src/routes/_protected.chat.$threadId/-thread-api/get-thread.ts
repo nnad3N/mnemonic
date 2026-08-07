@@ -5,7 +5,7 @@ import { matchError, Result } from "better-result";
 
 import { dbKit } from "@/lib/db-kit";
 import type { DbKit } from "@/lib/db-kit";
-import { Kit, toServerFnError } from "@/lib/kit";
+import * as Kit from "@/lib/kit";
 import type { Kits, ServerFnError } from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit";
 import type { MemoryKit } from "@/lib/memory-kit";
@@ -87,8 +87,8 @@ export const getThread = createServerFn({ method: "GET" })
       }),
     ).throws<ServerFnError>((error) =>
       matchError(error, {
-        DatabaseError: () => toServerFnError.serverError("Failed to load thread topic"),
-        MemoryError: () => toServerFnError.serverError("Failed to load thread messages"),
+        DatabaseError: () => Kit.toServerFnError.serverError("Failed to load thread topic"),
+        MemoryError: () => Kit.toServerFnError.serverError("Failed to load thread messages"),
       }),
     ),
   );

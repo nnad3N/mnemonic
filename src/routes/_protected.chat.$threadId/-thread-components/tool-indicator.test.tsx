@@ -2,7 +2,7 @@ import { screen } from "@testing-library/react";
 import type { ToolUIPart } from "ai";
 import { describe, expect, it } from "vitest";
 
-import { KNOWN_TOOL_NAMES } from "@/lib/ai-sdk/tool-labels";
+import { KnownToolName } from "@/lib/ai-sdk/known-tool-name";
 import type { MnemonicToolName } from "@/mastra/mnemonic-tool-types";
 import { render } from "@/test/render-message";
 
@@ -134,7 +134,7 @@ const TOOL_LABELS = {
 
 describe("AssistantToolPart", () => {
   it("renders the label every known tool declares for each status", () => {
-    for (const toolName of KNOWN_TOOL_NAMES) {
+    for (const toolName of KnownToolName.values) {
       const labels = TOOL_LABELS[toolName];
       const { unmount } = render(
         <>

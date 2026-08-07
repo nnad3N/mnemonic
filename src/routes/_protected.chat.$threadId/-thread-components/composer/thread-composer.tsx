@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef } from "react";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useDragOver } from "@/hooks/use-drag-over";
+import * as Kit from "@/lib/kit";
 import { cn } from "@/lib/utils";
 
 import { useComposerActions } from "../../-hooks/use-composer-actions";
@@ -24,10 +25,7 @@ type ThreadComposerProps = {
   location: ThreadInputLocation;
 };
 
-const ALLOWED_DROP_TYPES = ["Files", "text/plain"] as const;
-
-const isAllowedDrop = (types: readonly string[]) =>
-  ALLOWED_DROP_TYPES.some((type) => types.includes(type));
+const AllowedDropType = Kit.literals.from()(["Files", "text/plain"]);
 
 const Route = getRouteApi("/_protected/chat/$threadId");
 
@@ -132,7 +130,10 @@ export const ThreadComposer = ({ location }: ThreadComposerProps) => {
         onDragOverCapture={(e) => {
           e.preventDefault();
 
-          if (!isAllowedDrop(e.dataTransfer.types) || editor.meta.isFallback) {
+          if (
+            !e.dataTransfer.types.some((type) => AllowedDropType.is(type)) ||
+            editor.meta.isFallback
+          ) {
             e.dataTransfer.dropEffect = "none";
             return;
           }

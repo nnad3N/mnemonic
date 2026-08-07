@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { dbKit } from "@/lib/db-kit";
-import { Kit } from "@/lib/kit";
+import * as Kit from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit";
 import { createSafeId } from "@/lib/safe-id";
 import { expectOk } from "@/test/result";
