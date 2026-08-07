@@ -3,7 +3,12 @@ import { describe, expect, it } from "vitest";
 
 import type { ThreadUIMessagePart } from "@/routes/_protected.chat.$threadId/-thread-types";
 
-import { getToolPartStatus, isVisibleOmPart, isVisibleToolPart } from "./tool-parts";
+import {
+  getToolPartStatus,
+  isVisibleIntermediatePart,
+  isVisibleOmPart,
+  isVisibleToolPart,
+} from "./tool-parts";
 
 const PENDING_STATES = [
   "input-streaming",
@@ -83,5 +88,21 @@ describe("isVisibleToolPart", () => {
     expect(isVisibleToolPart(asPart({ type: "file", mediaType: "image/png", url: "u" }))).toBe(
       false,
     );
+  });
+
+  it("rejects work-segment timing markers so they stay out of the planning placeholder", () => {
+    expect(isVisibleToolPart(asPart({ type: "data-work-start" }))).toBe(false);
+    expect(isVisibleToolPart(asPart({ type: "data-work-end" }))).toBe(false);
+  });
+});
+
+describe("isVisibleIntermediatePart", () => {
+  it("includes reasoning and known tools but excludes text", () => {
+    expect(isVisibleIntermediatePart(asPart({ type: "reasoning", text: "x", state: "done" }))).toBe(
+      true,
+    );
+    expect(isVisibleIntermediatePart(asPart({ type: "tool-getFile" }))).toBe(true);
+    expect(isVisibleIntermediatePart(asPart({ type: "text", text: "hi" }))).toBe(false);
+    expect(isVisibleIntermediatePart(asPart({ type: "data-work-start" }))).toBe(false);
   });
 });

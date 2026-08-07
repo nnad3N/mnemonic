@@ -3,13 +3,13 @@ import { getToolName } from "ai";
 import { T } from "gt-tanstack-start";
 import type { ReactNode } from "react";
 
+import { isKnownToolName } from "@/lib/ai-sdk/tool-labels";
 import { getToolPartStatus } from "@/lib/ai-sdk/tool-parts";
 import { cn } from "@/lib/utils";
 import {
   ToolIndicator,
   type ToolIndicatorProps,
 } from "@/routes/_protected.chat.$threadId/-thread-components/tool-indicator";
-import { isKnownToolName } from "@/routes/_protected.chat.$threadId/-thread-components/tool-labels";
 import type { ThreadUITools } from "@/routes/_protected.chat.$threadId/-thread-types";
 
 type ToolStatus = ReturnType<typeof getToolPartStatus>;

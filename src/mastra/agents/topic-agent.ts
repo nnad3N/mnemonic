@@ -4,6 +4,7 @@ import { Memory } from "@mastra/memory";
 import { baseInstructions, sharedSourceInstructions } from "@/mastra/agents/base-instructions";
 import { getAgentModel, models, observationalMemoryOptions } from "@/mastra/models";
 import { stripNonNativeFilePartsProcessor } from "@/mastra/processors/strip-non-native-file-parts";
+import { workSegmentTimingProcessor } from "@/mastra/processors/work-segment-timing";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context";
 import { libsqlStore, libsqlVector } from "@/mastra/storage";
 import { executeCodeTool } from "@/mastra/tools/execute-code-tool";
@@ -13,7 +14,7 @@ import { getFileTool } from "@/mastra/tools/get-file-tool";
 import { webFetchTool } from "@/mastra/tools/web-fetch-tool";
 import { webSearchTool } from "@/mastra/tools/web-search-tool";
 
-export const topicAgentId = "topic-agent";
+export const TOPIC_AGENT_ID = "topic-agent";
 
 export const topicMemory = new Memory({
   embedder: models.embedding,
@@ -27,7 +28,7 @@ export const topicMemory = new Memory({
   vector: libsqlVector,
 });
 
-export const topicAgentTools = {
+const topicAgentTools = {
   executeCode: executeCodeTool,
   fileGraphRag: fileGraphRagTool,
   fileVectorSearch: fileVectorSearchTool,
@@ -36,10 +37,12 @@ export const topicAgentTools = {
   webSearch: webSearchTool,
 } as const;
 
+export type TopicAgentTools = typeof topicAgentTools;
+
 export const topicAgent = new Agent({
   description:
     "Uses current topic files, topic-scoped conversation recall, raw topic file access, and web search/fetch to answer topic-specific questions.",
-  id: topicAgentId,
+  id: TOPIC_AGENT_ID,
   instructions: `
 ${baseInstructions}
 
@@ -75,6 +78,7 @@ Use recall to browse past messages within the current topic:
 Threads from other topics or standalone conversations are not accessible.
 `,
   inputProcessors: [stripNonNativeFilePartsProcessor],
+  outputProcessors: [workSegmentTimingProcessor],
   memory: topicMemory,
   requestContextSchema: mnemonicRequestContextSchema,
   model: getAgentModel,

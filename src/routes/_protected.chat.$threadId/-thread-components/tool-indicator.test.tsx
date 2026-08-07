@@ -2,12 +2,13 @@ import { screen } from "@testing-library/react";
 import type { ToolUIPart } from "ai";
 import { describe, expect, it } from "vitest";
 
+import { KNOWN_TOOL_NAMES } from "@/lib/ai-sdk/tool-labels";
+import type { MnemonicToolName } from "@/mastra/mnemonic-tool-types";
 import { render } from "@/test/render-message";
 
 import type { ThreadUITools } from "../-thread-types";
 import { AssistantToolPart } from "./assistant-tool-part";
 import { ToolIndicator } from "./tool-indicator";
-import { TOOL_LABELS } from "./tool-labels";
 
 type RecallToolPart = Extract<ToolUIPart<ThreadUITools>, { type: "tool-recall" }>;
 
@@ -73,7 +74,7 @@ describe("ToolIndicator", () => {
   });
 });
 
-const toolPart = (toolName: keyof typeof TOOL_LABELS, state: ToolUIPart["state"]) =>
+const toolPart = (toolName: MnemonicToolName, state: ToolUIPart["state"]) =>
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- tool UI fixture for component render.
   ({
     type: `tool-${toolName}`,
@@ -93,24 +94,47 @@ const unknownToolPart = () =>
     output: {},
   }) as unknown as ToolUIPart<ThreadUITools>;
 
-const TOOL_NAMES = [
-  "executeCode",
-  "fileGraphRag",
-  "fileVectorSearch",
-  "getFile",
-  "recall",
-  "webFetch",
-  "webSearch",
-] as const satisfies (keyof typeof TOOL_LABELS)[];
+const TOOL_LABELS = {
+  executeCode: {
+    done: "Executed code",
+    error: "Could not execute code",
+    pending: "Executing code",
+  },
+  fileGraphRag: {
+    done: "Searched file connections",
+    error: "Could not search file connections",
+    pending: "Searching file connections",
+  },
+  fileVectorSearch: {
+    done: "Searched files",
+    error: "Could not search files",
+    pending: "Searching files",
+  },
+  getFile: {
+    done: "Read file",
+    error: "Could not read file",
+    pending: "Reading file",
+  },
+  recall: {
+    done: "Recalled memories",
+    error: "Could not recall memories",
+    pending: "Recalling memories",
+  },
+  webFetch: {
+    done: "Fetched the web page",
+    error: "Could not fetch the web page",
+    pending: "Fetching the web page",
+  },
+  webSearch: {
+    done: "Searched the web",
+    error: "Could not search the web",
+    pending: "Searching the web",
+  },
+} as const;
 
 describe("AssistantToolPart", () => {
-  it("covers every tool the UI knows about", () => {
-    expect(TOOL_NAMES).toHaveLength(Object.keys(TOOL_LABELS).length);
-  });
-
   it("renders the label every known tool declares for each status", () => {
-    // renderToolLabel duplicates the copy in TOOL_LABELS; this keeps them aligned.
-    for (const toolName of TOOL_NAMES) {
+    for (const toolName of KNOWN_TOOL_NAMES) {
       const labels = TOOL_LABELS[toolName];
       const { unmount } = render(
         <>

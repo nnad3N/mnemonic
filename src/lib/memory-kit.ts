@@ -12,10 +12,8 @@ import type { Result as ResultType } from "better-result";
 
 import { Kit } from "@/lib/kit";
 import { mastra } from "@/mastra";
-import type { conversationAgentId } from "@/mastra/agents/conversation-agent";
-import type { topicAgentId } from "@/mastra/agents/topic-agent";
+import type { MnemonicAgentId } from "@/mastra/agents/id";
 
-type AgentWithMemoryId = typeof conversationAgentId | typeof topicAgentId;
 type GetThreadInput = Parameters<MemoryStorage["getThreadById"]>[0];
 type GetThreadOutput = Awaited<ReturnType<MemoryStorage["getThreadById"]>>;
 type SaveMessagesOutput = Awaited<ReturnType<MastraMemory["saveMessages"]>>;
@@ -37,11 +35,11 @@ const toMemoryError = (cause: unknown): MemoryError =>
 
 export type MemoryApi = {
   deleteAgentThread: (input: {
-    agentId: AgentWithMemoryId;
+    agentId: MnemonicAgentId;
     threadId: string;
   }) => Promise<ResultType<void, MemoryError>>;
   deleteMessages: (input: {
-    agentId: AgentWithMemoryId;
+    agentId: MnemonicAgentId;
     messageIds: string[];
   }) => Promise<ResultType<void, MemoryError>>;
   listThreads: (
@@ -53,7 +51,7 @@ export type MemoryApi = {
     input: StorageListMessagesInput,
   ) => Promise<ResultType<StorageListMessagesOutput, MemoryError>>;
   saveMessages: (input: {
-    agentId: AgentWithMemoryId;
+    agentId: MnemonicAgentId;
     messages: MastraDBMessage[];
   }) => Promise<ResultType<SaveMessagesOutput, MemoryError>>;
   saveThread: (input: SaveThreadInput) => Promise<ResultType<SaveThreadOutput, MemoryError>>;
@@ -72,7 +70,7 @@ const getMemoryStore = async (): Promise<MemoryStorage> => {
   return memoryStore;
 };
 
-const getAgentMemory = async (agentId: AgentWithMemoryId): Promise<MastraMemory> => {
+const getAgentMemory = async (agentId: MnemonicAgentId): Promise<MastraMemory> => {
   const agent = mastra.getAgentById(agentId);
   const memory = await agent.getMemory();
 

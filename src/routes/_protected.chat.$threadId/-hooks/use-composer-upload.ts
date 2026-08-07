@@ -116,16 +116,7 @@ export const useComposerUpload = (threadId: string, location: ThreadInputLocatio
 
       editor.tf.focus({ edge: "endEditor" });
     },
-    [
-      canUpload,
-      chat.messages,
-      editor,
-      findDuplicateFiles,
-      location,
-      threadId,
-      topicId,
-      uploadFile,
-    ],
+    [canUpload, chat.messages, editor, findDuplicateFiles, location, threadId, topicId, uploadFile],
   );
 
   return { canUpload, uploadFiles };

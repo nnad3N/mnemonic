@@ -1,10 +1,13 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { convertFileListToFileUIParts } from "ai";
+import { produce } from "immer";
 import type { Descendant } from "platejs";
 import { ElementApi, TextApi } from "platejs";
 import type { PlateEditor } from "platejs/react";
 import { useEditorRef, useEditorSelector } from "platejs/react";
+
+import { closeWorkSegments } from "@/lib/ai-sdk/close-work-segments";
 
 import { getThreadEditorId, plateToMarkdown } from "../-thread-components/composer/plate";
 import type { ThreadMetadataAttachment, ThreadUIMessage } from "../-thread-types";
@@ -177,6 +180,17 @@ export const useComposerActions = (location: ThreadInputLocation) => {
 
   const stopStream = async () => {
     await chat.stop();
+    chat.setMessages((messages) =>
+      produce(messages, (draft) => {
+        const last = draft.findLast((message) => message.role === "assistant");
+
+        if (!last) {
+          return;
+        }
+
+        closeWorkSegments(last.parts, Temporal.Now.instant());
+      }),
+    );
 
     const lastMessage = chat.messages.at(-1);
 

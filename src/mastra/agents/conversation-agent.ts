@@ -4,6 +4,7 @@ import { Memory } from "@mastra/memory";
 import { baseInstructions, sharedSourceInstructions } from "@/mastra/agents/base-instructions";
 import { getAgentModel, models, observationalMemoryOptions } from "@/mastra/models";
 import { stripNonNativeFilePartsProcessor } from "@/mastra/processors/strip-non-native-file-parts";
+import { workSegmentTimingProcessor } from "@/mastra/processors/work-segment-timing";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context";
 import { libsqlStore, libsqlVector } from "@/mastra/storage";
 import { executeCodeTool } from "@/mastra/tools/execute-code-tool";
@@ -11,7 +12,7 @@ import { getFileTool } from "@/mastra/tools/get-file-tool";
 import { webFetchTool } from "@/mastra/tools/web-fetch-tool";
 import { webSearchTool } from "@/mastra/tools/web-search-tool";
 
-export const conversationAgentId = "conversation-agent";
+export const CONVERSATION_AGENT_ID = "conversation-agent";
 
 export const conversationMemory = new Memory({
   embedder: models.embedding,
@@ -25,15 +26,17 @@ export const conversationMemory = new Memory({
   vector: libsqlVector,
 });
 
-export const conversationAgentTools = {
+const conversationAgentTools = {
   executeCode: executeCodeTool,
   getFile: getFileTool,
   webFetch: webFetchTool,
   webSearch: webSearchTool,
 } as const;
 
+export type ConversationAgentTools = typeof conversationAgentTools;
+
 export const conversationAgent = new Agent({
-  id: conversationAgentId,
+  id: CONVERSATION_AGENT_ID,
   instructions: `
 ${baseInstructions}
 
@@ -56,6 +59,7 @@ Use recall to browse past messages in the current conversation only:
 - mode "search" with query — find relevant messages in the current thread.
 `,
   inputProcessors: [stripNonNativeFilePartsProcessor],
+  outputProcessors: [workSegmentTimingProcessor],
   memory: conversationMemory,
   requestContextSchema: mnemonicRequestContextSchema,
   model: getAgentModel,

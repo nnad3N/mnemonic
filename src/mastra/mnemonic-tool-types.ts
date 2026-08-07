@@ -1,10 +1,10 @@
 import type { Tool } from "@mastra/core/tools";
 
 import type {
-  conversationAgentTools,
+  ConversationAgentTools,
   conversationMemory,
 } from "@/mastra/agents/conversation-agent";
-import type { topicAgentTools, topicMemory } from "@/mastra/agents/topic-agent";
+import type { TopicAgentTools, topicMemory } from "@/mastra/agents/topic-agent";
 
 type EnabledMemoryToolName = "recall";
 type ConversationMemoryTools = Pick<
@@ -13,9 +13,9 @@ type ConversationMemoryTools = Pick<
 >;
 type TopicMemoryTools = Pick<ReturnType<typeof topicMemory.listTools>, EnabledMemoryToolName>;
 
-type MnemonicTools = typeof conversationAgentTools &
+type MnemonicTools = ConversationAgentTools &
   ConversationMemoryTools &
-  typeof topicAgentTools &
+  TopicAgentTools &
   TopicMemoryTools;
 
 // Mastra's InferUITool only matches the first four Tool generics, so tools with a typed
@@ -36,3 +36,5 @@ type InferContextualUITool<TTool> =
 export type MnemonicUITools = {
   [K in keyof MnemonicTools]: InferContextualUITool<MnemonicTools[K]>;
 };
+
+export type MnemonicToolName = keyof MnemonicUITools;

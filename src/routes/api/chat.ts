@@ -3,8 +3,10 @@ import { RequestContext } from "@mastra/core/request-context";
 import { createFileRoute } from "@tanstack/react-router";
 import { createUIMessageStreamResponse } from "ai";
 import { matchError, Result, TaggedError } from "better-result";
+import { produce } from "immer";
 import * as v from "valibot";
 
+import { closeWorkSegments } from "@/lib/ai-sdk/close-work-segments";
 import type { DbKit } from "@/lib/db-kit";
 import { dbKit } from "@/lib/db-kit";
 import type { Kits } from "@/lib/kit";
@@ -16,14 +18,10 @@ import { DEFAULT_MODEL_CAPABILITY } from "@/lib/model-capability";
 import type { SafeId } from "@/lib/safe-id";
 import { toSafeId } from "@/lib/safe-id";
 import { mastra } from "@/mastra";
+import type { MnemonicAgentId } from "@/mastra/agents/id";
+import { getMnemonicAgentId } from "@/mastra/agents/id";
 import type { MnemonicRequestContext } from "@/mastra/request-context";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
-
-type GetChatAgentIdInput = {
-  topicId: SafeId<"topic"> | undefined;
-};
-export const getChatAgentId = ({ topicId }: GetChatAgentIdInput) =>
-  topicId ? "topic-agent" : "conversation-agent";
 
 export const uiMessageSchema = v.object({
   id: v.pipe(v.string(), v.nanoid()),
@@ -71,6 +69,50 @@ class ChatStreamError extends TaggedError("ChatStreamError")<{
   message: string;
 }>() {}
 
+type PersistSealedAssistantOnAbortInput = {
+  agentId: MnemonicAgentId;
+  completedAt: Temporal.Instant;
+  threadId: string;
+};
+
+export const persistSealedAssistantOnAbort = Kit.gen(async function* (
+  ctx: ChatCtx,
+  input: PersistSealedAssistantOnAbortInput,
+) {
+  const { messages } = yield* await ctx.memory.listMessages({
+    threadId: input.threadId,
+    page: 0,
+    perPage: false,
+  });
+
+  const lastIdx = messages.findLastIndex((message) => message.role === "assistant");
+
+  if (lastIdx === -1) {
+    return Result.ok();
+  }
+
+  const message = messages.at(lastIdx);
+
+  if (!message) {
+    return Result.ok();
+  }
+
+  const sealed = produce(message, (draft) => {
+    closeWorkSegments(draft.content.parts, input.completedAt);
+  });
+
+  if (sealed === message) {
+    return Result.ok();
+  }
+
+  yield* await ctx.memory.saveMessages({
+    agentId: input.agentId,
+    messages: [sealed],
+  });
+
+  return Result.ok();
+});
+
 const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
   const thread = yield* await ctx.memory.getThreadById({
     threadId: input.body.threadId,
@@ -95,7 +137,7 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
     return Result.err(new ChatNotFoundError({ message: "Thread not found" }));
   }
 
-  const agentId = getChatAgentId({ topicId: topic?.id });
+  const agentId = getMnemonicAgentId({ topicId: topic?.id });
   const userSettings = yield* await ctx.db.run((db) =>
     db.query.settings.findFirst({
       columns: { modelCapability: true },
@@ -147,6 +189,13 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
           },
           // oxlint-disable-next-line typescript/no-unsafe-type-assertion
           messages: input.body.messages as ThreadUIMessage[],
+          onAbort: async () => {
+            await persistSealedAssistantOnAbort(ctx, {
+              agentId,
+              completedAt: Temporal.Now.instant(),
+              threadId: input.body.threadId,
+            });
+          },
           requestContext,
         },
         sendReasoning: true,

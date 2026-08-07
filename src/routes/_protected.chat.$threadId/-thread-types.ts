@@ -6,9 +6,25 @@ import type { MnemonicUITools } from "@/mastra/mnemonic-tool-types";
 
 type OmDataKey<P extends DataOmPart> = P["type"] extends `data-${infer K}` ? K : never;
 
+export type WorkStartData = {
+  segmentId: string;
+  startedAt: string;
+};
+
+export type WorkEndData = {
+  segmentId: string;
+  completedAt: string;
+  durationMs: number;
+};
+
+export type WorkUIDataTypes = {
+  "work-start": WorkStartData;
+  "work-end": WorkEndData;
+};
+
 export type ThreadUIDataTypes = {
   [P in DataOmPart as OmDataKey<P>]: Extract<DataOmPart, { type: P["type"] }>["data"];
-};
+} & WorkUIDataTypes;
 
 export type ThreadUITools = MnemonicUITools;
 
@@ -31,3 +47,6 @@ export type ThreadUIMessage = UIMessage<ThreadMessageMetadata, ThreadUIDataTypes
 export type ThreadUIMessagePart = UIMessagePart<ThreadUIDataTypes, ThreadUITools>;
 
 export type ThreadDataUIPart = DataUIPart<ThreadUIDataTypes>;
+
+export type WorkStartPart = Extract<ThreadDataUIPart, { type: "data-work-start" }>;
+export type WorkEndPart = Extract<ThreadDataUIPart, { type: "data-work-end" }>;

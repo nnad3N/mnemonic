@@ -78,7 +78,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
  * @see https://www.better-auth.com/docs/basic-usage#get-session — `getSession` + TanStack Query
  * @see https://www.better-auth.com/docs/basic-usage#use-session — reactive session on the client
  */
-export const useAuthSessionQuery = (): void => {
+const useAuthSessionQuery = (): void => {
   useSuspenseQuery(authSessionQuery);
   const router = useRouter();
   const queryClient = useQueryClient();

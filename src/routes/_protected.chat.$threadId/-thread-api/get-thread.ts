@@ -22,6 +22,27 @@ type GetThreadInput = {
   userId: SafeId<"user">;
 };
 
+// Collapse Mastra's split assistants so the UI always sees user → assistant → user.
+export const mergeConsecutiveAssistantMessages = <TMessage extends ThreadUIMessage>(
+  messages: TMessage[],
+): TMessage[] => {
+  const merged: TMessage[] = [];
+
+  for (const message of messages) {
+    const previous = merged.at(-1);
+    if (message.role === "assistant" && previous?.role === "assistant") {
+      merged[merged.length - 1] = {
+        ...message,
+        parts: previous.parts.concat(message.parts),
+      };
+      continue;
+    }
+    merged.push(message);
+  }
+
+  return merged;
+};
+
 const getThreadFn = Kit.gen(async function* (ctx: GetThreadCtx, input: GetThreadInput) {
   const [{ messages }, topic] = yield* await Kit.promiseAll([
     ctx.memory.listMessages({
@@ -41,11 +62,13 @@ const getThreadFn = Kit.gen(async function* (ctx: GetThreadCtx, input: GetThread
     ),
   ]);
 
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+  const uiMessages = toAISdkMessages(messages, {
+    version: "v6",
+  }) as (ThreadUIMessage & TsrSerializable)[];
+
   return Result.ok({
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-    messages: toAISdkMessages(messages, {
-      version: "v6",
-    }) as (ThreadUIMessage & TsrSerializable)[],
+    messages: mergeConsecutiveAssistantMessages(uiMessages),
     resourceId: input.resourceId,
     topicId: topic?.id,
   });

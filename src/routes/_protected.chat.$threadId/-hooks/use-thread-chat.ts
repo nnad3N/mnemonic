@@ -6,7 +6,6 @@ import { DefaultChatTransport } from "ai";
 
 import { getThread } from "../-thread-api/get-thread";
 import { threadKeys } from "../-thread-api/query-keys";
-import { saveAbortedMessages } from "../-thread-api/save-aborted-messages";
 import type { ThreadUIMessage } from "../-thread-types";
 import { useChatStore } from "../../-chat-store";
 
@@ -35,33 +34,6 @@ export const getMessagesToSend = <TMessage extends UIMessage>(
   return [lastMessage];
 };
 
-/** Aborted-turn patch — `onFinish.messages` is the full thread; only ship a delta. */
-export type AbortedMessagePatch<TMessage extends UIMessage = UIMessage> = {
-  add: TMessage[];
-  deleteIds: string[];
-};
-
-export const getAbortedMessagePatch = <TMessage extends UIMessage>(
-  messages: TMessage[],
-  persistedIds: Set<string>,
-): AbortedMessagePatch<TMessage> => {
-  const liveIds = new Set(messages.map((message) => message.id));
-  const deleteIds: string[] = [];
-
-  for (const id of persistedIds) {
-    if (!liveIds.has(id)) {
-      deleteIds.push(id);
-    }
-  }
-
-  const lastUserIndex = messages.findLastIndex((message) => message.role === "user");
-
-  return {
-    add: lastUserIndex === -1 ? [] : messages.slice(lastUserIndex),
-    deleteIds,
-  };
-};
-
 export const threadChatQuery = (threadId: string) =>
   queryOptions({
     gcTime: Infinity,
@@ -73,31 +45,11 @@ export const threadChatQuery = (threadId: string) =>
         data: { threadId },
       });
 
-      const persistedIds = new Set(data.messages.map((message) => message.id));
-
       const chat = new Chat({
         id: threadId,
         messages: data.messages as ThreadUIMessage[],
-        onFinish: ({ messages: finishedMessages, isAbort }) => {
-          useChatStore.getState().hydrateAttachments(threadId, finishedMessages);
-
-          // Mastra skips memory.saveMessages on abort. Persist the turn here and
-          // keep the live Chat — invalidate would refetch the same payload.
-          if (!isAbort) {
-            return;
-          }
-
-          const patch = getAbortedMessagePatch(finishedMessages, persistedIds);
-
-          if (patch.add.length > 0 || patch.deleteIds.length > 0) {
-            void saveAbortedMessages({
-              data: {
-                threadId,
-                add: patch.add,
-                deleteIds: patch.deleteIds,
-              },
-            });
-          }
+        onFinish: ({ messages }) => {
+          useChatStore.getState().hydrateAttachments(threadId, messages);
         },
         onError: (error) => {
           console.error(error);
