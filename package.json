@@ -51,7 +51,6 @@
     "@platejs/markdown": "^53.2.2",
     "@platejs/mention": "^53.0.0",
     "@sebastianwessel/quickjs": "^3.1.0",
-    "@shadcn/react": "^0.2.1",
     "@streamdown/code": "^1.1.1",
     "@streamdown/math": "^1.0.2",
     "@streamdown/mermaid": "^1.0.2",
@@ -99,6 +98,7 @@
     "tslib": "2.8.1",
     "tw-shimmer": "^0.4.11",
     "use-debounce": "^10.1.1",
+    "use-stick-to-bottom": "^1.1.6",
     "valibot": "^1.4.2",
     "zustand": "^5.0.14"
   },

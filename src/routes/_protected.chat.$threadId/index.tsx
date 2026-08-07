@@ -16,16 +16,17 @@ function RouteComponent() {
   const threadId = Route.useParams({ select: (params) => params.threadId });
 
   return (
-    <MessageScrollerProvider autoScroll defaultScrollPosition="end" key={threadId}>
-      <div className="typeset typeset-chat flex h-full min-h-0 w-full flex-col p-3">
-        <MessageScroller className="min-h-0 flex-1">
-          <ThreadMessages />
-          <MessageScrollerButton />
-        </MessageScroller>
+    <MessageScrollerProvider
+      className="typeset typeset-chat flex h-full min-h-0 w-full flex-col p-3"
+      key={threadId}
+    >
+      <MessageScroller className="min-h-0 flex-1">
+        <ThreadMessages />
+        <MessageScrollerButton />
+      </MessageScroller>
 
-        <div className="relative mx-auto flex w-full max-w-3xl justify-center">
-          <ThreadComposer location="main" />
-        </div>
+      <div className="relative mx-auto flex w-full max-w-3xl justify-center">
+        <ThreadComposer location="main" />
       </div>
     </MessageScrollerProvider>
   );

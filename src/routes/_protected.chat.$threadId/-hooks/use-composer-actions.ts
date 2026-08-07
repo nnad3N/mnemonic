@@ -6,6 +6,7 @@ import type { Descendant } from "platejs";
 import { ElementApi, TextApi } from "platejs";
 import type { PlateEditor } from "platejs/react";
 import { useEditorRef, useEditorSelector } from "platejs/react";
+import { useStickToBottomContext } from "use-stick-to-bottom";
 
 import { closeWorkSegments } from "@/lib/ai-sdk/close-work-segments";
 
@@ -104,6 +105,7 @@ export const useComposerActions = (location: ThreadInputLocation) => {
   );
 
   const chat = useThreadChat();
+  const { scrollToBottom } = useStickToBottomContext();
   const { data: topicId } = useSuspenseQuery({
     ...threadChatQuery(threadId),
     select: (data) => data.topicId,
@@ -155,6 +157,8 @@ export const useComposerActions = (location: ThreadInputLocation) => {
         topicId,
       });
     }
+
+    void scrollToBottom({ animation: "smooth", ignoreEscapes: true });
 
     await chat.sendMessage({
       text,

@@ -19,14 +19,13 @@
     "npm:@mastra/libsql@^1.19.0": "1.19.0_@mastra+core@1.57.0__zod@4.4.3__ai@6.0.180___zod@4.4.3__express@5.2.1_ai@6.0.180__zod@4.4.3_express@5.2.1_zod@4.4.3",
     "npm:@mastra/memory@^1.26.0": "1.26.0_@mastra+core@1.57.0__zod@4.4.3__ai@6.0.180___zod@4.4.3__express@5.2.1_ai@6.0.180__zod@4.4.3_express@5.2.1",
     "npm:@mastra/rag@^2.4.2": "2.4.2_@mastra+core@1.57.0__zod@4.4.3__ai@6.0.180___zod@4.4.3__express@5.2.1_zod@4.4.3_ai@6.0.180__zod@4.4.3_express@5.2.1",
-    "npm:@openrouter/ai-sdk-provider@2.9.1": "2.9.1_ai@6.0.180__zod@4.4.3_zod@4.4.3",
+    "npm:@openrouter/ai-sdk-provider@2.9.1": "2.9.1_ai@6.0.180__zod@4.4.3",
     "npm:@platejs/basic-nodes@53": "53.0.0_platejs@53.2.4__react@19.2.7__react-dom@19.2.7___react@19.2.7__@types+react@19.2.17__immer@11.1.11__scheduler@0.27.0_react@19.2.7_react-dom@19.2.7__react@19.2.7_@types+react@19.2.17_immer@11.1.11_scheduler@0.27.0",
     "npm:@platejs/combobox@53.0.0": "53.0.0_platejs@53.2.4__react@19.2.7__react-dom@19.2.7___react@19.2.7__@types+react@19.2.17__immer@11.1.11__scheduler@0.27.0_react@19.2.7_react-dom@19.2.7__react@19.2.7_@types+react@19.2.17_immer@11.1.11_scheduler@0.27.0",
     "npm:@platejs/markdown@^53.2.2": "53.2.2_platejs@53.2.4__react@19.2.7__react-dom@19.2.7___react@19.2.7__@types+react@19.2.17__immer@11.1.11__scheduler@0.27.0_react@19.2.7_react-dom@19.2.7__react@19.2.7_typescript@7.0.2",
     "npm:@platejs/mention@53": "53.0.0_platejs@53.2.4__react@19.2.7__react-dom@19.2.7___react@19.2.7__@types+react@19.2.17__immer@11.1.11__scheduler@0.27.0_react@19.2.7_react-dom@19.2.7__react@19.2.7_@types+react@19.2.17_immer@11.1.11_scheduler@0.27.0",
     "npm:@rolldown/plugin-babel@~0.2.3": "0.2.3_@babel+core@7.29.7_rolldown@1.1.5_vite@8.1.4__esbuild@0.28.1_esbuild@0.28.1",
     "npm:@sebastianwessel/quickjs@^3.1.0": "3.1.0_typescript@7.0.2_tslib@2.8.1",
-    "npm:@shadcn/react@~0.2.1": "0.2.1_@types+react@19.2.17_react@19.2.7",
     "npm:@streamdown/code@^1.1.1": "1.1.1_react@19.2.7",
     "npm:@streamdown/math@^1.0.2": "1.0.2_react@19.2.7",
     "npm:@streamdown/mermaid@^1.0.2": "1.0.2_react@19.2.7",
@@ -97,6 +96,7 @@
     "npm:tw-shimmer@~0.4.11": "0.4.11_tailwindcss@4.3.2",
     "npm:typescript@^7.0.2": "7.0.2",
     "npm:use-debounce@^10.1.1": "10.1.1_react@19.2.7",
+    "npm:use-stick-to-bottom@^1.1.6": "1.1.6_react@19.2.7",
     "npm:valibot@^1.4.2": "1.4.2_typescript@7.0.2",
     "npm:vite@^8.0.11": "8.1.4_esbuild@0.28.1",
     "npm:vitest-browser-react@2.0.5": "2.0.5_@types+react@19.2.17_@types+react-dom@19.2.3__@types+react@19.2.17_react@19.2.7_react-dom@19.2.7__react@19.2.7_vitest@4.1.10__@vitest+browser-playwright@4.1.10__happy-dom@20.11.1__vite@8.1.4___esbuild@0.28.1__playwright@1.62.0_@vitest+browser-playwright@4.1.10__playwright@1.62.0__vitest@4.1.10__vite@8.1.4___esbuild@0.28.1_playwright@1.62.0",
@@ -2071,7 +2071,6 @@
         "json-schema-typed@8.0.2",
         "pkce-challenge",
         "raw-body",
-        "zod@3.25.76",
         "zod-to-json-schema@3.25.2_zod@3.25.76"
       ]
     },
@@ -2166,7 +2165,7 @@
     "@oozcitak/util@10.0.0": {
       "integrity": "sha512-hAX0pT/73190NLqBPPWSdBVGtbY6VOhWYK3qqHqtXQ1gK7kS2yz4+ivsN07hpJ6I3aeMtKP6J6npsEKOAzuTLA=="
     },
-    "@openrouter/ai-sdk-provider@2.9.1_ai@6.0.180__zod@4.4.3_zod@4.4.3": {
+    "@openrouter/ai-sdk-provider@2.9.1_ai@6.0.180__zod@4.4.3": {
       "integrity": "sha512-okgq07Vdkro4CB5INbfhwa0e6VR1HS7sidNcfHN/MeXLJvX1JmQCff/vem6tcxwT9r1avyFrXSlfv9B28D/Pag==",
       "dependencies": [
         "ai@6.0.180_zod@4.4.3",
@@ -2985,17 +2984,6 @@
     },
     "@sec-ant/readable-stream@0.4.1": {
       "integrity": "sha512-831qok9r2t8AlxLko40y2ebgSDhenenCatLVeW/uBtnHPyhHOvG0C7TvfgecV+wHzIm5KUICgzmVpWS+IMEAeg=="
-    },
-    "@shadcn/react@0.2.1_@types+react@19.2.17_react@19.2.7": {
-      "integrity": "sha512-5krgi3dRMKb5jH6a+qPzVJUy/54s0kKE4Rw4LjDfLqOdVQTWKUgxWf1kW8r912I0jX/Lzxqc+pgjkjWxUIK5BQ==",
-      "dependencies": [
-        "@types/react",
-        "react@19.2.7"
-      ],
-      "optionalPeers": [
-        "@types/react",
-        "react@19.2.7"
-      ]
     },
     "@shikijs/core@3.23.0": {
       "integrity": "sha512-NSWQz0riNb67xthdm5br6lAkvpDJRTgB36fxlo37ZzM2yq0PQFFzbd8psqC2XMPgCzo1fW6cVi18+ArJ44wqgA==",
@@ -10173,6 +10161,12 @@
         "react@19.2.7"
       ]
     },
+    "use-stick-to-bottom@1.1.6_react@19.2.7": {
+      "integrity": "sha512-z3Up8jYQGTkUCsGBnwg6/wj70KgXoW5Kz1AAc1j8MtQuYMBo6ZsdhrIXoegxa7gaMMilgQYyTohTrt3p94jHog==",
+      "dependencies": [
+        "react@19.2.7"
+      ]
+    },
     "use-sync-external-store@1.4.0_react@19.2.7": {
       "integrity": "sha512-9WXSPC5fMv61vaupRkCKCxsPxBocVnwakBEkMIHHpkTTg6icbJtg6jzgtLDm4bl3cSHAca52rYWih0k4K3PfHw==",
       "dependencies": [
@@ -10475,10 +10469,7 @@
       ]
     },
     "zod-to-json-schema@3.25.2_zod@3.25.76": {
-      "integrity": "sha512-O/PgfnpT1xKSDeQYSCfRI5Gy3hPf91mKVDuYLUHZJMiDFptvP41MSnWofm8dnCm0256ZNfZIM7DSzuSMAFnjHA==",
-      "dependencies": [
-        "zod@3.25.76"
-      ]
+      "integrity": "sha512-O/PgfnpT1xKSDeQYSCfRI5Gy3hPf91mKVDuYLUHZJMiDFptvP41MSnWofm8dnCm0256ZNfZIM7DSzuSMAFnjHA=="
     },
     "zod-to-json-schema@3.25.2_zod@4.4.3": {
       "integrity": "sha512-O/PgfnpT1xKSDeQYSCfRI5Gy3hPf91mKVDuYLUHZJMiDFptvP41MSnWofm8dnCm0256ZNfZIM7DSzuSMAFnjHA==",
@@ -10563,7 +10554,6 @@
         "npm:@platejs/mention@53",
         "npm:@rolldown/plugin-babel@~0.2.3",
         "npm:@sebastianwessel/quickjs@^3.1.0",
-        "npm:@shadcn/react@~0.2.1",
         "npm:@streamdown/code@^1.1.1",
         "npm:@streamdown/math@^1.0.2",
         "npm:@streamdown/mermaid@^1.0.2",
@@ -10634,6 +10624,7 @@
         "npm:tw-shimmer@~0.4.11",
         "npm:typescript@^7.0.2",
         "npm:use-debounce@^10.1.1",
+        "npm:use-stick-to-bottom@^1.1.6",
         "npm:valibot@^1.4.2",
         "npm:vite@^8.0.11",
         "npm:vitest-browser-react@2.0.5",

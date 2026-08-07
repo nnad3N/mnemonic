@@ -1,11 +1,8 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useState } from "react";
+import { useStickToBottomContext } from "use-stick-to-bottom";
 
-import {
-  MessageScrollerContent,
-  MessageScrollerViewport,
-  useMessageScroller,
-} from "@/components/ui/message-scroller";
+import { MessageScrollerContent, MessageScrollerViewport } from "@/components/ui/message-scroller";
 import { cn } from "@/lib/utils";
 import { ThreadError } from "@/routes/_protected.chat.$threadId/-thread-components/thread-error";
 import { ThreadMessage } from "@/routes/_protected.chat.$threadId/-thread-components/thread-message";
@@ -22,13 +19,12 @@ export const ThreadMessages = () => {
   const chat = useThreadChat();
   const editingMessageIndex = useChatStore((state) => state.editingState?.messageIndex) ?? Infinity;
   const isBusy = chat.status === "submitted" || chat.status === "streaming";
-  const viewportRef = useRef<HTMLDivElement>(null);
   const [isLayoutReady, setIsLayoutReady] = useState(chat.messages.length === 0);
-  const { scrollToEnd } = useMessageScroller();
+  const { scrollRef, scrollToBottom } = useStickToBottomContext();
 
   const virtualizer = useVirtualizer({
     count: chat.messages.length,
-    getScrollElement: () => viewportRef.current,
+    getScrollElement: () => scrollRef.current,
     estimateSize: (index) => {
       const message = chat.messages.at(index);
 
@@ -44,49 +40,19 @@ export const ThreadMessages = () => {
   });
 
   useLayoutEffect(() => {
-    let cancelled = false;
-    let frameId = 0;
-    let lastScrollHeight = -1;
-    let stableFrames = 0;
-
-    // Virtual rows measure after paint; keep pinning to the end until
-    // scrollHeight stops growing so the first visible frame is not mid-shift.
-    const pinToEndUntilStable = () => {
-      if (cancelled) return;
-
-      const scrollElement = viewportRef.current;
-      if (!scrollElement) return;
-
-      scrollElement.scrollTop = scrollElement.scrollHeight - scrollElement.clientHeight;
-
-      if (scrollElement.scrollHeight === lastScrollHeight) {
-        stableFrames += 1;
-      } else {
-        lastScrollHeight = scrollElement.scrollHeight;
-        stableFrames = 0;
-      }
-
-      if (stableFrames > 0) {
-        scrollToEnd({
-          behavior: "instant",
-        });
+    const animationFrame = requestAnimationFrame(() => {
+      void Promise.resolve(scrollToBottom({ animation: "instant" })).finally(() => {
         setIsLayoutReady(true);
-        return;
-      }
-
-      frameId = requestAnimationFrame(pinToEndUntilStable);
-    };
-
-    frameId = requestAnimationFrame(pinToEndUntilStable);
+      });
+    });
 
     return () => {
-      cancelled = true;
-      cancelAnimationFrame(frameId);
+      cancelAnimationFrame(animationFrame);
     };
-  }, [scrollToEnd]);
+  }, [scrollToBottom]);
 
   return (
-    <MessageScrollerViewport ref={viewportRef}>
+    <MessageScrollerViewport>
       <MessageScrollerContent
         aria-busy={isBusy}
         aria-hidden={!isLayoutReady}
