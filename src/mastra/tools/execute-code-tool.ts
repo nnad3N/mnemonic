@@ -8,7 +8,7 @@ import { dbKit } from "@/lib/db-kit";
 import { LlmNativeMimeType } from "@/lib/file-validation";
 import { getAttachment } from "@/lib/get-attachment";
 import type { FetchedFile } from "@/lib/get-file";
-import { getFile, toFileText } from "@/lib/get-file";
+import { getFile, GetFileError, toFileText } from "@/lib/get-file";
 import * as Kit from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit";
 import { parseMentionKey } from "@/lib/mention-key";
@@ -16,6 +16,7 @@ import { s3Kit } from "@/lib/s3-kit";
 import { runCode } from "@/lib/sandbox/run-code.ts";
 import type { MnemonicRequestContext } from "@/mastra/request-context";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context";
+import { ToolError } from "@/mastra/tools/tool-error";
 
 const getFileCtx = Kit.createContext(dbKit, s3Kit);
 
@@ -80,9 +81,9 @@ export type SandboxFile = {
   mimeType: string;
 };
 
-const toSandboxFile = async (
-  file: FetchedFile,
-): Promise<Result<SandboxFile, { message: string }>> => {
+const notFound = (): GetFileError => new GetFileError({ message: "File not found." });
+
+const toSandboxFile = async (file: FetchedFile) => {
   if (LlmNativeMimeType.is(file.mimeType)) {
     return Result.ok({
       contents: `data:${file.mimeType};base64,${Buffer.from(file.bytes).toString("base64")}`,
@@ -95,7 +96,7 @@ const toSandboxFile = async (
   const text = await toFileText(file);
 
   if (Result.isError(text)) {
-    return Result.err({ message: text.error.message });
+    return Result.err(text.error);
   }
 
   return Result.ok({
@@ -112,65 +113,43 @@ type LoadSandboxFileInput = {
   requestContext: RequestContext<MnemonicRequestContext> | undefined;
 };
 
-const loadSandboxFile = async ({
-  fileKey,
-  flushMessages,
-  requestContext,
-}: LoadSandboxFileInput): Promise<Result<SandboxFile, { message: string }>> => {
-  const mention = parseMentionKey(fileKey);
+const loadSandboxFile = async ({ fileKey, flushMessages, requestContext }: LoadSandboxFileInput) =>
+  Result.gen(async function* () {
+    const mention = parseMentionKey(fileKey);
 
-  if (mention.type === "file") {
-    const topicId = requestContext?.get("filter")?.topicId;
+    if (mention.type === "file") {
+      const topicId = requestContext?.get("filter")?.topicId;
 
-    if (!topicId) {
-      return Result.err({ message: "File not found." });
-    }
+      if (!topicId) {
+        return Result.err(notFound());
+      }
 
-    const result = await getFile(getFileCtx, {
-      fileId: mention.value,
-      topicId,
-    });
-
-    if (Result.isError(result)) {
-      return Result.err({
-        message: matchError(result.error, {
-          GetFileError: (error) => error.message,
-          DatabaseError: () => "File could not be loaded.",
-          S3Error: () => "File could not be loaded.",
-        }),
+      const file = yield* await getFile(getFileCtx, {
+        fileId: mention.value,
+        topicId,
       });
+
+      return await toSandboxFile(file);
     }
 
-    return toSandboxFile(result.value);
-  }
+    if (mention.type === "attachment") {
+      const threadId = requestContext?.get("threadId");
 
-  if (mention.type === "attachment") {
-    const threadId = requestContext?.get("threadId");
+      if (!threadId) {
+        return Result.err(notFound());
+      }
 
-    if (!threadId) {
-      return Result.err({ message: "File not found." });
-    }
-
-    const result = await getAttachment(Kit.createContext(memoryKit), {
-      flushMessages,
-      sha256: mention.value,
-      threadId,
-    });
-
-    if (Result.isError(result)) {
-      return Result.err({
-        message: matchError(result.error, {
-          GetAttachmentError: (error) => error.message,
-          MemoryError: () => "File could not be loaded.",
-        }),
+      const file = yield* await getAttachment(Kit.createContext(memoryKit), {
+        flushMessages,
+        sha256: mention.value,
+        threadId,
       });
+
+      return await toSandboxFile(file);
     }
 
-    return toSandboxFile(result.value);
-  }
-
-  return Result.err({ message: "File not found." });
-};
+    return Result.err(notFound());
+  });
 
 export const executeCodeTool = createTool({
   id: "execute-code",
@@ -181,7 +160,7 @@ export const executeCodeTool = createTool({
     "Executes code in an isolated ES6 JavaScript sandbox with no filesystem or network access.",
     "Use for calculations (prefer mathjs), data transforms, parsing, formatting, or quick algorithmic checks.",
     "Pass small structured input via `args` (read as `env.args`). To compute over referenced content, pass its optional mention key in the shape `TYPE::STRING` via `fileKey` and read `env.file` (`contents`, `filename`, `size`, `mimeType`). PDF and image contents are data URLs; other contents are text. Do not embed large content bodies in `code` or `args`.",
-    "Missing, inaccessible, or oversized files return a tool error before the sandbox runs.",
+    "Missing, inaccessible, or oversized files fail before the sandbox runs.",
     "You can use mathjs after importing it. If uncertain about available functions, check the official mathjs docs.",
     "The tool result is `export default` (JSON-serialized into `result`). Example: `export default { answer: value }`.",
     "On success, `result` is the default export and `logs` is console output. On failure, returns execution error details.",
@@ -197,10 +176,19 @@ export const executeCodeTool = createTool({
       });
 
       if (Result.isError(result)) {
-        return {
-          type: "error",
-          message: result.error.message,
-        } satisfies ExecuteCodeError;
+        throw result.mapError(
+          (error) =>
+            new ToolError({
+              message: matchError(error, {
+                GetAttachmentError: (error) => error.message,
+                GetFileError: (error) => error.message,
+                DatabaseError: () => "File could not be loaded.",
+                MemoryError: () => "File could not be loaded.",
+                S3Error: () => "File could not be loaded.",
+              }),
+              cause: error,
+            }),
+        ).error;
       }
 
       file = result.value;
@@ -220,23 +208,18 @@ export const executeCodeTool = createTool({
     }
 
     return matchError(executionResult.error, {
-      SandboxExecuteError: (error) =>
-        ({
-          type: "error",
-          name: error.name,
-          message: error.message,
-          isSyntaxError: error.isSyntaxError,
-        }) satisfies ExecuteCodeError,
-      SandboxInitError: () =>
-        ({
-          type: "error",
-          message: "Code execution failed.",
-        }) satisfies ExecuteCodeError,
-      SandboxRunError: () =>
-        ({
-          type: "error",
-          message: "Code execution failed.",
-        }) satisfies ExecuteCodeError,
+      SandboxExecuteError: (error): ExecuteCodeError => ({
+        type: "error",
+        name: error.name,
+        message: error.message,
+        isSyntaxError: error.isSyntaxError,
+      }),
+      SandboxInitError: (cause) => {
+        throw new ToolError({ message: "Code execution failed.", cause });
+      },
+      SandboxRunError: (cause) => {
+        throw new ToolError({ message: "Code execution failed.", cause });
+      },
     });
   },
 });

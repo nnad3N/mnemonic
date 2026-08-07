@@ -13,11 +13,11 @@ type WebFetchPartProps = {
 export const WebFetchPart = ({ part }: WebFetchPartProps) => {
   const { externalLinkModal, requestExternalLink } = useExternalLinkSafety();
 
-  if (part.output?.type !== "success") {
+  const url = part.output?.url;
+
+  if (!url) {
     return <AssistantToolPart part={part} />;
   }
-
-  const url = part.output.url;
 
   return (
     <>

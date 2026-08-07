@@ -19,11 +19,13 @@ export const WebSearchPart = ({ part }: WebSearchPartProps) => {
   const { externalLinkModal, requestExternalLink } = useExternalLinkSafety();
   const [popoverOpen, setPopoverOpen] = useState(false);
 
-  if (part.output?.type !== "success") {
+  const results = part.output?.results;
+
+  if (!results || results.length === 0) {
     return <AssistantToolPart part={part} />;
   }
 
-  const links = part.output.results.map((result) => ({
+  const links = results.map((result) => ({
     url: result.url,
     title: result.title,
   }));

@@ -4,6 +4,7 @@ import { Result } from "better-result";
 import * as v from "valibot";
 
 import { firecrawl } from "@/mastra/tools/firecrawl-client";
+import { ToolError } from "@/mastra/tools/tool-error";
 
 const inputSchema = v.object({
   url: v.pipe(
@@ -13,23 +14,14 @@ const inputSchema = v.object({
   ),
 });
 
-const successOutputSchema = v.object({
-  type: v.literal("success"),
+const outputSchema = v.object({
   url: v.pipe(v.string(), v.nonEmpty()),
   title: v.optional(v.string()),
   description: v.optional(v.string()),
   markdown: v.pipe(v.string(), v.nonEmpty()),
 });
 
-const errorOutputSchema = v.object({
-  type: v.literal("error"),
-  message: v.string(),
-});
-
-const outputSchema = v.variant("type", [successOutputSchema, errorOutputSchema]);
-
-type WebFetchSuccess = v.InferOutput<typeof successOutputSchema>;
-type WebFetchError = v.InferOutput<typeof errorOutputSchema>;
+type WebFetchOutput = v.InferOutput<typeof outputSchema>;
 
 export const webFetchTool = createTool({
   id: "web-fetch",
@@ -50,27 +42,26 @@ export const webFetchTool = createTool({
     );
 
     if (Result.isError(documentResult)) {
-      return {
-        type: "error",
+      throw new ToolError({
         message: "Could not fetch that URL. Check the link or search for an alternative page.",
-      } satisfies WebFetchError;
+        cause: documentResult.error,
+      });
     }
 
     const document = documentResult.value;
     const markdown = document.markdown?.trim();
+
     if (!markdown) {
-      return {
-        type: "error",
+      throw new ToolError({
         message: "The page was reached but no readable content was extracted. Try a different URL.",
-      } satisfies WebFetchError;
+      });
     }
 
     return {
-      type: "success",
       url: document.metadata?.sourceURL ?? document.metadata?.url ?? url,
       title: document.metadata?.title,
       description: document.metadata?.description,
       markdown,
-    } satisfies WebFetchSuccess;
+    } satisfies WebFetchOutput;
   },
 });

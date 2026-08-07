@@ -14,6 +14,7 @@ import { memoryKit } from "@/lib/memory-kit";
 import { parseMentionKey } from "@/lib/mention-key";
 import { s3Kit } from "@/lib/s3-kit";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context";
+import { ToolError } from "@/mastra/tools/tool-error";
 
 const getFileCtx = Kit.createContext(dbKit, s3Kit);
 
@@ -42,20 +43,12 @@ const textOutputSchema = v.object({
   mimeType: v.pipe(v.string(), v.nonEmpty()),
 });
 
-const errorOutputSchema = v.object({
-  type: v.literal("error"),
-  message: v.string(),
-});
-
-const outputSchema = v.variant("type", [fileOutputSchema, textOutputSchema, errorOutputSchema]);
+const outputSchema = v.variant("type", [fileOutputSchema, textOutputSchema]);
 
 type GetFileToolFile = v.InferOutput<typeof fileOutputSchema>;
 type GetFileToolText = v.InferOutput<typeof textOutputSchema>;
-type GetFileToolError = v.InferOutput<typeof errorOutputSchema>;
 
-const toToolOutput = async (
-  file: FetchedFile,
-): Promise<GetFileToolFile | GetFileToolText | GetFileToolError> => {
+const toToolOutput = async (file: FetchedFile): Promise<GetFileToolFile | GetFileToolText> => {
   if (LlmNativeMimeType.is(file.mimeType)) {
     return {
       type: "file",
@@ -70,10 +63,10 @@ const toToolOutput = async (
   const text = await toFileText(file);
 
   if (Result.isError(text)) {
-    return {
-      type: "error",
+    throw new ToolError({
       message: text.error.message,
-    } satisfies GetFileToolError;
+      cause: text.error,
+    });
   }
 
   return {
@@ -86,13 +79,6 @@ const toToolOutput = async (
 };
 
 const toModelOutput = (output: v.InferOutput<typeof outputSchema>): ToolResultOutput => {
-  if (output.type === "error") {
-    return {
-      type: "error-text",
-      value: output.message,
-    };
-  }
-
   if (output.type === "text") {
     return {
       type: "text",
@@ -116,10 +102,7 @@ const toModelOutput = (output: v.InferOutput<typeof outputSchema>): ToolResultOu
   };
 };
 
-const notFound = (): GetFileToolError => ({
-  type: "error",
-  message: "File not found.",
-});
+const notFound = (): ToolError => new ToolError({ message: "File not found." });
 
 export const getFileTool = createTool({
   id: "get-file",
@@ -129,7 +112,7 @@ export const getFileTool = createTool({
   description: [
     "Load one file by mention key in the shape `TYPE::STRING`.",
     "PDF and supported images are returned for direct multimodal inspection; other supported files are returned as extracted plain text.",
-    "Returns an error if the file is missing, inaccessible, or oversized.",
+    "Fails if the file is missing, inaccessible, or oversized.",
   ].join(" "),
   execute: async ({ fileKey }, context) => {
     const mention = parseMentionKey(fileKey);
@@ -138,7 +121,7 @@ export const getFileTool = createTool({
       const topicId = context.requestContext?.get("filter")?.topicId;
 
       if (!topicId) {
-        return notFound();
+        throw notFound();
       }
 
       const result = await getFile(getFileCtx, {
@@ -147,14 +130,14 @@ export const getFileTool = createTool({
       });
 
       if (Result.isError(result)) {
-        return {
-          type: "error",
+        throw new ToolError({
           message: matchError(result.error, {
             GetFileError: (error) => error.message,
             DatabaseError: () => "File could not be loaded.",
             S3Error: () => "File could not be loaded.",
           }),
-        } satisfies GetFileToolError;
+          cause: result.error,
+        });
       }
 
       return toToolOutput(result.value);
@@ -164,7 +147,7 @@ export const getFileTool = createTool({
       const threadId = context.requestContext?.get("threadId");
 
       if (!threadId) {
-        return notFound();
+        throw notFound();
       }
 
       const result = await getAttachment(Kit.createContext(memoryKit), {
@@ -174,19 +157,19 @@ export const getFileTool = createTool({
       });
 
       if (Result.isError(result)) {
-        return {
-          type: "error",
+        throw new ToolError({
           message: matchError(result.error, {
             GetAttachmentError: (error) => error.message,
             MemoryError: () => "File could not be loaded.",
           }),
-        } satisfies GetFileToolError;
+          cause: result.error,
+        });
       }
 
       return toToolOutput(result.value);
     }
 
-    return notFound();
+    throw notFound();
   },
   toModelOutput,
 });

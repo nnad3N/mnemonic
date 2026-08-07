@@ -5,6 +5,7 @@ import type { Document, SearchResultWeb } from "firecrawl";
 import * as v from "valibot";
 
 import { firecrawl } from "@/mastra/tools/firecrawl-client";
+import { ToolError } from "@/mastra/tools/tool-error";
 
 const DEFAULT_SEARCH_LIMIT = 10;
 
@@ -31,21 +32,12 @@ const searchResultSchema = v.object({
   markdown: v.optional(v.string()),
 });
 
-const successOutputSchema = v.object({
-  type: v.literal("success"),
+const outputSchema = v.object({
   query: v.pipe(v.string(), v.nonEmpty()),
   results: v.array(searchResultSchema),
 });
 
-const errorOutputSchema = v.object({
-  type: v.literal("error"),
-  message: v.string(),
-});
-
-const outputSchema = v.variant("type", [successOutputSchema, errorOutputSchema]);
-
-type WebSearchSuccess = v.InferOutput<typeof successOutputSchema>;
-type WebSearchError = v.InferOutput<typeof errorOutputSchema>;
+type WebSearchOutput = v.InferOutput<typeof outputSchema>;
 type WebSearchResult = v.InferOutput<typeof searchResultSchema>;
 
 const isDocumentResult = (item: SearchResultWeb | Document): item is Document => "html" in item;
@@ -94,10 +86,10 @@ export const webSearchTool = createTool({
     );
 
     if (Result.isError(searchResult)) {
-      return {
-        type: "error",
+      throw new ToolError({
         message: "Web search failed. Try a different query or fetch a specific URL with webFetch.",
-      } satisfies WebSearchError;
+        cause: searchResult.error,
+      });
     }
 
     const results =
@@ -106,9 +98,8 @@ export const webSearchTool = createTool({
         .filter((item) => item !== undefined) ?? [];
 
     return {
-      type: "success",
       query,
       results,
-    } satisfies WebSearchSuccess;
+    } satisfies WebSearchOutput;
   },
 });
