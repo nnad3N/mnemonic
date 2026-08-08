@@ -7,9 +7,7 @@
       "name": "BAD_DELIMITERS",
       "kind": "constant",
       "summary": "An array of characters that are not allowed as delimiters.",
-      "signatures": [
-        "export const BAD_DELIMITERS: readonly string[];"
-      ],
+      "signatures": ["export const BAD_DELIMITERS: readonly string[];"],
       "description": "An array of characters that are not allowed as delimiters. `\\r`, `\\n`, `\"`, `\\ufeff`",
       "seealso": []
     },
@@ -17,9 +15,7 @@
       "name": "BYTE_ORDER_MARK",
       "kind": "constant",
       "summary": "The unicode Byte Order Mark (\\ufeff).",
-      "signatures": [
-        "export const BYTE_ORDER_MARK: \"\\ufeff\";"
-      ],
+      "signatures": ["export const BYTE_ORDER_MARK: \"\\ufeff\";"],
       "description": "The unicode Byte Order Mark (\\ufeff).\n@see ://en.wikipedia.org/wiki/Byte_order_mark",
       "seealso": []
     },
@@ -27,9 +23,7 @@
       "name": "DefaultDelimiter",
       "kind": "constant",
       "summary": "The delimiter used when it is left unspecified and cannot be detected automatically.",
-      "signatures": [
-        "export let DefaultDelimiter: string;"
-      ],
+      "signatures": ["export let DefaultDelimiter: string;"],
       "description": "The delimiter used when it is left unspecified and cannot be detected automatically. Default is comma.\n@default ','",
       "seealso": []
     },
@@ -107,9 +101,7 @@
       "name": "RECORD_SEP",
       "kind": "constant",
       "summary": "The true delimiter.",
-      "signatures": [
-        "export const RECORD_SEP: \"\\x1E\";"
-      ],
+      "signatures": ["export const RECORD_SEP: \"\\x1E\";"],
       "description": "The true delimiter. Invisible. ASCII code 30. Should be doing the job we strangely rely upon commas and tabs for.",
       "seealso": []
     },
@@ -117,9 +109,7 @@
       "name": "UNIT_SEP",
       "kind": "constant",
       "summary": "Also sometimes used as a delimiting character.",
-      "signatures": [
-        "export const UNIT_SEP: \"\\x1F\";"
-      ],
+      "signatures": ["export const UNIT_SEP: \"\\x1F\";"],
       "description": "Also sometimes used as a delimiting character. ASCII code 31.",
       "seealso": []
     },
