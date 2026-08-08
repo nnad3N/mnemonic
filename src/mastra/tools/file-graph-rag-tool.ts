@@ -9,11 +9,8 @@ import {
 import { VECTOR_STORE_NAME } from "../storage";
 
 export const fileGraphRagTool = createGraphRAGTool({
-  description: [
-    "Graph-based retrieval over text-indexed uploads in the current topic.",
-    "Use when the answer likely depends on relationships, connected passages, or evidence spread across multiple uploaded files.",
-    "Prefer fileVectorSearch first for direct facts, quotes, or specific passages unless the question clearly requires cross-document connections.",
-  ].join(" "),
+  description:
+    "Graph-based retrieval over extracted text from uploads in the current topic, connecting related passages across files.",
   enableFilter: true,
   graphOptions: {
     dimension: FILE_EMBEDDING_DIMENSION,

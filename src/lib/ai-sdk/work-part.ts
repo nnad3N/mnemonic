@@ -90,6 +90,7 @@ export const TOOL_WORK_ACTIVITY_KIND = {
   fileGraphRag: "research",
   getFile: "default",
   executeCode: "default",
+  docs: "default",
   recall: "default",
 } as const satisfies Record<MnemonicToolName, WorkActivityKind>;
 

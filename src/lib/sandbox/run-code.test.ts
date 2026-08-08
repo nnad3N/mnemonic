@@ -43,12 +43,23 @@ describe("runCode", () => {
   it("can import the bundled mathjs module", async () => {
     const result = expectOk(
       await runCode(`
-        import { evaluate } from "mathjs";
-        export default evaluate("1 + 2");
+        import math from "mathjs";
+        export default math.evaluate("1 + 2");
       `),
     );
 
     expect(result.output).toBe(3);
+  });
+
+  it("can import the bundled papaparse module", async () => {
+    const result = expectOk(
+      await runCode(`
+        import Papa from "papaparse";
+        export default Papa.parse("a,b\\n1,2", { header: true }).data;
+      `),
+    );
+
+    expect(result.output).toEqual([{ a: "1", b: "2" }]);
   });
 
   it("injects structured args onto env.args", async () => {

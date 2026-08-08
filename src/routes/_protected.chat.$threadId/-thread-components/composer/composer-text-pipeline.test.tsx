@@ -1,6 +1,31 @@
 import { describe, expect, it } from "vitest";
 
+import { createComposerEditor } from "@/test/create-composer-editor";
+
+import { plateToMarkdown } from "./plate";
 import { getComposerLinkLabel, parseComposerLinkPasteSegments } from "./plate-plugins/link";
+
+describe("plateToMarkdown", () => {
+  it("serializes a mention key without percent-encoding the double colon", () => {
+    const editor = createComposerEditor([
+      {
+        type: "p",
+        children: [
+          { text: "see " },
+          {
+            type: "mention",
+            key: "attachment::abc123",
+            value: "report.csv",
+            children: [{ text: "" }],
+          },
+          { text: "" },
+        ],
+      },
+    ]);
+
+    expect(plateToMarkdown(editor)).toContain("see [report.csv](mention:attachment::abc123)");
+  });
+});
 
 describe("getComposerLinkLabel", () => {
   it("returns the hostname for bare origins", () => {

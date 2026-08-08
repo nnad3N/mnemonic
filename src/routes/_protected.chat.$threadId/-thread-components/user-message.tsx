@@ -16,14 +16,13 @@ import { useChatStore } from "../../-chat-store";
 
 type UserMessageProps = {
   message: ThreadUIMessage;
-  index: number;
 };
 
 type UserMessageContentProps = {
   markdown: string;
 };
 
-export const UserMessage = ({ message, index }: UserMessageProps) => {
+export const UserMessage = ({ message }: UserMessageProps) => {
   const editingState = useChatStore((state) => state.editingState);
   const setEditingState = useChatStore((state) => state.setEditingState);
   const markdown = message.parts.find((part) => part.type === "text")?.text ?? "";
@@ -39,7 +38,6 @@ export const UserMessage = ({ message, index }: UserMessageProps) => {
       onClick={() => {
         setEditingState({
           messageId: message.id,
-          messageIndex: index,
           markdown,
         });
       }}

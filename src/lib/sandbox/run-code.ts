@@ -5,6 +5,7 @@ import type { JSONValue } from "ai";
 import { Result, TaggedError } from "better-result";
 
 import mathjsBundle from "./modules/mathjs.txt?raw";
+import papaparseBundle from "./modules/papaparse.txt?raw";
 
 const EXECUTION_TIMEOUT_MS = 10_000;
 const MEMORY_LIMIT_BYTES = 128 * 1024 * 1024;
@@ -68,6 +69,9 @@ const createExecuteSandboxOptions = (
   nodeModules: {
     mathjs: {
       "index.js": mathjsBundle,
+    },
+    papaparse: {
+      "index.js": papaparseBundle,
     },
   },
   transformTypescript: false,

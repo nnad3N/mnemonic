@@ -93,11 +93,18 @@ describe("ExecuteCodePart", () => {
     expect(document.querySelectorAll('[data-streamdown="code-block"]')).toHaveLength(3);
   });
 
+  it("labels a failed run as a failure even though the tool call itself succeeded", () => {
+    render(<ExecuteCodePart part={errorExecuteCode("bad")} />);
+
+    expect(screen.getByRole("button", { name: /Could not execute code/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Executed code/i })).not.toBeInTheDocument();
+  });
+
   it("renders error output details when expanded", async () => {
     const user = userEvent.setup();
     render(<ExecuteCodePart part={errorExecuteCode("bad")} />);
 
-    await user.click(screen.getByRole("button", { name: /Executed code/i }));
+    await user.click(screen.getByRole("button", { name: /Could not execute code/i }));
 
     expect(screen.getByText(/TypeError: nope/)).toBeInTheDocument();
   });

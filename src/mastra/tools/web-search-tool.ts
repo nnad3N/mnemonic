@@ -6,21 +6,18 @@ import * as v from "valibot";
 
 import { ToolError } from "@/lib/errors/tool-error";
 import { firecrawl } from "@/mastra/tools/firecrawl-client";
+import { toToolInputSchema } from "@/mastra/tools/tool-input-schema";
 
 const DEFAULT_SEARCH_LIMIT = 10;
 
 const inputSchema = v.object({
-  query: v.pipe(
-    v.string(),
-    v.nonEmpty(),
-    v.description("Concrete search string for open-web discovery."),
-  ),
+  query: v.pipe(v.string(), v.nonEmpty()),
   limit: v.optional(
     v.pipe(
       v.number(),
       v.minValue(1),
       v.maxValue(25),
-      v.description(`Maximum number of results to return. Defaults to ${DEFAULT_SEARCH_LIMIT}.`),
+      v.description(`Defaults to ${DEFAULT_SEARCH_LIMIT}.`),
     ),
   ),
 });
@@ -66,14 +63,10 @@ export const toSearchResult = (item: SearchResultWeb | Document): WebSearchResul
 
 export const webSearchTool = createTool({
   id: "web-search",
-  inputSchema: toStandardJsonSchema(inputSchema),
+  inputSchema: toToolInputSchema(inputSchema),
   outputSchema: toStandardJsonSchema(outputSchema),
-  description: [
-    "Search the live web and return ranked pages with scraped markdown content when available.",
-    "Use for open-ended research, current events, documentation discovery, or when the user asks to search the web and no specific URL is known yet.",
-    "Do not use when the user already provided a concrete URL to read; use webFetch for that.",
-    "Returns title, url, description, and markdown per result. Results may be partial or empty if pages fail to scrape; try a tighter query or webFetch on a promising URL.",
-  ].join(" "),
+  description:
+    "Searches the live web; results include scraped markdown of the page when available.",
   execute: async ({ query, limit = DEFAULT_SEARCH_LIMIT }) => {
     const searchResult = await Result.tryPromise(async () =>
       firecrawl.search(query, {
@@ -87,7 +80,7 @@ export const webSearchTool = createTool({
 
     if (Result.isError(searchResult)) {
       throw new ToolError({
-        message: "Web search failed. Try a different query or fetch a specific URL with webFetch.",
+        message: "Web search failed.",
         cause: searchResult.error,
       });
     }

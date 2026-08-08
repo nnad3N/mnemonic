@@ -40,7 +40,7 @@ export const AssistantMessage = ({ isStreaming, message }: AssistantMessageProps
 
   return (
     <MessageStateContext.Provider value={{ isStreaming }}>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 px-2">
         {blocks.map((block) => {
           if (block.type === "text") {
             return (

@@ -31,7 +31,6 @@ type ComposerState = {
 
 type EditingState = {
   messageId: string;
-  messageIndex: number;
   markdown: string;
 };
 

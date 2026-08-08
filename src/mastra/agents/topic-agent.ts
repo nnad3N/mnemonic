@@ -7,6 +7,7 @@ import { stripNonNativeFilePartsProcessor } from "@/mastra/processors/strip-non-
 import { workSegmentTimingProcessor } from "@/mastra/processors/work-segment-timing";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context";
 import { libsqlStore, libsqlVector } from "@/mastra/storage";
+import { docsTool } from "@/mastra/tools/docs-tool";
 import { executeCodeTool } from "@/mastra/tools/execute-code-tool";
 import { fileGraphRagTool } from "@/mastra/tools/file-graph-rag-tool";
 import { fileVectorSearchTool } from "@/mastra/tools/file-vector-search-tool";
@@ -29,6 +30,7 @@ export const topicMemory = new Memory({
 });
 
 const topicAgentTools = {
+  docs: docsTool,
   executeCode: executeCodeTool,
   fileGraphRag: fileGraphRagTool,
   fileVectorSearch: fileVectorSearchTool,
@@ -55,20 +57,9 @@ Available sources:
 
 When sources conflict, prefer topic files over web, and web over conversation recall.
 
-## Web
-- Use webSearch to discover pages when no specific URL is known.
-- Use webFetch when the user provided a URL or a prior search already identified the page to read.
-- Prefer these for current events, external documentation, explicit web requests, or when topic file tools plus conversation recall did not fully answer.
-- Tool descriptions own exact input requirements and result shapes.
+Prefer the web for current events, external documentation, explicit web requests, or when topic files plus conversation recall did not fully answer.
 
-## Topic file access
 When gathering from topic files, pick the tool that fits the question. You do not need to run every file tool.
-
-- fileVectorSearch — Direct facts, quotes, or specific passages in uploaded documents.
-- fileGraphRag — When information spans multiple files, connected passages matter, or relationships between concepts are important.
-- getFile — Load specific referenced content by mention key in the shape \`TYPE::STRING\`. PDFs and images are returned for direct inspection; other content is returned as text.
-
-Search tools are automatically scoped to the current topic. Tool descriptions own exact input requirements and file-type limits.
 
 ## Conversation history
 Use recall to browse past messages within the current topic:

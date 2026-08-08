@@ -7,6 +7,7 @@ import { stripNonNativeFilePartsProcessor } from "@/mastra/processors/strip-non-
 import { workSegmentTimingProcessor } from "@/mastra/processors/work-segment-timing";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context";
 import { libsqlStore, libsqlVector } from "@/mastra/storage";
+import { docsTool } from "@/mastra/tools/docs-tool";
 import { executeCodeTool } from "@/mastra/tools/execute-code-tool";
 import { getFileTool } from "@/mastra/tools/get-file-tool";
 import { webFetchTool } from "@/mastra/tools/web-fetch-tool";
@@ -27,6 +28,7 @@ export const conversationMemory = new Memory({
 });
 
 const conversationAgentTools = {
+  docs: docsTool,
   executeCode: executeCodeTool,
   getFile: getFileTool,
   webFetch: webFetchTool,
@@ -44,14 +46,8 @@ ${sharedSourceInstructions}
 
 Available sources:
 - Conversation recall: past messages in the current conversation only. Prefer this when the answer may already appear in prior chat.
-- Uploaded files: use getFile by mention key.
-- Web: current or external information via webSearch (discover pages) or webFetch (read a known URL).
-
-## Web
-- Use webSearch to discover pages when no specific URL is known.
-- Use webFetch when the user provided a URL or a prior search already identified the page to read.
-- Prefer these when the question needs facts outside this conversation or up-to-date information from the web, or when conversation recall did not fully answer.
-- Tool descriptions own exact input requirements and result shapes.
+- Referenced files: content the user has pointed at in this conversation.
+- Web: current or external information. Prefer it when the question needs facts from outside this conversation or up-to-date information, or when conversation recall did not fully answer.
 
 ## Conversation history
 Use recall to browse past messages in the current conversation only:

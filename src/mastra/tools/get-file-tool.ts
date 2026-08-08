@@ -1,7 +1,7 @@
 import type { ToolResultOutput } from "@ai-sdk/provider-utils";
 import { createTool } from "@mastra/core/tools";
 import { toStandardJsonSchema } from "@valibot/to-json-schema";
-import { matchError, Result } from "better-result";
+import { matchError, panic, Result } from "better-result";
 import * as v from "valibot";
 
 import { dbKit } from "@/lib/db-kit";
@@ -12,9 +12,10 @@ import type { FetchedFile } from "@/lib/get-file";
 import { getFile, toFileText } from "@/lib/get-file";
 import * as Kit from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit";
-import { parseMentionKey } from "@/lib/mention-key";
+import { mentionKeyShape, parseMentionKey } from "@/lib/mention-key";
 import { s3Kit } from "@/lib/s3-kit";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context";
+import { toToolInputSchema } from "@/mastra/tools/tool-input-schema";
 
 const getFileCtx = Kit.createContext(dbKit, s3Kit);
 
@@ -22,7 +23,9 @@ const inputSchema = v.object({
   fileKey: v.pipe(
     v.string(),
     v.nonEmpty(),
-    v.description("Mention key in the shape `TYPE::STRING`."),
+    v.description(
+      `Mention key of the file to read, in the shape ${mentionKeyShape(["file", "attachment"])}.`,
+    ),
   ),
 });
 
@@ -43,12 +46,20 @@ const textOutputSchema = v.object({
   mimeType: v.pipe(v.string(), v.nonEmpty()),
 });
 
-const outputSchema = v.variant("type", [fileOutputSchema, textOutputSchema]);
+const errorOutputSchema = v.object({
+  type: v.literal("error"),
+  message: v.string(),
+});
+
+const outputSchema = v.variant("type", [fileOutputSchema, textOutputSchema, errorOutputSchema]);
 
 type GetFileToolFile = v.InferOutput<typeof fileOutputSchema>;
 type GetFileToolText = v.InferOutput<typeof textOutputSchema>;
+type GetFileToolError = v.InferOutput<typeof errorOutputSchema>;
 
-const toToolOutput = async (file: FetchedFile): Promise<GetFileToolFile | GetFileToolText> => {
+const toToolOutput = async (
+  file: FetchedFile,
+): Promise<GetFileToolFile | GetFileToolText | GetFileToolError> => {
   if (LlmNativeMimeType.is(file.mimeType)) {
     return {
       type: "file",
@@ -63,10 +74,7 @@ const toToolOutput = async (file: FetchedFile): Promise<GetFileToolFile | GetFil
   const text = await toFileText(file);
 
   if (Result.isError(text)) {
-    throw new ToolError({
-      message: text.error.message,
-      cause: text.error,
-    });
+    return { type: "error", message: text.error.message } satisfies GetFileToolError;
   }
 
   return {
@@ -86,6 +94,13 @@ const toModelOutput = (output: v.InferOutput<typeof outputSchema>): ToolResultOu
     };
   }
 
+  if (output.type === "error") {
+    return {
+      type: "text",
+      value: output.message,
+    };
+  }
+
   return {
     type: "content",
     value: [
@@ -102,17 +117,14 @@ const toModelOutput = (output: v.InferOutput<typeof outputSchema>): ToolResultOu
   };
 };
 
-const notFound = (): ToolError => new ToolError({ message: "File not found." });
-
 export const getFileTool = createTool({
   id: "get-file",
-  inputSchema: toStandardJsonSchema(inputSchema),
+  inputSchema: toToolInputSchema(inputSchema),
   outputSchema: toStandardJsonSchema(outputSchema),
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
   description: [
-    "Load one file by mention key in the shape `TYPE::STRING`.",
-    "PDF and supported images are returned for direct multimodal inspection; other supported files are returned as extracted plain text.",
-    "Fails if the file is missing, inaccessible, or oversized.",
+    "Reads one file's contents into the conversation.",
+    "PDFs and images come back for direct inspection, other files as plain text.",
   ].join(" "),
   execute: async ({ fileKey }, context) => {
     const mention = parseMentionKey(fileKey);
@@ -121,7 +133,7 @@ export const getFileTool = createTool({
       const topicId = context.requestContext?.get("filter")?.topicId;
 
       if (!topicId) {
-        throw notFound();
+        panic("Missing topicId in request context");
       }
 
       const result = await getFile(getFileCtx, {
@@ -130,13 +142,14 @@ export const getFileTool = createTool({
       });
 
       if (Result.isError(result)) {
-        throw new ToolError({
-          message: matchError(result.error, {
-            GetFileError: (error) => error.message,
-            DatabaseError: () => "File could not be loaded.",
-            S3Error: () => "File could not be loaded.",
-          }),
-          cause: result.error,
+        return matchError(result.error, {
+          GetFileError: (error): GetFileToolError => ({ type: "error", message: error.message }),
+          DatabaseError: (cause) => {
+            throw new ToolError({ message: "File could not be loaded.", cause });
+          },
+          S3Error: (cause) => {
+            throw new ToolError({ message: "File could not be loaded.", cause });
+          },
         });
       }
 
@@ -147,7 +160,7 @@ export const getFileTool = createTool({
       const threadId = context.requestContext?.get("threadId");
 
       if (!threadId) {
-        throw notFound();
+        panic("Missing threadId in request context");
       }
 
       const result = await getAttachment(Kit.createContext(memoryKit), {
@@ -157,19 +170,24 @@ export const getFileTool = createTool({
       });
 
       if (Result.isError(result)) {
-        throw new ToolError({
-          message: matchError(result.error, {
-            GetAttachmentError: (error) => error.message,
-            MemoryError: () => "File could not be loaded.",
+        return matchError(result.error, {
+          GetAttachmentError: (error): GetFileToolError => ({
+            type: "error",
+            message: error.message,
           }),
-          cause: result.error,
+          MemoryError: (cause) => {
+            throw new ToolError({ message: "File could not be loaded.", cause });
+          },
         });
       }
 
       return toToolOutput(result.value);
     }
 
-    throw notFound();
+    return {
+      type: "error",
+      message: `"${fileKey}" is not a usable file reference.`,
+    } satisfies GetFileToolError;
   },
   toModelOutput,
 });

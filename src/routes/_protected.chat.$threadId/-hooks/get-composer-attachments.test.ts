@@ -100,7 +100,6 @@ describe("getComposerAttachments", () => {
   it("includes the edited message metadata attachments and file parts", async () => {
     useChatStore.getState().setEditingState({
       messageId: "msg-1",
-      messageIndex: 0,
       markdown: "hi",
     });
 
@@ -139,7 +138,6 @@ describe("getComposerAttachments", () => {
 
     useChatStore.getState().setEditingState({
       messageId: "msg-1",
-      messageIndex: 0,
       markdown: "hi",
     });
     useChatStore.getState().upsertAttachment("thread-1", {
@@ -176,7 +174,6 @@ describe("getComposerAttachments", () => {
   it("ignores editing state when the edited message is missing", async () => {
     useChatStore.getState().setEditingState({
       messageId: "missing",
-      messageIndex: 0,
       markdown: "hi",
     });
 

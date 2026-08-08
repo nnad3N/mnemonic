@@ -1,21 +1,74 @@
 import type { DynamicToolUIPart, ToolUIPart } from "ai";
-import { getToolName } from "ai";
+import { getToolName, isStaticToolUIPart } from "ai";
 import { T } from "gt-tanstack-start";
 import type { ReactNode } from "react";
 
 import { KnownToolName } from "@/lib/ai-sdk/known-tool-name";
-import { getToolPartStatus } from "@/lib/ai-sdk/tool-parts";
+import { getToolPartStatus, type ToolPartStatus } from "@/lib/ai-sdk/tool-parts";
 import { cn } from "@/lib/utils";
+import type { MnemonicToolName } from "@/mastra/mnemonic-tool-types";
 import {
   ToolIndicator,
   type ToolIndicatorProps,
 } from "@/routes/_protected.chat.$threadId/-thread-components/tool-indicator";
 import type { ThreadUITools } from "@/routes/_protected.chat.$threadId/-thread-types";
 
-type ToolStatus = ReturnType<typeof getToolPartStatus>;
+const isRecoverableFailure = (part: ToolUIPart<ThreadUITools>): boolean => {
+  if (part.state !== "output-available") {
+    return false;
+  }
 
-const renderToolLabel = (toolName: keyof ThreadUITools, status: ToolStatus): ReactNode => {
+  switch (part.type) {
+    case "tool-docs":
+      switch (part.output.type) {
+        case "error":
+          return true;
+        case "list":
+        case "member":
+        case "search":
+          return false;
+      }
+    case "tool-executeCode":
+      switch (part.output.type) {
+        case "error":
+          return true;
+        case "success":
+          return false;
+      }
+    case "tool-getFile":
+      switch (part.output.type) {
+        case "error":
+          return true;
+        case "file":
+        case "text":
+          return false;
+      }
+    case "tool-webFetch":
+      switch (part.output.type) {
+        case "error":
+          return true;
+        case "success":
+          return false;
+      }
+    case "tool-fileGraphRag":
+    case "tool-fileVectorSearch":
+    case "tool-recall":
+    case "tool-webSearch":
+      return false;
+  }
+};
+
+const renderToolLabel = (toolName: MnemonicToolName, status: ToolPartStatus): ReactNode => {
   switch (toolName) {
+    case "docs":
+      switch (status) {
+        case "pending":
+          return <T>Reading library documentation</T>;
+        case "done":
+          return <T>Read library documentation</T>;
+        case "error":
+          return <T>Could not read library documentation</T>;
+      }
     case "fileGraphRag":
       switch (status) {
         case "pending":
@@ -97,7 +150,8 @@ export const AssistantToolPart = ({
     return null;
   }
 
-  const status = getToolPartStatus(part);
+  const status: ToolPartStatus =
+    isStaticToolUIPart(part) && isRecoverableFailure(part) ? "error" : getToolPartStatus(part);
 
   return (
     <ToolIndicator

@@ -95,6 +95,11 @@ const unknownToolPart = () =>
   }) as unknown as ToolUIPart<ThreadUITools>;
 
 const TOOL_LABELS = {
+  docs: {
+    done: "Read library documentation",
+    error: "Could not read library documentation",
+    pending: "Reading library documentation",
+  },
   executeCode: {
     done: "Executed code",
     error: "Could not execute code",

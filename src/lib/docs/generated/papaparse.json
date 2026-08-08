@@ -1,0 +1,157 @@
+{
+  "library": "papaparse",
+  "version": "5.5.4",
+  "importHint": "import Papa from \"papaparse\"",
+  "members": [
+    {
+      "name": "BAD_DELIMITERS",
+      "kind": "constant",
+      "summary": "An array of characters that are not allowed as delimiters.",
+      "signatures": [
+        "export const BAD_DELIMITERS: readonly string[];"
+      ],
+      "description": "An array of characters that are not allowed as delimiters. `\\r`, `\\n`, `\"`, `\\ufeff`",
+      "seealso": []
+    },
+    {
+      "name": "BYTE_ORDER_MARK",
+      "kind": "constant",
+      "summary": "The unicode Byte Order Mark (\\ufeff).",
+      "signatures": [
+        "export const BYTE_ORDER_MARK: \"\\ufeff\";"
+      ],
+      "description": "The unicode Byte Order Mark (\\ufeff).\n@see ://en.wikipedia.org/wiki/Byte_order_mark",
+      "seealso": []
+    },
+    {
+      "name": "DefaultDelimiter",
+      "kind": "constant",
+      "summary": "The delimiter used when it is left unspecified and cannot be detected automatically.",
+      "signatures": [
+        "export let DefaultDelimiter: string;"
+      ],
+      "description": "The delimiter used when it is left unspecified and cannot be detected automatically. Default is comma.\n@default ','",
+      "seealso": []
+    },
+    {
+      "name": "parse",
+      "kind": "function",
+      "summary": "Parse string",
+      "signatures": [
+        "export function parse<T>(\n    csvString: string,\n    config?: ParseConfig<T> & { download?: false | undefined; worker?: false | undefined },\n): ParseResult<T>;"
+      ],
+      "description": "Parse string\n@param csvString a string of delimited text to be parsed.\n@param config an optional config object.\n@returns a parse results object",
+      "seealso": []
+    },
+    {
+      "name": "ParseConfig",
+      "kind": "interface",
+      "summary": "",
+      "signatures": [
+        "export interface ParseConfig<T = any, TInput = undefined> {\n    /**\n     * The delimiting character.\n     * Leave blank to auto-detect from a list of most common delimiters, or any values passed in through `delimitersToGuess`.\n     * It can be a string or a function.\n     * If a string, it can be of any length (so multi-character delimiters are supported).\n     * If a function, it must accept the input as first parameter and it must return a string which will be used as delimiter.\n     * In both cases it cannot be found in `Papa.BAD_DELIMITERS`.\n     * @default // auto-detect\n     */\n    delimiter?: string | ((input: string) => string) | undefined;\n    /**\n     * The newline sequence. Leave blank to auto-detect. Must be one of `\\r`, `\\n`, or `\\r\\n`.\n     * @default // auto-detect\n     */\n    newline?: \"\\r\" | \"\\n\" | \"\\r\\n\" | undefined;\n    /**\n     * The character used to quote fields. The quoting of all fields is not mandatory. Any field which is not quoted will correctly read.\n     * @default '\"'\n     */\n    quoteChar?: string | undefined;\n    /**\n     * The character used to escape the quote character within a field.\n     * If not set, this option will default to the value of `quoteChar`,\n     * meaning that the default escaping of quote character within a quoted field is using the quote character two times.\n     * (e.g. `\"column with \"\"quotes\"\" in text\"`)\n     * @default '\"'\n     */\n    escapeChar?: string | undefined;\n    /**\n     * If `true`, the first row of parsed data will be interpreted as field names.\n     * An array of field names will be returned in meta, and each row of data will be an object of values keyed by field name instead of a simple array.\n     * Rows with a different number of fields from the header row will produce an error.\n     * Warning: Duplicate field names will overwrite values in previous fields having the same name.\n     * @default false\n     */\n    header?: boolean | undefined;\n    /**\n     * A function to apply on each header. Requires header to be true. The function receives the header as its first argument and the index as second.\n     */\n    transformHeader?(header: string, index: number): string;\n    /**\n     * If `true`, numeric and boolean data will be converted to their type instead of remaining strings.\n     * Numeric data must conform to the definition of a decimal literal.\n     * Numerical values greater than 2^53 or less than -2^53 will not be converted to numbers to preserve precision.\n     * European-formatted numbers must have commas and dots swapped.\n     * If also accepts an object or a function.\n     * If object it's values should be a boolean to indicate if dynamic typing should be applied for each column number (or header name if using headers).\n     * If it's a function, it should return a boolean value for each field number (or name if using headers) which will be passed as first argument.\n     * @default false\n     */\n    dynamicTyping?:\n        | boolean\n        | { [headerName: string]: boolean; [columnNumber: number]: boolean }\n        | ((field: string | number) => boolean)\n        | undefined;\n    /** If > 0, only that many rows will be parsed. */\n    preview?: number | undefined;\n    /**\n     * A string that indicates a comment (for example, \"#\" or \"//\").\n     * When Papa encounters a line starting with this string, it will skip the line.\n     * @default false\n     */\n    comments?: false | string | undefined;\n    /**\n     * If `true`, lines that are completely empty (those which evaluate to an empty string) will be skipped.\n     * If set to `'greedy'`, lines that don't have any content (those which have only whitespace after parsing) will also be skipped.\n     * @default false\n     */\n    skipEmptyLines?: boolean | \"greedy\" | undefined;\n    /**\n     * Fast mode speeds up parsing significantly for large inputs.\n     * However, it only works when the input has no quoted fields.\n     * Fast mode will automatically be enabled if no \" characters appear in the input.\n     * You can force fast mode either way by setting it to true or false.\n     */\n    fastMode?: boolean | undefined;\n    /**\n     * A function to apply on each value.\n     * The function receives the value as its first argument and the column number or header name when enabled as its second argument.\n     * The return value of the function will replace the value it received.\n     * The transform function is applied before `dynamicTyping`.\n     */\n    transform?(value: string, field: string | number): any;\n    /**\n     * An array of delimiters to guess from if the delimiter option is not set.\n     * @default [',', '\\t', '|', ';', Papa.RECORD_SEP, Papa.UNIT_SEP]\n     */\n    delimitersToGuess?: string[] | undefined;\n    /**\n     * To stream the input, define a callback function.\n     * Streaming is necessary for large files which would otherwise crash the browser.\n     * You can call parser.abort() to abort parsing.\n     * And, except when using a Web Worker, you can call parser.pause() to pause it, and parser.resume() to resume.\n     */\n    step?(results: ParseStepResult<T>, parser: Parser): void;\n    /**\n     * The callback to execute when parsing is complete.\n     * It receives the parse results. If parsing a local file, the File is passed in, too.\n     * When streaming, parse results are not available in this callback.\n     */\n    complete?(results: ParseResult<T>, file: TInput): void;\n    /**\n     * A function to execute before parsing the first chunk.\n     * Can be used with chunk or step streaming modes.\n     * The function receives as an argument the chunk about to be parsed, and it may return a modified chunk to parse.\n     * This is useful for stripping header lines (as long as the header fits in a single chunk).\n     */\n    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type\n    beforeFirstChunk?(chunk: string): string | void;\n    /**\n     * To skip first N number of lines when converting a CSV file to JSON.\n     * @default 0\n     */\n    skipFirstNLines?: number | undefined;\n}"
+      ],
+      "description": "",
+      "seealso": []
+    },
+    {
+      "name": "ParseError",
+      "kind": "interface",
+      "summary": "Error structure",
+      "signatures": [
+        "export interface ParseError {\n    /** A generalization of the error */\n    type: \"Quotes\" | \"Delimiter\" | \"FieldMismatch\";\n    /** Standardized error code */\n    code: \"MissingQuotes\" | \"UndetectableDelimiter\" | \"TooFewFields\" | \"TooManyFields\" | \"InvalidQuotes\";\n    /** Human-readable details */\n    message: string;\n    /** Row index of parsed data where error is */\n    row?: number | undefined;\n    /** Index within the row where error is */\n    index?: number | undefined;\n}"
+      ],
+      "description": "Error structure",
+      "seealso": []
+    },
+    {
+      "name": "ParseMeta",
+      "kind": "interface",
+      "summary": "",
+      "signatures": [
+        "export interface ParseMeta {\n    /** Delimiter used */\n    delimiter: string;\n    /** Line break sequence used */\n    linebreak: string;\n    /** Whether process was aborted */\n    aborted: boolean;\n    /** Array of field names */\n    fields?: string[] | undefined;\n    /** Whether preview consumed all input */\n    truncated: boolean;\n    cursor: number;\n    /** Headers that are automatically renamed by the library to avoid duplication.\n     * {Column 1_1: 'Column 1'} the later header 'Column 1' was renamed to 'Column 1_1'}**/\n    renamedHeaders?: Record<string, string>;\n}"
+      ],
+      "description": "",
+      "seealso": []
+    },
+    {
+      "name": "Parser",
+      "kind": "function",
+      "summary": "On Papa there are actually more classes exposed but none of them are officially documented Since we can interact with the Parser from one of the callbacks I have included the API for this class.",
+      "signatures": [
+        "export class Parser {\n    constructor(config: ParseConfig);\n\n    parse(input: string, baseIndex: number, ignoreLastRow: boolean): any;\n\n    // Sets the abort flag\n    abort(): void;\n\n    // Gets the cursor position\n    getCharIndex(): number;\n\n    pause(): void;\n    resume(): void;\n}"
+      ],
+      "description": "On Papa there are actually more classes exposed but none of them are officially documented Since we can interact with the Parser from one of the callbacks I have included the API for this class.",
+      "seealso": []
+    },
+    {
+      "name": "ParseResult",
+      "kind": "interface",
+      "summary": "A parse result always contains three objects: data, errors, and meta.",
+      "signatures": [
+        "export interface ParseResult<T> {\n    /**\n     * an array of rows. If header is false, rows are arrays; otherwise they are objects of data keyed by the field name.\n     */\n    data: T[];\n    /** an array of errors. */\n    errors: ParseError[];\n    /**\n     * contains extra information about the parse, such as delimiter used,\n     * the newline sequence, whether the process was aborted, etc.\n     * Properties in this object are not guaranteed to exist in all situations.\n     */\n    meta: ParseMeta;\n}"
+      ],
+      "description": "A parse result always contains three objects: data, errors, and meta. Data and errors are arrays, and meta is an object. In the step callback, the data array will only contain one element.",
+      "seealso": []
+    },
+    {
+      "name": "ParseStepResult",
+      "kind": "interface",
+      "summary": "A parse result always contains three objects: data, errors, and meta.",
+      "signatures": [
+        "export interface ParseStepResult<T> {\n    /**\n     * In the step callback, the data array will only contain one element.\n     */\n    data: T;\n    /** an array of errors. */\n    errors: ParseError[];\n    /**\n     * contains extra information about the parse, such as delimiter used,\n     * the newline sequence, whether the process was aborted, etc.\n     * Properties in this object are not guaranteed to exist in all situations.\n     */\n    meta: ParseMeta;\n}"
+      ],
+      "description": "A parse result always contains three objects: data, errors, and meta. Data and errors are arrays, and meta is an object. In the step callback, the data array will only contain one element.",
+      "seealso": []
+    },
+    {
+      "name": "RECORD_SEP",
+      "kind": "constant",
+      "summary": "The true delimiter.",
+      "signatures": [
+        "export const RECORD_SEP: \"\\x1E\";"
+      ],
+      "description": "The true delimiter. Invisible. ASCII code 30. Should be doing the job we strangely rely upon commas and tabs for.",
+      "seealso": []
+    },
+    {
+      "name": "UNIT_SEP",
+      "kind": "constant",
+      "summary": "Also sometimes used as a delimiting character.",
+      "signatures": [
+        "export const UNIT_SEP: \"\\x1F\";"
+      ],
+      "description": "Also sometimes used as a delimiting character. ASCII code 31.",
+      "seealso": []
+    },
+    {
+      "name": "unparse",
+      "kind": "function",
+      "summary": "Unparses javascript data objects and returns a csv string",
+      "signatures": [
+        "export function unparse<T>(data: T[] | UnparseObject<T>, config?: UnparseConfig): string;"
+      ],
+      "description": "Unparses javascript data objects and returns a csv string\n@param data can be one of: An array of arrays; An array of objects; An object explicitly defining `fields` and `data`\n@param config an optional config object",
+      "seealso": []
+    },
+    {
+      "name": "UnparseConfig",
+      "kind": "interface",
+      "summary": "",
+      "signatures": [
+        "export interface UnparseConfig {\n    /**\n     * If `true`, forces all fields to be enclosed in quotes.\n     * If an array of `true`/`false` values, specifies which fields should be force-quoted (first boolean is for the first column, second boolean for the second column, ...).\n     * A function that returns a boolean values can be used to determine the quotes value of a cell.\n     * This function accepts the cell value and column index as parameters.\n     * Note that this option is ignored for `undefined`, `null` and `date-object` values.\n     * The option `escapeFormulae` also takes precedence over this.\n     *\n     * @default false\n     */\n    quotes?: boolean | boolean[] | ((value: any, columnIndex: number) => boolean) | undefined;\n    /**\n     * The character used to quote fields.\n     * @default '\"'\n     */\n    quoteChar?: string | undefined;\n    /**\n     * The character used to escape `quoteChar` inside field values.\n     * @default '\"'\n     */\n    escapeChar?: string | undefined;\n    /**\n     * The delimiting character. Multi-character delimiters are supported. It must not be found in `Papa.BAD_DELIMITERS`.\n     * @default ','\n     */\n    delimiter?: string | undefined;\n    /**\n     * If `false`, will omit the header row.\n     * If `data` is an array of arrays this option is ignored.\n     * If `data` is an array of objects the keys of the first object are the header row.\n     * If `data` is an object with the keys `fields` and `data` the `fields` are the header row.\n     * @default true\n     */\n    header?: boolean | undefined;\n    /**\n     * The character used to determine newline sequence.\n     * @default '\\r\\n'\n     */\n    newline?: string | undefined;\n    /**\n     * If `true`, lines that are completely empty (those which evaluate to an empty string) will be skipped.\n     * If set to `'greedy'`, lines that don't have any content (those which have only whitespace after parsing) will also be skipped.\n     * @default false\n     */\n    skipEmptyLines?: boolean | \"greedy\" | undefined;\n    /**\n     * If `data` is an array of objects this option can be used to manually specify the keys (columns) you expect in the objects.\n     * If not set the keys of the first objects are used as column.\n     * @default undefined\n     */\n    columns?: string[] | undefined;\n    /**\n     * If `true`, field values that begin with `=`, `+`, `-`, or `@`,\n     * will be prepended with a ` to defend against [injection attacks](https://www.contextis.com/en/blog/comma-separated-vulnerabilities),\n     * because Excel and LibreOffice will automatically parse such cells as formulae.\n     * @default false\n     */\n    escapeFormulae?: boolean | RegExp | undefined;\n}"
+      ],
+      "description": "",
+      "seealso": []
+    },
+    {
+      "name": "UnparseObject",
+      "kind": "interface",
+      "summary": "",
+      "signatures": [
+        "export interface UnparseObject<T> {\n    fields: string[];\n    data: T[];\n}"
+      ],
+      "description": "",
+      "seealso": []
+    }
+  ]
+}

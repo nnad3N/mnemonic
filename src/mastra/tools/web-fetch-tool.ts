@@ -3,36 +3,37 @@ import { toStandardJsonSchema } from "@valibot/to-json-schema";
 import { Result } from "better-result";
 import * as v from "valibot";
 
-import { ToolError } from "@/lib/errors/tool-error";
 import { firecrawl } from "@/mastra/tools/firecrawl-client";
+import { toToolInputSchema } from "@/mastra/tools/tool-input-schema";
 
 const inputSchema = v.object({
-  url: v.pipe(
-    v.string(),
-    v.url(),
-    v.description("Absolute http(s) URL of the page to fetch and read as markdown."),
-  ),
+  url: v.pipe(v.string(), v.url()),
 });
 
-const outputSchema = v.object({
+const successOutputSchema = v.object({
+  type: v.literal("success"),
   url: v.pipe(v.string(), v.nonEmpty()),
   title: v.optional(v.string()),
   description: v.optional(v.string()),
   markdown: v.pipe(v.string(), v.nonEmpty()),
 });
 
-type WebFetchOutput = v.InferOutput<typeof outputSchema>;
+const errorOutputSchema = v.object({
+  type: v.literal("error"),
+  url: v.pipe(v.string(), v.nonEmpty()),
+  message: v.string(),
+});
+
+const outputSchema = v.variant("type", [successOutputSchema, errorOutputSchema]);
+
+type WebFetchSuccess = v.InferOutput<typeof successOutputSchema>;
+type WebFetchError = v.InferOutput<typeof errorOutputSchema>;
 
 export const webFetchTool = createTool({
   id: "web-fetch",
-  inputSchema: toStandardJsonSchema(inputSchema),
+  inputSchema: toToolInputSchema(inputSchema),
   outputSchema: toStandardJsonSchema(outputSchema),
-  description: [
-    "Fetch one specific URL and return its main content as markdown.",
-    "Use when the user pastes a URL, or when a prior search already identified the exact page to read (GitHub README, docs page, blog post, etc.).",
-    "Do not use for open-ended discovery without a URL; use webSearch first.",
-    "Returns the page title, description when available, and markdown body. If the page cannot be fetched, try another URL from search results.",
-  ].join(" "),
+  description: "Fetches one URL and returns its main content as markdown.",
   execute: async ({ url }) => {
     const documentResult = await Result.tryPromise(async () =>
       firecrawl.scrape(url, {
@@ -42,26 +43,30 @@ export const webFetchTool = createTool({
     );
 
     if (Result.isError(documentResult)) {
-      throw new ToolError({
+      return {
+        type: "error",
+        url,
         message: "Could not fetch that URL. Check the link or search for an alternative page.",
-        cause: documentResult.error,
-      });
+      } satisfies WebFetchError;
     }
 
     const document = documentResult.value;
     const markdown = document.markdown?.trim();
 
     if (!markdown) {
-      throw new ToolError({
+      return {
+        type: "error",
+        url,
         message: "The page was reached but no readable content was extracted. Try a different URL.",
-      });
+      } satisfies WebFetchError;
     }
 
     return {
+      type: "success",
       url: document.metadata?.sourceURL ?? document.metadata?.url ?? url,
       title: document.metadata?.title,
       description: document.metadata?.description,
       markdown,
-    } satisfies WebFetchOutput;
+    } satisfies WebFetchSuccess;
   },
 });

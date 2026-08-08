@@ -20,13 +20,13 @@ const streamdownPlugins = {
 type ExecuteCodeToolPart = Extract<ToolUIPart<ThreadUITools>, { type: "tool-executeCode" }>;
 
 type ToExecuteCodeMarkdownInput = {
-  code: string;
-  args: NonNullable<ExecuteCodeToolPart["input"]>["args"];
   gt: GT;
+  code: string;
+  input: ExecuteCodeToolPart["input"];
   output: ExecuteCodeToolPart["output"];
 };
 
-const toExecuteCodeMarkdown = ({ code, args, gt, output }: ToExecuteCodeMarkdownInput): string => {
+const toExecuteCodeMarkdown = ({ gt, code, input, output }: ToExecuteCodeMarkdownInput): string => {
   const sections: string[] = [];
 
   if (output?.type === "success") {
@@ -43,8 +43,8 @@ const toExecuteCodeMarkdown = ({ code, args, gt, output }: ToExecuteCodeMarkdown
     sections.push(`\`\`\`${gt("error")}\n${output.name}: ${output.message}\n\`\`\``);
   }
 
-  if (args !== undefined) {
-    sections.push(`\`\`\`${gt("input")}\n${JSON.stringify(args, null, 2)}\n\`\`\``);
+  if (input) {
+    sections.push(`\`\`\`${gt("input")}\n${JSON.stringify(input, null, 2)}\n\`\`\``);
   }
 
   sections.push(`\`\`\`javascript\n${code}\n\`\`\``);
@@ -58,7 +58,7 @@ type ExecuteCodePartProps = {
 
 export const ExecuteCodePart = ({ part }: ExecuteCodePartProps) => {
   const gt = useGT();
-  const code = part.input?.code;
+  const { code, ...input } = part.input ?? {};
 
   if (!code) {
     return <AssistantToolPart part={part} />;
@@ -72,9 +72,9 @@ export const ExecuteCodePart = ({ part }: ExecuteCodePartProps) => {
       <CollapsibleContent className="overflow-hidden pt-2">
         <Streamdown linkSafety={streamdownLinkSafety} mode="static" plugins={streamdownPlugins}>
           {toExecuteCodeMarkdown({
-            code,
-            args: part.input?.args,
             gt,
+            code,
+            input,
             output: part.output,
           })}
         </Streamdown>

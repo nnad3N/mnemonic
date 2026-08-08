@@ -136,9 +136,10 @@ export const useComposerActions = (location: ThreadInputLocation) => {
       useChatStore.getState().removeComposerState(threadId);
     }
     if (location === "edit" && editingState) {
-      useChatStore
-        .getState()
-        .hydrateAttachments(threadId, chat.messages.slice(0, editingState.messageIndex));
+      const messageIndex = chat.messages.findIndex(
+        (message) => message.id === editingState.messageId,
+      );
+      useChatStore.getState().hydrateAttachments(threadId, chat.messages.slice(0, messageIndex));
     }
     if (location === "edit") {
       setEditingState(null);
@@ -212,14 +213,11 @@ export const useComposerActions = (location: ThreadInputLocation) => {
       return;
     }
 
-    const messageIndex = chat.messages.findLastIndex((message) => message.role === "user");
-    if (messageIndex === -1) return;
-
-    const message = chat.messages[messageIndex];
+    const message = chat.messages.find((message) => message.role === "user");
+    if (!message) return;
 
     setEditingState({
       messageId: message.id,
-      messageIndex,
       markdown: message.parts.find((part) => part.type === "text")?.text ?? "",
     });
   };

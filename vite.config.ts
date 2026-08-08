@@ -15,7 +15,7 @@ export default defineConfig({
     babel({ presets: [reactCompilerPreset()] }),
     nitro({
       preset: "deno-server",
-      traceDeps: ["@kreuzberg/node*"],
+      traceDeps: ["@kreuzberg/node*", "@stll/fuzzy-search*"],
     }),
   ],
   resolve: {

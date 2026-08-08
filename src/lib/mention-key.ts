@@ -6,6 +6,9 @@ const mentionTypeSchema = v.picklist(["file", "attachment", "selection", "thread
 
 type MentionKeyType = v.InferOutput<typeof mentionTypeSchema>;
 
+export const mentionKeyShape = (types: MentionKeyType[]): string =>
+  types.map((type) => `"${type}${MENTION_KEY_TYPE_SEPARATOR}<value>"`).join(" or ");
+
 export type MentionKey = `${MentionKeyType}${typeof MENTION_KEY_TYPE_SEPARATOR}${string}`;
 
 export const getMentionKey = (value: { type: MentionKeyType; value: string }): MentionKey =>
