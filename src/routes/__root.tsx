@@ -7,27 +7,33 @@ import {
   useRouter,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
-import { useEffect } from "react";
+import { GTProvider, getTranslationsSnapshot, initializeGT, parseLocale } from "gt-tanstack-start";
+import { enableMapSet } from "immer";
+import { useEffect, type PropsWithChildren } from "react";
 
 import { ErrorComponent } from "@/components/route-components/error";
 import { NotFoundComponent } from "@/components/route-components/not-found";
+import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { authClient } from "@/lib/better-auth/auth-client";
 import TanStackQueryDevtools from "@/lib/tanstack-query/devtools";
 import type { RouterContext } from "@/lib/tanstack-query/root-provider";
-import { getLocale } from "@/paraglide/runtime";
+import loadTranslations from "@/loadTranslations";
 import { authKeys, authSessionQuery } from "@/routes/_auth/-auth.api";
+
+import gtConfig from "../../gt.config.json";
 
 import appCss from "@/styles.css?url";
 
+enableMapSet();
+
+initializeGT({
+  ...gtConfig,
+  loadTranslations,
+});
+
 export const Route = createRootRouteWithContext<RouterContext>()({
   beforeLoad: async ({ context }) => {
-    // Other redirect strategies are possible; see
-    // https://github.com/TanStack/router/tree/main/examples/react/i18n-paraglide#offline-redirect
-    if (typeof document !== "undefined") {
-      document.documentElement.setAttribute("lang", getLocale());
-    }
-
     const session = await context.queryClient.ensureQueryData(authSessionQuery);
 
     return { session: session?.data?.session, user: session?.data?.user };
@@ -53,6 +59,14 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       },
     ],
   }),
+  loader: async () => {
+    const locale = parseLocale();
+
+    return {
+      locale,
+      translations: await getTranslationsSnapshot(locale),
+    };
+  },
   notFoundComponent: NotFoundComponent,
   shellComponent: RootDocument,
 });
@@ -64,7 +78,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
  * @see https://www.better-auth.com/docs/basic-usage#get-session — `getSession` + TanStack Query
  * @see https://www.better-auth.com/docs/basic-usage#use-session — reactive session on the client
  */
-export const useAuthSessionQuery = (): void => {
+const useAuthSessionQuery = (): void => {
   useSuspenseQuery(authSessionQuery);
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -78,17 +92,31 @@ export const useAuthSessionQuery = (): void => {
   }, [data, error, isPending, isRefetching, queryClient, router]);
 };
 
-function RootDocument({ children }: { children: React.ReactNode }) {
+export const RootAppShell = ({ children }: PropsWithChildren) => {
   useAuthSessionQuery();
+  const { locale, translations } = Route.useLoaderData();
 
   return (
-    <html lang={getLocale()}>
+    <GTProvider locale={locale} translations={translations}>
+      <ThemeProvider>
+        <Toaster />
+        <main className="flex h-dvh flex-col overflow-hidden">{children}</main>
+      </ThemeProvider>
+    </GTProvider>
+  );
+};
+
+function RootDocument({ children }: { children: React.ReactNode }) {
+  const { locale } = Route.useLoaderData();
+
+  return (
+    <html lang={locale} suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
-      <body>
-        <Toaster />
-        <main className="flex h-dvh flex-col overflow-hidden">{children}</main>
+      {/* Mermaid diagrams overflow the body while loading. */}
+      <body className="overflow-hidden">
+        <RootAppShell>{children}</RootAppShell>
         <TanStackDevtools
           config={{
             position: "bottom-right",

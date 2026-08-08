@@ -2,7 +2,10 @@ import { defineConfig } from "oxlint";
 
 export default defineConfig({
   plugins: ["eslint", "typescript", "oxc", "react", "import", "jsx-a11y", "vitest"],
-  jsPlugins: [{ name: "eslint-js", specifier: "oxlint-plugin-eslint" }],
+  jsPlugins: [
+    { name: "eslint-js", specifier: "oxlint-plugin-eslint" },
+    { name: "gt", specifier: "@generaltranslation/react-core-linter" },
+  ],
   ignorePatterns: [
     "**/.nx/**",
     "**/snap/**",
@@ -10,6 +13,7 @@ export default defineConfig({
     "**.gen.ts",
     "**/src/components/ui/**",
     "**/src/components/assistant-ui/**",
+    "**/src/lib/sandbox/modules/**",
   ],
   options: {
     typeAware: true,
@@ -26,8 +30,24 @@ export default defineConfig({
         "vitest/expect-expect": "off",
       },
     },
+    {
+      files: ["**/*.{test,test-d}.{ts,tsx}"],
+      rules: {
+        "eslint-js/no-restricted-syntax": "off",
+      },
+    },
   ],
   rules: {
+    "vitest/expect-expect": [
+      "error",
+      {
+        assertFunctionNames: ["expect", "expect*", "assert*"],
+      },
+    ],
+    "no-console": ["warn", { allow: ["warn", "error"] }],
+    "gt/static-jsx": ["error", { libs: ["gt-tanstack-start"] }],
+    "gt/static-string": ["error", { libs: ["gt-tanstack-start"] }],
+    "gt/no-data-attrs-on-branch": ["error", { libs: ["gt-tanstack-start"] }],
     "typescript/consistent-return": "off",
     "no-shadow": "off",
     "react/react-in-jsx-scope": "off",
@@ -56,7 +76,12 @@ export default defineConfig({
     "typescript/require-await": "error",
     "typescript/strict-boolean-expressions": [
       "error",
-      { allowNullableBoolean: true, allowNullableString: true },
+      {
+        allowNullableBoolean: true,
+        allowNullableString: true,
+        allowNullableNumber: false,
+        allowNumber: false,
+      },
     ],
     "typescript/switch-exhaustiveness-check": "error",
   },

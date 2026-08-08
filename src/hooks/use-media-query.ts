@@ -26,7 +26,7 @@ const resolveMax = (value: Breakpoint | number): string => {
 
 const isBreakpointKey = (key: string): key is Breakpoint => key in BREAKPOINTS;
 
-const parseQuery = (query: BreakpointQuery | MediaQueryInput | (string & {})): string => {
+export const parseQuery = (query: BreakpointQuery | MediaQueryInput | (string & {})): string => {
   if (typeof query !== "string") {
     const parts: string[] = [];
     if (query.min !== undefined) {

@@ -4,6 +4,7 @@ dist
 dist-ssr
 *.local
 .env
+data
 .nitro
 .mastra
 .tanstack
@@ -12,3 +13,5 @@ dist-ssr
 .vinxi
 __unconfig*
 todos.json
+**/__screenshots__/
+.vitest-attachments/

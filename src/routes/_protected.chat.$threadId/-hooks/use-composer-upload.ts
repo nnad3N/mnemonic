@@ -5,29 +5,53 @@ import { useEditorRef } from "platejs/react";
 import { useCallback } from "react";
 
 import { hashFileContents } from "@/lib/hash";
+import { getMentionKey } from "@/lib/mention-key";
 
 import { findFilesBySha256 } from "../-thread-api/find-files-by-sha256";
-import { threadQuery } from "../-thread-api/get-thread";
 import { getThreadEditorId } from "../-thread-components/composer/plate";
-import { getMentionKey } from "../-thread-components/composer/plate-plugins/mention-key";
+import type { ThreadUIMessage } from "../-thread-types";
 import type { ThreadInputLocation } from "../../-chat-store";
-import { useAddAttachment, useIsAddingAttachment } from "./use-add-attachment";
+import { useChatStore } from "../../-chat-store";
+import { threadChatQuery, useThreadChat } from "./use-thread-chat";
 import { useIsUploadingFile, useUploadFile } from "./use-upload-file";
 
 const insertMentionItem = getMentionOnSelectItem();
 
+/** Same content hash → same mention label (clipboard paste renames the File, not the attachment). */
+export const findAttachmentFilename = (
+  threadId: string,
+  messages: ThreadUIMessage[],
+  sha256: string,
+): string | undefined => {
+  const stored = useChatStore
+    .getState()
+    .attachments.get(threadId)
+    ?.find((attachment) => attachment.sha256 === sha256);
+
+  if (stored) {
+    return stored.filename;
+  }
+
+  for (const message of messages) {
+    const attachment = message.metadata?.attachments?.find((entry) => entry.sha256 === sha256);
+
+    if (attachment) {
+      return attachment.filename;
+    }
+  }
+};
+
 export const useComposerUpload = (threadId: string, location: ThreadInputLocation) => {
   const editorId = getThreadEditorId(threadId, location);
   const editor = useEditorRef(editorId);
+  const chat = useThreadChat();
   const { data: topicId } = useSuspenseQuery({
-    ...threadQuery(threadId),
+    ...threadChatQuery(threadId),
     select: (data) => data.topicId,
   });
 
   const isUploading = useIsUploadingFile(threadId);
-  const isAttaching = useIsAddingAttachment(threadId);
   const { mutate: uploadFile } = useUploadFile(threadId);
-  const { mutate: addAttachment } = useAddAttachment(threadId, location);
   const { mutateAsync: findDuplicateFiles, isPending } = useMutation({
     mutationFn: async (sha256s: string[]) => {
       if (!topicId) {
@@ -40,8 +64,7 @@ export const useComposerUpload = (threadId: string, location: ThreadInputLocatio
     },
   });
 
-  const canUpload =
-    !editor.meta.isFallback && (topicId ? !isUploading && !isPending : !isAttaching);
+  const canUpload = !editor.meta.isFallback && (!topicId || (!isUploading && !isPending));
 
   const uploadFiles = useCallback(
     async (files: File[]) => {
@@ -72,18 +95,28 @@ export const useComposerUpload = (threadId: string, location: ThreadInputLocatio
         }
       } else {
         for (const { file, sha256 } of fileEntries) {
-          addAttachment({ file, sha256 });
+          const existingFilename = findAttachmentFilename(threadId, chat.messages, sha256);
+
+          if (!existingFilename) {
+            useChatStore.getState().upsertAttachment(threadId, {
+              status: "draft",
+              location,
+              filename: file.name,
+              sha256,
+              file,
+            });
+          }
 
           insertMentionItem(editor, {
             key: getMentionKey({ type: "attachment", value: sha256 }),
-            text: file.name,
+            text: existingFilename ?? file.name,
           });
         }
       }
 
       editor.tf.focus({ edge: "endEditor" });
     },
-    [addAttachment, canUpload, editor, findDuplicateFiles, topicId, uploadFile],
+    [canUpload, chat.messages, editor, findDuplicateFiles, location, threadId, topicId, uploadFile],
   );
 
   return { canUpload, uploadFiles };

@@ -26,6 +26,15 @@ const sharedPlugins = [
     options: {
       remarkPlugins: [remarkGfm, remarkMention],
       rules: {
+        // The default rule percent-encodes the id, so the model would see
+        // `attachment%3A%3A<sha>` instead of the `type::value` key tools expect.
+        mention: {
+          serialize: (node) => ({
+            type: "link",
+            children: [{ type: "text", value: node.value }],
+            url: `mention:${typeof node.key === "string" ? node.key : node.value}`,
+          }),
+        },
         a: {
           serialize: (node) => {
             return {

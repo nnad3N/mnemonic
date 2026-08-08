@@ -8,22 +8,19 @@ import * as v from "valibot";
 import { topic } from "@/db/schema";
 import { dbKit } from "@/lib/db-kit";
 import type { DbKit } from "@/lib/db-kit";
-import { Kit, toServerFnError } from "@/lib/kit";
-import type { Kits, ServerFnError } from "@/lib/kit";
+import { toServerFnError } from "@/lib/errors/server-fn-error";
+import type { ServerFnError } from "@/lib/errors/server-fn-error";
+import * as Kit from "@/lib/kit";
+import type { Kits } from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit";
 import type { MemoryKit } from "@/lib/memory-kit";
 import { authMiddleware } from "@/lib/middleware/auth-middleware";
 import type { SafeId } from "@/lib/safe-id";
+import { matchesQuery } from "@/lib/string-match";
 
 const SEARCH_TOPIC_LIMIT = 100;
 const SEARCH_THREAD_LIMIT = 5;
 const SEARCH_TOPIC_THREAD_SCAN_LIMIT = 100;
-
-const titleMatchesQuery = (title: string, query: string) => {
-  const trimmedQuery = query.trim().toLowerCase();
-
-  return trimmedQuery.length === 0 || title.toLowerCase().includes(trimmedQuery);
-};
 
 const toConversationResult = (thread: StorageThreadType): SearchConversationResult => ({
   id: thread.id,
@@ -51,7 +48,7 @@ type SearchItemsInput = {
 
 type SearchCtx = Kits<[DbKit, MemoryKit]>;
 
-const searchItemsFn = Kit.gen(async function* (
+export const searchItemsFn = Kit.gen(async function* (
   ctx: SearchCtx,
   { query, userId }: SearchItemsInput,
 ) {
@@ -79,7 +76,7 @@ const searchItemsFn = Kit.gen(async function* (
   ]);
 
   const conversations = standaloneThreads.threads
-    .filter((thread) => titleMatchesQuery(thread.title ?? "", query))
+    .filter((thread) => matchesQuery(thread.title ?? "", query))
     .slice(0, SEARCH_THREAD_LIMIT)
     .map((thread) => toConversationResult(thread));
 
@@ -98,11 +95,11 @@ const searchItemsFn = Kit.gen(async function* (
 
   for (const [index, recentTopic] of recentTopics.entries()) {
     const listed = yield* topicThreadBatch[index];
-    const topicMatchesQuery = titleMatchesQuery(recentTopic.title, query);
+    const topicMatchesQuery = matchesQuery(recentTopic.title, query);
 
     const matchingThreads = topicMatchesQuery
       ? listed.threads
-      : listed.threads.filter((thread) => titleMatchesQuery(thread.title ?? "", query));
+      : listed.threads.filter((thread) => matchesQuery(thread.title ?? "", query));
 
     if (hasQuery && !(topicMatchesQuery || matchingThreads.length > 0)) {
       continue;
@@ -111,7 +108,13 @@ const searchItemsFn = Kit.gen(async function* (
     topicResults.push({
       conversations: matchingThreads
         .slice(0, SEARCH_THREAD_LIMIT)
-        .map((thread) => toConversationResult(thread)),
+        .map((thread) => toConversationResult(thread))
+        .sort((a, b) =>
+          Temporal.Instant.compare(
+            Temporal.Instant.from(b.updatedAt),
+            Temporal.Instant.from(a.updatedAt),
+          ),
+        ),
       id: recentTopic.id,
       title: recentTopic.title,
       updatedAt: recentTopic.updatedAt.toISOString(),
@@ -120,8 +123,8 @@ const searchItemsFn = Kit.gen(async function* (
 
   conversations.sort((a, b) =>
     Temporal.Instant.compare(
-      Temporal.Instant.from(a.updatedAt),
       Temporal.Instant.from(b.updatedAt),
+      Temporal.Instant.from(a.updatedAt),
     ),
   );
 

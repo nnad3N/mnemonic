@@ -1,76 +1,39 @@
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowDownIcon } from "lucide-react";
-import { StickToBottom, useStickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
+import { useEffect } from "react";
 
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
-import { ThreadComposer } from "@/routes/_protected.chat.$threadId/-thread-components/composer/thread-composer";
-import { ThreadError } from "@/routes/_protected.chat.$threadId/-thread-components/thread-error";
-import { ThreadMessage } from "@/routes/_protected.chat.$threadId/-thread-components/thread-message";
-
-import { useChatStore } from "../-chat-store";
-import { useThreadChat } from "./-thread-chat-provider";
+import { useChatStore } from "@/routes/-chat-store";
+import { threadChatQuery } from "@/routes/_protected.chat.$threadId/-hooks/use-thread-chat";
+import { ThreadMessages } from "@/routes/_protected.chat.$threadId/-thread-components/thread-messages";
+import { FilesSync } from "@/routes/_protected.topic.$topicId/-topic-components/files-sync";
 
 export const Route = createFileRoute("/_protected/chat/$threadId/")({
+  // threadChatQuery holds a Chat class instance, which cannot be dehydrated.
+  ssr: false,
   component: RouteComponent,
+  beforeLoad: ({ params, preload }) => {
+    // defaultPreload is "intent", so hovering a sidebar link must not acknowledge the result.
+    if (preload) return;
+
+    useChatStore.getState().clearThreadIndicator(params.threadId);
+  },
+  loader: async ({ context, params }) => {
+    await context.queryClient.prefetchQuery(threadChatQuery(params.threadId));
+  },
 });
 
 function RouteComponent() {
-  const chat = useThreadChat();
-  const stickToBottom = useStickToBottom({
-    resize: "smooth",
-    initial: "instant",
-  });
-  const editingMessageIndex = useChatStore((state) => state.editingState?.messageIndex) ?? Infinity;
+  const threadId = Route.useParams({ select: (params) => params.threadId });
+  const { data } = useSuspenseQuery(threadChatQuery(threadId));
+
+  useEffect(() => {
+    useChatStore.getState().hydrateAttachments(threadId, data.chat.messages);
+  }, [data.chat, threadId]);
 
   return (
-    <StickToBottom className="flex h-full min-h-0 w-full flex-col p-3" instance={stickToBottom}>
-      <ScrollArea className="h-full min-h-0" viewportRef={stickToBottom.scrollRef}>
-        <div
-          className="mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-2.5 pb-4"
-          ref={stickToBottom.contentRef}
-        >
-          {chat.messages.map((message, index) => (
-            <div key={message.id} className={cn(index > editingMessageIndex && "opacity-50")}>
-              <ThreadMessage
-                index={index}
-                messageCount={chat.messages.length}
-                message={message}
-                status={chat.status}
-              />
-            </div>
-          ))}
-          <ThreadError />
-        </div>
-      </ScrollArea>
-
-      <div className="relative mx-auto flex w-full max-w-3xl justify-center">
-        <ScrollToBottomButton />
-        <ThreadComposer location="main" />
-      </div>
-    </StickToBottom>
+    <>
+      {data.topicId && <FilesSync topicId={data.topicId} />}
+      <ThreadMessages />
+    </>
   );
 }
-
-const ScrollToBottomButton = () => {
-  const { isAtBottom, scrollToBottom } = useStickToBottomContext();
-
-  if (isAtBottom) {
-    return null;
-  }
-
-  return (
-    <Button
-      className="absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2"
-      onClick={async () => {
-        await scrollToBottom();
-      }}
-      size="icon-sm"
-      type="button"
-      variant="outline"
-    >
-      <ArrowDownIcon />
-    </Button>
-  );
-};

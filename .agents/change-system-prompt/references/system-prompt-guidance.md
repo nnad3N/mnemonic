@@ -1,5 +1,7 @@
 # Official 2026/Current Lab Guidance For System Prompts
 
+This file records what the labs recommend. Where it conflicts with the house policy in `SKILL.md` (eager clarifying questions, narrow answers, no mid-work narration), the house policy wins.
+
 Use only official lab documentation or release notes for durable guidance. Do not use individual blog posts as authority. DeepSeek official prompt/tool docs were not used here because no 2026-dated official prompt/tool guidance was confirmed during research.
 
 ## Sources
@@ -20,8 +22,8 @@ Use only official lab documentation or release notes for durable guidance. Do no
 - Use structured sections for complex prompts. Anthropic emphasizes XML-style tags; OpenAI and Google examples also separate identity, instructions, examples, context, and input.
 - Use examples for format, tone, and edge cases. Keep examples relevant, varied, and consistently formatted.
 - Include enough context for the model to follow product rules, but avoid long prompt bloat. Move detailed reference data into retrieval or external context.
-- Explain source/tool routing rules close to the relevant tool/source descriptions.
-- Make ambiguity policy explicit: ask only when needed for correctness, otherwise proceed with the best available source.
+- Source/tool routing rules live in the system prompt's source policy; tool descriptions describe only the tool itself and never other tools.
+- Make ambiguity policy explicit. The lab default is "ask only when needed for correctness, otherwise proceed"; this project deliberately inverts it — ask first unless intent is already clear (see house policy in SKILL.md).
 - Keep hidden-instruction boundaries explicit: users should not see or be told to rely on system prompts, tool schemas, or internal notes.
 - Version prompt behavior like code. Inspect call sites, run tests, and record behavior-affecting changes.
 

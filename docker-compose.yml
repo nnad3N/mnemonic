@@ -1,56 +1,61 @@
 services:
-  db:
-    image: pgvector/pgvector:pg18
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_USER: mnemonic
-      POSTGRES_PASSWORD: mnemonic
-      POSTGRES_DB: mnemonic
-    volumes:
-      - postgres_data:/var/lib/postgresql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U mnemonic -d mnemonic"]
-      interval: 2s
-      timeout: 5s
-      retries: 10
-
   rustfs:
     image: rustfs/rustfs:latest
+    profiles: ["host", "selfhost"]
     command: ["/data"]
-    ports:
-      - "9000:9000"
-      - "9001:9001"
     environment:
-      RUSTFS_ACCESS_KEY: rustfsadmin
-      RUSTFS_SECRET_KEY: rustfsadmin
+      RUSTFS_ACCESS_KEY: "${S3_ACCESS_KEY_ID:-rustfsadmin}"
+      RUSTFS_SECRET_KEY: "${S3_SECRET_ACCESS_KEY:-rustfsadmin}"
       RUSTFS_ADDRESS: "0.0.0.0:9000"
       RUSTFS_CONSOLE_ENABLE: "true"
       RUSTFS_CONSOLE_ADDRESS: "0.0.0.0:9001"
       RUSTFS_CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://127.0.0.1:3000"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    networks:
+      - default
     volumes:
       - rustfs_data:/data
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9000/health || exit 1"]
-      interval: 2s
-      timeout: 5s
-      retries: 15
 
   rustfs-init:
     image: minio/mc:latest
+    profiles: ["init"]
+    environment:
+      S3_ACCESS_KEY_ID: "${S3_ACCESS_KEY_ID:-rustfsadmin}"
+      S3_BUCKET: "${S3_BUCKET:-mnemonic-files}"
+      S3_SECRET_ACCESS_KEY: "${S3_SECRET_ACCESS_KEY:-rustfsadmin}"
     depends_on:
       rustfs:
-        condition: service_healthy
+        condition: service_started
     entrypoint: >
       /bin/sh -c "
-      until mc alias set rustfs http://rustfs:9000 rustfsadmin rustfsadmin; do
+      until mc alias set local http://rustfs:9000 \"$${S3_ACCESS_KEY_ID}\" \"$${S3_SECRET_ACCESS_KEY}\"; do
         sleep 1;
       done;
-      mc mb --ignore-existing rustfs/mnemonic-files;
+      mc mb --ignore-existing \"local/$${S3_BUCKET}\";
       "
+
+  app:
+    profiles: ["selfhost"]
+    build: .
+    network_mode: host
+    env_file: .env
+    environment:
+      DATABASE_URL: file:/data/mnemonic.db
+      BETTER_AUTH_URL: http://localhost:3000
+      FIRECRAWL_API_URL: http://localhost:3002
+    volumes:
+      - mnemonic_data:/data
+    restart: unless-stopped
+    depends_on:
+      rustfs:
+        condition: service_started
 
   searxng:
     image: searxng/searxng:latest
+    ports:
+      - "8080:8080"
     volumes:
       - ./searxng:/etc/searxng:rw
     environment:
@@ -66,11 +71,10 @@ services:
       start_period: 10s
 
   firecrawl-redis:
-    image: redis:alpine
+    image: valkey/valkey:alpine
     networks:
       - firecrawl
-    volumes:
-      - firecrawl_redis_data:/data
+    command: redis-server --bind 0.0.0.0
     cpus: 0.25
     mem_limit: 256M
     logging:
@@ -148,12 +152,14 @@ services:
 
   firecrawl-api:
     image: ghcr.io/firecrawl/firecrawl:latest
+    ports:
+      - "3002:3002"
+    networks:
+      - firecrawl
     ulimits:
       nofile:
         soft: 65535
         hard: 65535
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     environment:
       HOST: "0.0.0.0"
       PORT: 3002
@@ -189,10 +195,6 @@ services:
         condition: service_healthy
       searxng:
         condition: service_healthy
-    ports:
-      - "3002:3002"
-    networks:
-      - firecrawl
     command: ["node", "dist/src/harness.js", "--start-docker"]
     cpus: 2.0
     mem_limit: 2G
@@ -213,8 +215,7 @@ networks:
     driver: bridge
 
 volumes:
-  postgres_data:
+  mnemonic_data:
   rustfs_data:
-  firecrawl_redis_data:
   firecrawl_rabbitmq_data:
   firecrawl_postgres_data:

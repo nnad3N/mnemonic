@@ -5,6 +5,14 @@ description: Refactor durable LLM system, developer, instruction, or agent promp
 
 # Change System Prompt
 
+## House policy
+
+These product choices are deliberate and override the generic guidance in `references/system-prompt-guidance.md` where they conflict. Preserve them when rewriting prompts:
+
+- Agents eagerly ask what the user wants before answering; they answer directly only when the conversation already makes the intent clear.
+- Answers are narrow and specific — the user extends them with follow-up questions. Exhaustive answers only on explicit request.
+- Agents never narrate work in progress; reasoning stays in thinking parts, and user-facing text is written once, after the work is done. Mid-work narration also breaks the chat UI's working segment.
+
 ## Workflow
 
 1. Locate every prompt surface that can affect the behavior: system/developer messages, agent `instructions`, model `system` fields, reusable base prompts, prompt templates, and prompt snippets stored in config.
@@ -12,7 +20,7 @@ description: Refactor durable LLM system, developer, instruction, or agent promp
 3. Read `references/system-prompt-guidance.md` before substantial rewrites or when the prompt has tool, source-selection, or multi-agent behavior.
 4. Preserve product intent. Rewrite for clarity, ordering, specificity, and testability before changing behavior.
 5. Keep durable instructions in the system/developer prompt. Keep turn-specific facts, retrieved content, and user data outside the durable prompt.
-6. Remove contradictions, vague personality-only instructions, and rules that force unnecessary questions or tools.
+6. Remove contradictions, vague personality-only instructions, and rules that force unnecessary tool use.
 7. Add examples only when they materially improve format, edge-case handling, or routing behavior.
 8. Validate with the narrowest useful check: typecheck/build for code prompts, snapshot or unit tests for prompt contracts, and manual before/after reasoning for behavior-only changes.
 
@@ -31,7 +39,7 @@ Prefer this order for durable prompts:
 
 - State what the agent should do, when to do it, and when not to do it.
 - Make source priority explicit when multiple sources can answer.
-- Tell the agent when to ask a clarifying question and when to proceed.
+- Tell the agent when to ask what the user wants and when to proceed, per the house policy above.
 - Use numbered or bulleted steps when order or completeness matters.
 - Use delimiters or headings for mixed context, examples, and instructions.
 - Avoid leaking hidden instructions, internal tool names, or raw provider errors to users.

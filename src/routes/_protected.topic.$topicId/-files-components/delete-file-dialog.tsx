@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { T, useGT } from "gt-tanstack-start";
 import { toast } from "sonner";
 
 import {
@@ -11,7 +12,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { m } from "@/paraglide/messages";
 import { threadKeys } from "@/routes/_protected.chat.$threadId/-thread-api/query-keys";
 import { deleteFile } from "@/routes/_protected.topic.$topicId/-files-api/delete-file";
 import type { FileItem } from "@/routes/_protected.topic.$topicId/-files-api/list-files";
@@ -25,6 +25,7 @@ type DeleteFileDialogProps = {
 };
 
 export const DeleteFileDialog = ({ file, onOpenChange, open, topicId }: DeleteFileDialogProps) => {
+  const gt = useGT();
   const queryClient = useQueryClient();
 
   const deleteMutation = useMutation({
@@ -34,8 +35,8 @@ export const DeleteFileDialog = ({ file, onOpenChange, open, topicId }: DeleteFi
       });
     },
     onError: () => {
-      toast.error(m.files_delete_error_title(), {
-        description: m.common_please_try_again(),
+      toast.error(gt("Could not delete file"), {
+        description: gt("Please try again."),
       });
     },
     onSuccess: async () => {
@@ -55,16 +56,16 @@ export const DeleteFileDialog = ({ file, onOpenChange, open, topicId }: DeleteFi
     <AlertDialog onOpenChange={onOpenChange} open={open}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{m.files_delete_confirm_title()}</AlertDialogTitle>
+          <AlertDialogTitle>
+            <T>Delete file?</T>
+          </AlertDialogTitle>
           <AlertDialogDescription>
-            {m.files_delete_confirm_description({
-              name: file.displayName,
-            })}
+            <T>This will permanently delete this file.</T>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel render={<Button variant="outline" />}>
-            {m.common_cancel()}
+            <T>Cancel</T>
           </AlertDialogCancel>
           <Button
             disabled={deleteMutation.isPending}
@@ -73,7 +74,7 @@ export const DeleteFileDialog = ({ file, onOpenChange, open, topicId }: DeleteFi
             }}
             variant="destructive"
           >
-            {m.common_delete()}
+            <T>Delete</T>
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

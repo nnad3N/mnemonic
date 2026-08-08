@@ -1,3 +1,4 @@
+import { T } from "gt-tanstack-start";
 import { ExternalLinkIcon, XIcon } from "lucide-react";
 import type { TElement } from "platejs";
 import type { PlateElementProps } from "platejs/react";
@@ -12,7 +13,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { m } from "@/paraglide/messages";
 
 import {
   MentionContent,
@@ -71,7 +71,7 @@ export const ThreadLinkElement = (props: ThreadLinkElementProps) => {
               }}
             >
               <ExternalLinkIcon className="size-3" />
-              {m.composer_link_open()}
+              <T>Open</T>
             </DropdownMenuItem>
             <DropdownMenuItem
               className="min-h-6 gap-1 rounded-full px-1 py-0.5 text-xs"
@@ -80,7 +80,7 @@ export const ThreadLinkElement = (props: ThreadLinkElementProps) => {
               }}
             >
               <XIcon className="size-3" />
-              {m.composer_link_unlink()}
+              <T>Unlink</T>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

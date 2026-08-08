@@ -1,37 +1,85 @@
-import { defaultEmbeddingSettingsMiddleware, wrapEmbeddingModel } from "ai";
+import type { ObservationalMemoryOptions } from "@mastra/core/memory";
+import type { RequestContext } from "@mastra/core/request-context";
+import type { OpenRouterProviderOptions } from "@openrouter/ai-sdk-provider";
 
-import { google } from "@/mastra/google";
+import { modelCapabilityLevels } from "@/lib/model-capability";
+import type { ModelCapability } from "@/lib/model-capability";
+import { openrouter } from "@/mastra/openrouter";
+import type { MnemonicRequestContext } from "@/mastra/request-context.ts";
 
-export const FILE_EMBEDDING_DIMENSION = 1536;
+/** Qwen3 Embedding 8B native output size. */
+export const FILE_EMBEDDING_DIMENSION = 4096;
 
-/** Google batchEmbedContents accepts at most 100 requests per call. */
-const GEMINI_BATCH_EMBED_LIMIT = 100;
+export { modelCapabilityLevels };
+export type { ModelCapability };
 
-const baseEmbedding = google.embedding("gemini-embedding-2");
+type ModelCapabilityModel = {
+  model: string;
+  openrouter?: OpenRouterProviderOptions;
+};
 
-const embedding = wrapEmbeddingModel({
-  middleware: [
-    defaultEmbeddingSettingsMiddleware({
-      settings: {
-        providerOptions: {
-          google: {
-            outputDimensionality: FILE_EMBEDDING_DIMENSION,
-          },
-        },
+export const modelCapabilityModels: Record<ModelCapability, ModelCapabilityModel> = {
+  standard: {
+    model: "xiaomi/mimo-v2.5",
+  },
+  balanced: {
+    model: "openai/gpt-5.6-luna",
+    openrouter: {
+      reasoning: {
+        effort: "xhigh",
       },
-    }),
-    {
-      specificationVersion: "v3",
-      overrideMaxEmbeddingsPerCall: () => GEMINI_BATCH_EMBED_LIMIT,
     },
-  ],
-  model: baseEmbedding,
-});
+  },
+  max: {
+    model: "moonshotai/kimi-k3",
+  },
+};
 
 export const models = {
-  embedding,
-  conversationAgent: google("gemini-3.1-flash-lite-preview"),
-  topicAgent: google("gemini-3.1-flash-lite-preview"),
-  observationalMemory: google("gemini-3.1-flash-lite-preview"),
-  threadTitle: google("gemini-2.5-flash-lite"),
+  embedding: openrouter.textEmbeddingModel("qwen/qwen3-embedding-8b"),
+  forModelCapability: (capability: ModelCapability) => {
+    const config = modelCapabilityModels[capability];
+    return openrouter(config.model, config.openrouter);
+  },
+  observationalMemory: openrouter(modelCapabilityModels.standard.model),
+  threadTitle: openrouter("google/gemma-4-26b-a4b-it"),
 } as const;
+
+const observationalMemoryReasoningOff = {
+  openrouter: {
+    reasoning: {
+      effort: "none",
+    },
+  },
+} as const;
+
+type ObservationalMemoryRetrieval = NonNullable<ObservationalMemoryOptions["retrieval"]>;
+
+export const observationalMemoryOptions = (
+  retrieval: ObservationalMemoryRetrieval,
+): ObservationalMemoryOptions => ({
+  activateAfterIdle: "auto",
+  activateOnProviderChange: true,
+  model: models.observationalMemory,
+  observation: {
+    providerOptions: observationalMemoryReasoningOff,
+  },
+  reflection: {
+    activateAfterIdle: "auto",
+    activateOnProviderChange: true,
+    providerOptions: observationalMemoryReasoningOff,
+  },
+  retrieval,
+  scope: "thread",
+  temporalMarkers: true,
+});
+
+type GetAgentModelInput = {
+  requestContext: RequestContext<MnemonicRequestContext>;
+};
+
+export const getAgentModel = ({ requestContext }: GetAgentModelInput) => {
+  const capability = requestContext.get("modelCapability");
+
+  return models.forModelCapability(capability);
+};

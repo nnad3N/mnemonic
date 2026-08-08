@@ -1,62 +1,84 @@
-import { useParams } from "@tanstack/react-router";
+import { ClientOnly, useParams } from "@tanstack/react-router";
 import { ArrowUpIcon, PaperclipIcon, SquareIcon } from "lucide-react";
-import { useRef } from "react";
+import { Suspense, useRef } from "react";
 
 import { Button } from "@/components/ui/button";
-import { SUPPORTED_MIME_TYPES } from "@/lib/file-validation";
+import { SupportedMimeType } from "@/lib/file-validation";
 
 import { useComposerActions } from "../../-hooks/use-composer-actions";
 import { useComposerUpload } from "../../-hooks/use-composer-upload";
-import { useThreadChat } from "../../-thread-chat-provider";
+import { useThreadChat } from "../../-hooks/use-thread-chat";
 import type { ThreadInputLocation } from "../../../-chat-store";
+import { CapabilityPicker } from "./capability-picker";
 
 type ComposerFooterProps = {
   location: ThreadInputLocation;
 };
 
 export const ComposerFooter = ({ location }: ComposerFooterProps) => {
-  const chat = useThreadChat();
+  const fallback = (
+    <>
+      <UploadButton onSelectFiles={undefined} />
+      <SendButton onSend={undefined} />
+    </>
+  );
 
   return (
     <div className="flex w-full items-center justify-between">
-      <UploadButton location={location} />
-      <div className="ml-auto">
-        {chat.status === "streaming" ? (
-          <Button
-            onClick={async () => {
-              await chat.stop();
-            }}
-            size="icon-xs"
-            type="button"
-          >
-            <SquareIcon />
-          </Button>
-        ) : (
-          <SendButton location={location} />
-        )}
+      <CapabilityPicker />
+      <div className="ml-auto flex items-center gap-1">
+        <ClientOnly fallback={fallback}>
+          <Suspense fallback={fallback}>
+            <ComposerActions location={location} />
+          </Suspense>
+        </ClientOnly>
       </div>
     </div>
   );
 };
 
-type UploadButtonProps = {
-  location: ThreadInputLocation;
-};
-
-const UPLOAD_ACCEPT = SUPPORTED_MIME_TYPES.join(",");
-
-const UploadButton = ({ location }: UploadButtonProps) => {
-  const inputRef = useRef<HTMLInputElement>(null);
+const ComposerActions = ({ location }: ComposerFooterProps) => {
   const threadId = useParams({
     from: "/_protected/chat/$threadId",
     select: (params) => params.threadId,
   });
+  const chat = useThreadChat();
+  const { canSend, sendMessage, stopStream } = useComposerActions(location);
   const { canUpload, uploadFiles } = useComposerUpload(threadId, location);
+
+  return (
+    <>
+      <UploadButton onSelectFiles={canUpload ? uploadFiles : undefined} />
+      {chat.status === "streaming" || chat.status === "submitted" ? (
+        <Button
+          onClick={async () => {
+            await stopStream();
+          }}
+          size="icon-xs"
+          type="button"
+        >
+          <SquareIcon />
+        </Button>
+      ) : (
+        <SendButton onSend={canSend ? sendMessage : undefined} />
+      )}
+    </>
+  );
+};
+
+type UploadButtonProps = {
+  onSelectFiles: ((files: File[]) => Promise<void>) | undefined;
+};
+
+const UPLOAD_ACCEPT = SupportedMimeType.values.join(",");
+
+const UploadButton = ({ onSelectFiles }: UploadButtonProps) => {
+  const inputRef = useRef<HTMLInputElement>(null);
 
   return (
     <Button
       variant="ghost"
-      disabled={!canUpload}
+      disabled={typeof onSelectFiles === "undefined"}
       onClick={() => inputRef.current?.click()}
       size="icon-sm"
       type="button"
@@ -68,7 +90,7 @@ const UploadButton = ({ location }: UploadButtonProps) => {
 
           if (!files || files.length === 0) return;
 
-          await uploadFiles([...files]);
+          await onSelectFiles?.([...files]);
 
           e.target.value = "";
         }}
@@ -83,14 +105,16 @@ const UploadButton = ({ location }: UploadButtonProps) => {
   );
 };
 
-const SendButton = ({ location }: Pick<ComposerFooterProps, "location">) => {
-  const { canSend, sendMessage } = useComposerActions(location);
+type SendButtonProps = {
+  onSend: (() => Promise<void>) | undefined;
+};
 
+const SendButton = ({ onSend }: SendButtonProps) => {
   return (
     <Button
-      disabled={!canSend}
+      disabled={typeof onSend === "undefined"}
       onClick={async () => {
-        await sendMessage();
+        await onSend?.();
       }}
       size="icon-sm"
       type="button"

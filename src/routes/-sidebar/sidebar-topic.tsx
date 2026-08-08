@@ -5,6 +5,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { T, useGT } from "gt-tanstack-start";
 import {
   ChevronRightIcon,
   FileIcon,
@@ -34,7 +35,6 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
-import { m } from "@/paraglide/messages";
 
 import { useChatStore } from "../-chat-store";
 import { createTopicConversation } from "../_protected.chat.$threadId/-thread-api/create-thread";
@@ -59,7 +59,9 @@ export const SidebarTopics = () => {
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>{m.nav_topics()}</SidebarGroupLabel>
+      <SidebarGroupLabel>
+        <T>Topics</T>
+      </SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
           {topics.isSuccess ? (
@@ -68,7 +70,9 @@ export const SidebarTopics = () => {
             <SidebarTopicsSkeleton count={2} />
           )}
           {topics.isSuccess && topicItems.length === 0 && (
-            <SidebarGroupEmpty>{m.nav_no_topics()}</SidebarGroupEmpty>
+            <SidebarGroupEmpty>
+              <T>No topics yet</T>
+            </SidebarGroupEmpty>
           )}
           {topics.isSuccess && (topics.hasNextPage || hasMultiplePages) && (
             <SidebarMenuItem>
@@ -105,6 +109,7 @@ type SidebarTopicItemProps = {
 };
 
 const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
+  const gt = useGT();
   const [isRenaming, setIsRenaming] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const navigate = useNavigate();
@@ -132,7 +137,7 @@ const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
     mutationFn: async () => {
       const thread = await createTopicConversation({
         data: {
-          title: m.nav_new_conversation_default_title(),
+          title: gt("New Conversation"),
           topicId: topic.id,
         },
       });
@@ -140,8 +145,8 @@ const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
       return thread;
     },
     onError: () => {
-      toast.error(m.nav_new_conversation_error_title(), {
-        description: m.common_please_try_again(),
+      toast.error(gt("Could not create conversation"), {
+        description: gt("Please try again."),
       });
     },
     onSuccess: async (thread) => {
@@ -182,7 +187,7 @@ const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
                 <span className="truncate">{topic.title}</span>
               </ContextMenuTrigger>
               <Button
-                className="text-sidebar-foreground opacity-0 peer-hover/menu-button:opacity-100 hover:opacity-100"
+                className="text-sidebar-foreground opacity-0 peer-hover/menu-button:opacity-100 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:opacity-100 dark:hover:bg-sidebar-accent"
                 disabled={createConversationMutation.isPending}
                 onClick={(event) => {
                   event.stopPropagation();
@@ -202,13 +207,13 @@ const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
               }}
             >
               <PencilIcon />
-              {m.common_rename()}
+              <T>Rename</T>
             </ContextMenuItem>
             <ContextMenuItem
               render={<Link params={{ topicId: topic.id }} to="/topic/$topicId/files" />}
             >
               <FileIcon />
-              {m.nav_files()}
+              <T>Files</T>
             </ContextMenuItem>
             <ContextMenuItem
               onClick={() => {
@@ -217,7 +222,7 @@ const SidebarTopicItem = ({ topic }: SidebarTopicItemProps) => {
               variant="destructive"
             >
               <Trash2Icon />
-              {m.common_delete()}
+              <T>Delete</T>
             </ContextMenuItem>
           </ContextMenuContent>
         </ContextMenu>

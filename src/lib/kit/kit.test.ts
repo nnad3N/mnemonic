@@ -1,7 +1,9 @@
 import { Panic, Result, TaggedError } from "better-result";
 import { describe, expect, it } from "vitest";
 
-import { Kit, ServerFnError } from ".";
+import { ServerFnError } from "@/lib/errors/server-fn-error";
+
+import * as Kit from ".";
 import type { Kits } from ".";
 
 class TestKitError extends TaggedError("TestKitError")<{

@@ -1,8 +1,8 @@
 import { Link, Outlet, createFileRoute, useLocation } from "@tanstack/react-router";
+import { T } from "gt-tanstack-start";
 
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { m } from "@/paraglide/messages";
 import { Route as SignInRoute } from "@/routes/_auth/sign-in";
 import { Route as SignUpRoute } from "@/routes/_auth/sign-up";
 
@@ -22,14 +22,14 @@ function LayoutComponent() {
                 render={<Link to={SignInRoute.fullPath} />}
                 value={SignInRoute.fullPath}
               >
-                {m.auth_sign_in()}
+                <T>Sign in</T>
               </TabsTrigger>
               <TabsTrigger
                 nativeButton={false}
                 render={<Link to={SignUpRoute.fullPath} />}
                 value={SignUpRoute.fullPath}
               >
-                {m.auth_sign_up()}
+                <T>Sign up</T>
               </TabsTrigger>
             </TabsList>
           </Tabs>

@@ -16,14 +16,13 @@ import { useChatStore } from "../../-chat-store";
 
 type UserMessageProps = {
   message: ThreadUIMessage;
-  index: number;
 };
 
 type UserMessageContentProps = {
   markdown: string;
 };
 
-export const UserMessage = ({ message, index }: UserMessageProps) => {
+export const UserMessage = ({ message }: UserMessageProps) => {
   const editingState = useChatStore((state) => state.editingState);
   const setEditingState = useChatStore((state) => state.setEditingState);
   const markdown = message.parts.find((part) => part.type === "text")?.text ?? "";
@@ -35,11 +34,10 @@ export const UserMessage = ({ message, index }: UserMessageProps) => {
 
   return (
     <ComposerWrapper
-      className="relative block w-full overflow-clip bg-secondary text-left transition-colors hover:border-ring"
+      className="relative block w-full overflow-clip bg-input/50 text-left transition-colors hover:border-ring/50"
       onClick={() => {
         setEditingState({
           messageId: message.id,
-          messageIndex: index,
           markdown,
         });
       }}
@@ -49,11 +47,9 @@ export const UserMessage = ({ message, index }: UserMessageProps) => {
     </ComposerWrapper>
   );
 };
+
 const UserMessageContent = ({ markdown }: UserMessageContentProps) => {
-  const { isHeightClamped, maxHeight, ref } = useClampHeight<HTMLDivElement>({
-    // text-sm line-height
-    lineHeight: 1.25 / 0.875,
-  });
+  const { isHeightClamped, lineHeight, maxHeight, ref } = useClampHeight<HTMLDivElement>();
   const editor = useMemo(
     () =>
       createStaticEditor({
@@ -65,14 +61,18 @@ const UserMessageContent = ({ markdown }: UserMessageContentProps) => {
 
   return (
     <>
-      <div className="overflow-hidden p-1" ref={ref}>
-        <PlateStatic
-          style={{
-            maxHeight,
-          }}
-          className="wrap-break-word whitespace-pre-wrap outline-none"
-          editor={editor}
-        />
+      <div
+        className="overflow-hidden p-1"
+        data-test-id="user-message-clamp"
+        ref={ref}
+        style={{ lineHeight }}
+      >
+        <div data-test-id="user-message-clamp-content" style={{ maxHeight }}>
+          <PlateStatic
+            className="wrap-break-word whitespace-pre-wrap outline-none"
+            editor={editor}
+          />
+        </div>
       </div>
       {isHeightClamped && (
         <span className="pointer-events-none absolute right-0 bottom-0 left-0 h-1/4 bg-linear-to-t from-secondary from-10% to-transparent" />

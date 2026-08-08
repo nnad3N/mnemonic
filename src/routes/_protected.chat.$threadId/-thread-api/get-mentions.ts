@@ -1,19 +1,23 @@
 import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { matchError, Result } from "better-result";
-import { and, desc, eq, ilike } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { file, topic } from "@/db/schema";
+import { file } from "@/db/schema";
+import { ilike } from "@/db/sql";
 import { dbKit } from "@/lib/db-kit";
 import type { DbKit } from "@/lib/db-kit";
-import { Kit, toServerFnError } from "@/lib/kit";
-import type { Kits, ServerFnError } from "@/lib/kit";
+import { toServerFnError } from "@/lib/errors/server-fn-error";
+import type { ServerFnError } from "@/lib/errors/server-fn-error";
+import * as Kit from "@/lib/kit";
+import type { Kits } from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit";
 import type { MemoryKit } from "@/lib/memory-kit";
 import { authMiddleware } from "@/lib/middleware/auth-middleware";
 import type { SafeId } from "@/lib/safe-id";
 import { rawId, toSafeId } from "@/lib/safe-id";
+import { matchesQuery } from "@/lib/string-match";
 
 import type { MentionQueryType } from "./query-keys";
 import { threadKeys } from "./query-keys";
@@ -36,22 +40,6 @@ const buildFileMentionsWhereClause = (topicId: SafeId<"topic">, query: string) =
   return and(eq(file.topicId, topicId), ilike(file.displayName, `%${trimmedQuery}%`));
 };
 
-const buildTopicMentionsWhereClause = (userId: SafeId<"user">, query: string) => {
-  const trimmedQuery = query.trim();
-
-  if (trimmedQuery.length === 0) {
-    return eq(topic.userId, userId);
-  }
-
-  return and(eq(topic.userId, userId), ilike(topic.title, `%${trimmedQuery}%`));
-};
-
-const titleMatchesQuery = (title: string, query: string) => {
-  const trimmedQuery = query.trim().toLowerCase();
-
-  return trimmedQuery.length === 0 || title.toLowerCase().includes(trimmedQuery);
-};
-
 const getMentionsInputSchema = v.object({
   resourceId: v.pipe(v.string(), v.nonEmpty()),
   query: v.optional(v.string(), ""),
@@ -70,7 +58,7 @@ type GetMentionsInput = {
   userId: SafeId<"user">;
 };
 
-const getMentionsFn = Kit.gen(async function* (ctx: MentionsCtx, input: GetMentionsInput) {
+export const getMentionsFn = Kit.gen(async function* (ctx: MentionsCtx, input: GetMentionsInput) {
   const ownedTopic = yield* await ctx.db.run((db) =>
     db.query.topic.findFirst({
       columns: { id: true },
@@ -82,67 +70,48 @@ const getMentionsFn = Kit.gen(async function* (ctx: MentionsCtx, input: GetMenti
     }),
   );
 
-  if (ownedTopic) {
-    const [fileMentions, threads] = yield* await Kit.promiseAll([
-      ctx.db.run((db) =>
-        db
-          .select({
-            id: file.id,
-            displayName: file.displayName,
-          })
-          .from(file)
-          .where(buildFileMentionsWhereClause(ownedTopic.id, input.query))
-          .orderBy(desc(file.createdAt))
-          .limit(MENTIONS_QUERY_LIMIT),
-      ),
-      ctx.memory.listThreads({
-        filter: { resourceId: ownedTopic.id },
-        orderBy: { direction: "DESC", field: "updatedAt" },
-        page: 0,
-        perPage: false,
-      }),
-    ]);
-
-    const mentions: MentionItem[] = fileMentions.map((mention) => ({
-      ...mention,
-      type: "file",
-    }));
-
-    for (const thread of threads.threads) {
-      const title = thread.title ?? "";
-
-      if (titleMatchesQuery(title, input.query) && mentions.length < MENTIONS_QUERY_LIMIT) {
-        mentions.push({
-          displayName: title,
-          id: thread.id,
-          type: "thread",
-        });
-      }
-    }
-
-    return Result.ok(mentions);
+  if (!ownedTopic) {
+    return Result.ok([]);
   }
 
-  const topicMentions = yield* await ctx.db.run((db) =>
-    db
-      .select({
-        id: topic.id,
-        displayName: topic.title,
-      })
-      .from(topic)
-      .where(buildTopicMentionsWhereClause(input.userId, input.query))
-      .orderBy(desc(topic.updatedAt))
-      .limit(MENTIONS_QUERY_LIMIT),
-  );
-
-  return Result.ok(
-    topicMentions.map(
-      (mention): MentionItem => ({
-        ...mention,
-        type: "topic",
-      }),
+  const [fileMentions, threads] = yield* await Kit.promiseAll([
+    ctx.db.run((db) =>
+      db
+        .select({
+          id: file.id,
+          displayName: file.displayName,
+        })
+        .from(file)
+        .where(buildFileMentionsWhereClause(ownedTopic.id, input.query))
+        .orderBy(desc(file.createdAt))
+        .limit(MENTIONS_QUERY_LIMIT),
     ),
-  );
+    ctx.memory.listThreads({
+      filter: { resourceId: ownedTopic.id },
+      orderBy: { direction: "DESC", field: "updatedAt" },
+      page: 0,
+      perPage: false,
+    }),
+  ]);
+
+  const mentions: MentionItem[] = fileMentions.map((mention) => ({
+    ...mention,
+    type: "file",
+  }));
+
+  for (const thread of threads.threads) {
+    const title = thread.title ?? "";
+
+    if (matchesQuery(title, input.query) && mentions.length < MENTIONS_QUERY_LIMIT) {
+      mentions.push({
+        displayName: title,
+        id: thread.id,
+        type: "thread",
+      });
+    }
+  }
+
+  return Result.ok(mentions);
 });
 
 type GetMentionByIdInput = {

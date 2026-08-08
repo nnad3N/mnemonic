@@ -1,5 +1,6 @@
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { T } from "gt-tanstack-start";
 import { PencilIcon, Trash2Icon } from "lucide-react";
 import { useState } from "react";
 import type * as React from "react";
@@ -18,8 +19,9 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { m } from "@/paraglide/messages";
+import { cn } from "@/lib/utils";
 
+import { useChatStore } from "../-chat-store";
 import { sidebarConversationsQuery } from "../_protected.chat.$threadId/-thread-api/sidebar-data";
 import type { SidebarThread } from "../_protected.chat.$threadId/-thread-api/types";
 import { DeleteThreadDialog, RenameField } from "./sidebar-context-menu";
@@ -36,7 +38,9 @@ export const SidebarConversations = () => {
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>{m.nav_recent_conversations()}</SidebarGroupLabel>
+      <SidebarGroupLabel>
+        <T>Recent conversations</T>
+      </SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
           {conversations.isSuccess ? (
@@ -52,7 +56,9 @@ export const SidebarConversations = () => {
             <SidebarConversationsSkeleton count={4} />
           )}
           {conversations.isSuccess && conversationItems.length === 0 && (
-            <SidebarGroupEmpty>{m.nav_no_conversations()}</SidebarGroupEmpty>
+            <SidebarGroupEmpty>
+              <T>No conversations yet</T>
+            </SidebarGroupEmpty>
           )}
           {conversations.isSuccess && (conversations.hasNextPage || hasMultiplePages) && (
             <SidebarMenuItem>
@@ -92,6 +98,7 @@ type SidebarConversationItemProps = {
 export const SidebarConversationItem = ({ renderButton, thread }: SidebarConversationItemProps) => {
   const [isRenaming, setIsRenaming] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const indicator = useChatStore((state) => state.threadIndicators.get(thread.id));
 
   if (isRenaming) {
     return (
@@ -111,7 +118,16 @@ export const SidebarConversationItem = ({ renderButton, thread }: SidebarConvers
         <Link params={{ threadId: thread.id }} to="/chat/$threadId">
           {({ isActive }) => (
             <ContextMenuTrigger render={renderButton(isActive)}>
-              <span className="min-w-0 truncate">{thread.title}</span>
+              <span
+                className={cn(
+                  "min-w-0 truncate",
+                  indicator === "pending" && "shimmer",
+                  !isActive && indicator === "ready" && "text-f-blue",
+                  !isActive && indicator === "error" && "text-f-red",
+                )}
+              >
+                {thread.title}
+              </span>
             </ContextMenuTrigger>
           )}
         </Link>
@@ -122,7 +138,7 @@ export const SidebarConversationItem = ({ renderButton, thread }: SidebarConvers
             }}
           >
             <PencilIcon />
-            {m.common_rename()}
+            <T>Rename</T>
           </ContextMenuItem>
           <ContextMenuItem
             onClick={() => {
@@ -131,7 +147,7 @@ export const SidebarConversationItem = ({ renderButton, thread }: SidebarConvers
             variant="destructive"
           >
             <Trash2Icon />
-            {m.common_delete()}
+            <T>Delete</T>
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>

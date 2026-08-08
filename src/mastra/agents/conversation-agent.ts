@@ -2,39 +2,43 @@ import { Agent } from "@mastra/core/agent";
 import { Memory } from "@mastra/memory";
 
 import { baseInstructions, sharedSourceInstructions } from "@/mastra/agents/base-instructions";
-import { models } from "@/mastra/models";
-import { pgVector, postgresStore } from "@/mastra/storage";
-import { accessTopicTool } from "@/mastra/tools/access-topic-tool";
+import { getAgentModel, models, observationalMemoryOptions } from "@/mastra/models";
+import { stripNonNativeFilePartsProcessor } from "@/mastra/processors/strip-non-native-file-parts";
+import { workSegmentTimingProcessor } from "@/mastra/processors/work-segment-timing";
+import { mnemonicRequestContextSchema } from "@/mastra/request-context";
+import { libsqlStore, libsqlVector } from "@/mastra/storage";
+import { docsTool } from "@/mastra/tools/docs-tool";
+import { executeCodeTool } from "@/mastra/tools/execute-code-tool";
+import { getFileTool } from "@/mastra/tools/get-file-tool";
 import { webFetchTool } from "@/mastra/tools/web-fetch-tool";
 import { webSearchTool } from "@/mastra/tools/web-search-tool";
 
-export const conversationAgentId = "conversation-agent";
+export const CONVERSATION_AGENT_ID = "conversation-agent";
 
 export const conversationMemory = new Memory({
   embedder: models.embedding,
   options: {
-    observationalMemory: {
-      model: models.observationalMemory,
-      retrieval: {
-        scope: "thread",
-        vector: true,
-      },
+    observationalMemory: observationalMemoryOptions({
       scope: "thread",
-      temporalMarkers: true,
-    },
+      vector: true,
+    }),
   },
-  storage: postgresStore,
-  vector: pgVector,
+  storage: libsqlStore,
+  vector: libsqlVector,
 });
 
-export const conversationAgentTools = {
-  accessTopic: accessTopicTool,
+const conversationAgentTools = {
+  docs: docsTool,
+  executeCode: executeCodeTool,
+  getFile: getFileTool,
   webFetch: webFetchTool,
   webSearch: webSearchTool,
 } as const;
 
+export type ConversationAgentTools = typeof conversationAgentTools;
+
 export const conversationAgent = new Agent({
-  id: conversationAgentId,
+  id: CONVERSATION_AGENT_ID,
   instructions: `
 ${baseInstructions}
 
@@ -42,25 +46,19 @@ ${sharedSourceInstructions}
 
 Available sources:
 - Conversation recall: past messages in the current conversation only. Prefer this when the answer may already appear in prior chat.
-- Web: current or external information via webSearch (discover pages) or webFetch (read a known URL).
-- Access topic: topic files and topic-scoped conversation history. Use when the user asks for information from a topic, topic files, or prior topic conversations.
-
-## Access topic
-Use accessTopic only when the topic is clear. If the user asks about a topic but no topic can be identified, ask which topic to use.
-
-## Web
-- Use webSearch to discover pages when no specific URL is known.
-- Use webFetch when the user provided a URL or a prior search already identified the page to read.
-- Prefer these when the question needs facts outside this conversation or up-to-date information from the web, or when conversation recall did not fully answer and topic context is not required.
-- Tool descriptions own exact input requirements and result shapes.
+- Referenced files: content the user has pointed at in this conversation.
+- Web: current or external information. Prefer it when the question needs facts from outside this conversation or up-to-date information, or when conversation recall did not fully answer.
 
 ## Conversation history
 Use recall to browse past messages in the current conversation only:
 - mode "messages" — read messages from the current thread.
 - mode "search" with query — find relevant messages in the current thread.
 `,
+  inputProcessors: [stripNonNativeFilePartsProcessor],
+  outputProcessors: [workSegmentTimingProcessor],
   memory: conversationMemory,
-  model: models.conversationAgent,
+  requestContextSchema: mnemonicRequestContextSchema,
+  model: getAgentModel,
   name: "Conversation",
   tools: conversationAgentTools,
 });

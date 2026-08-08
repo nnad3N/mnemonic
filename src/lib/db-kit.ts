@@ -2,7 +2,7 @@ import { Result, TaggedError } from "better-result";
 import type { Result as ResultType } from "better-result";
 
 import { drizzleDb } from "@/db";
-import { Kit } from "@/lib/kit";
+import * as Kit from "@/lib/kit";
 
 type DrizzleDb = typeof drizzleDb;
 type DbTransaction = Parameters<Parameters<DrizzleDb["transaction"]>[0]>[0];

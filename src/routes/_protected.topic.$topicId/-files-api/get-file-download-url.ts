@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 
-import { Kit, toServerFnError } from "@/lib/kit";
+import { toServerFnError } from "@/lib/errors/server-fn-error";
+import * as Kit from "@/lib/kit";
 import { fileAccessMiddleware } from "@/lib/middleware/assert-thread-access";
 import { s3Kit } from "@/lib/s3-kit";
 

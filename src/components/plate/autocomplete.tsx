@@ -5,8 +5,8 @@ import type { PointRef, TElement } from "platejs";
 import { useComposedRef, useEditorRef } from "platejs/react";
 import * as React from "react";
 
+import type { MentionValue } from "@/lib/mention-key";
 import { cn } from "@/lib/utils";
-import type { MentionValue } from "@/routes/_protected.chat.$threadId/-thread-components/composer/plate-plugins/mention-key";
 
 type AutocompleteContextValue = {
   value: string;
@@ -234,7 +234,7 @@ const AutocompleteList = ({
     <AutocompletePrimitive.List
       data-slot="autocomplete-list"
       className={cn(
-        "no-scrollbar max-h-[min(calc(--spacing(72)---spacing(9)),calc(var(--available-height)---spacing(9)))] scroll-py-1 overflow-y-auto overscroll-contain p-1 data-empty:p-0",
+        "no-scrollbar max-h-[min(calc(--spacing(72)-(--spacing(9))),calc(var(--available-height)-(--spacing(9))))] scroll-py-1 overflow-y-auto overscroll-contain p-1 data-empty:p-0",
         className,
       )}
       {...props}

@@ -1,6 +1,7 @@
 import { getMentionOnSelectItem } from "@platejs/mention";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
+import { T } from "gt-tanstack-start";
 import type { TComboboxInputElement, TMentionElement } from "platejs";
 import type { PlateElementProps } from "platejs/react";
 import { PlateElement, useFocused, useSelected } from "platejs/react";
@@ -18,11 +19,13 @@ import {
   AutocompleteItem,
   AutocompleteList,
 } from "@/components/plate/autocomplete";
+import type { MentionValue, ParseMentionKeyResult } from "@/lib/mention-key";
+import { getMentionKey, parseMentionKey } from "@/lib/mention-key";
 import { cn } from "@/lib/utils";
-import { m } from "@/paraglide/messages";
 
+import { useComposer } from "../../-hooks/use-composer";
+import { threadChatQuery } from "../../-hooks/use-thread-chat";
 import { mentionByIdQuery, mentionsQuery } from "../../-thread-api/get-mentions";
-import { threadQuery } from "../../-thread-api/get-thread";
 import type { MentionQueryType } from "../../-thread-api/query-keys";
 import type { ThreadAttachment } from "../../../-chat-store";
 import { useChatStore } from "../../../-chat-store";
@@ -34,8 +37,6 @@ import {
   MentionRemoveIcon,
 } from "./mention";
 import type { MentionVariant } from "./mention";
-import type { MentionValue, ParseMentionKeyResult } from "./plate-plugins/mention-key";
-import { getMentionKey, parseMentionKey } from "./plate-plugins/mention-key";
 
 type MentionStatus = "failed" | "pending" | "ready" | undefined;
 type MentionType = ParseMentionKeyResult["type"];
@@ -49,7 +50,7 @@ const getMentionVariant = (status: MentionStatus): MentionVariant => {
     return "neutral";
   }
 
-  return "teal";
+  return "cyan";
 };
 
 export const ThreadMentionElement = (props: PlateElementProps<TMentionElement>) => {
@@ -137,11 +138,7 @@ const ThreadLocalMentionElement = ({
       return undefined;
     }
 
-    if (attachment.status === "persisted") {
-      return "ready";
-    }
-
-    return attachment.status;
+    return "ready";
   }, [attachment, mentionType]);
 
   return (
@@ -231,7 +228,7 @@ export const ThreadMentionElementStatic = (props: SlateElementProps<TMentionElem
 
   return (
     <MentionRoot
-      variant="teal"
+      variant="cyan"
       render={(renderProps) => <SlateElement {...props} {...renderProps} />}
     >
       <MentionContent>
@@ -252,10 +249,11 @@ export const ThreadMentionInputElement = (props: PlateElementProps<TComboboxInpu
     select: (params) => params.threadId,
   });
   const resourceId = useSuspenseQuery({
-    ...threadQuery(threadId),
+    ...threadChatQuery(threadId),
     select: (data) => data.resourceId,
   }).data;
   const attachments = useChatStore((state) => state.attachments.get(threadId));
+  const { registerPortal } = useComposer();
   const [search, setSearch] = useState("");
   const [debouncedSearch] = useDebounce(search, 100);
   const mentions = useQuery({
@@ -301,9 +299,9 @@ export const ThreadMentionInputElement = (props: PlateElementProps<TComboboxInpu
     <PlateElement {...props} as="span">
       <Autocomplete element={element} items={items} setValue={setSearch} trigger="@" value={search}>
         <AutocompleteInput />
-        <AutocompleteContent side="top">
+        <AutocompleteContent ref={registerPortal} side="top">
           <AutocompleteEmpty>
-            {mentions.isLoading ? m.common_loading() : m.common_no_results()}
+            {mentions.isLoading ? <T>Loading…</T> : <T>No results</T>}
           </AutocompleteEmpty>
           <AutocompleteList>
             {(item) => (

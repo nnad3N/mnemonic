@@ -1,12 +1,18 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { T, useGT, useLocale, useSetLocale } from "gt-tanstack-start";
 import {
   ChevronsUpDownIcon,
+  LanguagesIcon,
+  LaptopIcon,
   LogOutIcon,
   MessageSquareTextIcon,
   MessagesSquareIcon,
+  MoonIcon,
   SearchIcon,
+  SunIcon,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { toast } from "sonner";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -15,6 +21,12 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -26,7 +38,6 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { authClient } from "@/lib/better-auth/auth-client";
-import { m } from "@/paraglide/messages";
 
 import {
   createConversation,
@@ -50,20 +61,21 @@ const getInitials = (value: string): string => {
 };
 
 export const SidebarHeaderSection = () => {
+  const gt = useGT();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const createConversationMutation = useMutation({
     mutationFn: async () => {
       const thread = await createConversation({
-        data: { title: m.nav_new_conversation_default_title() },
+        data: { title: gt("New conversation") },
       });
 
       return thread;
     },
     onError: () => {
-      toast.error(m.nav_new_conversation_error_title(), {
-        description: m.common_please_try_again(),
+      toast.error(gt("Could not create conversation"), {
+        description: gt("Please try again."),
       });
     },
     onSuccess: async (thread) => {
@@ -79,16 +91,16 @@ export const SidebarHeaderSection = () => {
     mutationFn: async () => {
       const thread = await createTopic({
         data: {
-          conversationTitle: m.nav_new_conversation_default_title(),
-          topicTitle: m.nav_new_topic_default_title(),
+          conversationTitle: gt("New conversation"),
+          topicTitle: gt("New topic"),
         },
       });
 
       return thread;
     },
     onError: () => {
-      toast.error(m.nav_new_topic_error_title(), {
-        description: m.common_please_try_again(),
+      toast.error(gt("Could not create topic"), {
+        description: gt("Please try again."),
       });
     },
     onSuccess: async (thread) => {
@@ -108,7 +120,7 @@ export const SidebarHeaderSection = () => {
             {({ isActive }) => (
               <SidebarMenuButton isActive={isActive}>
                 <SearchIcon />
-                {m.common_search()}
+                <T>Search</T>
               </SidebarMenuButton>
             )}
           </Link>
@@ -119,10 +131,10 @@ export const SidebarHeaderSection = () => {
             onClick={() => {
               createConversationMutation.mutate();
             }}
-            tooltip={m.nav_new_conversation()}
+            tooltip={gt("New conversation")}
           >
             <MessageSquareTextIcon />
-            {m.nav_new_conversation()}
+            <T>New conversation</T>
           </SidebarMenuButton>
         </SidebarMenuItem>
         <SidebarMenuItem>
@@ -131,10 +143,10 @@ export const SidebarHeaderSection = () => {
             onClick={() => {
               createTopicMutation.mutate();
             }}
-            tooltip={m.nav_new_topic()}
+            tooltip={gt("New topic")}
           >
             <MessagesSquareIcon />
-            {m.nav_new_topic()}
+            <T>New topic</T>
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
@@ -151,8 +163,11 @@ type SidebarFooterSectionProps = {
 };
 
 export const SidebarFooterSection = ({ user }: SidebarFooterSectionProps) => {
+  const locale = useLocale();
+  const setLocale = useSetLocale();
   const { isMobile } = useSidebar();
   const navigate = useNavigate();
+  const { setTheme, theme } = useTheme();
   const displayName = user.name ?? user.email;
   const initials = getInitials(displayName);
 
@@ -186,6 +201,48 @@ export const SidebarFooterSection = ({ user }: SidebarFooterSectionProps) => {
               sideOffset={4}
             >
               <DropdownMenuGroup>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <SunIcon />
+                    <T>Theme</T>
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuRadioGroup
+                      value={theme ?? "system"}
+                      onValueChange={(value) => {
+                        setTheme(value);
+                      }}
+                    >
+                      <DropdownMenuRadioItem value="light">
+                        <SunIcon />
+                        <T>Light</T>
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="dark">
+                        <MoonIcon />
+                        <T>Dark</T>
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="system">
+                        <LaptopIcon />
+                        <T>System</T>
+                      </DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <LanguagesIcon />
+                    <T>Language</T>
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuRadioGroup onValueChange={setLocale} value={locale}>
+                      <DropdownMenuRadioItem value="en">English</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="pl">Polski</DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
                 <DropdownMenuItem
                   onClick={async () => {
                     await authClient.signOut();
@@ -193,7 +250,7 @@ export const SidebarFooterSection = ({ user }: SidebarFooterSectionProps) => {
                   }}
                 >
                   <LogOutIcon />
-                  {m.common_sign_out()}
+                  <T>Sign out</T>
                 </DropdownMenuItem>
               </DropdownMenuGroup>
             </DropdownMenuContent>

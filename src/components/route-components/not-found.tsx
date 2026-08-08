@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { T } from "gt-tanstack-start";
 import { CircleQuestionMark } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,6 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { m } from "@/paraglide/messages";
 
 export const NotFoundComponent = () => {
   return (
@@ -19,11 +19,19 @@ export const NotFoundComponent = () => {
         <EmptyMedia variant="icon">
           <CircleQuestionMark className="text-destructive" />
         </EmptyMedia>
-        <EmptyTitle className="text-destructive">{m.not_found_title()}</EmptyTitle>
-        <EmptyDescription>{m.not_found_description()}</EmptyDescription>
+        <EmptyTitle className="text-destructive">
+          <T>Page not found</T>
+        </EmptyTitle>
+        <EmptyDescription>
+          <T>
+            This link may be broken, or the page was moved. Check the URL or head back to the start.
+          </T>
+        </EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
-        <Button render={<Link to="/" />}>{m.not_found_back_home()}</Button>
+        <Button render={<Link to="/" />}>
+          <T>Back to home</T>
+        </Button>
       </EmptyContent>
     </Empty>
   );

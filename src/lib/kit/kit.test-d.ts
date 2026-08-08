@@ -2,7 +2,9 @@ import { Result, TaggedError } from "better-result";
 import type { Result as ResultType, TaggedErrorInstance } from "better-result";
 import { assertType, expectTypeOf, test } from "vitest";
 
-import { Kit, ServerFnError } from ".";
+import { ServerFnError } from "@/lib/errors/server-fn-error";
+
+import * as Kit from ".";
 import type { KitModule, Kits } from "./utils";
 
 class TypeTestError extends TaggedError("TypeTestError")<{
@@ -85,6 +87,57 @@ test("Kit.run infers async Result values and errors", () => {
 
   // @ts-expect-error mapped errors must be Error instances
   void run.throws(() => "failed");
+});
+
+test("Kit.literals narrows an unknown to the literal union", () => {
+  const status = Kit.literals.from()(["pending", "done"]);
+
+  expectTypeOf(status.values).toEqualTypeOf<readonly ["pending", "done"]>();
+
+  const value: unknown = "done";
+
+  if (status.is(value)) {
+    expectTypeOf(value).toEqualTypeOf<"pending" | "done">();
+  }
+});
+
+test("Kit.literals.from constrains entries to a wide base type", () => {
+  const mimeType = Kit.literals.from<`${string}/${string}`>()(["image/png"]);
+
+  expectTypeOf(mimeType.values).toEqualTypeOf<readonly ["image/png"]>();
+
+  // @ts-expect-error entries must match the base type
+  Kit.literals.from<`${string}/${string}`>()(["imagepng"]);
+});
+
+test("Kit.literals.from requires a finite union to be covered exactly", () => {
+  type Level = "standard" | "balanced" | "max";
+
+  const level = Kit.literals.from<Level>()(["standard", "balanced", "max"]);
+
+  expectTypeOf(level.values).toEqualTypeOf<readonly ["standard", "balanced", "max"]>();
+
+  // @ts-expect-error every member of the union must be present
+  Kit.literals.from<Level>()(["standard", "balanced"]);
+
+  // @ts-expect-error values outside the union are rejected
+  Kit.literals.from<Level>()(["standard", "balanced", "max", "turbo"]);
+});
+
+test("Kit.literals.from covers finite unions of any literal type", () => {
+  Kit.literals.from<80 | 443>()([80, 443]);
+
+  // @ts-expect-error 443 is missing
+  Kit.literals.from<80 | 443>()([80]);
+
+  Kit.literals.from<"a" | 1 | true>()(["a", 1, true]);
+
+  // @ts-expect-error true is missing
+  Kit.literals.from<"a" | 1 | true>()(["a", 1]);
+
+  // wide types stay a plain constraint
+  Kit.literals.from<number>()([80]);
+  Kit.literals.from<symbol>()([Symbol.iterator]);
 });
 
 test("Kit.promiseAll preserves tuple values and unions errors", () => {

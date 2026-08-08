@@ -5,8 +5,10 @@ import { eq } from "drizzle-orm";
 import { file } from "@/db/schema";
 import { dbKit } from "@/lib/db-kit";
 import type { DbKit } from "@/lib/db-kit";
-import { Kit, toServerFnError } from "@/lib/kit";
-import type { Kits, ServerFnError } from "@/lib/kit";
+import { toServerFnError } from "@/lib/errors/server-fn-error";
+import type { ServerFnError } from "@/lib/errors/server-fn-error";
+import * as Kit from "@/lib/kit";
+import type { Kits } from "@/lib/kit";
 import { fileAccessMiddleware } from "@/lib/middleware/assert-thread-access";
 import { s3Kit } from "@/lib/s3-kit";
 import type { S3Kit } from "@/lib/s3-kit";
@@ -21,7 +23,7 @@ type DeleteFileInput = {
   s3Key: string;
 };
 
-const deleteFileFn = Kit.gen(async function* (ctx: DeleteFileCtx, input: DeleteFileInput) {
+export const deleteFileFn = Kit.gen(async function* (ctx: DeleteFileCtx, input: DeleteFileInput) {
   yield* await Kit.promiseAll([
     ctx.s3.deleteObject(input.s3Key),
     ctx.vector.deleteVectors({

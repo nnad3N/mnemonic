@@ -6,8 +6,9 @@ import * as v from "valibot";
 import { file } from "@/db/schema";
 import { dbKit } from "@/lib/db-kit";
 import type { DbKit } from "@/lib/db-kit";
+import { ServerFnError, toServerFnError } from "@/lib/errors/server-fn-error";
 import { validateUploadFile } from "@/lib/file-validation";
-import { Kit, ServerFnError, toServerFnError } from "@/lib/kit";
+import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
 import {
   fileAccessMiddleware,
@@ -33,7 +34,7 @@ type GetPresignedUrlInput = {
   userId: SafeId<"user">;
 };
 
-const getPresignedUrlFn = Kit.gen(async function* (
+export const getPresignedUrlFn = Kit.gen(async function* (
   ctx: UploadFileCtx,
   input: GetPresignedUrlInput,
 ) {

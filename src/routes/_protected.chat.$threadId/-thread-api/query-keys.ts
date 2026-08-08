@@ -2,10 +2,11 @@ export type MentionQueryType = "file" | "thread" | "topic";
 
 export const threadKeys = {
   all: ["threads"] as const,
-  byId: (threadId: string) => [...threadKeys.all, threadId] as const,
+  chat: (threadId: string) => [...threadKeys.all, threadId, "chat"] as const,
   mentions: (topicId: string) => [...threadKeys.all, topicId, "mentions"] as const,
   mention: (type: MentionQueryType, id: string) =>
     [...threadKeys.all, "mention", type, id] as const,
+  settings: (threadId: string) => [...threadKeys.all, threadId, "settings"] as const,
   sidebar: () => [...threadKeys.all, "sidebar"] as const,
   sidebarConversations: () => [...threadKeys.sidebar(), "conversations"] as const,
   sidebarTopics: () => [...threadKeys.sidebar(), "topics"] as const,
@@ -16,6 +17,4 @@ export const threadKeys = {
 export const threadMutationKeys = {
   all: ["thread-mutation"] as const,
   uploadFile: (threadId: string) => [...threadMutationKeys.all, "upload-file", threadId] as const,
-  addAttachment: (threadId: string) =>
-    [...threadMutationKeys.all, "add-attachment", threadId] as const,
 };

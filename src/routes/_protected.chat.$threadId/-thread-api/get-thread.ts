@@ -1,19 +1,19 @@
 import { toAISdkMessages } from "@mastra/ai-sdk/ui";
-import { queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import type { TsrSerializable } from "@tanstack/router-core";
 import { matchError, Result } from "better-result";
 
 import { dbKit } from "@/lib/db-kit";
 import type { DbKit } from "@/lib/db-kit";
-import { Kit, toServerFnError } from "@/lib/kit";
-import type { Kits, ServerFnError } from "@/lib/kit";
+import { toServerFnError } from "@/lib/errors/server-fn-error";
+import type { ServerFnError } from "@/lib/errors/server-fn-error";
+import * as Kit from "@/lib/kit";
+import type { Kits } from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit";
 import type { MemoryKit } from "@/lib/memory-kit";
 import { threadAccessMiddleware } from "@/lib/middleware/assert-thread-access";
 import type { SafeId } from "@/lib/safe-id";
 import { toSafeId } from "@/lib/safe-id";
-import { threadKeys } from "@/routes/_protected.chat.$threadId/-thread-api/query-keys";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 
 type GetThreadCtx = Kits<[DbKit, MemoryKit]>;
@@ -22,6 +22,27 @@ type GetThreadInput = {
   resourceId: string;
   threadId: string;
   userId: SafeId<"user">;
+};
+
+// Collapse Mastra's split assistants so the UI always sees user → assistant → user.
+export const mergeConsecutiveAssistantMessages = <TMessage extends ThreadUIMessage>(
+  messages: TMessage[],
+): TMessage[] => {
+  const merged: TMessage[] = [];
+
+  for (const message of messages) {
+    const previous = merged.at(-1);
+    if (message.role === "assistant" && previous?.role === "assistant") {
+      merged[merged.length - 1] = {
+        ...message,
+        parts: previous.parts.concat(message.parts),
+      };
+      continue;
+    }
+    merged.push(message);
+  }
+
+  return merged;
 };
 
 const getThreadFn = Kit.gen(async function* (ctx: GetThreadCtx, input: GetThreadInput) {
@@ -43,11 +64,13 @@ const getThreadFn = Kit.gen(async function* (ctx: GetThreadCtx, input: GetThread
     ),
   ]);
 
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+  const uiMessages = toAISdkMessages(messages, {
+    version: "v6",
+  }) as (ThreadUIMessage & TsrSerializable)[];
+
   return Result.ok({
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-    messages: toAISdkMessages(messages, {
-      version: "v6",
-    }) as (ThreadUIMessage & TsrSerializable)[],
+    messages: mergeConsecutiveAssistantMessages(uiMessages),
     resourceId: input.resourceId,
     topicId: topic?.id,
   });
@@ -71,20 +94,3 @@ export const getThread = createServerFn({ method: "GET" })
       }),
     ),
   );
-
-export const threadQuery = (threadId: string) =>
-  queryOptions({
-    queryFn: async () => {
-      const data = await getThread({
-        data: { threadId },
-      });
-
-      return {
-        resourceId: data.resourceId,
-        messages: data.messages as ThreadUIMessage[],
-        topicId: data.topicId,
-      };
-    },
-    queryKey: threadKeys.byId(threadId),
-    staleTime: Infinity,
-  });

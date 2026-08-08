@@ -3,7 +3,8 @@ import { Result } from "better-result";
 import * as v from "valibot";
 
 import { dbKit } from "@/lib/db-kit";
-import { Kit, toServerFnError } from "@/lib/kit";
+import { toServerFnError } from "@/lib/errors/server-fn-error";
+import * as Kit from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit";
 import { authMiddleware } from "@/lib/middleware/auth-middleware";
 import { toSafeId } from "@/lib/safe-id";

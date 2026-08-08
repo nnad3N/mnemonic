@@ -12,7 +12,7 @@ export type ThreadInputLocation = "main" | "edit";
 
 export type ThreadAttachment =
   | {
-      status: "ready" | "pending" | "failed";
+      status: "draft";
       location: ThreadInputLocation;
       filename: string;
       sha256: string;
@@ -31,9 +31,10 @@ type ComposerState = {
 
 type EditingState = {
   messageId: string;
-  messageIndex: number;
   markdown: string;
 };
+
+export type ThreadIndicator = "error" | "pending" | "ready";
 
 type State = {
   composerState: Map<ThreadId, ComposerState>;
@@ -41,21 +42,21 @@ type State = {
   attachments: Map<ThreadId, ThreadAttachment[]>;
   pollingTopicIds: Set<TopicId>;
   collapsedTopicIds: TopicId[];
+  threadIndicators: Map<ThreadId, ThreadIndicator>;
 };
 
 type Actions = {
   setEditingState: (data: EditingState | null) => void;
   setComposerValue: (threadId: ThreadId, value: Value) => void;
-  upsertAttachment: (
-    threadId: ThreadId,
-    attachment: Exclude<ThreadAttachment, { status: "persisted" }>,
-  ) => void;
+  upsertAttachment: (threadId: ThreadId, attachment: ThreadAttachment) => void;
   removeAttachment: (threadId: ThreadId, sha256: string) => void;
   hydrateAttachments: (threadId: ThreadId, messages: ThreadUIMessage[]) => void;
   removeComposerState: (threadId: ThreadId) => void;
   addPollingTopicId: (topicId: TopicId) => void;
   removePollingTopicId: (topicId: TopicId) => void;
   setTopicCollapsed: (topicId: TopicId, isCollapsed: boolean) => void;
+  setThreadIndicator: (threadId: ThreadId, indicator: ThreadIndicator) => void;
+  clearThreadIndicator: (threadId: ThreadId) => void;
 };
 
 export const useChatStore = create<State & Actions>()(
@@ -66,6 +67,7 @@ export const useChatStore = create<State & Actions>()(
       attachments: new Map(),
       pollingTopicIds: new Set(),
       collapsedTopicIds: [],
+      threadIndicators: new Map(),
       setEditingState: (data) => {
         set((state) => {
           state.editingState = data;
@@ -174,6 +176,20 @@ export const useChatStore = create<State & Actions>()(
           if (!isCollapsed && topicIndex !== -1) {
             state.collapsedTopicIds.splice(topicIndex, 1);
           }
+        });
+      },
+      setThreadIndicator: (threadId, indicator) => {
+        set((state) => {
+          state.threadIndicators.set(threadId, indicator);
+        });
+      },
+      clearThreadIndicator: (threadId) => {
+        set((state) => {
+          // A running stream keeps its indicator: viewing the thread only
+          // acknowledges a settled result.
+          if (state.threadIndicators.get(threadId) === "pending") return;
+
+          state.threadIndicators.delete(threadId);
         });
       },
     })),

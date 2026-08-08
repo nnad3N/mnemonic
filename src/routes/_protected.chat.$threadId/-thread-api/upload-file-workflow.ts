@@ -10,8 +10,8 @@ import * as v from "valibot";
 import { file } from "@/db/schema";
 import { dbKit } from "@/lib/db-kit";
 import type { DbKit } from "@/lib/db-kit";
-import { isImageMimeType } from "@/lib/file-validation";
-import { Kit } from "@/lib/kit";
+import { ImageMimeType } from "@/lib/file-validation";
+import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
 import { s3Kit } from "@/lib/s3-kit";
 import type { S3Kit } from "@/lib/s3-kit";
@@ -36,7 +36,7 @@ const validatedFileSchema = v.object({
 
 type FileProcessingErrorReason = "file-not-found" | "invalid-status" | "size-mismatch";
 
-class FileProcessingError extends TaggedError("FileProcessingError")<{
+export class FileProcessingError extends TaggedError("FileProcessingError")<{
   actualSize?: number;
   expectedSize?: number;
   message: string;
@@ -45,7 +45,7 @@ class FileProcessingError extends TaggedError("FileProcessingError")<{
 
 type ProcessFileCtx = Kits<[DbKit, S3Kit, VectorKit]>;
 
-const validateFileFn = Kit.gen(async function* (
+export const validateFileFn = Kit.gen(async function* (
   ctx: ProcessFileCtx,
   input: v.InferOutput<typeof workflowInputSchema>,
 ) {
@@ -129,11 +129,11 @@ const workflowOutputSchema = v.object({
   fileId: v.pipe(v.string(), v.nanoid()),
 });
 
-const processForRagFn = Kit.gen(async function* (
+export const processForRagFn = Kit.gen(async function* (
   ctx: ProcessFileCtx,
   input: v.InferOutput<typeof validatedFileSchema>,
 ) {
-  if (isImageMimeType(input.mimeType)) {
+  if (ImageMimeType.is(input.mimeType)) {
     yield* await ctx.db.run((db) =>
       db.update(file).set({ status: "ready" }).where(eq(file.id, input.fileId)),
     );
@@ -170,7 +170,6 @@ const processForRagFn = Kit.gen(async function* (
 
   yield* await ctx.vector.createIndex({
     dimension: FILE_EMBEDDING_DIMENSION,
-    metadataIndexes: ["topicId", "fileId"],
   });
 
   yield* await ctx.vector.upsert({

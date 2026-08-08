@@ -1,22 +1,26 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { convertFileListToFileUIParts } from "ai";
-import { ElementApi, TextApi } from "platejs";
+import { produce } from "immer";
 import type { Descendant } from "platejs";
+import { ElementApi, TextApi } from "platejs";
 import type { PlateEditor } from "platejs/react";
 import { useEditorRef, useEditorSelector } from "platejs/react";
+import { useStickToBottomContext } from "use-stick-to-bottom";
 
-import { useCreateThreadTitle } from "../-thread-api/create-thread-title";
-import { threadQuery } from "../-thread-api/get-thread";
-import { useThreadChat } from "../-thread-chat-provider";
+import { closeWorkSegments } from "@/lib/ai-sdk/close-work-segments";
+
+import { moveSidebarThreadToTop } from "../-thread-api/sidebar-cache";
 import { getThreadEditorId, plateToMarkdown } from "../-thread-components/composer/plate";
-import type { ThreadMetadataAttachment } from "../-thread-types";
+import type { ThreadMetadataAttachment, ThreadUIMessage } from "../-thread-types";
 import type { ThreadInputLocation } from "../../-chat-store";
 import { useChatStore } from "../../-chat-store";
+import { useCreateThreadTitle } from "./use-create-thread-title";
+import { threadChatQuery, useThreadChat } from "./use-thread-chat";
 
 const Route = getRouteApi("/_protected/chat/$threadId");
 
-const hasComposerContent = (editor: PlateEditor, node: Descendant): boolean => {
+export const hasComposerContent = (editor: PlateEditor, node: Descendant): boolean => {
   // editor.api.isEmpty() treats whitespace text as content. We need whitespace
   // to stay empty, while void nodes still count because they render visible
   // chips with empty text children.
@@ -35,51 +39,8 @@ const hasComposerContent = (editor: PlateEditor, node: Descendant): boolean => {
   return node.children.some((child) => hasComposerContent(editor, child));
 };
 
-const getThreadAttachments = async (threadId: string, location: ThreadInputLocation) => {
-  const attachments = useChatStore.getState().attachments.get(threadId);
-
-  if (!attachments) {
-    return {
-      files: undefined,
-      metadataAttachments: undefined,
-    };
-  }
-
-  const files: File[] = [];
-  const metadataAttachments: ThreadMetadataAttachment[] = [];
-
-  for (const attachment of attachments) {
-    if (attachment.location === location && attachment.status === "ready") {
-      files.push(attachment.file);
-      metadataAttachments.push({
-        filename: attachment.filename,
-        mediaType: attachment.file.type,
-        sha256: attachment.sha256,
-      });
-    }
-  }
-
-  const dataTransfer = new DataTransfer();
-
-  for (const file of files) {
-    dataTransfer.items.add(file);
-  }
-
-  const fileParts = await convertFileListToFileUIParts(dataTransfer.files);
-
-  return {
-    metadataAttachments,
-    files: fileParts,
-  };
-};
-
-export const useComposerActions = (location: ThreadInputLocation) => {
-  const threadId = Route.useParams({
-    select: (params) => params.threadId,
-  });
-  const editorId = getThreadEditorId(threadId, location);
-  const editor = useEditorRef(editorId);
-  const isEditorEmpty = useEditorSelector(
+export const useIsComposerEmpty = (editorId?: string): boolean =>
+  useEditorSelector(
     (plate) => {
       if (plate === undefined || plate.meta.isFallback) {
         return true;
@@ -91,30 +52,77 @@ export const useComposerActions = (location: ThreadInputLocation) => {
     { id: editorId },
   );
 
+export const getComposerAttachments = async (
+  threadId: string,
+  messages: ThreadUIMessage[],
+  location: ThreadInputLocation,
+) => {
+  const { attachments: storedAttachments, editingState } = useChatStore.getState();
+  const editedMessage = editingState
+    ? messages.find((message) => message.id === editingState.messageId)
+    : undefined;
+
+  const files = editedMessage?.parts.filter((part) => part.type === "file") ?? [];
+  const attachments: ThreadMetadataAttachment[] = [];
+
+  for (const attachment of editedMessage?.metadata?.attachments ?? []) {
+    attachments.push(attachment);
+  }
+
+  const draftFiles: File[] = [];
+
+  for (const attachment of storedAttachments.get(threadId) ?? []) {
+    if (attachment.location === location && attachment.status === "draft") {
+      draftFiles.push(attachment.file);
+      attachments.push({
+        filename: attachment.filename,
+        mediaType: attachment.file.type,
+        sha256: attachment.sha256,
+      });
+    }
+  }
+
+  if (draftFiles.length > 0) {
+    const dataTransfer = new DataTransfer();
+
+    for (const file of draftFiles) {
+      dataTransfer.items.add(file);
+    }
+
+    for (const filePart of await convertFileListToFileUIParts(dataTransfer.files)) {
+      files.push(filePart);
+    }
+  }
+
+  return {
+    files,
+    attachments: attachments.length > 0 ? attachments : undefined,
+  };
+};
+
+export const useComposerActions = (location: ThreadInputLocation) => {
+  const threadId = Route.useParams({
+    select: (params) => params.threadId,
+  });
+  const editorId = getThreadEditorId(threadId, location);
+  const editor = useEditorRef(editorId);
+  const isEditorEmpty = useIsComposerEmpty(editorId);
+
   const chat = useThreadChat();
+  const queryClient = useQueryClient();
+  const { scrollToBottom } = useStickToBottomContext();
   const { data: topicId } = useSuspenseQuery({
-    ...threadQuery(threadId),
+    ...threadChatQuery(threadId),
     select: (data) => data.topicId,
   });
   const createThreadTitleMutation = useCreateThreadTitle();
   const editingState = useChatStore((state) => state.editingState);
   const setEditingState = useChatStore((state) => state.setEditingState);
   const removeAttachment = useChatStore((state) => state.removeAttachment);
-  const hasBlockingAttachments = useChatStore(
-    (state) =>
-      state.attachments
-        .get(threadId)
-        ?.some(
-          (attachment) =>
-            (attachment.status === "pending" || attachment.status === "failed") &&
-            attachment.location === location,
-        ) ?? false,
-  );
 
   const canSend =
     !editor.meta.isFallback &&
     !isEditorEmpty &&
-    !hasBlockingAttachments &&
     chat.status !== "submitted" &&
     chat.status !== "streaming";
 
@@ -122,17 +130,27 @@ export const useComposerActions = (location: ThreadInputLocation) => {
     if (!canSend) return;
 
     const text = plateToMarkdown(editor).trim();
+    const { files, attachments } = await getComposerAttachments(threadId, chat.messages, location);
 
     if (location === "main") {
       useChatStore.getState().removeComposerState(threadId);
     }
     if (location === "edit" && editingState) {
-      useChatStore
-        .getState()
-        .hydrateAttachments(threadId, chat.messages.slice(0, editingState.messageIndex));
+      const messageIndex = chat.messages.findIndex(
+        (message) => message.id === editingState.messageId,
+      );
+      useChatStore.getState().hydrateAttachments(threadId, chat.messages.slice(0, messageIndex));
     }
     if (location === "edit") {
       setEditingState(null);
+    }
+
+    for (const attachment of attachments ?? []) {
+      useChatStore.getState().upsertAttachment(threadId, {
+        status: "persisted",
+        filename: attachment.filename,
+        sha256: attachment.sha256,
+      });
     }
 
     editor.tf.setValue();
@@ -146,13 +164,15 @@ export const useComposerActions = (location: ThreadInputLocation) => {
       });
     }
 
-    const { files, metadataAttachments } = await getThreadAttachments(threadId, location);
+    void scrollToBottom({ animation: "smooth", ignoreEscapes: true });
+
+    moveSidebarThreadToTop(queryClient, { threadId, topicId });
 
     await chat.sendMessage({
       text,
       files,
       metadata: {
-        attachments: metadataAttachments,
+        attachments,
       },
       messageId: location === "edit" ? editingState?.messageId : undefined,
     });
@@ -171,15 +191,40 @@ export const useComposerActions = (location: ThreadInputLocation) => {
   };
 
   const stopStream = async () => {
-    if (chat.status !== "streaming") return;
-
     await chat.stop();
+    chat.setMessages((messages) =>
+      produce(messages, (draft) => {
+        const last = draft.findLast((message) => message.role === "assistant");
+
+        if (!last) {
+          return;
+        }
+
+        closeWorkSegments(last.parts, Temporal.Now.instant());
+      }),
+    );
+
+    const lastMessage = chat.messages.at(-1);
+
+    if (
+      lastMessage?.role === "assistant" &&
+      lastMessage.parts.some((part) => part.type === "text")
+    ) {
+      return;
+    }
+
+    const message = chat.messages.find((message) => message.role === "user");
+    if (!message) return;
+
+    setEditingState({
+      messageId: message.id,
+      markdown: message.parts.find((part) => part.type === "text")?.text ?? "",
+    });
   };
 
   return {
     canSend,
     cancelEditing,
-    isEditorEmpty,
     sendMessage,
     stopStream,
   };

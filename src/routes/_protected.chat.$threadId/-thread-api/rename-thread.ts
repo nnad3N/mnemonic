@@ -5,7 +5,8 @@ import * as v from "valibot";
 
 import { topic } from "@/db/schema";
 import { dbKit } from "@/lib/db-kit";
-import { Kit, toServerFnError } from "@/lib/kit";
+import { toServerFnError } from "@/lib/errors/server-fn-error";
+import * as Kit from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit";
 import {
   threadAccessMiddleware,

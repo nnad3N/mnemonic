@@ -1,10 +1,10 @@
 import { useRender } from "@base-ui/react/use-render";
+import { useGT } from "gt-tanstack-start";
 import { ChevronsDownUpIcon } from "lucide-react";
 import type { ComponentProps, ReactElement } from "react";
 
 import { Button } from "@/components/ui/button";
 import type { SidebarMenuButton, SidebarMenuSubButton } from "@/components/ui/sidebar";
-import { m } from "@/paraglide/messages";
 
 type SidebarMenuButtonType = typeof SidebarMenuButton | typeof SidebarMenuSubButton;
 
@@ -25,13 +25,14 @@ export const SidebarMore = ({
   onMore,
   showCollapse,
 }: SidebarMoreProps) => {
+  const gt = useGT();
   const button = useRender({
     render,
     props: {
       className: "text-muted-foreground hover:text-muted-foreground",
       disabled,
       onClick: onMore,
-      children: m.common_more(),
+      children: gt("More"),
     },
   });
 
@@ -40,11 +41,10 @@ export const SidebarMore = ({
       {button}
       {showCollapse && (
         <Button
-          aria-label={m.common_collapse()}
           className="text-sidebar-foreground opacity-0 group-hover/more:opacity-100"
           onClick={onCollapse}
           size="icon-sm"
-          title={m.common_collapse()}
+
           variant="ghost"
         >
           <ChevronsDownUpIcon />

@@ -1,5 +1,7 @@
-import { Result, TaggedError } from "better-result";
+import { Result } from "better-result";
 import type { Err, Result as ResultType } from "better-result";
+
+import { ServerFnError } from "@/lib/errors/server-fn-error";
 
 import type {
   AnyKits,
@@ -12,36 +14,10 @@ import type {
 
 export type { Kits } from "./utils";
 
-export class ServerFnError extends TaggedError("ServerFnError")<{
-  message: string;
-  status: "not-found" | "unauthorized" | "server-error" | "bad-request";
-  cause?: unknown;
-}>() {}
+export * as literals from "./literals";
+export type { LiteralMember } from "./literals";
 
-export const toServerFnError = {
-  notFound: (message = "Not found") =>
-    new ServerFnError({
-      message,
-      status: "not-found",
-    }),
-  unauthorized: (message = "Unauthorized") =>
-    new ServerFnError({
-      message,
-      status: "unauthorized",
-    }),
-  serverError: (message = "Something went wrong") =>
-    new ServerFnError({
-      message,
-      status: "server-error",
-    }),
-  badRequest: (message = "Bad request") =>
-    new ServerFnError({
-      message,
-      status: "bad-request",
-    }),
-};
-
-const defineKit = <const TName extends string, TValue>(
+export const define = <const TName extends string, TValue>(
   name: TName,
   value: TValue,
 ): KitModule<TName, TValue> => {
@@ -49,7 +25,7 @@ const defineKit = <const TName extends string, TValue>(
   return [name, value] as unknown as KitModule<TName, TValue>;
 };
 
-const createKitContext = <TKits extends readonly KitModule[]>(
+export const createContext = <TKits extends readonly KitModule[]>(
   ...kits: TKits & UniqueKitNames<TKits>
 ): Kits<TKits> => {
   const context: Record<string, unknown> = {};
@@ -62,9 +38,9 @@ const createKitContext = <TKits extends readonly KitModule[]>(
   return context as Kits<TKits>;
 };
 
-const getKit = <TName extends string, TValue>(kit: KitModule<TName, TValue>): TValue => kit[1];
+export const get = <TName extends string, TValue>(kit: KitModule<TName, TValue>): TValue => kit[1];
 
-const kitGen =
+export const gen =
   <
     TKits extends AnyKits,
     TInput,
@@ -103,6 +79,10 @@ const createKitRunResult = <TValue, TError extends Error>(
       return result.value;
     }
 
+    if (!ServerFnError.is(result.error)) {
+      console.error(result.error);
+    }
+
     if (!mapError) {
       throw result.error;
     }
@@ -118,7 +98,7 @@ const createKitRunResult = <TValue, TError extends Error>(
   };
 };
 
-const kitRun = <TValue, TError extends Error>(
+export const run = <TValue, TError extends Error>(
   operation: () => Promise<ResultType<TValue, TError>>,
 ): KitRunResult<TValue, TError> => createKitRunResult(Promise.resolve().then(operation));
 
@@ -132,7 +112,7 @@ type PromiseAllValues<TPromises extends readonly Promise<ResultType<unknown, Err
   -readonly [TIndex in keyof TPromises]: InferPromiseResultValue<TPromises[TIndex]>;
 };
 
-const kitPromiseAll = async <
+export const promiseAll = async <
   const TPromises extends readonly Promise<ResultType<unknown, Error>>[],
 >(
   promises: TPromises,
@@ -153,13 +133,4 @@ const kitPromiseAll = async <
     PromiseAllValues<TPromises>,
     InferPromiseResultError<TPromises[number]>
   >;
-};
-
-export const Kit = {
-  define: defineKit,
-  get: getKit,
-  createContext: createKitContext,
-  gen: kitGen,
-  promiseAll: kitPromiseAll,
-  run: kitRun,
 };

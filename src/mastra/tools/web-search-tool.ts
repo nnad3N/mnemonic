@@ -4,22 +4,20 @@ import { Result } from "better-result";
 import type { Document, SearchResultWeb } from "firecrawl";
 import * as v from "valibot";
 
+import { ToolError } from "@/lib/errors/tool-error";
 import { firecrawl } from "@/mastra/tools/firecrawl-client";
+import { toToolInputSchema } from "@/mastra/tools/tool-input-schema";
 
 const DEFAULT_SEARCH_LIMIT = 10;
 
 const inputSchema = v.object({
-  query: v.pipe(
-    v.string(),
-    v.nonEmpty(),
-    v.description("Concrete search string for open-web discovery."),
-  ),
+  query: v.pipe(v.string(), v.nonEmpty()),
   limit: v.optional(
     v.pipe(
       v.number(),
       v.minValue(1),
       v.maxValue(25),
-      v.description(`Maximum number of results to return. Defaults to ${DEFAULT_SEARCH_LIMIT}.`),
+      v.description(`Defaults to ${DEFAULT_SEARCH_LIMIT}.`),
     ),
   ),
 });
@@ -31,26 +29,17 @@ const searchResultSchema = v.object({
   markdown: v.optional(v.string()),
 });
 
-const successOutputSchema = v.object({
-  type: v.literal("success"),
+const outputSchema = v.object({
   query: v.pipe(v.string(), v.nonEmpty()),
   results: v.array(searchResultSchema),
 });
 
-const errorOutputSchema = v.object({
-  type: v.literal("error"),
-  message: v.string(),
-});
-
-const outputSchema = v.variant("type", [successOutputSchema, errorOutputSchema]);
-
-type WebSearchSuccess = v.InferOutput<typeof successOutputSchema>;
-type WebSearchError = v.InferOutput<typeof errorOutputSchema>;
+type WebSearchOutput = v.InferOutput<typeof outputSchema>;
 type WebSearchResult = v.InferOutput<typeof searchResultSchema>;
 
 const isDocumentResult = (item: SearchResultWeb | Document): item is Document => "html" in item;
 
-const toSearchResult = (item: SearchResultWeb | Document): WebSearchResult | undefined => {
+export const toSearchResult = (item: SearchResultWeb | Document): WebSearchResult | undefined => {
   if (isDocumentResult(item)) {
     const url = item.metadata?.sourceURL ?? item.metadata?.url;
     if (!url) return;
@@ -74,14 +63,10 @@ const toSearchResult = (item: SearchResultWeb | Document): WebSearchResult | und
 
 export const webSearchTool = createTool({
   id: "web-search",
-  inputSchema: toStandardJsonSchema(inputSchema),
+  inputSchema: toToolInputSchema(inputSchema),
   outputSchema: toStandardJsonSchema(outputSchema),
-  description: [
-    "Search the live web and return ranked pages with scraped markdown content when available.",
-    "Use for open-ended research, current events, documentation discovery, or when the user asks to search the web and no specific URL is known yet.",
-    "Do not use when the user already provided a concrete URL to read; use webFetch for that.",
-    "Returns title, url, description, and markdown per result. Results may be partial or empty if pages fail to scrape; try a tighter query or webFetch on a promising URL.",
-  ].join(" "),
+  description:
+    "Searches the live web; results include scraped markdown of the page when available.",
   execute: async ({ query, limit = DEFAULT_SEARCH_LIMIT }) => {
     const searchResult = await Result.tryPromise(async () =>
       firecrawl.search(query, {
@@ -94,10 +79,10 @@ export const webSearchTool = createTool({
     );
 
     if (Result.isError(searchResult)) {
-      return {
-        type: "error",
-        message: "Web search failed. Try a different query or fetch a specific URL with webFetch.",
-      } satisfies WebSearchError;
+      throw new ToolError({
+        message: "Web search failed.",
+        cause: searchResult.error,
+      });
     }
 
     const results =
@@ -106,9 +91,8 @@ export const webSearchTool = createTool({
         .filter((item) => item !== undefined) ?? [];
 
     return {
-      type: "success",
       query,
       results,
-    } satisfies WebSearchSuccess;
+    } satisfies WebSearchOutput;
   },
 });
