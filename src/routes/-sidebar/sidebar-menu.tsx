@@ -10,6 +10,7 @@ import {
   MessagesSquareIcon,
   MoonIcon,
   SearchIcon,
+  SettingsIcon,
   SunIcon,
 } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -201,6 +202,10 @@ export const SidebarFooterSection = ({ user }: SidebarFooterSectionProps) => {
               sideOffset={4}
             >
               <DropdownMenuGroup>
+                <DropdownMenuItem render={<Link to="/settings" />}>
+                  <SettingsIcon />
+                  <T>Settings</T>
+                </DropdownMenuItem>
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
                     <SunIcon />
