@@ -9,4 +9,4 @@ import { TaggedError } from "better-result";
 export class ToolError extends TaggedError("ToolError")<{
   message: string;
   cause?: unknown;
-}>() {}
+}> {}

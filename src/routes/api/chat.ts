@@ -55,12 +55,12 @@ type ChatInput = {
 
 class ChatNotFoundError extends TaggedError("ChatNotFoundError")<{
   message: string;
-}>() {}
+}> {}
 
 class ChatStreamError extends TaggedError("ChatStreamError")<{
   cause: unknown;
   message: string;
-}>() {}
+}> {}
 
 type PersistSealedAssistantOnEndInput = {
   agentId: MnemonicAgentId;

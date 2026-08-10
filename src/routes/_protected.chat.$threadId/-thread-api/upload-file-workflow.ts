@@ -41,7 +41,7 @@ export class FileProcessingError extends TaggedError("FileProcessingError")<{
   expectedSize?: number;
   message: string;
   reason: FileProcessingErrorReason;
-}>() {}
+}> {}
 
 type ProcessFileCtx = Kits<[DbKit, S3Kit, VectorKit]>;
 

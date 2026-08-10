@@ -8,7 +8,7 @@ import type { Kits } from ".";
 
 class TestKitError extends TaggedError("TestKitError")<{
   message: string;
-}>() {}
+}> {}
 
 const numberKit = Kit.define("number", {
   double: (value: number) => Result.ok(value * 2),

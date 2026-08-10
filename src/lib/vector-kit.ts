@@ -8,7 +8,7 @@ import { libsqlVector } from "@/mastra/storage";
 export class VectorError extends TaggedError("VectorError")<{
   cause: unknown;
   message: string;
-}>() {}
+}> {}
 
 const toVectorError = (cause: unknown): VectorError =>
   new VectorError({

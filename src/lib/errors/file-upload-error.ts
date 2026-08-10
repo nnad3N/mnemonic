@@ -22,7 +22,7 @@ const FileUploadErrorMessage = (args: FileUploadErrorShape) => {
   }
 };
 
-export class FileUploadError extends TaggedError("FileUploadError")<FileUploadErrorShape>() {
+export class FileUploadError extends TaggedError("FileUploadError")<FileUploadErrorShape> {
   constructor(args: FileUploadErrorShape) {
     super({
       ...args,

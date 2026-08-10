@@ -10,7 +10,7 @@ type DbTransaction = Parameters<Parameters<DrizzleDb["transaction"]>[0]>[0];
 export class DatabaseError extends TaggedError("DatabaseError")<{
   cause: unknown;
   message: string;
-}>() {}
+}> {}
 
 const toDatabaseError = (cause: unknown): DatabaseError =>
   new DatabaseError({

@@ -16,7 +16,7 @@ type WorkSegmentTimingState = {
 
 const getWorkState = (state: Record<string, unknown>): WorkSegmentTimingState =>
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Mastra processor state is untyped Record; we own this processor's shape.
-  state as WorkSegmentTimingState;
+  state;
 
 export const createWorkEndPart = (
   start: WorkStartData,

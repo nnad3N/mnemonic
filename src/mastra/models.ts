@@ -35,8 +35,31 @@ export const modelCapabilityModels: Record<ModelCapability, ModelCapabilityModel
   },
 };
 
+const openrouterEmbedding = openrouter.textEmbeddingModel("qwen/qwen3-embedding-8b");
+
+/**
+ * Mastra only accepts embedding models tagged `v2` or `v3`, while the AI SDK v7 OpenRouter
+ * provider emits `v4`. The interfaces are otherwise identical except for the `deprecated`
+ * warning variant, which `v3` cannot represent. Drop this once Mastra supports v4 embedders.
+ */
+const mastraEmbedding = {
+  doEmbed: async (options: Parameters<typeof openrouterEmbedding.doEmbed>[0]) => {
+    const { embeddings, usage, warnings } = await openrouterEmbedding.doEmbed(options);
+    return {
+      embeddings,
+      usage,
+      warnings: warnings.filter((warning) => warning.type !== "deprecated"),
+    };
+  },
+  maxEmbeddingsPerCall: openrouterEmbedding.maxEmbeddingsPerCall,
+  modelId: openrouterEmbedding.modelId,
+  provider: openrouterEmbedding.provider,
+  specificationVersion: "v3" as const,
+  supportsParallelCalls: openrouterEmbedding.supportsParallelCalls,
+};
+
 export const models = {
-  embedding: openrouter.textEmbeddingModel("qwen/qwen3-embedding-8b"),
+  embedding: mastraEmbedding,
   forModelCapability: (capability: ModelCapability) => {
     const config = modelCapabilityModels[capability];
     return openrouter(config.model, config.openrouter);

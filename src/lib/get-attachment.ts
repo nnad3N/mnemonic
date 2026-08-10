@@ -11,7 +11,7 @@ import { threadMessageMetadataSchema } from "@/routes/_protected.chat.$threadId/
 
 export class GetAttachmentError extends TaggedError("GetAttachmentError")<{
   message: string;
-}>() {}
+}> {}
 
 type GetAttachmentInput = {
   flushMessages?: () => Promise<void>;

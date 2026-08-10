@@ -14,19 +14,19 @@ const MAX_STACK_SIZE_BYTES = 4 * 1024 * 1024;
 export class SandboxInitError extends TaggedError("SandboxInitError")<{
   cause: unknown;
   message: string;
-}>() {}
+}> {}
 
 export class SandboxRunError extends TaggedError("SandboxRunError")<{
   cause: unknown;
   message: string;
-}>() {}
+}> {}
 
 export class SandboxExecuteError extends TaggedError("SandboxExecuteError")<{
   name: string;
   message: string;
   stack?: string;
   isSyntaxError?: boolean;
-}>() {}
+}> {}
 
 export type SandboxError = SandboxInitError | SandboxRunError | SandboxExecuteError;
 

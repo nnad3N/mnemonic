@@ -27,13 +27,13 @@ Object.defineProperty(document, "compatMode", {
 // the original async exception can surface (or be ignored) without crashing.
 const originalWindowDispatchEvent = window.dispatchEvent.bind(window);
 
-window.dispatchEvent = ((event: Event) => {
+window.dispatchEvent = (event: Event) => {
   try {
     return originalWindowDispatchEvent(event);
   } catch {
     return false;
   }
-}) as typeof window.dispatchEvent;
+};
 
 afterEach(() => {
   cleanup();

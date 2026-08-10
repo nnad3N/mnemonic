@@ -96,7 +96,7 @@ export class AuthError extends TaggedError("AuthError")<{
   message: string;
   status: number;
   statusText: string;
-}>() {}
+}> {}
 
 export type ToAuthErrorProps = {
   code?: string | undefined;

@@ -25,7 +25,7 @@ type UpdateThreadOutput = Awaited<ReturnType<MemoryStorage["updateThread"]>>;
 export class MemoryError extends TaggedError("MemoryError")<{
   cause: unknown;
   message: string;
-}>() {}
+}> {}
 
 const toMemoryError = (cause: unknown): MemoryError =>
   new MemoryError({

@@ -9,7 +9,7 @@ import type { KitModule, Kits } from "./utils";
 
 class TypeTestError extends TaggedError("TypeTestError")<{
   message: string;
-}>() {}
+}> {}
 
 type OtherTypeTestError = TaggedErrorInstance<"OtherTypeTestError", { message: string }>;
 

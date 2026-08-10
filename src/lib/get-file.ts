@@ -10,7 +10,7 @@ import type { SafeId } from "@/lib/safe-id";
 
 export class GetFileError extends TaggedError("GetFileError")<{
   message: string;
-}>() {}
+}> {}
 
 export type FetchedFile = {
   bytes: Uint8Array;

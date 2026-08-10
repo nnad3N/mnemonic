@@ -46,9 +46,11 @@ export const threadChatQuery = (threadId: string) =>
         data: { threadId },
       });
 
+      const messages = data.messages as ThreadUIMessage[];
+
       const chat = new Chat({
         id: threadId,
-        messages: data.messages as ThreadUIMessage[],
+        messages,
         onFinish: ({ isError, messages }) => {
           useChatStore.getState().hydrateAttachments(threadId, messages);
           useChatStore.getState().setThreadIndicator(threadId, isError ? "error" : "ready");

@@ -28,7 +28,7 @@ export class S3Error extends TaggedError("S3Error")<{
   message: string;
   requestId?: string;
   statusCode?: number;
-}>() {}
+}> {}
 
 const toS3Error = (error: unknown): S3Error => {
   if (S3Error.is(error)) {
