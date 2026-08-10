@@ -13,6 +13,7 @@ export const env = createEnv({
   skipValidation: process.env.SKIP_ENV_VALIDATION === "1",
 
   server: {
+    ALLOWED_EMAILS: v.optional(v.pipe(v.string(), v.nonEmpty())),
     DATABASE_AUTH_TOKEN: v.optional(v.pipe(v.string(), v.nonEmpty())),
     DATABASE_URL: v.pipe(v.string(), v.nonEmpty()),
     FIRECRAWL_API_URL: v.pipe(v.string(), v.url()),

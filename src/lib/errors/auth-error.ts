@@ -6,7 +6,22 @@ import * as Kit from "@/lib/kit";
 
 export const AUTH_ERROR_CODES = authClient.$ERROR_CODES;
 
-export type AuthErrorCode = keyof typeof AUTH_ERROR_CODES;
+/**
+ * Codes this app throws itself (from `resolveUser` in the passkey config). Better Auth
+ * cannot infer codes thrown inside config callbacks, so they are declared here and
+ * unioned with the client's `$ERROR_CODES`.
+ */
+export const customAuthErrorCodes = Kit.literals.from()([
+  "EMAIL_NOT_ALLOWED",
+  "INVALID_SIGN_UP_DETAILS",
+]);
+
+export type AuthErrorCode =
+  | keyof typeof AUTH_ERROR_CODES
+  | Kit.LiteralMember<typeof customAuthErrorCodes>;
+
+const isAuthErrorCode = (code: string): code is AuthErrorCode =>
+  code in AUTH_ERROR_CODES || customAuthErrorCodes.is(code);
 
 /**
  * Dismissing the browser's WebAuthn prompt surfaces as an error, but the user meant it.
@@ -20,10 +35,11 @@ export const cancelledPasskeyCodes = Kit.literals.from()([
 ]);
 
 export const getAuthErrorDescription = (gt: GT, code?: string): string => {
-  if (code === undefined) {
+  if (!code || !isAuthErrorCode(code)) {
     return gt("We couldn't complete your request. Please try again.");
   }
 
+  // oxlint-disable-next-line typescript/switch-exhaustiveness-check -- codes without specific copy fall back to the default.
   switch (code) {
     case "ACCOUNT_NOT_FOUND":
     case "INVALID_USER":
@@ -36,6 +52,9 @@ export const getAuthErrorDescription = (gt: GT, code?: string): string => {
     }
     case "CHALLENGE_NOT_FOUND": {
       return gt("This request took too long. Please try again.");
+    }
+    case "EMAIL_NOT_ALLOWED": {
+      return gt("This email is not allowed to sign up.");
     }
     case "FAILED_TO_UPDATE_PASSKEY": {
       return gt("We couldn't rename that passkey. Please try again.");

@@ -9,6 +9,7 @@ import { FieldError } from "@/components/field-error";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import type { SignUpContext } from "@/lib/better-auth/auth";
 import { authClient } from "@/lib/better-auth/auth-client";
 import {
   getAuthErrorDescription,
@@ -55,8 +56,13 @@ function RouteComponent() {
   const form = useForm({
     defaultValues: { email: "", fullName: "" },
     onSubmit: async ({ value }) => {
+      const context: SignUpContext = {
+        email: value.email,
+        name: value.fullName.trim(),
+      };
+
       const registration = await authClient.passkey.addPasskey({
-        context: JSON.stringify({ email: value.email, name: value.fullName.trim() }),
+        context: JSON.stringify(context),
       });
 
       if (registration?.error) {

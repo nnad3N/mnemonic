@@ -1,5 +1,4 @@
 {
-  "8a135e63b19b5636": "Settings",
   "94f373fbbb9ceee8": "Search conversations and topics…",
   "5feb239cc4f8a1ae": "Could not load search results",
   "a4027c574be11999": "We couldn't load search results. Check your connection and try again.",
@@ -18,6 +17,7 @@
   "daec3e2b7b581673": "We couldn't find an account with that email.",
   "d84d7f169b526477": "We couldn't verify that passkey. Please try again.",
   "cc18a72babbf4294": "This request took too long. Please try again.",
+  "8e9f770c135c62d9": "This email is not allowed to sign up.",
   "9507ffc5f93e136f": "We couldn't rename that passkey. Please try again.",
   "0bc1e5966e922087": "We couldn't register that passkey. Please try again.",
   "7c2a535363a2b4dc": "Invalid email address.",
@@ -44,6 +44,7 @@
   "d05f56d2129e990b": "Search",
   "85c2636843f26f67": "New conversation",
   "c6067013fe092442": "New topic",
+  "8a135e63b19b5636": "Settings",
   "20529ca475e73f99": "Theme",
   "fdd81c55ee7946f3": "Light",
   "cd8ccd4b937873e1": "Dark",

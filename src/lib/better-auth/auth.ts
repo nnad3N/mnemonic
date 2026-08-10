@@ -7,6 +7,8 @@ import * as v from "valibot";
 
 import { drizzleDb } from "@/db";
 import * as authSchema from "@/db/auth-schema";
+import { isEmailAllowed } from "@/lib/better-auth/allowed-emails";
+import type { AuthErrorCode } from "@/lib/errors/auth-error";
 
 const signUpContextSchema = v.pipe(
   v.string(),
@@ -33,12 +35,20 @@ export const auth = betterAuth({
 
           if (!signUpContext.success) {
             throw APIError.from("BAD_REQUEST", {
-              code: "INVALID_SIGN_UP_DETAILS",
+              code: "INVALID_SIGN_UP_DETAILS" satisfies AuthErrorCode,
               message: "Invalid sign-up details",
             });
           }
 
           const { email, name } = signUpContext.output;
+
+          if (!isEmailAllowed(email)) {
+            throw APIError.from("UNAUTHORIZED", {
+              code: "EMAIL_NOT_ALLOWED" satisfies AuthErrorCode,
+              message: "This email is not allowed to sign up",
+            });
+          }
+
           const existing = await ctx.context.internalAdapter.findUserByEmail(email);
 
           if (!existing) {
@@ -61,7 +71,7 @@ export const auth = betterAuth({
           // owner, and handing it out here would be an account takeover.
           if (passkeyCount > 0) {
             throw APIError.from("BAD_REQUEST", {
-              code: "USER_ALREADY_EXISTS",
+              code: "USER_ALREADY_EXISTS" satisfies AuthErrorCode,
               message: "An account with that email already exists",
             });
           }
