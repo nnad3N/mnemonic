@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { matchError, Result } from "better-result";
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import * as v from "valibot";
 
 import { file } from "@/db/schema";
@@ -23,6 +23,20 @@ import { mastra } from "@/mastra";
 export const FILE_UPLOAD_TTL_SECONDS = 60;
 
 type UploadFileCtx = Kits<[DbKit, S3Kit]>;
+
+const markFileFailed = async (fileId: SafeId<"file">, userId: SafeId<"user">) =>
+  Kit.get(dbKit).run((db) =>
+    db
+      .update(file)
+      .set({ status: "failed" })
+      .where(
+        and(
+          eq(file.id, fileId),
+          eq(file.userId, userId),
+          inArray(file.status, ["uploading", "processing"]),
+        ),
+      ),
+  );
 
 type GetPresignedUrlInput = {
   displayName: string;
@@ -65,7 +79,7 @@ export const getPresignedUrlFn = Kit.gen(async function* (
 
   const topicId = ownedTopic.id;
 
-  const fileKey = yield* await ctx.db.transaction(async (tx) => {
+  const pendingUpload = yield* await ctx.db.transaction(async (tx) => {
     const existing = await tx.query.file.findFirst({
       columns: { id: true, s3Key: true, status: true },
       where: {
@@ -79,14 +93,15 @@ export const getPresignedUrlFn = Kit.gen(async function* (
     if (existing) {
       await tx.update(file).set({ status: "uploading" }).where(eq(file.id, existing.id));
 
-      return existing.s3Key;
+      return { fileId: existing.id, s3Key: existing.s3Key };
     }
 
+    // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId write.
+    const fileId = toSafeId<"file">(input.fileId);
     const s3Key = `${input.userId}/${topicId}/${input.fileId}`;
 
     await tx.insert(file).values({
-      // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId write.
-      id: toSafeId<"file">(input.fileId),
+      id: fileId,
       userId: input.userId,
       topicId,
       displayName: input.displayName,
@@ -97,25 +112,31 @@ export const getPresignedUrlFn = Kit.gen(async function* (
       status: "uploading",
     });
 
-    return s3Key;
+    return { fileId, s3Key };
   });
 
-  if (!fileKey) {
+  if (!pendingUpload) {
     return Result.ok({
       type: "skipped" as const,
     });
   }
 
-  const presignedUrl = yield* await ctx.s3.getPresignedPutUrl({
+  const presignedUrl = await ctx.s3.getPresignedPutUrl({
     contentLength: input.sizeBytes,
     contentType: input.mimeType,
     expiresIn: FILE_UPLOAD_TTL_SECONDS,
-    key: fileKey,
+    key: pendingUpload.s3Key,
   });
+
+  if (Result.isError(presignedUrl)) {
+    await markFileFailed(pendingUpload.fileId, input.userId);
+
+    return presignedUrl;
+  }
 
   return Result.ok({
     type: "upload" as const,
-    presignedUrl,
+    presignedUrl: presignedUrl.value,
   });
 });
 
@@ -156,23 +177,6 @@ export const getPresignedUrl = createServerFn({ method: "POST" })
     }),
   );
 
-const updateFileStatusInputSchema = v.object({
-  status: v.pipe(v.string(), v.picklist(["uploading", "processing", "ready", "failed"])),
-});
-
-export const updateFileStatus = createServerFn({ method: "POST" })
-  .validator(updateFileStatusInputSchema)
-  .middleware([fileAccessMiddleware])
-  .handler(async ({ context, data }) => {
-    const result = await Kit.get(dbKit).run((db) =>
-      db.update(file).set({ status: data.status }).where(eq(file.id, context.file.id)),
-    );
-
-    if (result.isErr()) {
-      throw toServerFnError.serverError("Failed to update file status");
-    }
-  });
-
 export const processFile = createServerFn({ method: "POST" })
   .middleware([fileAccessMiddleware])
   .handler(async ({ context }) => {
@@ -190,12 +194,17 @@ export const processFile = createServerFn({ method: "POST" })
     });
 
     if (Result.isError(workflowResult)) {
+      await markFileFailed(context.file.id, context.user.id);
+
       throw toServerFnError.serverError("File processing could not be started");
     }
 
     const result = workflowResult.value;
 
     if (result.status === "failed") {
+      // The workflow's onError already marks the file failed; this covers that hook's own DB write failing.
+      await markFileFailed(context.file.id, context.user.id);
+
       throw new ServerFnError({
         message: "File processing failed",
         status: "server-error",
@@ -204,6 +213,8 @@ export const processFile = createServerFn({ method: "POST" })
     }
 
     if (result.status !== "success") {
+      await markFileFailed(context.file.id, context.user.id);
+
       throw new ServerFnError({
         message: "File processing did not complete",
         status: "server-error",

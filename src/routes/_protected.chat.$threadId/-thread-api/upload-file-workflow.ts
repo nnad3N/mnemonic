@@ -4,7 +4,7 @@ import { MDocument } from "@mastra/rag";
 import { toStandardJsonSchema } from "@valibot/to-json-schema";
 import { embedMany } from "ai";
 import { Result, TaggedError } from "better-result";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import * as v from "valibot";
 
 import { file } from "@/db/schema";
@@ -206,16 +206,18 @@ export const processFileWorkflow = createWorkflow({
     onError: async ({ getInitData, logger }) => {
       const { fileId, userId } = v.parse(workflowInputSchema, getInitData());
 
+      // Failed is only a valid transition from a pending status — a retry of an already-completed upload must never clobber a ready file.
       const updateResult = await Kit.get(dbKit).run((db) =>
         db
           .update(file)
           .set({ status: "failed" })
           .where(
             and(
-              // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId check.
+              // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId write.
               eq(file.id, toSafeId<"file">(fileId)),
               // oxlint-disable-next-line eslint-js/no-restricted-syntax
               eq(file.userId, toSafeId<"user">(userId)),
+              inArray(file.status, ["uploading", "processing"]),
             ),
           ),
       );

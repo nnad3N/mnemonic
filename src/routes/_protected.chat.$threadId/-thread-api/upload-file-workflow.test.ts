@@ -271,4 +271,24 @@ describe("processFileWorkflow", () => {
     expect(result.status).toBe("failed");
     expect(await getFileStatus(fileId)).toBe("failed");
   });
+
+  it("does not clobber a ready file when a duplicate run fails validation", async () => {
+    const { fileId } = await seedFile({
+      userId,
+      topicId,
+      status: "ready",
+    });
+
+    const run = await processFileWorkflow.createRun();
+    const result = await run.start({
+      inputData: {
+        fileId,
+        topicId,
+        userId,
+      },
+    });
+
+    expect(result.status).toBe("failed");
+    expect(await getFileStatus(fileId)).toBe("ready");
+  });
 });

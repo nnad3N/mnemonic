@@ -5,7 +5,7 @@ import { FileUploadError } from "@/lib/errors/file-upload-error";
 
 import { mentionByIdQuery } from "../-thread-api/get-mentions";
 import { threadKeys, threadMutationKeys } from "../-thread-api/query-keys";
-import { getPresignedUrl, processFile, updateFileStatus } from "../-thread-api/upload-file";
+import { getPresignedUrl, processFile } from "../-thread-api/upload-file";
 
 export type UploadFileVars = {
   topicId: string;
@@ -81,33 +81,6 @@ export const useUploadFile = (threadId: string) => {
         displayName: file.name,
         status: "uploading" as const,
       }));
-    },
-    onError: async (_error, { fileId }) => {
-      const mentionQuery = mentionByIdQuery({
-        type: "file",
-        id: fileId,
-      });
-
-      queryClient.setQueryData(mentionQuery.queryKey, (current) =>
-        current ? { ...current, status: "failed" as const } : current,
-      );
-
-      await Result.tryPromise(
-        async () =>
-          updateFileStatus({
-            data: {
-              fileId,
-              status: "failed",
-            },
-          }),
-        {
-          retry: {
-            times: 3,
-            delayMs: 1000,
-            backoff: "exponential",
-          },
-        },
-      );
     },
     onSettled: async (_data, _error, { topicId, fileId }) => {
       await Promise.all([
