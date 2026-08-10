@@ -87,6 +87,16 @@ const useAuthSessionQuery = (): void => {
   useEffect(() => {
     if (isPending || isRefetching) return;
 
+    // The cached session is the identity the whole cache was populated under (query keys
+    // carry no user id), so when the live session disagrees every cached query belongs to
+    // someone else — nuke it all. Better Auth reports sign-out, sign-in, and cross-tab
+    // session changes through `useSession`, making this the single boundary for all of them.
+    const cached = queryClient.getQueryData(authSessionQuery.queryKey);
+
+    if ((cached?.data?.user.id ?? null) !== (data?.user.id ?? null)) {
+      queryClient.clear();
+    }
+
     queryClient.setQueryData(authKeys.session(), { data, error });
     void router.invalidate();
   }, [data, error, isPending, isRefetching, queryClient, router]);

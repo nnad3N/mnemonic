@@ -2,8 +2,20 @@
 
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
+import { T } from "gt-tanstack-start";
+import { AlertCircleIcon } from "lucide-react";
 import type React from "react";
 
+import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 export type TableVariant = "default" | "card";
@@ -49,14 +61,22 @@ export function TableHeader({
   return <thead className={cn("[&_tr]:border-b", className)} data-slot="table-header" {...props} />;
 }
 
+export type TableBodyProps = React.ComponentProps<"tbody"> & {
+  /** Card-variant rows highlight on hover; opt out for non-interactive tables. */
+  hoverable?: boolean;
+};
+
 export function TableBody({
   className,
+  hoverable = true,
   ...props
-}: React.ComponentProps<"tbody">): React.ReactElement {
+}: TableBodyProps): React.ReactElement {
   return (
     <tbody
       className={cn(
-        "relative before:pointer-events-none before:absolute before:inset-px before:rounded-[calc(var(--radius-xl)-1px)] before:shadow-[0_1px_--theme(--color-black/4%)] not-in-data-[variant=card]:before:hidden in-data-[variant=card]:rounded-xl in-data-[variant=card]:shadow-xs/5 dark:before:shadow-[0_-1px_--theme(--color-white/8%)] [&_tr:last-child]:border-0 in-data-[variant=card]:*:[tr]:border-0 in-data-[variant=card]:*:[tr]:*:[td]:border-b in-data-[variant=card]:*:[tr]:*:[td]:bg-card in-data-[variant=card]:*:[tr]:first:*:[td]:first:rounded-ss-xl in-data-[variant=card]:*:[tr]:*:[td]:first:border-s in-data-[variant=card]:*:[tr]:first:*:[td]:border-t in-data-[variant=card]:*:[tr]:last:*:[td]:last:rounded-ee-xl in-data-[variant=card]:*:[tr]:*:[td]:last:border-e in-data-[variant=card]:*:[tr]:first:*:[td]:last:rounded-se-xl in-data-[variant=card]:*:[tr]:last:*:[td]:first:rounded-es-xl in-data-[variant=card]:*:[tr]:hover:*:[td]:bg-[color-mix(in_srgb,var(--card),var(--color-black)_2%)] in-data-[variant=card]:*:[tr]:data-[state=selected]:*:[td]:bg-[color-mix(in_srgb,var(--card),var(--color-black)_4%)] dark:in-data-[variant=card]:*:[tr]:hover:*:[td]:bg-[color-mix(in_srgb,var(--card),var(--color-white)_2%)] dark:in-data-[variant=card]:*:[tr]:data-[state=selected]:*:[td]:bg-[color-mix(in_srgb,var(--card),var(--color-white)_4%)]",
+        "relative before:pointer-events-none before:absolute before:inset-px before:rounded-[calc(var(--radius-xl)-1px)] before:shadow-[0_1px_--theme(--color-black/4%)] not-in-data-[variant=card]:before:hidden in-data-[variant=card]:rounded-xl in-data-[variant=card]:shadow-xs/5 dark:before:shadow-[0_-1px_--theme(--color-white/8%)] [&_tr:last-child]:border-0 in-data-[variant=card]:*:[tr]:border-0 in-data-[variant=card]:*:[tr]:*:[td]:border-b in-data-[variant=card]:*:[tr]:*:[td]:bg-card in-data-[variant=card]:*:[tr]:first:*:[td]:first:rounded-ss-xl in-data-[variant=card]:*:[tr]:*:[td]:first:border-s in-data-[variant=card]:*:[tr]:first:*:[td]:border-t in-data-[variant=card]:*:[tr]:last:*:[td]:last:rounded-ee-xl in-data-[variant=card]:*:[tr]:*:[td]:last:border-e in-data-[variant=card]:*:[tr]:first:*:[td]:last:rounded-se-xl in-data-[variant=card]:*:[tr]:last:*:[td]:first:rounded-es-xl in-data-[variant=card]:*:[tr]:data-[state=selected]:*:[td]:bg-[color-mix(in_srgb,var(--card),var(--color-black)_4%)] dark:in-data-[variant=card]:*:[tr]:data-[state=selected]:*:[td]:bg-[color-mix(in_srgb,var(--card),var(--color-white)_4%)]",
+        hoverable &&
+          "in-data-[variant=card]:*:[tr]:hover:*:[td]:bg-[color-mix(in_srgb,var(--card),var(--color-black)_2%)] dark:in-data-[variant=card]:*:[tr]:hover:*:[td]:bg-[color-mix(in_srgb,var(--card),var(--color-white)_2%)]",
         className,
       )}
       data-slot="table-body"
@@ -81,11 +101,22 @@ export function TableFooter({
   );
 }
 
-export function TableRow({ className, ...props }: React.ComponentProps<"tr">): React.ReactElement {
+export type TableRowProps = React.ComponentProps<"tr"> & {
+  /** Header rows and non-interactive rows opt out of the hover highlight. */
+  hoverable?: boolean;
+};
+
+export function TableRow({
+  className,
+  hoverable = true,
+  ...props
+}: TableRowProps): React.ReactElement {
   return (
     <tr
       className={cn(
-        "relative border-b not-in-data-[variant=card]:hover:bg-[color-mix(in_srgb,var(--background),var(--color-black)_2%)] not-in-data-[variant=card]:data-[state=selected]:bg-[color-mix(in_srgb,var(--background),var(--color-black)_4%)] dark:not-in-data-[variant=card]:hover:bg-[color-mix(in_srgb,var(--background),var(--color-white)_2%)] dark:not-in-data-[variant=card]:data-[state=selected]:bg-[color-mix(in_srgb,var(--background),var(--color-white)_4%)]",
+        "relative border-b not-in-data-[variant=card]:data-[state=selected]:bg-[color-mix(in_srgb,var(--background),var(--color-black)_4%)] dark:not-in-data-[variant=card]:data-[state=selected]:bg-[color-mix(in_srgb,var(--background),var(--color-white)_4%)]",
+        hoverable &&
+          "not-in-data-[variant=card]:hover:bg-[color-mix(in_srgb,var(--background),var(--color-black)_2%)] dark:not-in-data-[variant=card]:hover:bg-[color-mix(in_srgb,var(--background),var(--color-white)_2%)]",
         className,
       )}
       data-slot="table-row"
@@ -117,6 +148,71 @@ export function TableCell({ className, ...props }: React.ComponentProps<"td">): 
       data-slot="table-cell"
       {...props}
     />
+  );
+}
+
+export type TableSkeletonRowsProps = {
+  /** One width class per column; null renders an empty cell (e.g. a hover-only action column). */
+  widths: readonly (string | null)[];
+  rows?: number;
+};
+
+export function TableSkeletonRows({
+  widths,
+  rows = 3,
+}: TableSkeletonRowsProps): React.ReactElement {
+  return (
+    <>
+      {Array.from({ length: rows }, (_, rowIndex) => (
+        <TableRow key={rowIndex}>
+          {widths.map((width, cellIndex) => (
+            <TableCell key={cellIndex}>
+              {width !== null && <Skeleton className={cn("h-5", width)} />}
+            </TableCell>
+          ))}
+        </TableRow>
+      ))}
+    </>
+  );
+}
+
+export type TableErrorRowProps = {
+  children: React.ReactNode;
+  colSpan: number;
+  onRetry: () => Promise<unknown>;
+};
+
+export function TableErrorRow({
+  children,
+  colSpan,
+  onRetry,
+}: TableErrorRowProps): React.ReactElement {
+  return (
+    <TableRow>
+      <TableCell colSpan={colSpan}>
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <AlertCircleIcon className="text-destructive" />
+            </EmptyMedia>
+            <EmptyTitle className="text-destructive">{children}</EmptyTitle>
+            <EmptyDescription>
+              <T>Check your connection and try again.</T>
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button
+              onClick={async () => {
+                await onRetry();
+              }}
+              variant="outline"
+            >
+              <T>Try again</T>
+            </Button>
+          </EmptyContent>
+        </Empty>
+      </TableCell>
+    </TableRow>
   );
 }
 

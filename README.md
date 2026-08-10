@@ -8,7 +8,7 @@ Mnemonic is meant to be a minimal research tool with good primitives that stay o
 
 It is not trying to be groundbreaking. It is trying to be useful.
 
-Mnemonic is built for individuals. It runs on libSQL, so an you can host it wherever you want.
+Mnemonic is built for individuals. It runs on libSQL, so you can host it wherever you want.
 
 Things like teams, shared workspaces or BYOK are all possible later if there is a reason to build them, but none of that is a priority right now.
 
@@ -38,7 +38,7 @@ Mnemonic is in **alpha**.
 
 Alpha means the chat works and I am happy with where it is going. It is not finished, but I cannot think of another big feature that would meaningfully improve how it feels to use. Everything around the chat is still unfinished.
 
-For **local self-hosting** (Docker; OpenRouter API key required), see [docs/self-hosting.md](docs/self-hosting.md). Deployment docs are local-only for now — not a production guide.
+Every technology Mnemonic is built on can be hosted on your own hardware. There is no packaged setup or guide for doing that — how you run it is up to you.
 
 ## Roadmap
 

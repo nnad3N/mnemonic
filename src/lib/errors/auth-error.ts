@@ -2,16 +2,44 @@ import { TaggedError } from "better-result";
 
 import { authClient } from "@/lib/better-auth/auth-client";
 import type { GT } from "@/lib/gt";
+import * as Kit from "@/lib/kit";
 
 export const AUTH_ERROR_CODES = authClient.$ERROR_CODES;
 
-export type AuthErrorCode = keyof typeof AUTH_ERROR_CODES;
+/**
+ * Codes this app throws itself (from `resolveUser` in the passkey config). Better Auth
+ * cannot infer codes thrown inside config callbacks, so they are declared here and
+ * unioned with the client's `$ERROR_CODES`.
+ */
+export const customAuthErrorCodes = Kit.literals.from()([
+  "EMAIL_NOT_ALLOWED",
+  "INVALID_SIGN_UP_DETAILS",
+]);
+
+export type AuthErrorCode =
+  | keyof typeof AUTH_ERROR_CODES
+  | Kit.LiteralMember<typeof customAuthErrorCodes>;
+
+const isAuthErrorCode = (code: string): code is AuthErrorCode =>
+  code in AUTH_ERROR_CODES || customAuthErrorCodes.is(code);
+
+/**
+ * Dismissing the browser's WebAuthn prompt surfaces as an error, but the user meant it.
+ * A manual cancel arrives as `NotAllowedError`, which simplewebauthn passes through as
+ * ERROR_PASSTHROUGH_SEE_CAUSE_PROPERTY; ERROR_CEREMONY_ABORTED covers programmatic aborts.
+ */
+export const cancelledPasskeyCodes = Kit.literals.from()([
+  "AUTH_CANCELLED",
+  "ERROR_CEREMONY_ABORTED",
+  "ERROR_PASSTHROUGH_SEE_CAUSE_PROPERTY",
+]);
 
 export const getAuthErrorDescription = (gt: GT, code?: string): string => {
-  if (code === undefined) {
+  if (!code || !isAuthErrorCode(code)) {
     return gt("We couldn't complete your request. Please try again.");
   }
 
+  // oxlint-disable-next-line typescript/switch-exhaustiveness-check -- codes without specific copy fall back to the default.
   switch (code) {
     case "ACCOUNT_NOT_FOUND":
     case "INVALID_USER":
@@ -19,34 +47,43 @@ export const getAuthErrorDescription = (gt: GT, code?: string): string => {
     case "USER_NOT_FOUND": {
       return gt("We couldn't find an account with that email.");
     }
-    case "CREDENTIAL_ACCOUNT_NOT_FOUND": {
-      return gt("No password is set for this account. Try a different sign-in method.");
+    case "AUTHENTICATION_FAILED": {
+      return gt("We couldn't verify that passkey. Please try again.");
     }
-    case "EMAIL_NOT_VERIFIED": {
-      return gt("Please verify your email address before signing in.");
+    case "CHALLENGE_NOT_FOUND": {
+      return gt("This request took too long. Please try again.");
+    }
+    case "EMAIL_NOT_ALLOWED": {
+      return gt("This email is not allowed to sign up.");
+    }
+    case "FAILED_TO_UPDATE_PASSKEY": {
+      return gt("We couldn't rename that passkey. Please try again.");
+    }
+    case "FAILED_TO_VERIFY_REGISTRATION": {
+      return gt("We couldn't register that passkey. Please try again.");
     }
     case "INVALID_EMAIL": {
       return gt("Invalid email address.");
     }
-    case "INVALID_EMAIL_OR_PASSWORD": {
-      return gt("Invalid email or password.");
+    case "PASSKEY_NOT_FOUND": {
+      return gt("We couldn't find that passkey.");
     }
-    case "INVALID_PASSWORD": {
-      return gt("Invalid password.");
-    }
-    case "PASSWORD_TOO_LONG": {
-      return gt("Password is too long.");
-    }
-    case "PASSWORD_TOO_SHORT": {
-      return gt("Password is too short.");
+    case "PREVIOUSLY_REGISTERED": {
+      return gt("That passkey is already registered.");
     }
     case "SESSION_EXPIRED":
     case "TOKEN_EXPIRED": {
       return gt("Your session has expired. Please sign in again.");
     }
+    case "UNABLE_TO_CREATE_SESSION": {
+      return gt("We couldn't sign you in. Please try again.");
+    }
     case "USER_ALREADY_EXISTS":
     case "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL": {
       return gt("An account with that email already exists.");
+    }
+    case "YOU_ARE_NOT_ALLOWED_TO_REGISTER_THIS_PASSKEY": {
+      return gt("That passkey can't be added to this account.");
     }
     default: {
       return gt("We couldn't complete your request. Please try again.");

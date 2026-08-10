@@ -12,6 +12,7 @@ export default defineConfig({
     "**/*.gen.*",
     "**/*.generated.*",
     "**/src/lib/sandbox/modules/**",
+    "**/src/_gt/**",
   ],
   sortImports: true,
   sortTailwindcss: {

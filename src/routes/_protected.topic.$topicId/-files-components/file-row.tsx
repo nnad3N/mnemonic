@@ -57,9 +57,7 @@ export const FileRow = ({ file, topicId }: FileRowProps) => {
         data: { fileId: file.id },
       }),
     onError: () => {
-      toast.error(gt("Could not download file"), {
-        description: gt("Please try again."),
-      });
+      toast.error(gt("Could not download file"));
     },
     onSuccess: ({ url }) => {
       const anchor = document.createElement("a");
@@ -174,9 +172,7 @@ const RenameFileField = ({ file, stopRenaming, topicId }: RenameFileFieldProps) 
       });
     },
     onError: () => {
-      toast.error(gt("Could not rename file"), {
-        description: gt("Please try again."),
-      });
+      toast.error(gt("Could not rename file"));
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({

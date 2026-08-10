@@ -43,7 +43,7 @@ const toExecuteCodeMarkdown = ({ gt, code, input, output }: ToExecuteCodeMarkdow
     sections.push(`\`\`\`${gt("error")}\n${output.name}: ${output.message}\n\`\`\``);
   }
 
-  if (input) {
+  if (input && Object.values(input).filter(Boolean).length > 0) {
     sections.push(`\`\`\`${gt("input")}\n${JSON.stringify(input, null, 2)}\n\`\`\``);
   }
 
