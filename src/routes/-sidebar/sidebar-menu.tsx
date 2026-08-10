@@ -75,9 +75,7 @@ export const SidebarHeaderSection = () => {
       return thread;
     },
     onError: () => {
-      toast.error(gt("Could not create conversation"), {
-        description: gt("Please try again."),
-      });
+      toast.error(gt("Could not create conversation"));
     },
     onSuccess: async (thread) => {
       await navigate({
@@ -100,9 +98,7 @@ export const SidebarHeaderSection = () => {
       return thread;
     },
     onError: () => {
-      toast.error(gt("Could not create topic"), {
-        description: gt("Please try again."),
-      });
+      toast.error(gt("Could not create topic"));
     },
     onSuccess: async (thread) => {
       await navigate({

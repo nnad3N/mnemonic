@@ -1,7 +1,6 @@
 services:
   rustfs:
     image: rustfs/rustfs:latest
-    profiles: ["host", "selfhost"]
     command: ["/data"]
     environment:
       RUSTFS_ACCESS_KEY: "${S3_ACCESS_KEY_ID:-rustfsadmin}"
@@ -35,22 +34,6 @@ services:
       done;
       mc mb --ignore-existing \"local/$${S3_BUCKET}\";
       "
-
-  app:
-    profiles: ["selfhost"]
-    build: .
-    network_mode: host
-    env_file: .env
-    environment:
-      DATABASE_URL: file:/data/mnemonic.db
-      BETTER_AUTH_URL: http://localhost:3000
-      FIRECRAWL_API_URL: http://localhost:3002
-    volumes:
-      - mnemonic_data:/data
-    restart: unless-stopped
-    depends_on:
-      rustfs:
-        condition: service_started
 
   searxng:
     image: searxng/searxng:latest
@@ -215,7 +198,6 @@ networks:
     driver: bridge
 
 volumes:
-  mnemonic_data:
   rustfs_data:
   firecrawl_rabbitmq_data:
   firecrawl_postgres_data:

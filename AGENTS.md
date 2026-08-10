@@ -333,6 +333,7 @@ Subscribe narrowly to drive the submit button:
 
 - **Validation errors** (client-side, from the schema) → Base UI `<FieldError />` via the `toFormErrors` flow above.
 - **Generic API errors** (e.g. Better Auth) → `toastManager.add(...)`. Translate via an error-code lookup (see [`src/lib/auth-errors.ts`](src/lib/auth-errors.ts)); never display raw provider messages.
+- **Toast descriptions** — error toasts are title-only by default. Add a `description` only when it carries a real explanation of the error, such as the translated cause from an auth error-code lookup. Never pad a toast with filler like "Please try again."
 
 ### Submit handler shape
 

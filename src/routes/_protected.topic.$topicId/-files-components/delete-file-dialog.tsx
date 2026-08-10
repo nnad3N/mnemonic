@@ -35,9 +35,7 @@ export const DeleteFileDialog = ({ file, onOpenChange, open, topicId }: DeleteFi
       });
     },
     onError: () => {
-      toast.error(gt("Could not delete file"), {
-        description: gt("Please try again."),
-      });
+      toast.error(gt("Could not delete file"));
     },
     onSuccess: async () => {
       await Promise.all([

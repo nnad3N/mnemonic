@@ -56,6 +56,29 @@ export const account = sqliteTable(
   (table) => [index("account_userId_idx").on(table.userId)],
 );
 
+export const passkey = sqliteTable(
+  "passkey",
+  {
+    aaguid: text("aaguid"),
+    backedUp: integer("backed_up", { mode: "boolean" }).notNull(),
+    counter: integer("counter").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }),
+    credentialID: text("credential_id").notNull(),
+    deviceType: text("device_type").notNull(),
+    id: text("id").primaryKey(),
+    name: text("name"),
+    publicKey: text("public_key").notNull(),
+    transports: text("transports"),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    index("passkey_userId_idx").on(table.userId),
+    index("passkey_credentialID_idx").on(table.credentialID),
+  ],
+);
+
 export const verification = sqliteTable(
   "verification",
   {
@@ -71,12 +94,18 @@ export const verification = sqliteTable(
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
-const authTables = { account, session, user, verification };
+const authTables = { account, passkey, session, user, verification };
 
 export const authRelations = defineRelationsPart(authTables, (r) => ({
   account: {
     user: r.one.user({
       from: r.account.userId,
+      to: r.user.id,
+    }),
+  },
+  passkey: {
+    user: r.one.user({
+      from: r.passkey.userId,
       to: r.user.id,
     }),
   },
@@ -88,6 +117,7 @@ export const authRelations = defineRelationsPart(authTables, (r) => ({
   },
   user: {
     accounts: r.many.account(),
+    passkeys: r.many.passkey(),
     sessions: r.many.session(),
   },
 }));

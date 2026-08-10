@@ -42,9 +42,7 @@ export const RenameField = ({ threadId, initialValue, stopRenaming }: RenameFiel
       await renameConversation({ data: { threadId, title } });
     },
     onError: () => {
-      toast.error(gt("Could not rename conversation"), {
-        description: gt("Please try again."),
-      });
+      toast.error(gt("Could not rename conversation"));
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: threadKeys.sidebar() });
@@ -125,9 +123,7 @@ export const RenameTopicField = ({
       await renameTopic({ data: { topicId, title } });
     },
     onError: () => {
-      toast.error(gt("Could not rename topic"), {
-        description: gt("Please try again."),
-      });
+      toast.error(gt("Could not rename topic"));
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: threadKeys.sidebar() });
@@ -210,9 +206,7 @@ export const DeleteThreadDialog = ({ threadId, onOpenChange, open }: DeleteThrea
       await deleteConversation({ data: { threadId } });
     },
     onError: () => {
-      toast.error(gt("Could not delete conversation"), {
-        description: gt("Please try again."),
-      });
+      toast.error(gt("Could not delete conversation"));
     },
     onSuccess: async () => {
       if (activeThreadId === threadId) {
@@ -274,9 +268,7 @@ export const DeleteTopicDialog = ({ onOpenChange, open, topic }: DeleteTopicDial
       await deleteTopic({ data: { topicId: topic.id } });
     },
     onError: () => {
-      toast.error(gt("Could not delete topic"), {
-        description: gt("Please try again."),
-      });
+      toast.error(gt("Could not delete topic"));
     },
     onSuccess: async () => {
       if (activeThreadId && topic.threads.some((thread) => thread.id === activeThreadId)) {
