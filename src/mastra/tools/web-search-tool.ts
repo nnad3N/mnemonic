@@ -26,7 +26,6 @@ const searchResultSchema = v.object({
   url: v.pipe(v.string(), v.nonEmpty()),
   title: v.optional(v.string()),
   description: v.optional(v.string()),
-  markdown: v.optional(v.string()),
 });
 
 const outputSchema = v.object({
@@ -37,22 +36,11 @@ const outputSchema = v.object({
 type WebSearchOutput = v.InferOutput<typeof outputSchema>;
 type WebSearchResult = v.InferOutput<typeof searchResultSchema>;
 
-const isDocumentResult = (item: SearchResultWeb | Document): item is Document => "html" in item;
+const isWebResult = (item: SearchResultWeb | Document): item is SearchResultWeb =>
+  !("html" in item);
 
 export const toSearchResult = (item: SearchResultWeb | Document): WebSearchResult | undefined => {
-  if (isDocumentResult(item)) {
-    const url = item.metadata?.sourceURL ?? item.metadata?.url;
-    if (!url) return;
-
-    return {
-      url,
-      title: item.metadata?.title,
-      description: item.metadata?.description,
-      markdown: item.markdown,
-    };
-  }
-
-  if (!item.url) return;
+  if (!isWebResult(item) || !item.url) return;
 
   return {
     url: item.url,
@@ -65,18 +53,9 @@ export const webSearchTool = createTool({
   id: "web-search",
   inputSchema: toToolInputSchema(inputSchema),
   outputSchema: toStandardJsonSchema(outputSchema),
-  description:
-    "Searches the live web; results include scraped markdown of the page when available.",
+  description: "Searches the live web; results include the search engine's description snippet.",
   execute: async ({ query, limit = DEFAULT_SEARCH_LIMIT }) => {
-    const searchResult = await Result.tryPromise(async () =>
-      firecrawl.search(query, {
-        limit,
-        scrapeOptions: {
-          formats: ["markdown"],
-          onlyMainContent: true,
-        },
-      }),
-    );
+    const searchResult = await Result.tryPromise(async () => firecrawl.search(query, { limit }));
 
     if (Result.isError(searchResult)) {
       throw new ToolError({
