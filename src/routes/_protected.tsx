@@ -1,5 +1,5 @@
 import { Outlet, createFileRoute, redirect, retainSearchParams } from "@tanstack/react-router";
-import { createServerFn } from "@tanstack/react-start";
+import { createIsomorphicFn } from "@tanstack/react-start";
 import { getCookie } from "@tanstack/react-start/server";
 import * as v from "valibot";
 
@@ -15,6 +15,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
+import * as Kit from "@/lib/kit";
 
 import { AppHeader } from "./-app-header";
 import { SidebarFooterSection } from "./-sidebar/sidebar-menu";
@@ -28,20 +29,11 @@ const SIDEBAR_MAX_SIZE = "28rem";
 const SIDEBAR_WIDTH_COOKIE_NAME = "sidebar_width";
 const SIDEBAR_WIDTH_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 
-const sidebarWidthSchema = v.pipe(v.string(), v.regex(/^\d+(\.\d+)?(px|rem)$/));
+const sidebarWidthSchema = v.pipe(v.string(), v.regex(/^\d+px$/));
 
-const getSidebarLayout = createServerFn({ method: "GET" }).handler(() => {
-  const widthParsed = v.safeParse(sidebarWidthSchema, getCookie(SIDEBAR_WIDTH_COOKIE_NAME));
-
-  return {
-    sidebarOpen: getCookie(SIDEBAR_COOKIE_NAME) !== "false",
-    sidebarWidth: widthParsed.success ? widthParsed.output : SIDEBAR_DEFAULT_SIZE,
-  };
-});
-
-const setSidebarWidthCookie = (sidebarWidth: string) => {
-  document.cookie = `${SIDEBAR_WIDTH_COOKIE_NAME}=${sidebarWidth}; path=/; max-age=${SIDEBAR_WIDTH_COOKIE_MAX_AGE}`;
-};
+const readCookie = createIsomorphicFn()
+  .server((name: string) => getCookie(name))
+  .client((name: string) => Kit.cookies.get(name).unwrapOr(undefined));
 
 const sidebarSearchSchema = v.object({
   topic: v.optional(v.pipe(v.string(), v.nanoid())),
@@ -54,6 +46,8 @@ const sidebarSearchSchema = v.object({
 export type SidebarSearch = v.InferInput<typeof sidebarSearchSchema>;
 
 export const Route = createFileRoute("/_protected")({
+  search: { middlewares: [retainSearchParams(["topic", "q", "range"])] },
+  validateSearch: sidebarSearchSchema,
   beforeLoad: ({ context }) => {
     if (!context.user || !context.session) {
       throw redirect({ to: "/sign-in" });
@@ -61,10 +55,15 @@ export const Route = createFileRoute("/_protected")({
 
     return { session: context.session, user: context.user };
   },
+  loader: () => {
+    const widthParsed = v.safeParse(sidebarWidthSchema, readCookie(SIDEBAR_WIDTH_COOKIE_NAME));
+
+    return {
+      sidebarOpen: readCookie(SIDEBAR_COOKIE_NAME) !== "false",
+      sidebarWidth: widthParsed.success ? widthParsed.output : SIDEBAR_DEFAULT_SIZE,
+    };
+  },
   component: LayoutComponent,
-  loader: async () => getSidebarLayout(),
-  search: { middlewares: [retainSearchParams(["topic", "q", "range"])] },
-  validateSearch: sidebarSearchSchema,
 });
 
 function LayoutComponent() {
@@ -103,7 +102,11 @@ const ProtectedLayout = ({ sidebarWidth }: ProtectedLayoutProps) => {
               minSize={SIDEBAR_MIN_SIZE}
               onResize={(panelSize, _id, prevPanelSize) => {
                 if (!prevPanelSize) return;
-                setSidebarWidthCookie(`${Math.round(panelSize.inPixels)}px`);
+                Kit.cookies.set({
+                  name: SIDEBAR_WIDTH_COOKIE_NAME,
+                  value: `${Math.round(panelSize.inPixels)}px`,
+                  options: { maxAge: SIDEBAR_WIDTH_COOKIE_MAX_AGE },
+                });
               }}
               style={{ overflow: "hidden" }}
             >
