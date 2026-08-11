@@ -136,7 +136,7 @@ services:
   firecrawl-api:
     image: ghcr.io/firecrawl/firecrawl:latest
     ports:
-      - "3002:3002"
+      - "4010:3002"
     networks:
       - firecrawl
     ulimits:
