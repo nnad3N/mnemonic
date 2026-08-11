@@ -1,27 +1,43 @@
-import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
+import { Outlet, createFileRoute, redirect, retainSearchParams } from "@tanstack/react-router";
+import * as v from "valibot";
 
 import {
   Sidebar,
   SidebarContent,
+  SidebarHeader,
   SidebarInset,
+  SidebarMenu,
   SidebarProvider,
   SidebarRail,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 
-import { SidebarConversations } from "./-sidebar/sidebar-conversation";
-import { SidebarFooterSection, SidebarHeaderSection } from "./-sidebar/sidebar-menu";
-import { SidebarTopics } from "./-sidebar/sidebar-topic";
+import { SidebarFooterSection } from "./-sidebar/sidebar-menu";
+import { SidebarScopeCombobox } from "./-sidebar/sidebar-scope-combobox";
+import { SidebarThreadList } from "./-sidebar/sidebar-thread-list";
+import { SidebarThreadSearch } from "./-sidebar/sidebar-thread-search";
+
+const sidebarSearchSchema = v.object({
+  topic: v.optional(v.pipe(v.string(), v.nanoid())),
+  q: v.optional(v.string(), ""),
+  range: v.optional(
+    v.union([v.picklist(["today", "7d", "30d"]), v.object({ from: v.string(), to: v.string() })]),
+  ),
+});
+
+export type SidebarSearch = v.InferInput<typeof sidebarSearchSchema>;
 
 export const Route = createFileRoute("/_protected")({
   beforeLoad: ({ context }) => {
-    if (context.user === undefined || context.session === undefined) {
+    if (!context.user || !context.session) {
       throw redirect({ to: "/sign-in" });
     }
 
     return { session: context.session, user: context.user };
   },
   component: LayoutComponent,
+  search: { middlewares: [retainSearchParams(["topic", "q", "range"])] },
+  validateSearch: sidebarSearchSchema,
 });
 
 function LayoutComponent() {
@@ -30,7 +46,12 @@ function LayoutComponent() {
   return (
     <SidebarProvider className="h-full min-h-0">
       <Sidebar collapsible="icon">
-        <SidebarHeaderSection />
+        <SidebarHeader className="pb-0">
+          <SidebarMenu className="gap-0.5">
+            <SidebarScopeCombobox />
+            <SidebarThreadSearch />
+          </SidebarMenu>
+        </SidebarHeader>
         {/*
           Icon-collapsed: hide list content but keep its flex space so the footer
           stays at the bottom (`hidden` would drop that space). Delay visibility
@@ -40,8 +61,7 @@ function LayoutComponent() {
           still lays out.
         */}
         <SidebarContent className="group-data-[collapsible=icon]:invisible group-data-[collapsible=icon]:transition-[visibility] group-data-[collapsible=icon]:delay-200 group-data-[collapsible=icon]:duration-0 group-data-[collapsible=icon]:**:data-[sidebar=group-label]:mt-0">
-          <SidebarConversations />
-          <SidebarTopics />
+          <SidebarThreadList />
         </SidebarContent>
         <SidebarFooterSection user={user} />
         <SidebarRail />

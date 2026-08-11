@@ -14,7 +14,6 @@ import { Route as AuthRouteRouteImport } from './routes/_auth/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ProtectedSettingsRouteImport } from './routes/_protected.settings'
-import { Route as ProtectedSearchRouteImport } from './routes/_protected.search'
 import { Route as AuthSignUpRouteImport } from './routes/_auth/sign-up'
 import { Route as AuthSignInRouteImport } from './routes/_auth/sign-in'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -44,11 +43,6 @@ const ApiChatRoute = ApiChatRouteImport.update({
 const ProtectedSettingsRoute = ProtectedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
-  getParentRoute: () => ProtectedRoute,
-} as any)
-const ProtectedSearchRoute = ProtectedSearchRouteImport.update({
-  id: '/search',
-  path: '/search',
   getParentRoute: () => ProtectedRoute,
 } as any)
 const AuthSignUpRoute = AuthSignUpRouteImport.update({
@@ -95,7 +89,6 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/sign-in': typeof AuthSignInRoute
   '/sign-up': typeof AuthSignUpRoute
-  '/search': typeof ProtectedSearchRoute
   '/settings': typeof ProtectedSettingsRoute
   '/api/chat': typeof ApiChatRoute
   '/chat/$threadId': typeof ProtectedChatThreadIdRouteRouteWithChildren
@@ -108,7 +101,6 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/sign-in': typeof AuthSignInRoute
   '/sign-up': typeof AuthSignUpRoute
-  '/search': typeof ProtectedSearchRoute
   '/settings': typeof ProtectedSettingsRoute
   '/api/chat': typeof ApiChatRoute
   '/topic/$topicId': typeof ProtectedTopicTopicIdRouteRouteWithChildren
@@ -123,7 +115,6 @@ export interface FileRoutesById {
   '/_protected': typeof ProtectedRouteWithChildren
   '/_auth/sign-in': typeof AuthSignInRoute
   '/_auth/sign-up': typeof AuthSignUpRoute
-  '/_protected/search': typeof ProtectedSearchRoute
   '/_protected/settings': typeof ProtectedSettingsRoute
   '/api/chat': typeof ApiChatRoute
   '/_protected/chat/$threadId': typeof ProtectedChatThreadIdRouteRouteWithChildren
@@ -138,7 +129,6 @@ export interface FileRouteTypes {
     | '/'
     | '/sign-in'
     | '/sign-up'
-    | '/search'
     | '/settings'
     | '/api/chat'
     | '/chat/$threadId'
@@ -151,7 +141,6 @@ export interface FileRouteTypes {
     | '/'
     | '/sign-in'
     | '/sign-up'
-    | '/search'
     | '/settings'
     | '/api/chat'
     | '/topic/$topicId'
@@ -165,7 +154,6 @@ export interface FileRouteTypes {
     | '/_protected'
     | '/_auth/sign-in'
     | '/_auth/sign-up'
-    | '/_protected/search'
     | '/_protected/settings'
     | '/api/chat'
     | '/_protected/chat/$threadId'
@@ -218,13 +206,6 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof ProtectedSettingsRouteImport
-      parentRoute: typeof ProtectedRoute
-    }
-    '/_protected/search': {
-      id: '/_protected/search'
-      path: '/search'
-      fullPath: '/search'
-      preLoaderRoute: typeof ProtectedSearchRouteImport
       parentRoute: typeof ProtectedRoute
     }
     '/_auth/sign-up': {
@@ -322,14 +303,12 @@ const ProtectedTopicTopicIdRouteRouteWithChildren =
   )
 
 interface ProtectedRouteChildren {
-  ProtectedSearchRoute: typeof ProtectedSearchRoute
   ProtectedSettingsRoute: typeof ProtectedSettingsRoute
   ProtectedChatThreadIdRouteRoute: typeof ProtectedChatThreadIdRouteRouteWithChildren
   ProtectedTopicTopicIdRouteRoute: typeof ProtectedTopicTopicIdRouteRouteWithChildren
 }
 
 const ProtectedRouteChildren: ProtectedRouteChildren = {
-  ProtectedSearchRoute: ProtectedSearchRoute,
   ProtectedSettingsRoute: ProtectedSettingsRoute,
   ProtectedChatThreadIdRouteRoute: ProtectedChatThreadIdRouteRouteWithChildren,
   ProtectedTopicTopicIdRouteRoute: ProtectedTopicTopicIdRouteRouteWithChildren,

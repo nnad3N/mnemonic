@@ -1,7 +1,8 @@
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate, useParams } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { T, useGT } from "gt-tanstack-start";
+import { produce } from "immer";
 import { toast } from "sonner";
 import * as v from "valibot";
 
@@ -16,6 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import type { SidebarSearch } from "@/routes/_protected";
 import {
   deleteConversation,
   deleteTopic,
@@ -25,15 +27,76 @@ import {
   renameConversation,
   renameTopic,
 } from "@/routes/_protected.chat.$threadId/-thread-api/rename-thread";
-import type { SidebarTopic } from "@/routes/_protected.chat.$threadId/-thread-api/types";
 
 type RenameFieldProps = {
-  threadId: string;
   initialValue: string;
-  stopRenaming: () => void;
+  onRename: (title: string) => Promise<void>;
+  onCancel: () => void;
 };
 
-export const RenameField = ({ threadId, initialValue, stopRenaming }: RenameFieldProps) => {
+const RenameForm = ({ initialValue, onRename, onCancel }: RenameFieldProps) => {
+  const form = useForm({
+    defaultValues: { title: initialValue },
+    onSubmit: async ({ value }) => {
+      const trimmed = value.title.trim();
+
+      if (trimmed.length === 0 || trimmed === initialValue.trim()) {
+        onCancel();
+        return;
+      }
+
+      await onRename(trimmed);
+    },
+    validationLogic: revalidateLogic(),
+    validators: {
+      onDynamic: v.object({
+        title: v.string(),
+      }),
+    },
+  });
+
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        void form.handleSubmit();
+      }}
+    >
+      <form.Field name="title">
+        {(field) => (
+          <Input
+            autoFocus
+            className="h-6 py-0 text-foreground"
+            name={field.name}
+            onBlur={() => {
+              field.handleBlur();
+              void form.handleSubmit();
+            }}
+            onChange={(event) => {
+              field.handleChange(event.target.value);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.preventDefault();
+                onCancel();
+              }
+            }}
+            value={field.state.value}
+          />
+        )}
+      </form.Field>
+    </form>
+  );
+};
+
+type RenameThreadFieldProps = {
+  initialValue: string;
+  onCancel: () => void;
+  threadId: string;
+};
+
+export const RenameThreadField = ({ initialValue, onCancel, threadId }: RenameThreadFieldProps) => {
   const gt = useGT();
   const queryClient = useQueryClient();
 
@@ -45,161 +108,62 @@ export const RenameField = ({ threadId, initialValue, stopRenaming }: RenameFiel
       toast.error(gt("Could not rename conversation"));
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: threadKeys.sidebar() });
-      stopRenaming();
-    },
-  });
-
-  const form = useForm({
-    defaultValues: { title: initialValue },
-    onSubmit: ({ value }) => {
-      const trimmed = value.title.trim();
-
-      if (trimmed.length === 0 || trimmed === initialValue.trim()) {
-        stopRenaming();
-        return;
-      }
-
-      renameMutation.mutate(trimmed);
-    },
-    validationLogic: revalidateLogic(),
-    validators: {
-      onDynamic: v.object({
-        title: v.string(),
-      }),
+      await queryClient.invalidateQueries({ queryKey: threadKeys.all });
+      onCancel();
     },
   });
 
   return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        void form.handleSubmit();
-      }}
-    >
-      <form.Field name="title">
-        {(field) => (
-          <Input
-            autoFocus
-            name={field.name}
-            onBlur={() => {
-              field.handleBlur();
-              void form.handleSubmit();
-            }}
-            onChange={(event) => {
-              field.handleChange(event.target.value);
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") {
-                event.preventDefault();
-                stopRenaming();
-              }
-            }}
-            value={field.state.value}
-          />
-        )}
-      </form.Field>
-    </form>
+    <RenameForm
+      initialValue={initialValue}
+      onRename={renameMutation.mutateAsync}
+      onCancel={onCancel}
+    />
   );
 };
 
 type RenameTopicFieldProps = {
-  topicId: string;
   initialValue: string;
-  stopRenaming: () => void;
+  onCancel: () => void;
+  topicId: string;
 };
 
-export const RenameTopicField = ({
-  topicId,
-  initialValue,
-  stopRenaming,
-}: RenameTopicFieldProps) => {
+export const RenameTopicField = ({ initialValue, onCancel, topicId }: RenameTopicFieldProps) => {
   const gt = useGT();
   const queryClient = useQueryClient();
 
   const renameMutation = useMutation({
     mutationFn: async (title: string) => {
-      await renameTopic({ data: { topicId, title } });
+      await renameTopic({ data: { title, topicId } });
     },
     onError: () => {
       toast.error(gt("Could not rename topic"));
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: threadKeys.sidebar() });
-      stopRenaming();
-    },
-  });
-
-  const form = useForm({
-    defaultValues: { title: initialValue },
-    onSubmit: ({ value }) => {
-      const trimmed = value.title.trim();
-
-      if (trimmed.length === 0 || trimmed === initialValue.trim()) {
-        stopRenaming();
-        return;
-      }
-
-      renameMutation.mutate(trimmed);
-    },
-    validationLogic: revalidateLogic(),
-    validators: {
-      onDynamic: v.object({
-        title: v.string(),
-      }),
+      await queryClient.invalidateQueries({ queryKey: threadKeys.all });
+      onCancel();
     },
   });
 
   return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        void form.handleSubmit();
-      }}
-    >
-      <form.Field name="title">
-        {(field) => (
-          <Input
-            autoFocus
-            name={field.name}
-            onBlur={() => {
-              field.handleBlur();
-              void form.handleSubmit();
-            }}
-            onChange={(event) => {
-              field.handleChange(event.target.value);
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") {
-                event.preventDefault();
-                stopRenaming();
-              }
-            }}
-            value={field.state.value}
-          />
-        )}
-      </form.Field>
-    </form>
+    <RenameForm
+      initialValue={initialValue}
+      onRename={renameMutation.mutateAsync}
+      onCancel={onCancel}
+    />
   );
 };
 
 type DeleteThreadDialogProps = {
-  threadId: string;
   onOpenChange: (open: boolean) => void;
   open: boolean;
+  threadId: string;
 };
 
-export const DeleteThreadDialog = ({ threadId, onOpenChange, open }: DeleteThreadDialogProps) => {
+export const DeleteThreadDialog = ({ onOpenChange, open, threadId }: DeleteThreadDialogProps) => {
   const gt = useGT();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const activeThreadId = useParams({
-    from: "/_protected/chat/$threadId",
-    select: (params) => params.threadId,
-    shouldThrow: false,
-  });
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
@@ -209,9 +173,7 @@ export const DeleteThreadDialog = ({ threadId, onOpenChange, open }: DeleteThrea
       toast.error(gt("Could not delete conversation"));
     },
     onSuccess: async () => {
-      if (activeThreadId === threadId) {
-        await navigate({ to: "/search" });
-      }
+      await navigate({ to: "/" });
       await queryClient.invalidateQueries({ queryKey: threadKeys.sidebar() });
       onOpenChange(false);
     },
@@ -250,33 +212,32 @@ export const DeleteThreadDialog = ({ threadId, onOpenChange, open }: DeleteThrea
 type DeleteTopicDialogProps = {
   onOpenChange: (open: boolean) => void;
   open: boolean;
-  topic: SidebarTopic;
+  topicId: string;
 };
 
-export const DeleteTopicDialog = ({ onOpenChange, open, topic }: DeleteTopicDialogProps) => {
+export const DeleteTopicDialog = ({ onOpenChange, open, topicId }: DeleteTopicDialogProps) => {
   const gt = useGT();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const activeThreadId = useParams({
-    from: "/_protected/chat/$threadId",
-    select: (params) => params.threadId,
-    shouldThrow: false,
-  });
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      await deleteTopic({ data: { topicId: topic.id } });
+      await deleteTopic({ data: { topicId } });
     },
     onError: () => {
       toast.error(gt("Could not delete topic"));
     },
     onSuccess: async () => {
-      if (activeThreadId && topic.threads.some((thread) => thread.id === activeThreadId)) {
-        await navigate({ to: "/search" });
-      }
+      await navigate({
+        search: (prev: SidebarSearch) =>
+          produce(prev, (draft) => {
+            draft.topic = undefined;
+          }),
+        to: "/",
+      });
       queryClient.removeQueries({
         exact: true,
-        queryKey: threadKeys.sidebarTopicThreads(topic.id),
+        queryKey: threadKeys.sidebarThreads(topicId),
       });
       await queryClient.invalidateQueries({
         exact: true,

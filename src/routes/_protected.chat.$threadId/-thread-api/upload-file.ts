@@ -24,8 +24,8 @@ export const FILE_UPLOAD_TTL_SECONDS = 60;
 
 type UploadFileCtx = Kits<[DbKit, S3Kit]>;
 
-const markFileFailed = async (fileId: SafeId<"file">, userId: SafeId<"user">) =>
-  Kit.get(dbKit).run((db) =>
+const markFileFailed = async (ctx: Kits<[DbKit]>, fileId: SafeId<"file">, userId: SafeId<"user">) =>
+  ctx.db.run((db) =>
     db
       .update(file)
       .set({ status: "failed" })
@@ -129,7 +129,7 @@ export const getPresignedUrlFn = Kit.gen(async function* (
   });
 
   if (Result.isError(presignedUrl)) {
-    await markFileFailed(pendingUpload.fileId, input.userId);
+    await markFileFailed(ctx, pendingUpload.fileId, input.userId);
 
     return presignedUrl;
   }
@@ -194,7 +194,7 @@ export const processFile = createServerFn({ method: "POST" })
     });
 
     if (Result.isError(workflowResult)) {
-      await markFileFailed(context.file.id, context.user.id);
+      await markFileFailed(uploadFileCtx, context.file.id, context.user.id);
 
       throw toServerFnError.serverError("File processing could not be started");
     }
@@ -203,7 +203,7 @@ export const processFile = createServerFn({ method: "POST" })
 
     if (result.status === "failed") {
       // The workflow's onError already marks the file failed; this covers that hook's own DB write failing.
-      await markFileFailed(context.file.id, context.user.id);
+      await markFileFailed(uploadFileCtx, context.file.id, context.user.id);
 
       throw new ServerFnError({
         message: "File processing failed",
@@ -213,7 +213,7 @@ export const processFile = createServerFn({ method: "POST" })
     }
 
     if (result.status !== "success") {
-      await markFileFailed(context.file.id, context.user.id);
+      await markFileFailed(uploadFileCtx, context.file.id, context.user.id);
 
       throw new ServerFnError({
         message: "File processing did not complete",

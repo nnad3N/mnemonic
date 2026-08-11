@@ -40,12 +40,15 @@ function MessageScrollerViewport({
         data-slot="message-scroller-viewport"
         className={cn(
           "size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1",
-          "scroll-fade-b overscroll-contain contain-content",
+          "overscroll-contain contain-content",
           className,
         )}
         {...props}
       />
-      <ScrollBar />
+      {/* A mask-based fade (scroll-fade-b) on the viewport disables backdrop-filter
+          for the sticky thread header inside it, so fade over the background instead. */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-linear-to-b from-transparent to-background" />
+      <ScrollBar className="z-20 mr-1 py-1" />
       <ScrollAreaPrimitive.Corner />
     </ScrollAreaPrimitive.Root>
   );

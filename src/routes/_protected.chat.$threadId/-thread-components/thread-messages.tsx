@@ -9,6 +9,7 @@ import { isVisibleToolPart } from "@/lib/ai-sdk/tool-parts";
 import { cn } from "@/lib/utils";
 import { MessageStateContext } from "@/routes/_protected.chat.$threadId/-message-state-context";
 import { ThreadError } from "@/routes/_protected.chat.$threadId/-thread-components/thread-error";
+import { ThreadHeader } from "@/routes/_protected.chat.$threadId/-thread-components/thread-header";
 import { ToolIndicator } from "@/routes/_protected.chat.$threadId/-thread-components/tool-indicator";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 
@@ -80,11 +81,12 @@ export const ThreadMessages = () => {
 
   return (
     <MessageScrollerViewport>
+      <ThreadHeader />
       <MessageScrollerContent
         aria-busy={isBusy}
         aria-hidden={!isLayoutReady}
         className={cn(
-          "mx-auto block w-full max-w-3xl min-w-0 pb-64 transition-opacity",
+          "typeset typeset-chat mx-auto mt-3 block w-full max-w-3xl min-w-0 px-3 pb-64 transition-opacity",
           isLayoutReady ? "opacity-100" : "opacity-0",
         )}
       >

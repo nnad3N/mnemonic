@@ -12,11 +12,7 @@ import { memoryKit } from "@/lib/memory-kit";
 import type { MemoryKit } from "@/lib/memory-kit";
 import { threadAccessMiddleware } from "@/lib/middleware/assert-thread-access";
 import { models } from "@/mastra/models";
-import {
-  sidebarConversationsQuery,
-  sidebarTopicThreadsQuery,
-  sidebarTopicsQuery,
-} from "@/routes/_protected.chat.$threadId/-thread-api/sidebar-data";
+import { sidebarThreadsQuery } from "@/routes/_protected.chat.$threadId/-thread-api/sidebar-data";
 
 const TITLE_SYSTEM_PROMPT = `
 You generate concise thread titles for a conversation sidebar.
@@ -149,60 +145,14 @@ export const useCreateThreadTitle = () => {
     onSuccess: (thread, vars) => {
       if (!thread) return;
 
-      const conversationsQueryOptions = sidebarConversationsQuery();
-
-      queryClient.setQueryData(conversationsQueryOptions.queryKey, (current) =>
+      queryClient.setQueryData(sidebarThreadsQuery(vars.topicId).queryKey, (current) =>
         produce(current, (draft) => {
           if (!draft) return;
 
-          for (const page of draft.pages) {
-            for (const item of page.items) {
-              if (item.id === thread.id) {
-                item.title = thread.title;
-                item.updatedAt = thread.updatedAt;
-              }
-            }
-          }
-        }),
-      );
-
-      if (!vars.topicId) return;
-
-      const topicsQueryOptions = sidebarTopicsQuery();
-
-      queryClient.setQueryData(topicsQueryOptions.queryKey, (current) =>
-        produce(current, (draft) => {
-          if (!draft) return;
-
-          for (const page of draft.pages) {
-            for (const topic of page.items) {
-              if (topic.id !== vars.topicId) {
-                continue;
-              }
-
-              for (const topicThread of topic.threads) {
-                if (topicThread.id === thread.id) {
-                  topicThread.title = thread.title;
-                  topicThread.updatedAt = thread.updatedAt;
-                }
-              }
-            }
-          }
-        }),
-      );
-
-      const topicThreadsQueryOptions = sidebarTopicThreadsQuery(vars.topicId);
-
-      queryClient.setQueryData(topicThreadsQueryOptions.queryKey, (current) =>
-        produce(current, (draft) => {
-          if (!draft) return;
-
-          for (const topicThreadPage of draft.pages) {
-            for (const topicThread of topicThreadPage.items) {
-              if (topicThread.id === thread.id) {
-                topicThread.title = thread.title;
-                topicThread.updatedAt = thread.updatedAt;
-              }
+          for (const item of draft) {
+            if (item.id === thread.id) {
+              item.title = thread.title;
+              item.updatedAt = thread.updatedAt;
             }
           }
         }),

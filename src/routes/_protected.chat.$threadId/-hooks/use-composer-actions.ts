@@ -1,4 +1,5 @@
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { convertFileListToFileUIParts } from "ai";
 import { produce } from "immer";
@@ -9,8 +10,8 @@ import { useEditorRef, useEditorSelector } from "platejs/react";
 import { useStickToBottomContext } from "use-stick-to-bottom";
 
 import { closeWorkSegments } from "@/lib/ai-sdk/close-work-segments";
+import { sidebarThreadsQuery } from "@/routes/_protected.chat.$threadId/-thread-api/sidebar-data";
 
-import { moveSidebarThreadToTop } from "../-thread-api/sidebar-cache";
 import { getThreadEditorId, plateToMarkdown } from "../-thread-components/composer/plate";
 import type { ThreadMetadataAttachment, ThreadUIMessage } from "../-thread-types";
 import type { ThreadInputLocation } from "../../-chat-store";
@@ -19,6 +20,29 @@ import { useCreateThreadTitle } from "./use-create-thread-title";
 import { threadChatQuery, useThreadChat } from "./use-thread-chat";
 
 const Route = getRouteApi("/_protected/chat/$threadId");
+
+type MoveSidebarThreadToTopInput = {
+  threadId: string;
+  topicId: string | undefined;
+};
+
+const moveSidebarThreadToTop = (queryClient: QueryClient, input: MoveSidebarThreadToTopInput) => {
+  const updatedAt = Temporal.Now.instant().toString();
+
+  queryClient.setQueryData(sidebarThreadsQuery(input.topicId).queryKey, (current) =>
+    produce(current, (draft) => {
+      if (!draft) return;
+
+      const threadIndex = draft.findIndex((thread) => thread.id === input.threadId);
+
+      if (threadIndex === -1) return;
+
+      const [thread] = draft.splice(threadIndex, 1);
+      thread.updatedAt = updatedAt;
+      draft.unshift(thread);
+    }),
+  );
+};
 
 export const hasComposerContent = (editor: PlateEditor, node: Descendant): boolean => {
   // editor.api.isEmpty() treats whitespace text as content. We need whitespace

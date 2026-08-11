@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 import { RootAppShell } from "@/routes/__root";
 import { authSessionQuery } from "@/routes/_auth/-auth.api";
 import {
-  sidebarConversationsQuery,
+  sidebarThreadsQuery,
   sidebarTopicsQuery,
 } from "@/routes/_protected.chat.$threadId/-thread-api/sidebar-data";
 import { routeTree } from "@/routeTree.gen";
@@ -46,14 +46,8 @@ export const createTestRouter = ({ queryClient, session, user }: CreateTestRoute
     data: { session, user },
     error: null,
   });
-  queryClient.setQueryData(sidebarConversationsQuery().queryKey, {
-    pageParams: [0],
-    pages: [{ hasMore: false, items: [], nextPage: null }],
-  });
-  queryClient.setQueryData(sidebarTopicsQuery().queryKey, {
-    pageParams: [0],
-    pages: [{ hasMore: false, items: [] }],
-  });
+  queryClient.setQueryData(sidebarThreadsQuery(undefined).queryKey, []);
+  queryClient.setQueryData(sidebarTopicsQuery().queryKey, []);
 
   // `update()`'s public type omits Start's `shellComponent`; set it on the live options.
   Object.assign(routeTree.options, {

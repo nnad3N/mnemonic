@@ -8,10 +8,9 @@ export const threadKeys = {
     [...threadKeys.all, "mention", type, id] as const,
   settings: (threadId: string) => [...threadKeys.all, threadId, "settings"] as const,
   sidebar: () => [...threadKeys.all, "sidebar"] as const,
-  sidebarConversations: () => [...threadKeys.sidebar(), "conversations"] as const,
   sidebarTopics: () => [...threadKeys.sidebar(), "topics"] as const,
-  sidebarTopicThreads: (topicId: string) =>
-    [...threadKeys.sidebar(), "topics", topicId, "threads"] as const,
+  sidebarThreads: (topicId: string | undefined) =>
+    [...threadKeys.sidebar(), "threads", topicId] as const,
 };
 
 export const threadMutationKeys = {

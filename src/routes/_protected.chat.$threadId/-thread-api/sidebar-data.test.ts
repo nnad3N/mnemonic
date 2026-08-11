@@ -5,13 +5,9 @@ import * as Kit from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit";
 import { createSafeId } from "@/lib/safe-id";
 import { expectOk } from "@/test/result";
-import { clearDatabase, seedThread, seedTopic, seedUser } from "@/test/seed";
+import { clearDatabase, seedThread, seedUser } from "@/test/seed";
 
-import {
-  getSidebarTopicsPageRequest,
-  listSidebarConversationsFn,
-  listSidebarTopicsFn,
-} from "./sidebar-data";
+import { listSidebarConversationsFn } from "./sidebar-data";
 
 const sidebarCtx = Kit.createContext(dbKit, memoryKit);
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -28,21 +24,8 @@ afterEach(async () => {
   await clearDatabase();
 });
 
-describe("getSidebarTopicsPageRequest", () => {
-  it("tiles consecutive pages without gaps or overlaps", () => {
-    expect(getSidebarTopicsPageRequest(0).offset).toBe(0);
-
-    for (let pageIndex = 0; pageIndex < 6; pageIndex += 1) {
-      const current = getSidebarTopicsPageRequest(pageIndex);
-      const next = getSidebarTopicsPageRequest(pageIndex + 1);
-
-      expect(next.offset).toBe(current.offset + current.limit);
-    }
-  });
-});
-
 describe("listSidebarConversationsFn", () => {
-  it("deletes conversations older than 7 days before listing the current page", async () => {
+  it("deletes conversations older than 7 days before listing", async () => {
     const expiredAt = new Date(Date.now() - 8 * DAY_MS);
     const freshAt = new Date();
 
@@ -61,10 +44,10 @@ describe("listSidebarConversationsFn", () => {
       }),
     ]);
 
-    const result = expectOk(await listSidebarConversationsFn(sidebarCtx, { page: 0, userId }));
+    const conversations = expectOk(await listSidebarConversationsFn(sidebarCtx, { userId }));
 
-    expect(result.items.map((item) => item.id)).toEqual([freshId]);
-    expect(result.items.map((item) => item.id)).not.toContain(expiredId);
+    expect(conversations.map((item) => item.id)).toEqual([freshId]);
+    expect(conversations.map((item) => item.id)).not.toContain(expiredId);
   });
 
   it("keeps conversations just inside the 7-day retention window and deletes those just outside", async () => {
@@ -86,8 +69,8 @@ describe("listSidebarConversationsFn", () => {
       }),
     ]);
 
-    const result = expectOk(await listSidebarConversationsFn(sidebarCtx, { page: 0, userId }));
-    const ids = result.items.map((item) => item.id);
+    const conversations = expectOk(await listSidebarConversationsFn(sidebarCtx, { userId }));
+    const ids = conversations.map((item) => item.id);
 
     expect(ids).toContain(insideId);
     expect(ids).not.toContain(outsideId);
@@ -112,61 +95,8 @@ describe("listSidebarConversationsFn", () => {
       }),
     ]);
 
-    const result = expectOk(await listSidebarConversationsFn(sidebarCtx, { page: 0, userId }));
+    const conversations = expectOk(await listSidebarConversationsFn(sidebarCtx, { userId }));
 
-    expect(result.items.at(0)?.id).toBe(newerId);
-  });
-});
-
-describe("listSidebarTopicsFn", () => {
-  it("reports hasMore when more topics exist beyond the page", async () => {
-    await Promise.all(
-      Array.from({ length: 3 }, async (_, index) =>
-        seedTopic({
-          userId,
-          title: `Topic ${String(index)}`,
-          updatedAt: new Date(Date.UTC(2026, 0, index + 1)),
-        }),
-      ),
-    );
-
-    const [firstPageResult, secondPageResult] = await Promise.all([
-      listSidebarTopicsFn(sidebarCtx, {
-        userId,
-        limit: 2,
-        offset: 0,
-      }),
-      listSidebarTopicsFn(sidebarCtx, {
-        userId,
-        limit: 2,
-        offset: 2,
-      }),
-    ]);
-    const firstPage = expectOk(firstPageResult);
-    const secondPage = expectOk(secondPageResult);
-
-    expect(firstPage.items).toHaveLength(2);
-    expect(firstPage.hasMore).toBe(true);
-    expect(secondPage.items).toHaveLength(1);
-    expect(secondPage.hasMore).toBe(false);
-  });
-
-  it("attaches topic conversations from memory", async () => {
-    const topicId = await seedTopic({ userId, title: "With threads" });
-    const threadId = await seedThread({
-      resourceId: topicId,
-      title: "Inside topic",
-    });
-
-    const result = expectOk(
-      await listSidebarTopicsFn(sidebarCtx, {
-        userId,
-        limit: 10,
-        offset: 0,
-      }),
-    );
-
-    const topicItem = result.items.find((item) => item.id === topicId);
-    expect(topicItem?.threads.map((thread) => thread.id)).toEqual([threadId]);
+    expect(conversations.at(0)?.id).toBe(newerId);
   });
 });
