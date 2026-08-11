@@ -45,17 +45,35 @@ export const Route = createRootRouteWithContext<RouterContext>()({
         href: appCss,
         rel: "stylesheet",
       },
+      {
+        href: "/manifest.json",
+        rel: "manifest",
+      },
+      {
+        href: "/icon.svg",
+        rel: "icon",
+        type: "image/svg+xml",
+      },
+      {
+        href: "/apple-touch-icon.png",
+        rel: "apple-touch-icon",
+      },
     ],
     meta: [
       {
         charSet: "utf-8",
       },
       {
-        content: "width=device-width, initial-scale=1",
+        // viewport-fit=cover is what makes env(safe-area-inset-*) report anything but zero.
+        content: "width=device-width, initial-scale=1, viewport-fit=cover",
         name: "viewport",
       },
       {
-        title: "TanStack Start Starter",
+        content: "black-translucent",
+        name: "apple-mobile-web-app-status-bar-style",
+      },
+      {
+        title: "Mnemonic",
       },
     ],
   }),
@@ -102,15 +120,57 @@ const useAuthSessionQuery = (): void => {
   }, [data, error, isPending, isRefetching, queryClient, router]);
 };
 
+const OFFLINE_CACHE = "mnemonic-offline";
+const OFFLINE_URL = "/offline";
+
+/**
+ * Refreshed on every load rather than at service worker install, so the cached copy tracks
+ * deploys without `sw.js` ever needing a version bump. Credentials are omitted so the cached
+ * document never embeds the dehydrated session. The stylesheet has to come along, since by
+ * definition nothing can be fetched when the document is served offline.
+ */
+const refreshOfflineCache = async () => {
+  const response = await fetch(OFFLINE_URL, { credentials: "omit" });
+
+  if (!response.ok) return;
+
+  const html = new DOMParser().parseFromString(await response.clone().text(), "text/html");
+  const stylesheets = [...html.querySelectorAll("link[rel=stylesheet]")]
+    .map((link) => link.getAttribute("href"))
+    .filter((href) => href !== null);
+
+  const cache = await caches.open(OFFLINE_CACHE);
+  await cache.put(OFFLINE_URL, response);
+  await cache.addAll(stylesheets);
+
+  const kept = [OFFLINE_URL, ...stylesheets].map(
+    (path) => new URL(path, window.location.origin).href,
+  );
+
+  for (const cached of await cache.keys()) {
+    if (!kept.includes(cached.url)) {
+      await cache.delete(cached.url);
+    }
+  }
+};
+
 export const RootAppShell = ({ children }: PropsWithChildren) => {
   useAuthSessionQuery();
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+
+    void navigator.serviceWorker.register("/sw.js");
+    void refreshOfflineCache();
+  }, []);
   const { locale, translations } = Route.useLoaderData();
 
   return (
     <GTProvider locale={locale} translations={translations}>
       <ThemeProvider>
         <Toaster />
-        <main className="flex h-dvh flex-col overflow-hidden">{children}</main>
+        <main className="flex h-dvh flex-col overflow-hidden pt-(--safe-top) pr-(--safe-right) pb-(--safe-bottom) pl-(--safe-left)">
+          {children}
+        </main>
       </ThemeProvider>
     </GTProvider>
   );
@@ -122,6 +182,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>
+        {/*
+          Not in `head()`: HeadContent keys meta by `name`, so the pair collapses to one tag.
+          Both are needed because the theme is `system` by default.
+        */}
+        <meta content="#fffcf0" media="(prefers-color-scheme: light)" name="theme-color" />
+        <meta content="#100f0f" media="(prefers-color-scheme: dark)" name="theme-color" />
         <HeadContent />
       </head>
       {/* Mermaid diagrams overflow the body while loading. */}

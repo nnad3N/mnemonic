@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as OfflineRouteImport } from './routes/offline'
 import { Route as ProtectedRouteImport } from './routes/_protected'
 import { Route as AuthRouteRouteImport } from './routes/_auth/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -22,6 +23,11 @@ import { Route as ProtectedChatThreadIdRouteRouteImport } from './routes/_protec
 import { Route as ProtectedChatThreadIdIndexRouteImport } from './routes/_protected.chat.$threadId/index'
 import { Route as ProtectedTopicTopicIdFilesRouteImport } from './routes/_protected.topic.$topicId/files'
 
+const OfflineRoute = OfflineRouteImport.update({
+  id: '/offline',
+  path: '/offline',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProtectedRoute = ProtectedRouteImport.update({
   id: '/_protected',
   getParentRoute: () => rootRouteImport,
@@ -87,6 +93,7 @@ const ProtectedTopicTopicIdFilesRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/offline': typeof OfflineRoute
   '/sign-in': typeof AuthSignInRoute
   '/sign-up': typeof AuthSignUpRoute
   '/settings': typeof ProtectedSettingsRoute
@@ -99,6 +106,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/offline': typeof OfflineRoute
   '/sign-in': typeof AuthSignInRoute
   '/sign-up': typeof AuthSignUpRoute
   '/settings': typeof ProtectedSettingsRoute
@@ -113,6 +121,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_auth': typeof AuthRouteRouteWithChildren
   '/_protected': typeof ProtectedRouteWithChildren
+  '/offline': typeof OfflineRoute
   '/_auth/sign-in': typeof AuthSignInRoute
   '/_auth/sign-up': typeof AuthSignUpRoute
   '/_protected/settings': typeof ProtectedSettingsRoute
@@ -127,6 +136,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/offline'
     | '/sign-in'
     | '/sign-up'
     | '/settings'
@@ -139,6 +149,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/offline'
     | '/sign-in'
     | '/sign-up'
     | '/settings'
@@ -152,6 +163,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_auth'
     | '/_protected'
+    | '/offline'
     | '/_auth/sign-in'
     | '/_auth/sign-up'
     | '/_protected/settings'
@@ -167,12 +179,20 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRouteRoute: typeof AuthRouteRouteWithChildren
   ProtectedRoute: typeof ProtectedRouteWithChildren
+  OfflineRoute: typeof OfflineRoute
   ApiChatRoute: typeof ApiChatRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/offline': {
+      id: '/offline'
+      path: '/offline'
+      fullPath: '/offline'
+      preLoaderRoute: typeof OfflineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_protected': {
       id: '/_protected'
       path: ''
@@ -322,6 +342,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRouteRoute: AuthRouteRouteWithChildren,
   ProtectedRoute: ProtectedRouteWithChildren,
+  OfflineRoute: OfflineRoute,
   ApiChatRoute: ApiChatRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }

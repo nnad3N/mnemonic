@@ -2,6 +2,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { T, useLocale, useSetLocale } from "gt-tanstack-start";
 import {
   ChevronsUpDownIcon,
+  DownloadIcon,
   LanguagesIcon,
   LaptopIcon,
   LogOutIcon,
@@ -17,6 +18,7 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
@@ -32,6 +34,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { useInstallPrompt } from "@/hooks/use-install-prompt";
 import { authClient } from "@/lib/better-auth/auth-client";
 
 const getInitials = (value: string): string => {
@@ -60,6 +63,7 @@ type SidebarFooterSectionProps = {
 export const SidebarFooterSection = ({ user }: SidebarFooterSectionProps) => {
   const locale = useLocale();
   const setLocale = useSetLocale();
+  const { canInstall, needsManualInstall, promptInstall } = useInstallPrompt();
   const { isMobile } = useSidebar();
   const navigate = useNavigate();
   const { setTheme, theme } = useTheme();
@@ -138,6 +142,21 @@ export const SidebarFooterSection = ({ user }: SidebarFooterSectionProps) => {
                     </DropdownMenuRadioGroup>
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
+                {canInstall && (
+                  <DropdownMenuItem
+                    onClick={async () => {
+                      await promptInstall();
+                    }}
+                  >
+                    <DownloadIcon />
+                    <T>Install app</T>
+                  </DropdownMenuItem>
+                )}
+                {needsManualInstall && (
+                  <DropdownMenuLabel className="font-normal text-muted-foreground">
+                    <T>To install: Share, then Add to Home Screen.</T>
+                  </DropdownMenuLabel>
+                )}
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>

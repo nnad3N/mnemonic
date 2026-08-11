@@ -15,6 +15,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
+      // Portaled out of the shell, so it does not inherit the root safe-area padding.
+      mobileOffset={{ bottom: "calc(1rem + var(--safe-bottom))" }}
       icons={{
         success: <CircleCheckIcon className="size-4" />,
         info: <InfoIcon className="size-4" />,

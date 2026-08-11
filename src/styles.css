@@ -299,6 +299,18 @@
 }
 
 /*
+ * Device insets, non-zero only in an installed app (the root viewport meta sets viewport-fit=cover).
+ * The shell is a fixed h-dvh box that never scrolls, so nothing can be nudged clear of the status
+ * bar or home indicator by scrolling — these have to be padding.
+ */
+:root {
+  --safe-top: env(safe-area-inset-top);
+  --safe-right: env(safe-area-inset-right);
+  --safe-bottom: env(safe-area-inset-bottom);
+  --safe-left: env(safe-area-inset-left);
+}
+
+/*
  * Flexoki palette (absolute hex) → f-* utilities + shadcn tokens.
  * Bare accents (f-red, f-blue, …) are 600 in light / 400 in dark.
  * https://stephango.com/flexoki

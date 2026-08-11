@@ -165,7 +165,10 @@ function Sidebar({
             <SheetTitle>Sidebar</SheetTitle>
             <SheetDescription>Displays the mobile sidebar.</SheetDescription>
           </SheetHeader>
-          <div className="flex h-full w-full flex-col">{children}</div>
+          {/* Portaled out of the shell, so it does not inherit the root safe-area padding. */}
+          <div className="flex h-full w-full flex-col pt-(--safe-top) pb-(--safe-bottom) pl-(--safe-left)">
+            {children}
+          </div>
         </SheetContent>
       </Sheet>
     );

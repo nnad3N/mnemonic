@@ -14,6 +14,7 @@ export const env = createEnv({
 
   server: {
     ALLOWED_EMAILS: v.optional(v.pipe(v.string(), v.nonEmpty())),
+    BETTER_AUTH_URL: v.pipe(v.string(), v.url()),
     DATABASE_AUTH_TOKEN: v.optional(v.pipe(v.string(), v.nonEmpty())),
     DATABASE_URL: v.pipe(v.string(), v.nonEmpty()),
     FIRECRAWL_API_URL: v.pipe(v.string(), v.url()),
@@ -24,7 +25,6 @@ export const env = createEnv({
     S3_FORCE_PATH_STYLE: v.picklist(["true", "false"]),
     S3_REGION: v.pipe(v.string(), v.nonEmpty()),
     S3_SECRET_ACCESS_KEY: v.pipe(v.string(), v.nonEmpty()),
-    SERVER_URL: v.optional(v.pipe(v.string(), v.url())),
   },
 });
 

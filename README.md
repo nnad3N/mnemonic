@@ -40,6 +40,8 @@ Alpha means the chat works and I am happy with where it is going. It is not fini
 
 Every technology Mnemonic is built on can be hosted on your own hardware. There is no packaged setup or guide for doing that — how you run it is up to you.
 
+Two things are worth knowing if you host it. Sign-in is passkeys only, and a passkey is bound to the hostname you registered it on, so pick the domain you intend to keep before anyone signs up. Mnemonic also installs to a phone home screen; on iOS an installed app keeps its own cookies separately from Safari, so the first launch asks you to sign in again even though the passkey itself is already on the device.
+
 ## Roadmap
 
 There are no dates here. The phases say how settled the project is, not when things land.

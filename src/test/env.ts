@@ -2,6 +2,7 @@ import type { RequiredServerEnv } from "@/env";
 
 /** Dummy env for Vitest. Values are never used for real I/O at construction time. */
 export const TEST_ENV = {
+  BETTER_AUTH_URL: "http://localhost:3000",
   DATABASE_URL: "file:./node_modules/.vitest/placeholder.db",
   FIRECRAWL_API_URL: "http://127.0.0.1:3002",
   OPENROUTER_API_KEY: "test-openrouter-key",
