@@ -1,8 +1,11 @@
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { T, useGT } from "gt-tanstack-start";
 import { produce } from "immer";
+import { PencilIcon, Trash2Icon } from "lucide-react";
+import { useState } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { toast } from "sonner";
 import * as v from "valibot";
 
@@ -16,7 +19,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
+import { navigateToScopeThread } from "@/routes/-sidebar/navigate-to-scope-thread";
 import type { SidebarSearch } from "@/routes/_protected";
 import {
   deleteConversation,
@@ -27,6 +37,7 @@ import {
   renameConversation,
   renameTopic,
 } from "@/routes/_protected.chat.$threadId/-thread-api/rename-thread";
+import { sidebarThreadsQuery } from "@/routes/_protected.chat.$threadId/-thread-api/sidebar-data";
 
 type RenameFieldProps = {
   initialValue: string;
@@ -164,6 +175,7 @@ export const DeleteThreadDialog = ({ onOpenChange, open, threadId }: DeleteThrea
   const gt = useGT();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const topicId = useSearch({ from: "/_protected", select: (search) => search.topic });
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
@@ -173,7 +185,11 @@ export const DeleteThreadDialog = ({ onOpenChange, open, threadId }: DeleteThrea
       toast.error(gt("Could not delete conversation"));
     },
     onSuccess: async () => {
-      await navigate({ to: "/" });
+      queryClient.setQueryData(
+        sidebarThreadsQuery(topicId).queryKey,
+        (current) => current?.filter((thread) => thread.id !== threadId) ?? [],
+      );
+      await navigateToScopeThread({ navigate, queryClient, topicId });
       await queryClient.invalidateQueries({ queryKey: threadKeys.sidebar() });
       onOpenChange(false);
     },
@@ -206,6 +222,76 @@ export const DeleteThreadDialog = ({ onOpenChange, open, threadId }: DeleteThrea
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+  );
+};
+
+type ThreadContextMenuProps = {
+  children: ReactNode | ((isActive: boolean) => ReactNode);
+  render: ReactElement | ((isActive: boolean) => ReactElement);
+  threadId: string;
+  title: string;
+};
+
+export const ThreadContextMenu = ({
+  children,
+  render,
+  threadId,
+  title,
+}: ThreadContextMenuProps) => {
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  if (isRenaming) {
+    return (
+      <RenameThreadField
+        initialValue={title}
+        onCancel={() => {
+          setIsRenaming(false);
+        }}
+        threadId={threadId}
+      />
+    );
+  }
+
+  return (
+    <>
+      <ContextMenu>
+        {typeof render === "function" ? (
+          <Link params={{ threadId }} to="/chat/$threadId">
+            {({ isActive }) => (
+              <ContextMenuTrigger render={render(isActive)}>
+                {typeof children === "function" ? children(isActive) : children}
+              </ContextMenuTrigger>
+            )}
+          </Link>
+        ) : (
+          <ContextMenuTrigger render={render}>
+            {typeof children === "function" ? children(false) : children}
+          </ContextMenuTrigger>
+        )}
+        <ContextMenuContent>
+          <ContextMenuItem
+            onClick={() => {
+              setIsRenaming(true);
+            }}
+          >
+            <PencilIcon />
+            <T>Rename</T>
+          </ContextMenuItem>
+          <ContextMenuItem
+            onClick={() => {
+              setDeleteOpen(true);
+            }}
+            variant="destructive"
+          >
+            <Trash2Icon />
+            <T>Delete</T>
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
+
+      <DeleteThreadDialog onOpenChange={setDeleteOpen} open={deleteOpen} threadId={threadId} />
+    </>
   );
 };
 

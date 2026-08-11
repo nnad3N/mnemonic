@@ -154,7 +154,7 @@ export const getOrCreateLatestConversation = createServerFn({ method: "GET" })
     const latest = listed.value.threads.at(0);
 
     if (latest) {
-      return { id: latest.id };
+      return { created: false, id: latest.id };
     }
 
     const now = new Date();
@@ -172,7 +172,7 @@ export const getOrCreateLatestConversation = createServerFn({ method: "GET" })
       throw toServerFnError.serverError("Failed to create conversation");
     }
 
-    return { id: created.value.id };
+    return { created: true, id: created.value.id };
   });
 
 export const sidebarTopicsQuery = () =>

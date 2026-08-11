@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams, useSearch } from "@tanstack/react-router";
+import { panic } from "better-result";
 import { T } from "gt-tanstack-start";
 import { FileIcon, PencilIcon, Trash2Icon } from "lucide-react";
 import { useState } from "react";
@@ -23,12 +24,7 @@ import {
   sidebarTopicsQuery,
 } from "@/routes/_protected.chat.$threadId/-thread-api/sidebar-data";
 
-import {
-  DeleteThreadDialog,
-  DeleteTopicDialog,
-  RenameThreadField,
-  RenameTopicField,
-} from "./thread-actions";
+import { DeleteTopicDialog, RenameTopicField, ThreadContextMenu } from "./thread-actions";
 
 export const ThreadHeader = () => {
   const threadId = useParams({
@@ -41,7 +37,9 @@ export const ThreadHeader = () => {
   });
   const thread = useQuery({
     ...sidebarThreadsQuery(topicId),
-    select: (listed) => listed.find((thread) => thread.id === threadId)?.title,
+    select: (listed) =>
+      listed.find((thread) => thread.id === threadId)?.title ??
+      panic(`Thread ${threadId} missing from sidebar threads`),
   });
   const topic = useQuery({
     ...sidebarTopicsQuery(),
@@ -51,21 +49,21 @@ export const ThreadHeader = () => {
   const isReady = thread.isSuccess && (!topic.isEnabled || topic.isSuccess);
 
   return (
-    <header className="sticky top-0 z-10 flex items-center border-b border-foreground/3 bg-background/50 p-2 text-sm backdrop-blur dark:border-white/5">
+    <header className="sticky top-0 z-10 flex h-10 items-center border-b border-foreground/3 bg-background/50 px-2 text-sm backdrop-blur dark:border-white/5">
       {isReady ? (
         <Breadcrumb className="min-w-0">
           <BreadcrumbList className="flex-nowrap gap-0.5 sm:gap-0.5">
             {topic.data && (
-              <>
-                <BreadcrumbItem className="min-w-0">
-                  <TopicCrumb title={topic.data.title} topicId={topic.data.id} />
-                </BreadcrumbItem>
-                <BreadcrumbSeparator />
-              </>
+              <BreadcrumbItem className="min-w-0">
+                <TopicCrumb title={topic.data.title} topicId={topic.data.id} />
+              </BreadcrumbItem>
             )}
-            <BreadcrumbItem className="min-w-0">
-              <ThreadCrumb threadId={threadId} title={thread.data ?? ""} />
-            </BreadcrumbItem>
+            {topic.data && thread.data && <BreadcrumbSeparator />}
+            {thread.data && (
+              <BreadcrumbItem className="min-w-0">
+                <ThreadCrumb threadId={threadId} title={thread.data} />
+              </BreadcrumbItem>
+            )}
           </BreadcrumbList>
         </Breadcrumb>
       ) : (
@@ -144,58 +142,18 @@ type ThreadCrumbProps = {
   title: string;
 };
 
-const ThreadCrumb = ({ threadId, title }: ThreadCrumbProps) => {
-  const [isRenaming, setIsRenaming] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-
-  if (isRenaming) {
-    return (
-      <RenameThreadField
-        initialValue={title}
-        onCancel={() => {
-          setIsRenaming(false);
-        }}
-        threadId={threadId}
+const ThreadCrumb = ({ threadId, title }: ThreadCrumbProps) => (
+  <ThreadContextMenu
+    render={
+      <button
+        aria-current="page"
+        className="rounded-md px-1.5 py-1 font-normal text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+        type="button"
       />
-    );
-  }
-
-  return (
-    <>
-      <ContextMenu>
-        <ContextMenuTrigger
-          render={
-            <button
-              aria-current="page"
-              className="rounded-md px-1.5 py-1 font-normal text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-              type="button"
-            />
-          }
-        >
-          {title}
-        </ContextMenuTrigger>
-        <ContextMenuContent>
-          <ContextMenuItem
-            onClick={() => {
-              setIsRenaming(true);
-            }}
-          >
-            <PencilIcon />
-            <T>Rename</T>
-          </ContextMenuItem>
-          <ContextMenuItem
-            onClick={() => {
-              setDeleteOpen(true);
-            }}
-            variant="destructive"
-          >
-            <Trash2Icon />
-            <T>Delete</T>
-          </ContextMenuItem>
-        </ContextMenuContent>
-      </ContextMenu>
-
-      <DeleteThreadDialog onOpenChange={setDeleteOpen} open={deleteOpen} threadId={threadId} />
-    </>
-  );
-};
+    }
+    threadId={threadId}
+    title={title}
+  >
+    {title}
+  </ThreadContextMenu>
+);

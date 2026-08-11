@@ -1,6 +1,7 @@
 import { Navigate, createFileRoute, redirect } from "@tanstack/react-router";
 
 import { Spinner } from "@/components/ui/spinner";
+import { threadKeys } from "@/routes/_protected.chat.$threadId/-thread-api/query-keys";
 import { getOrCreateLatestConversation } from "@/routes/_protected.chat.$threadId/-thread-api/sidebar-data";
 
 export const Route = createFileRoute("/")({
@@ -10,7 +11,17 @@ export const Route = createFileRoute("/")({
     }
   },
   component: RouteComponent,
-  loader: async () => getOrCreateLatestConversation(),
+  loader: async ({ context }) => {
+    const conversation = await getOrCreateLatestConversation();
+
+    if (conversation.created) {
+      await context.queryClient.invalidateQueries({
+        queryKey: threadKeys.sidebarThreads(undefined),
+      });
+    }
+
+    return conversation;
+  },
   pendingComponent: () => {
     return (
       <div className="flex h-full items-center justify-center">

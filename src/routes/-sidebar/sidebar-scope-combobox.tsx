@@ -26,6 +26,8 @@ import {
 import { threadKeys } from "@/routes/_protected.chat.$threadId/-thread-api/query-keys";
 import { sidebarTopicsQuery } from "@/routes/_protected.chat.$threadId/-thread-api/sidebar-data";
 
+import { navigateToScopeThread } from "./navigate-to-scope-thread";
+
 type SidebarScope = {
   id: string | null;
   title: string;
@@ -52,24 +54,29 @@ export const SidebarScopeCombobox = () => {
   const newTopicTitle = typedTitle.trim();
   const anchor = useComboboxAnchor();
 
-  const selectScope = async (topicId: string | undefined) =>
-    navigate({
-      replace: true,
-      search: (prev) =>
-        produce(prev, (draft) => {
-          draft.topic = topicId;
-        }),
-      to: ".",
-    });
-
   const createTopicMutation = useMutation({
-    mutationFn: async () => createTopic({ data: { title: newTopicTitle } }),
+    mutationFn: async () =>
+      createTopic({
+        data: {
+          conversationTitle: gt("New thread"),
+          title: newTopicTitle,
+        },
+      }),
     onError: () => {
       toast.error(gt("Could not create topic"));
     },
-    onSuccess: async (topic) => {
+    onSuccess: async ({ topicId, threadId }) => {
       await queryClient.invalidateQueries({ queryKey: threadKeys.sidebarTopics() });
-      await selectScope(topic.id);
+      await queryClient.invalidateQueries({ queryKey: threadKeys.sidebarThreads(topicId) });
+      await navigate({
+        params: { threadId },
+        replace: true,
+        search: (prev) =>
+          produce(prev, (draft) => {
+            draft.topic = topicId;
+          }),
+        to: "/chat/$threadId",
+      });
       setIsOpen(false);
     },
   });
@@ -106,13 +113,13 @@ export const SidebarScopeCombobox = () => {
           setTypedTitle("");
         }}
         onValueChange={async (scope) => {
-          await selectScope(scope?.id ?? undefined);
+          await navigateToScopeThread({ navigate, queryClient, topicId: scope?.id ?? undefined });
         }}
         open={isOpen}
         value={selectedScope}
       >
         <div className="min-w-0 flex-1" ref={anchor}>
-          <ComboboxInput className="w-full bg-transparent" placeholder="">
+          <ComboboxInput className="w-full bg-transparent" placeholder={selectedScope.title}>
             <InputGroupAddon align="inline-start">
               <MessagesSquareIcon />
             </InputGroupAddon>

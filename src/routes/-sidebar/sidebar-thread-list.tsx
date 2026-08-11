@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, useSearch } from "@tanstack/react-router";
+import { useSearch } from "@tanstack/react-router";
 import { T, useLocale } from "gt-tanstack-start";
 import { AlertCircleIcon, CircleIcon } from "lucide-react";
 
@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import type { SidebarSearch } from "@/routes/_protected";
 import type { SidebarThread } from "@/routes/_protected.chat.$threadId/-thread-api/sidebar-data";
 import { sidebarThreadsQuery } from "@/routes/_protected.chat.$threadId/-thread-api/sidebar-data";
+import { ThreadContextMenu } from "@/routes/_protected.chat.$threadId/-thread-components/thread-actions";
 
 import type { ThreadIndicator } from "../-chat-store";
 import { useChatStore } from "../-chat-store";
@@ -105,9 +106,13 @@ const SidebarThreadItem = ({ thread }: SidebarThreadItemProps) => {
   const indicator = useChatStore((state) => state.threadIndicators.get(thread.id));
 
   return (
-    <Link params={{ threadId: thread.id }} to="/chat/$threadId">
-      {({ isActive }) => (
-        <SidebarMenuButton isActive={isActive}>
+    <ThreadContextMenu
+      render={(isActive) => <SidebarMenuButton isActive={isActive} />}
+      threadId={thread.id}
+      title={thread.title}
+    >
+      {(isActive) => (
+        <>
           <span className={cn("min-w-0 flex-1 truncate", indicator === "pending" && "shimmer")}>
             {thread.title}
           </span>
@@ -117,9 +122,9 @@ const SidebarThreadItem = ({ thread }: SidebarThreadItemProps) => {
             locale={locale}
             updatedAt={thread.updatedAt}
           />
-        </SidebarMenuButton>
+        </>
       )}
-    </Link>
+    </ThreadContextMenu>
   );
 };
 

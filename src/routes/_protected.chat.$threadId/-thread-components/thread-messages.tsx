@@ -81,62 +81,64 @@ export const ThreadMessages = () => {
 
   return (
     <MessageScrollerViewport>
-      <ThreadHeader />
-      <MessageScrollerContent
-        aria-busy={isBusy}
-        aria-hidden={!isLayoutReady}
-        className={cn(
-          "typeset typeset-chat mx-auto mt-3 block w-full max-w-3xl min-w-0 px-3 pb-64 transition-opacity",
-          isLayoutReady ? "opacity-100" : "opacity-0",
-        )}
-      >
-        <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
-          {virtualizer.getVirtualItems().map((virtualItem) => {
-            const message = visibleMessages.at(virtualItem.index);
+      <div className="flex min-h-full flex-col">
+        <ThreadHeader />
+        <MessageScrollerContent
+          aria-busy={isBusy}
+          aria-hidden={!isLayoutReady}
+          className={cn(
+            "typeset typeset-chat mx-auto mt-3 block h-auto min-h-0 w-full max-w-3xl min-w-0 flex-1 px-3 pb-64 transition-opacity",
+            isLayoutReady ? "opacity-100" : "opacity-0",
+          )}
+        >
+          <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+            {virtualizer.getVirtualItems().map((virtualItem) => {
+              const message = visibleMessages.at(virtualItem.index);
 
-            if (!message) {
-              return null;
-            }
+              if (!message) {
+                return null;
+              }
 
-            return (
-              <div
-                className={cn(
-                  "absolute inset-s-0 top-0 w-full pb-2.5",
-                  virtualItem.index > editingMessageIndex && "opacity-50",
-                  message.role === "user" && virtualItem.index !== 0 && "pt-12",
-                )}
-                data-index={virtualItem.index}
-                key={virtualItem.key}
-                ref={virtualizer.measureElement}
-                style={{
-                  transform: `translateY(${virtualItem.start}px)`,
-                }}
-              >
-                {message.role === "user" ? (
-                  <UserMessage message={message} />
-                ) : (
-                  <AssistantMessage
-                    isStreaming={
-                      chat.status === "streaming" && message.id === chat.messages.at(-1)?.id
-                    }
-                    message={message}
-                  />
-                )}
-              </div>
-            );
-          })}
-        </div>
-        {isPending && (
-          <div className="px-2">
-            <MessageStateContext.Provider value={{ isStreaming: true }}>
-              <ToolIndicator pending>
-                <T>Planning next moves...</T>
-              </ToolIndicator>
-            </MessageStateContext.Provider>
+              return (
+                <div
+                  className={cn(
+                    "absolute inset-s-0 top-0 w-full pb-2.5",
+                    virtualItem.index > editingMessageIndex && "opacity-50",
+                    message.role === "user" && virtualItem.index !== 0 && "pt-12",
+                  )}
+                  data-index={virtualItem.index}
+                  key={virtualItem.key}
+                  ref={virtualizer.measureElement}
+                  style={{
+                    transform: `translateY(${virtualItem.start}px)`,
+                  }}
+                >
+                  {message.role === "user" ? (
+                    <UserMessage message={message} />
+                  ) : (
+                    <AssistantMessage
+                      isStreaming={
+                        chat.status === "streaming" && message.id === chat.messages.at(-1)?.id
+                      }
+                      message={message}
+                    />
+                  )}
+                </div>
+              );
+            })}
           </div>
-        )}
-        <ThreadError />
-      </MessageScrollerContent>
+          {isPending && (
+            <div className="px-2">
+              <MessageStateContext.Provider value={{ isStreaming: true }}>
+                <ToolIndicator pending>
+                  <T>Planning next moves...</T>
+                </ToolIndicator>
+              </MessageStateContext.Provider>
+            </div>
+          )}
+          <ThreadError />
+        </MessageScrollerContent>
+      </div>
     </MessageScrollerViewport>
   );
 };

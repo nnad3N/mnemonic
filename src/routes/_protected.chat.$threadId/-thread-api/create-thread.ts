@@ -1,20 +1,61 @@
 import { createServerFn } from "@tanstack/react-start";
-import { Result } from "better-result";
+import { matchError, Result } from "better-result";
 import { nanoid } from "nanoid";
 import * as v from "valibot";
 
 import { topic } from "@/db/schema";
 import { dbKit } from "@/lib/db-kit";
+import type { DbKit } from "@/lib/db-kit";
 import { toServerFnError } from "@/lib/errors/server-fn-error";
+import type { ServerFnError } from "@/lib/errors/server-fn-error";
 import * as Kit from "@/lib/kit";
+import type { Kits } from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit";
+import type { MemoryKit } from "@/lib/memory-kit";
 import { topicAccessMiddleware } from "@/lib/middleware/assert-thread-access";
 import { authMiddleware } from "@/lib/middleware/auth-middleware";
 import { createSafeId } from "@/lib/safe-id";
+import type { SafeId } from "@/lib/safe-id";
+
+type CreateTopicCtx = Kits<[DbKit, MemoryKit]>;
+
+type CreateTopicInput = {
+  conversationTitle: string;
+  title: string;
+  userId: SafeId<"user">;
+};
+
+const createTopicFn = Kit.gen(async function* (ctx: CreateTopicCtx, input: CreateTopicInput) {
+  const topicId = createSafeId<"topic">();
+
+  yield* await ctx.db.run((db) =>
+    db.insert(topic).values({
+      id: topicId,
+      title: input.title,
+      userId: input.userId,
+    }),
+  );
+
+  const now = new Date();
+  const thread = yield* await ctx.memory.saveThread({
+    thread: {
+      id: nanoid(),
+      resourceId: topicId,
+      title: input.conversationTitle,
+      createdAt: now,
+      updatedAt: now,
+    },
+  });
+
+  return Result.ok({ topicId, threadId: thread.id });
+});
+
+const createTopicCtx = Kit.createContext(dbKit, memoryKit);
 
 export const createConversation = createServerFn({ method: "POST" })
   .validator(
     v.object({
+      id: v.optional(v.pipe(v.string(), v.nanoid())),
       title: v.pipe(v.string(), v.nonEmpty()),
     }),
   )
@@ -23,7 +64,7 @@ export const createConversation = createServerFn({ method: "POST" })
     const now = new Date();
     const result = await Kit.get(memoryKit).saveThread({
       thread: {
-        id: nanoid(),
+        id: data.id ?? nanoid(),
         resourceId: context.user.id,
         title: data.title,
         createdAt: now,
@@ -43,30 +84,30 @@ export const createConversation = createServerFn({ method: "POST" })
 export const createTopic = createServerFn({ method: "POST" })
   .validator(
     v.object({
+      conversationTitle: v.pipe(v.string(), v.nonEmpty()),
       title: v.pipe(v.string(), v.nonEmpty()),
     }),
   )
   .middleware([authMiddleware])
-  .handler(async ({ context, data }) => {
-    const topicId = createSafeId<"topic">();
-    const result = await Kit.get(dbKit).run((db) =>
-      db.insert(topic).values({
-        id: topicId,
+  .handler(async ({ context, data }) =>
+    Kit.run(async () =>
+      createTopicFn(createTopicCtx, {
+        conversationTitle: data.conversationTitle,
         title: data.title,
         userId: context.user.id,
       }),
-    );
-
-    if (Result.isError(result)) {
-      throw toServerFnError.serverError("Failed to create topic");
-    }
-
-    return { id: topicId };
-  });
+    ).throws<ServerFnError>((error) =>
+      matchError(error, {
+        DatabaseError: () => toServerFnError.serverError("Failed to create topic"),
+        MemoryError: () => toServerFnError.serverError("Failed to create topic conversation"),
+      }),
+    ),
+  );
 
 export const createTopicThread = createServerFn({ method: "POST" })
   .validator(
     v.object({
+      id: v.optional(v.pipe(v.string(), v.nanoid())),
       title: v.pipe(v.string(), v.nonEmpty()),
     }),
   )
@@ -75,7 +116,7 @@ export const createTopicThread = createServerFn({ method: "POST" })
     const now = new Date();
     const result = await Kit.get(memoryKit).saveThread({
       thread: {
-        id: nanoid(),
+        id: data.id ?? nanoid(),
         resourceId: context.topic.id,
         title: data.title,
         createdAt: now,

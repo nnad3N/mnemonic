@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { getGT } from "gt-tanstack-start";
 import { PlateController } from "platejs/react";
 
 import {
@@ -6,13 +7,53 @@ import {
   MessageScrollerButton,
   MessageScrollerProvider,
 } from "@/components/ui/message-scroller";
+import { ServerFnError } from "@/lib/errors/server-fn-error";
+import {
+  createConversation,
+  createTopicThread,
+} from "@/routes/_protected.chat.$threadId/-thread-api/create-thread";
+import { threadKeys } from "@/routes/_protected.chat.$threadId/-thread-api/query-keys";
 import { threadSettingsQuery } from "@/routes/_protected.chat.$threadId/-thread-api/settings";
 import { ThreadComposer } from "@/routes/_protected.chat.$threadId/-thread-components/composer/thread-composer";
 
 export const Route = createFileRoute("/_protected/chat/$threadId")({
   component: RouteComponent,
-  loader: async ({ context, params }) => {
-    await context.queryClient.prefetchQuery(threadSettingsQuery(params.threadId));
+  beforeLoad: async ({ context, params, search }) => {
+    try {
+      await context.queryClient.ensureQueryData(threadSettingsQuery(params.threadId));
+      return;
+    } catch (error) {
+      if (!ServerFnError.is(error) || error.status !== "not-found") {
+        throw error;
+      }
+    }
+
+    const gt = await getGT();
+    const title = gt("New thread");
+
+    if (search.topic) {
+      await createTopicThread({
+        data: {
+          id: params.threadId,
+          title,
+          topicId: search.topic,
+        },
+      });
+    } else {
+      await createConversation({
+        data: {
+          id: params.threadId,
+          title,
+        },
+      });
+    }
+
+    await Promise.all([
+      context.queryClient.invalidateQueries({
+        queryKey: threadKeys.sidebarThreads(search.topic),
+      }),
+      context.queryClient.prefetchQuery(threadSettingsQuery(params.threadId)),
+    ]);
   },
 });
 
