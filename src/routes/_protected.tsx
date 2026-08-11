@@ -1,6 +1,7 @@
 import { Outlet, createFileRoute, redirect, retainSearchParams } from "@tanstack/react-router";
 import { createIsomorphicFn } from "@tanstack/react-start";
 import { getCookie } from "@tanstack/react-start/server";
+import { usePanelRef } from "react-resizable-panels";
 import * as v from "valibot";
 
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
@@ -83,6 +84,7 @@ type ProtectedLayoutProps = {
 const ProtectedLayout = ({ sidebarWidth }: ProtectedLayoutProps) => {
   const isMobile = useIsMobile();
   const { open } = useSidebar();
+  const sidebarPanelRef = usePanelRef();
 
   return (
     <>
@@ -95,6 +97,7 @@ const ProtectedLayout = ({ sidebarWidth }: ProtectedLayoutProps) => {
         {!isMobile && open && (
           <>
             <ResizablePanel
+              // Cookie width for SSR; double-click resets to SIDEBAR_DEFAULT_SIZE via the handle.
               defaultSize={sidebarWidth}
               groupResizeBehavior="preserve-pixel-size"
               id="sidebar"
@@ -108,13 +111,19 @@ const ProtectedLayout = ({ sidebarWidth }: ProtectedLayoutProps) => {
                   options: { maxAge: SIDEBAR_WIDTH_COOKIE_MAX_AGE },
                 });
               }}
+              panelRef={sidebarPanelRef}
               style={{ overflow: "hidden" }}
             >
               <Sidebar>
                 <SidebarBody />
               </Sidebar>
             </ResizablePanel>
-            <ResizableHandle />
+            <ResizableHandle
+              disableDoubleClick
+              onDoubleClick={() => {
+                sidebarPanelRef.current?.resize(SIDEBAR_DEFAULT_SIZE);
+              }}
+            />
           </>
         )}
         <ResizablePanel minSize="20rem">
