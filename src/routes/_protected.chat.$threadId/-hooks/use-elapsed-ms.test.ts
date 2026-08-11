@@ -11,7 +11,7 @@ describe("useElapsedMs", () => {
   });
 
   it("returns elapsed ms from startedAt", () => {
-    const startedAt = new Date(Date.now() - 80_000).toISOString();
+    const startedAt = Temporal.Now.instant().subtract({ seconds: 80 }).toString();
 
     const { result } = renderHook(() => useElapsedMs({ enabled: true, startedAt }));
 
@@ -20,7 +20,7 @@ describe("useElapsedMs", () => {
   });
 
   it("clamps future startedAt to 0", () => {
-    const startedAt = new Date(Date.now() + 60_000).toISOString();
+    const startedAt = Temporal.Now.instant().add({ seconds: 60 }).toString();
 
     const { result } = renderHook(() => useElapsedMs({ enabled: true, startedAt }));
 

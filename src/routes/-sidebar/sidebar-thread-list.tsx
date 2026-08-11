@@ -142,7 +142,7 @@ const formatLastActive = (locale: string, updatedAt: string) => {
     return new Intl.DateTimeFormat(locale, {
       day: "numeric",
       month: "short",
-    }).format(new Date(updatedAt));
+    }).format(Temporal.Instant.from(updatedAt));
   }
 
   // DurationFormat omits past phrasing ("ago"); RelativeTimeFormat only for "now".

@@ -379,6 +379,16 @@ Use GT with `gt-tanstack-start` throughout the app. Import `useGT`, `useLocale`,
 
 ---
 
+## Dates (Temporal)
+
+- **Always use `Temporal`** — `Temporal.Instant`, `Temporal.Now.instant()`, `Temporal.PlainDate` — instead of `Date`, `Date.now()` and `Date.parse`, on the server **and** in client UI. `Date` is mutable, parses ambiguously, and has no duration arithmetic.
+- `Temporal` is a bare global; never import it. `src/router.tsx` loads `temporal-polyfill/global` behind a `!globalThis.Temporal` guard for Safari, which has no stable support yet; every other target uses the native implementation. Delete the guard and the dependency once Safari ships.
+- **The one exception is a library whose API takes a `Date`** — Drizzle `$onUpdate` and query predicates, Mastra `createdAt`/`updatedAt`, Better Auth. Pass `new Date()` there directly rather than converting.
+- Do not add shared Date↔Temporal conversion helpers. At a `Date` boundary use the built-ins inline: `date.toTemporalInstant()` going in, `new Date(instant.epochMilliseconds)` going out.
+- `Intl.DateTimeFormat.prototype.format` accepts Temporal objects directly, so do not round-trip through `Date` to format one.
+
+---
+
 ## Testing
 
 - Write assertions inside `it()` or `test()` blocks
@@ -400,9 +410,3 @@ Oxlint + Oxfmt will catch most issues automatically. Focus your attention on:
 ---
 
 Most formatting and common issues are automatically fixed by Oxlint + Oxfmt. Run `deno task typecheck`, `deno task lint`, and `deno task format` before handing off changes. Do not run `deno task build` just to validate agent work unless the user explicitly asks for a build.
-
-### Backend dates (Temporal)
-
-Use Temporal when the backend is doing real date logic (comparing instants, TTL/retention cutoffs, sorting by time). Prefer `Temporal.Instant` / `Temporal.Now.instant()` over `Date.now()` / `Date.parse` in those cases.
-
-Do not wrap plain “now for this API” call sites in Temporal when a library needs a `Date` anyway (Drizzle `$onUpdate`, Mastra `createdAt`/`updatedAt`, etc.) — use `new Date()` there. Do not add shared Date↔Temporal conversion helpers. Client UI may keep using `Date` / `Intl` for display of ISO strings.

@@ -40,11 +40,7 @@ const getExpiredThreads = (threads: StorageThreadType[]) => {
   });
 
   return threads.filter(
-    (thread) =>
-      Temporal.Instant.compare(
-        Temporal.Instant.fromEpochMilliseconds(thread.updatedAt.getTime()),
-        expiresBefore,
-      ) < 0,
+    (thread) => Temporal.Instant.compare(thread.updatedAt.toTemporalInstant(), expiresBefore) < 0,
   );
 };
 
