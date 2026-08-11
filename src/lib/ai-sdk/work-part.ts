@@ -21,7 +21,6 @@ type AssistantMessageRunBlock = {
   type: "run";
   id: string;
   parts: ThreadUIMessagePart[];
-  visibleCount: number;
   startIndex: number;
 };
 
@@ -66,13 +65,11 @@ export const groupAssistantParts = (parts: ThreadUIMessagePart[]): AssistantMess
       index += 1;
     }
 
-    const visibleCount = runParts.filter(isVisibleIntermediatePart).length;
-    if (visibleCount > 0) {
+    if (runParts.some(isVisibleIntermediatePart)) {
       blocks.push({
         type: "run",
         id: `run-${startIndex}`,
         parts: runParts,
-        visibleCount,
         startIndex,
       });
     }

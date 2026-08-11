@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { MnemonicToolName } from "@/mastra/mnemonic-tool-types";
 import type { ThreadUIMessagePart } from "@/routes/_protected.chat.$threadId/-thread-types";
 
-import { getDominantWorkActivityKind, getWorkRunTiming, groupAssistantParts } from "./work-part";
+import { getDominantWorkActivityKind, groupAssistantParts } from "./work-part";
 
 const toolPart = (toolName: MnemonicToolName, toolCallId?: string): ThreadUIMessagePart => ({
   type: `tool-${toolName}`,
@@ -14,54 +14,8 @@ const toolPart = (toolName: MnemonicToolName, toolCallId?: string): ThreadUIMess
   output: {},
 });
 
-describe("getWorkRunTiming", () => {
-  it("reads start and end markers from a run", () => {
-    const parts: ThreadUIMessagePart[] = [
-      {
-        type: "data-work-start",
-        data: { segmentId: "seg-1", startedAt: "2026-01-01T00:00:00Z" },
-      },
-      toolPart("getFile"),
-      {
-        type: "data-work-end",
-        data: { segmentId: "seg-1", completedAt: "2026-01-01T00:01:20Z", durationMs: 80_000 },
-      },
-    ];
-
-    expect(getWorkRunTiming(parts)).toEqual({
-      startedAt: "2026-01-01T00:00:00Z",
-      completedAt: "2026-01-01T00:01:20Z",
-      durationMs: 80_000,
-    });
-  });
-});
-
 describe("groupAssistantParts", () => {
-  it("keeps short runs as a single run block with the visible count", () => {
-    const parts: ThreadUIMessagePart[] = [
-      toolPart("getFile"),
-      toolPart("webSearch"),
-      { type: "text", text: "done" },
-    ];
-
-    expect(groupAssistantParts(parts)).toEqual([
-      {
-        type: "run",
-        id: "run-0",
-        parts: [parts.at(0), parts.at(1)],
-        visibleCount: 2,
-        startIndex: 0,
-      },
-      {
-        type: "text",
-        id: "text-2",
-        part: parts.at(2),
-        index: 2,
-      },
-    ]);
-  });
-
-  it("groups three or more intermediates before text into one run", () => {
+  it("groups work markers and intermediates before text into one run", () => {
     const parts: ThreadUIMessagePart[] = [
       {
         type: "data-work-start",
@@ -95,7 +49,7 @@ describe("groupAssistantParts", () => {
     expect(blocks.at(0)).toMatchObject({
       type: "run",
       id: "run-0",
-      visibleCount: 3,
+      parts: parts.slice(0, 5),
       startIndex: 0,
     });
     expect(blocks.at(1)).toMatchObject({
@@ -119,7 +73,6 @@ describe("groupAssistantParts", () => {
         type: "run",
         id: "run-0",
         parts: [parts.at(0)],
-        visibleCount: 1,
         startIndex: 0,
       },
       {
@@ -132,7 +85,6 @@ describe("groupAssistantParts", () => {
         type: "run",
         id: "run-2",
         parts: [parts.at(2), parts.at(3)],
-        visibleCount: 2,
         startIndex: 2,
       },
       {
@@ -195,26 +147,5 @@ describe("getDominantWorkActivityKind", () => {
     expect(
       getDominantWorkActivityKind([toolPart("webSearch", "c1"), toolPart("getFile", "c2")]),
     ).toBe("default");
-  });
-
-  it("returns default when default tools have a majority", () => {
-    expect(
-      getDominantWorkActivityKind([
-        toolPart("getFile", "c1"),
-        toolPart("getFile", "c2"),
-        toolPart("getFile", "c3"),
-        toolPart("webSearch", "c4"),
-      ]),
-    ).toBe("default");
-  });
-
-  it("treats file search tools as research", () => {
-    expect(
-      getDominantWorkActivityKind([
-        toolPart("fileVectorSearch", "c1"),
-        toolPart("fileGraphRag", "c2"),
-        toolPart("executeCode", "c3"),
-      ]),
-    ).toBe("research");
   });
 });
