@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { T, useGT } from "gt-tanstack-start";
 import { produce } from "immer";
@@ -38,11 +38,11 @@ export const SidebarScopeCombobox = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const selectedTopicId = useSearch({ from: "/_protected", select: (search) => search.topic });
-  const topics = useQuery(sidebarTopicsQuery());
+  const { data: topics } = useSuspenseQuery(sidebarTopicsQuery());
   const conversationsScope: SidebarScope = { id: null, title: gt("Conversations") };
   const scopes: SidebarScope[] = [
     conversationsScope,
-    ...(topics.data ?? []).map((topic) => ({ id: topic.id, title: topic.title })),
+    ...topics.map((topic) => ({ id: topic.id, title: topic.title })),
   ];
   const selectedScope =
     scopes.find((scope) => scope.id === (selectedTopicId ?? null)) ?? conversationsScope;
@@ -101,7 +101,7 @@ export const SidebarScopeCombobox = () => {
   });
 
   return (
-    <SidebarMenuItem className="flex items-center group-data-[collapsible=icon]:hidden">
+    <SidebarMenuItem className="flex items-center">
       <Combobox
         inputValue={isOpen ? typedTitle : selectedScope.title}
         items={scopes}

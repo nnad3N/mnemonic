@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, useParams, useSearch } from "@tanstack/react-router";
+import { Link, useSearch } from "@tanstack/react-router";
 import { panic } from "better-result";
 import { T } from "gt-tanstack-start";
 import { FileIcon, PencilIcon, Trash2Icon } from "lucide-react";
@@ -26,11 +26,11 @@ import {
 
 import { DeleteTopicDialog, RenameTopicField, ThreadContextMenu } from "./thread-actions";
 
-export const ThreadHeader = () => {
-  const threadId = useParams({
-    from: "/_protected/chat/$threadId",
-    select: (params) => params.threadId,
-  });
+type ThreadHeaderProps = {
+  threadId: string;
+};
+
+export const ThreadHeader = ({ threadId }: ThreadHeaderProps) => {
   const topicId = useSearch({
     from: "/_protected",
     select: (search) => search.topic,
@@ -48,28 +48,26 @@ export const ThreadHeader = () => {
   });
   const isReady = thread.isSuccess && (!topic.isEnabled || topic.isSuccess);
 
+  if (!isReady) {
+    return <Skeleton className="h-4 w-40" />;
+  }
+
   return (
-    <header className="sticky top-0 z-10 flex h-10 items-center border-b border-foreground/3 bg-background/50 px-2 text-sm backdrop-blur dark:border-white/5">
-      {isReady ? (
-        <Breadcrumb className="min-w-0">
-          <BreadcrumbList className="flex-nowrap gap-0.5 sm:gap-0.5">
-            {topic.data && (
-              <BreadcrumbItem className="min-w-0">
-                <TopicCrumb title={topic.data.title} topicId={topic.data.id} />
-              </BreadcrumbItem>
-            )}
-            {topic.data && thread.data && <BreadcrumbSeparator />}
-            {thread.data && (
-              <BreadcrumbItem className="min-w-0">
-                <ThreadCrumb threadId={threadId} title={thread.data} />
-              </BreadcrumbItem>
-            )}
-          </BreadcrumbList>
-        </Breadcrumb>
-      ) : (
-        <Skeleton className="h-4 w-40" />
-      )}
-    </header>
+    <Breadcrumb className="min-w-0">
+      <BreadcrumbList className="flex-nowrap gap-0.5 overflow-hidden sm:gap-0.5">
+        {topic.data && (
+          <BreadcrumbItem className="max-w-[45%] min-w-0 shrink">
+            <TopicCrumb title={topic.data.title} topicId={topic.data.id} />
+          </BreadcrumbItem>
+        )}
+        {topic.data && thread.data && <BreadcrumbSeparator className="shrink-0" />}
+        {thread.data && (
+          <BreadcrumbItem className="min-w-0 shrink">
+            <ThreadCrumb threadId={threadId} title={thread.data} />
+          </BreadcrumbItem>
+        )}
+      </BreadcrumbList>
+    </Breadcrumb>
   );
 };
 
@@ -100,7 +98,7 @@ const TopicCrumb = ({ title, topicId }: TopicCrumbProps) => {
         <ContextMenuTrigger
           render={
             <BreadcrumbLink
-              className="truncate rounded-md px-1.5 py-1 hover:bg-accent hover:text-accent-foreground"
+              className="truncate rounded-md px-1.5 py-1.5 hover:bg-accent hover:text-accent-foreground"
               render={<Link params={{ topicId }} to="/topic/$topicId/files" />}
             />
           }
@@ -147,7 +145,7 @@ const ThreadCrumb = ({ threadId, title }: ThreadCrumbProps) => (
     render={
       <button
         aria-current="page"
-        className="rounded-md px-1.5 py-1 font-normal text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+        className="truncate rounded-md px-1.5 py-1.5 font-normal text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
         type="button"
       />
     }

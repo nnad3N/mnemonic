@@ -44,6 +44,11 @@ import {
   toAuthError,
 } from "@/lib/errors/auth-error";
 import { cn } from "@/lib/utils";
+import {
+  SettingsSection,
+  SettingsSectionHeader,
+  SettingsSectionTitle,
+} from "@/routes/_protected.settings/-settings-section";
 
 const formatPasskeyDate = (locale: string, date: Date) =>
   new Intl.DateTimeFormat(locale, {
@@ -79,11 +84,11 @@ export const PasskeysSection = () => {
   const items = passkeys.data ?? [];
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-4">
-        <h2 className="font-medium">
+    <SettingsSection>
+      <SettingsSectionHeader>
+        <SettingsSectionTitle>
           <T>Passkeys</T>
-        </h2>
+        </SettingsSectionTitle>
         <Button
           disabled={addPasskey.isPending}
           onClick={() => {
@@ -93,7 +98,7 @@ export const PasskeysSection = () => {
         >
           <T>Add passkey</T>
         </Button>
-      </div>
+      </SettingsSectionHeader>
       <Frame className="w-full">
         <Table className="w-full" variant="card">
           <TableHeader>
@@ -119,7 +124,7 @@ export const PasskeysSection = () => {
           </TableBody>
         </Table>
       </Frame>
-    </div>
+    </SettingsSection>
   );
 };
 

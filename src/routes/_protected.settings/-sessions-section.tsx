@@ -23,6 +23,11 @@ import type { GT } from "@/lib/gt";
 import { authKeys } from "@/routes/_auth/-auth.api";
 import { sessionsQuery } from "@/routes/_protected.settings/-sessions-api";
 import type { SessionItem } from "@/routes/_protected.settings/-sessions-api";
+import {
+  SettingsSection,
+  SettingsSectionHeader,
+  SettingsSectionTitle,
+} from "@/routes/_protected.settings/-settings-section";
 
 const MOBILE_PATTERN = /android|iphone|ipad|ipod|mobile/i;
 
@@ -94,11 +99,11 @@ export const SessionsSection = ({ currentSessionId }: SessionsSectionProps) => {
   const items = sessions.data ?? [];
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-4">
-        <h2 className="font-medium">
+    <SettingsSection>
+      <SettingsSectionHeader>
+        <SettingsSectionTitle>
           <T>Active sessions</T>
-        </h2>
+        </SettingsSectionTitle>
         <Button
           disabled={revokeAllMutation.isPending}
           onClick={() => {
@@ -108,7 +113,7 @@ export const SessionsSection = ({ currentSessionId }: SessionsSectionProps) => {
         >
           <T>Revoke all</T>
         </Button>
-      </div>
+      </SettingsSectionHeader>
       <Frame className="w-full">
         <Table className="w-full" variant="card">
           <TableHeader>
@@ -135,7 +140,7 @@ export const SessionsSection = ({ currentSessionId }: SessionsSectionProps) => {
           </TableBody>
         </Table>
       </Frame>
-    </div>
+    </SettingsSection>
   );
 };
 

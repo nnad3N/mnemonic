@@ -52,7 +52,7 @@ export const SidebarThreadSearch = () => {
   };
 
   return (
-    <SidebarMenuItem className="flex items-center gap-1 group-data-[collapsible=icon]:hidden">
+    <SidebarMenuItem className="flex items-center gap-1">
       <InputGroup className="bg-transparent">
         <InputGroupAddon align="inline-start">
           <SearchIcon />

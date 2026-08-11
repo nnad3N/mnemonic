@@ -88,6 +88,7 @@
     "npm:playwright@^1.62.1": "1.62.1",
     "npm:react-day-picker@^10.0.1": "10.0.1_@types+react@19.2.18_react@19.2.8",
     "npm:react-dom@^19.2.8": "19.2.8_react@19.2.8",
+    "npm:react-resizable-panels@^4.12.2": "4.12.2_react@19.2.8_react-dom@19.2.8__react@19.2.8",
     "npm:react@^19.2.8": "19.2.8",
     "npm:remark-gfm@^4.0.1": "4.0.1",
     "npm:shadcn@^4.16.2": "4.16.2_typescript@7.0.2",
@@ -9263,6 +9264,13 @@
         "scheduler@0.23.2"
       ]
     },
+    "react-resizable-panels@4.12.2_react@19.2.8_react-dom@19.2.8__react@19.2.8": {
+      "integrity": "sha512-NwY5LCo4WrxVvDh0xoMML6EMLPONP/8ckKcIdpnojxexoatZdjLiRqLJQjQK5CPkd4SYiB/2M5BVrjZBQtOO7Q==",
+      "dependencies": [
+        "react@19.2.8",
+        "react-dom"
+      ]
+    },
     "react-tracked@1.7.14_react@19.2.8_react-dom@19.2.8__react@19.2.8_scheduler@0.27.0": {
       "integrity": "sha512-6UMlgQeRAGA+uyYzuQGm7kZB6ZQYFhc7sntgP7Oxwwd6M0Ud/POyb4K3QWT1eXvoifSa80nrAWnXWFGpOvbwkw==",
       "dependencies": [
@@ -11030,6 +11038,7 @@
         "npm:playwright@^1.62.1",
         "npm:react-day-picker@^10.0.1",
         "npm:react-dom@^19.2.8",
+        "npm:react-resizable-panels@^4.12.2",
         "npm:react@^19.2.8",
         "npm:remark-gfm@^4.0.1",
         "npm:shadcn@^4.16.2",
