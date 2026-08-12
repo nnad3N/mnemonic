@@ -41,6 +41,7 @@ type State = {
   attachments: Map<ThreadId, ThreadAttachment[]>;
   pollingTopicIds: Set<TopicId>;
   threadIndicators: Map<ThreadId, ThreadIndicator>;
+  viewedThreadId: ThreadId | null;
 };
 
 type Actions = {
@@ -52,6 +53,7 @@ type Actions = {
   removeComposerState: (threadId: ThreadId) => void;
   addPollingTopicId: (topicId: TopicId) => void;
   removePollingTopicId: (topicId: TopicId) => void;
+  setViewedThreadId: (threadId: ThreadId | null) => void;
   setThreadIndicator: (threadId: ThreadId, indicator: ThreadIndicator) => void;
   clearThreadIndicator: (threadId: ThreadId) => void;
 };
@@ -63,6 +65,7 @@ export const useChatStore = create<State & Actions>()(
     attachments: new Map(),
     pollingTopicIds: new Set(),
     threadIndicators: new Map(),
+    viewedThreadId: null,
     setEditingState: (data) => {
       set((state) => {
         state.editingState = data;
@@ -159,8 +162,20 @@ export const useChatStore = create<State & Actions>()(
         state.pollingTopicIds.delete(topicId);
       });
     },
+    setViewedThreadId: (threadId) => {
+      set((state) => {
+        state.viewedThreadId = threadId;
+      });
+    },
     setThreadIndicator: (threadId, indicator) => {
       set((state) => {
+        // Settled results are only for threads the user is not viewing —
+        // finishing while viewing drops pending without leaving a badge.
+        if ((indicator === "ready" || indicator === "error") && state.viewedThreadId === threadId) {
+          state.threadIndicators.delete(threadId);
+          return;
+        }
+
         state.threadIndicators.set(threadId, indicator);
       });
     },

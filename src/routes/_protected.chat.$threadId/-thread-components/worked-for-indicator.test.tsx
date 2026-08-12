@@ -80,6 +80,21 @@ describe("WorkedForIndicator ticker", () => {
     expect(screen.getByText("Searched files")).toBeInTheDocument();
     expect(screen.queryByText("Read file")).not.toBeInTheDocument();
     expect(screen.getByText("Recalled memories")).toBeInTheDocument();
+
+    settle(tickerRow(container));
+
+    expect(screen.queryByText("Recalled memories")).not.toBeInTheDocument();
+  });
+
+  it("drops the animation classes and the exiting row once the handover has played", () => {
+    const initial = [workStart, toolPart("recall", "c1")];
+    const { container } = renderIndicator(initial);
+
+    expect(tickerRow(container)).toHaveClass("animate-in");
+
+    fireEvent.animationEnd(tickerRow(container));
+
+    expect(tickerRow(container)).not.toHaveClass("animate-in");
   });
 
   it("advances immediately when a part arrives after the hold has elapsed", () => {

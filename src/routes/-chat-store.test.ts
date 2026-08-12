@@ -123,4 +123,32 @@ describe("useChatStore thread indicators", () => {
 
     expect(useChatStore.getState().threadIndicators.get(threadId)).toBe("pending");
   });
+
+  it("drops a settled indicator when the thread is being viewed", () => {
+    const threadId = "thread-viewed-settle";
+
+    useChatStore.getState().setViewedThreadId(threadId);
+    useChatStore.getState().setThreadIndicator(threadId, "pending");
+    useChatStore.getState().setThreadIndicator(threadId, "ready");
+
+    expect(useChatStore.getState().threadIndicators.get(threadId)).toBeUndefined();
+  });
+
+  it("keeps a settled indicator for a background thread", () => {
+    const backgroundThreadId = "thread-background";
+
+    useChatStore.getState().setViewedThreadId("thread-viewing");
+    useChatStore.getState().setThreadIndicator(backgroundThreadId, "ready");
+
+    expect(useChatStore.getState().threadIndicators.get(backgroundThreadId)).toBe("ready");
+  });
+
+  it("still sets pending while the thread is being viewed", () => {
+    const threadId = "thread-viewed-pending";
+
+    useChatStore.getState().setViewedThreadId(threadId);
+    useChatStore.getState().setThreadIndicator(threadId, "pending");
+
+    expect(useChatStore.getState().threadIndicators.get(threadId)).toBe("pending");
+  });
 });

@@ -17,6 +17,25 @@ export const Route = createFileRoute("/_protected/chat/$threadId/")({
 
     useChatStore.getState().clearThreadIndicator(params.threadId);
   },
+  onEnter: ({ params }) => {
+    useChatStore.getState().setViewedThreadId(params.threadId);
+  },
+  // Navigating between threads is a stay (same route, new params).
+  onStay: ({ params }) => {
+    const store = useChatStore.getState();
+    const previousThreadId = store.viewedThreadId;
+
+    if (previousThreadId && previousThreadId !== params.threadId) {
+      store.clearThreadIndicator(previousThreadId);
+    }
+
+    store.setViewedThreadId(params.threadId);
+  },
+  onLeave: ({ params }) => {
+    const store = useChatStore.getState();
+    store.clearThreadIndicator(params.threadId);
+    store.setViewedThreadId(null);
+  },
   loader: async ({ context, params }) => {
     await context.queryClient.prefetchQuery(threadChatQuery(params.threadId));
   },

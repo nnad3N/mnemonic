@@ -44,7 +44,7 @@ type WorkedForIndicatorProps = {
 type WorkTickerState = {
   current: number;
   previous?: number;
-  settled: boolean;
+  phase: "entering" | "holding" | "settled";
 };
 
 const TICKER_HOLD_MS = 700;
@@ -61,9 +61,12 @@ export const WorkedForIndicator = ({ messageParts, parts }: WorkedForIndicatorPr
   const visibleParts = parts.filter(isVisibleIntermediatePart);
   const latestIndex = visibleParts.length - 1;
 
-  const [ticker, setTicker] = useState<WorkTickerState>({ current: latestIndex, settled: false });
-  if (ticker.settled && ticker.current < latestIndex) {
-    setTicker({ current: latestIndex, previous: ticker.current, settled: false });
+  const [ticker, setTicker] = useState<WorkTickerState>({
+    current: latestIndex,
+    phase: "entering",
+  });
+  if (ticker.phase === "settled" && ticker.current < latestIndex) {
+    setTicker({ current: latestIndex, previous: ticker.current, phase: "entering" });
   }
 
   const currentPart = visibleParts.at(ticker.current);
@@ -103,7 +106,11 @@ export const WorkedForIndicator = ({ messageParts, parts }: WorkedForIndicatorPr
               </div>
             )}
             <div
-              className="w-max max-w-full animate-in pt-1 duration-700 ease-out zoom-in-95 fade-in slide-in-from-bottom-4"
+              className={cn(
+                "w-max max-w-full pt-1",
+                ticker.phase === "entering" &&
+                  "animate-in duration-700 ease-out zoom-in-95 fade-in slide-in-from-bottom-4",
+              )}
               data-test-id="work-ticker-current"
               key={ticker.current}
               onAnimationEnd={(event) => {
@@ -111,8 +118,9 @@ export const WorkedForIndicator = ({ messageParts, parts }: WorkedForIndicatorPr
                   return;
                 }
 
+                setTicker((state) => ({ ...state, previous: undefined, phase: "holding" }));
                 window.setTimeout(() => {
-                  setTicker((state) => ({ ...state, settled: true }));
+                  setTicker((state) => ({ ...state, phase: "settled" }));
                 }, TICKER_HOLD_MS);
               }}
             >
