@@ -1,3 +1,5 @@
+import { readFile, writeFile } from "node:fs/promises";
+
 import { Result } from "better-result";
 import * as mathjs from "mathjs";
 import { all, create } from "mathjs";
@@ -14,7 +16,7 @@ const project = new Project({
 });
 
 const readVersion = async (path: string): Promise<string> => {
-  const manifest: unknown = JSON.parse(await Deno.readTextFile(path));
+  const manifest: unknown = JSON.parse(await readFile(path, "utf8"));
 
   if (typeof manifest === "object" && manifest !== null && "version" in manifest) {
     return String(manifest.version);
@@ -290,7 +292,7 @@ const sources: LibrarySource[] = [
       toPapaparseMembers(
         project.createSourceFile(
           "papaparse.d.ts",
-          await Deno.readTextFile("./src/lib/docs/vendor/papaparse/types.d.txt"),
+          await readFile("./src/lib/docs/vendor/papaparse/types.d.txt", "utf8"),
           { overwrite: true },
         ),
       ),
@@ -305,7 +307,7 @@ for (const source of sources) {
     members: (await source.members()).sort((left, right) => left.name.localeCompare(right.name)),
   };
 
-  await Deno.writeTextFile(
+  await writeFile(
     `${GENERATED_DIR}/${source.library}.json`,
     `${JSON.stringify(library, null, 2)}\n`,
   );

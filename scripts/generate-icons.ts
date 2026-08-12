@@ -1,3 +1,5 @@
+import { writeFile } from "node:fs/promises";
+
 import sharp from "sharp";
 
 const OUT = new URL("../public/", import.meta.url).pathname;
@@ -61,11 +63,11 @@ const maskable = Buffer.from(icon(Math.min(FIT, SAFE), true));
 
 const png = async (svg: Buffer, size: number) => sharp(svg).resize(size, size).png().toBuffer();
 
-await Deno.writeTextFile(`${OUT}icon.svg`, icon(FIT, false));
-await Deno.writeFile(`${OUT}icon-192.png`, await png(rounded, 192));
-await Deno.writeFile(`${OUT}icon-512.png`, await png(rounded, 512));
-await Deno.writeFile(`${OUT}icon-maskable-512.png`, await png(maskable, 512));
-await Deno.writeFile(`${OUT}apple-touch-icon.png`, await png(square, 180));
+await writeFile(`${OUT}icon.svg`, icon(FIT, false));
+await writeFile(`${OUT}icon-192.png`, await png(rounded, 192));
+await writeFile(`${OUT}icon-512.png`, await png(rounded, 512));
+await writeFile(`${OUT}icon-maskable-512.png`, await png(maskable, 512));
+await writeFile(`${OUT}apple-touch-icon.png`, await png(square, 180));
 
 // oxlint-disable-next-line no-console
 console.log(

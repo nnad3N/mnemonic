@@ -21,19 +21,11 @@ Object.defineProperty(document, "compatMode", {
   value: "CSS1Compat",
 });
 
-// Deno's `reportException` dispatches ErrorEvents from the Deno web realm.
-// happy-dom's `window.dispatchEvent` rejects those as not instances of its
-// Event class, which kills the Vitest worker. Swallow that realm mismatch so
-// the original async exception can surface (or be ignored) without crashing.
-const originalWindowDispatchEvent = window.dispatchEvent.bind(window);
-
-window.dispatchEvent = (event: Event) => {
-  try {
-    return originalWindowDispatchEvent(event);
-  } catch {
-    return false;
-  }
-};
+// happy-dom has no Web Animations API. Base UI ScrollArea calls
+// `viewport.getAnimations({ subtree: true })` on a 0ms timeout after mount.
+if (typeof Element.prototype.getAnimations !== "function") {
+  Element.prototype.getAnimations = () => [];
+}
 
 afterEach(() => {
   cleanup();

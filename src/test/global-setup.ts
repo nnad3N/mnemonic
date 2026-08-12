@@ -1,36 +1,33 @@
+import { spawnSync } from "node:child_process";
+import { mkdirSync, realpathSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
+
 import { SCHEMA_SQL_PATH, TEST_ENV } from "./env";
 
-const projectRoot = Deno.realPathSync(`${import.meta.dirname}/../..`);
+const projectRoot = realpathSync(`${import.meta.dirname}/../..`);
 const schemaSqlPath = `${projectRoot}/${SCHEMA_SQL_PATH}`;
 const drizzleKitBin = `${projectRoot}/node_modules/drizzle-kit/bin.cjs`;
 
-const dirname = (path: string) => path.slice(0, path.lastIndexOf("/"));
-
 const exportSchemaSql = () => {
-  const result = new Deno.Command("deno", {
-    args: ["run", "-A", drizzleKitBin, "export", "--sql"],
+  const result = spawnSync(process.execPath, [drizzleKitBin, "export", "--sql"], {
     cwd: projectRoot,
+    encoding: "utf8",
     env: {
-      ...Deno.env.toObject(),
+      ...process.env,
       ...TEST_ENV,
     },
-    stdout: "piped",
-    stderr: "piped",
-  }).outputSync();
+  });
 
-  const stdout = new TextDecoder().decode(result.stdout);
-  const stderr = new TextDecoder().decode(result.stderr);
-
-  if (!result.success) {
+  if (result.status !== 0) {
     throw new Error(
-      `drizzle-kit export failed (status ${String(result.code)}):\n${stderr}\n${stdout}`,
+      `drizzle-kit export failed (status ${String(result.status)}):\n${result.stderr}\n${result.stdout}`,
     );
   }
 
-  const sql = stdout.trim();
+  const sql = result.stdout.trim();
 
-  Deno.mkdirSync(dirname(schemaSqlPath), { recursive: true });
-  Deno.writeTextFileSync(schemaSqlPath, `${sql}\n`);
+  mkdirSync(dirname(schemaSqlPath), { recursive: true });
+  writeFileSync(schemaSqlPath, `${sql}\n`);
 };
 
 export default function setup() {

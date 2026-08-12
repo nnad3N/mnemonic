@@ -1,13 +1,15 @@
+import { mkdirSync, readFileSync, realpathSync, rmSync } from "node:fs";
+
 import { createClient } from "@libsql/client";
 import { afterAll } from "vitest";
 
 import { SCHEMA_SQL_PATH, TEST_DB_DIR, TEST_ENV } from "./env";
 
-const projectRoot = Deno.realPathSync(`${import.meta.dirname}/../..`);
+const projectRoot = realpathSync(`${import.meta.dirname}/../..`);
 const dbDir = `${projectRoot}/${TEST_DB_DIR}`;
-const schemaSql = Deno.readTextFileSync(`${projectRoot}/${SCHEMA_SQL_PATH}`);
+const schemaSql = readFileSync(`${projectRoot}/${SCHEMA_SQL_PATH}`, "utf8");
 
-Deno.mkdirSync(dbDir, { recursive: true });
+mkdirSync(dbDir, { recursive: true });
 
 const dbPath = `${dbDir}/${crypto.randomUUID()}.db`;
 const databaseUrl = `file:${dbPath}`;
@@ -17,23 +19,13 @@ await bootstrapClient.executeMultiple(schemaSql);
 bootstrapClient.close();
 
 for (const [key, value] of Object.entries(TEST_ENV)) {
-  Deno.env.set(key, value);
+  process.env[key] = value;
 }
 
-Deno.env.set("DATABASE_URL", databaseUrl);
-
-const removeIfExists = (path: string) => {
-  try {
-    Deno.removeSync(path);
-  } catch (error) {
-    if (!(error instanceof Deno.errors.NotFound)) {
-      throw error;
-    }
-  }
-};
+process.env.DATABASE_URL = databaseUrl;
 
 afterAll(() => {
-  removeIfExists(dbPath);
-  removeIfExists(`${dbPath}-wal`);
-  removeIfExists(`${dbPath}-shm`);
+  rmSync(dbPath, { force: true });
+  rmSync(`${dbPath}-wal`, { force: true });
+  rmSync(`${dbPath}-shm`, { force: true });
 });

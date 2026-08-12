@@ -8,6 +8,10 @@ export const env = createEnv({
 
   emptyStringAsUndefined: true,
 
+  // Server modules under test run in happy-dom, which defines `window`, so the
+  // default check would read them as the client and refuse every server key.
+  isServer: typeof window === "undefined" || import.meta.env.MODE === "test",
+
   runtimeEnv: { ...import.meta.env, ...process.env },
 
   skipValidation: process.env.SKIP_ENV_VALIDATION === "1",

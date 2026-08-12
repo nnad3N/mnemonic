@@ -1,3 +1,5 @@
+import { inspect } from "node:util";
+
 import variant from "@jitl/quickjs-ng-wasmfile-release-sync";
 import { loadQuickJs } from "@sebastianwessel/quickjs";
 import type { SandboxOptions } from "@sebastianwessel/quickjs";
@@ -40,7 +42,7 @@ const getQuickJsSandbox = async (): Promise<QuickJsSandbox> => {
 };
 
 const formatConsoleArgs = (args: unknown[]): string =>
-  args.map((value) => Deno.inspect(value, { colors: false })).join(" ");
+  args.map((value) => inspect(value)).join(" ");
 
 const createExecuteSandboxOptions = (
   mutLogs: string[],

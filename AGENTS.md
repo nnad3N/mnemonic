@@ -4,11 +4,11 @@ This project uses **Oxlint** and **Oxfmt** for linting and formatting.
 
 ## Quick Reference
 
-- **Format code**: `deno task format`
-- **Lint and autofix**: `deno task lint`
-- **Format and lint**: `deno task fix`
-- **Typecheck only**: `deno task typecheck`
-- **Run tests**: `deno task test` (includes Vitest typecheck)
+- **Format code**: `nub run format`
+- **Lint and autofix**: `nub run lint`
+- **Format and lint**: `nub run fix`
+- **Typecheck only**: `nub run typecheck`
+- **Run tests**: `nub run test` (includes Vitest typecheck)
 
 Oxlint + Oxfmt provide robust linting and formatting. Most issues are automatically fixable.
 
@@ -374,7 +374,7 @@ When adding a new subagent with custom UI, add its `agent-<key>` name to `tool-p
 Use GT with `gt-tanstack-start` throughout the app. Import `useGT`, `useLocale`, and `useSetLocale` from `gt-tanstack-start`; it re-exports the GT React bindings used by the CLI scanner. Use `<T>text</T>` from `gt-react` or `gt-tanstack-start` for simple visible JSX text, and `const gt = useGT()` for attributes, toasts, validators, tooltips, and interpolated or conditional copy. Helpers outside components that need translations should take `gt: GT` from [`src/lib/gt.ts`](src/lib/gt.ts).
 
 - Supported locales are English (`en`) and Polish (`pl`). The active locale is stored in the GT locale cookie; use `useLocale()` and `useSetLocale()` for client-side locale controls.
-- GT translation artifacts live in [`src/_gt/`](src/_gt/). Keep source strings inline in English. Run `deno task translate` (`gt generate`) to refresh hash-keyed templates in `src/_gt/` (no API key). Translate `src/_gt/pl.json` values to Polish yourself — do not use `gt translate` / the GT cloud API.
+- GT translation artifacts live in [`src/_gt/`](src/_gt/). Keep source strings inline in English. Run `nub run translate` (`gt generate`) to refresh hash-keyed templates in `src/_gt/` (no API key). Translate `src/_gt/pl.json` values to Polish yourself — do not use `gt translate` / the GT cloud API.
 - Reuse the same English source string for shared UI words (“Cancel”, “Delete”, “Search”, …) instead of inventing near-duplicate copy.
 
 ---
@@ -409,4 +409,4 @@ Oxlint + Oxfmt will catch most issues automatically. Focus your attention on:
 
 ---
 
-Most formatting and common issues are automatically fixed by Oxlint + Oxfmt. Run `deno task typecheck`, `deno task lint`, and `deno task format` before handing off changes. Do not run `deno task build` just to validate agent work unless the user explicitly asks for a build.
+Most formatting and common issues are automatically fixed by Oxlint + Oxfmt. Run `nub run typecheck`, `nub run lint`, and `nub run format` before handing off changes. Do not run `nub run build` just to validate agent work unless the user explicitly asks for a build.
