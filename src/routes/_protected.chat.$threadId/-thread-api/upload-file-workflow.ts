@@ -131,7 +131,7 @@ const workflowOutputSchema = v.object({
 
 export const processForRagFn = Kit.gen(async function* (
   ctx: ProcessFileCtx,
-  input: v.InferOutput<typeof validatedFileSchema>,
+  input: v.InferOutput<typeof validatedFileSchema> & { abortSignal?: AbortSignal },
 ) {
   if (ImageMimeType.is(input.mimeType)) {
     yield* await ctx.db.run((db) =>
@@ -163,6 +163,7 @@ export const processForRagFn = Kit.gen(async function* (
 
   const { embeddings } = yield* await Result.tryPromise(async () =>
     embedMany({
+      abortSignal: input.abortSignal,
       model: fileEmbeddingModel,
       values: chunks.map((chunk) => chunk.text),
     }),
@@ -195,8 +196,8 @@ const processForRagStep = createStep({
   id: "process-for-rag",
   inputSchema: toStandardJsonSchema(validatedFileSchema),
   outputSchema: toStandardJsonSchema(workflowOutputSchema),
-  execute: async ({ inputData }) =>
-    Kit.run(async () => processForRagFn(processFileCtx, inputData)).throws(),
+  execute: async ({ abortSignal, inputData }) =>
+    Kit.run(async () => processForRagFn(processFileCtx, { ...inputData, abortSignal })).throws(),
 });
 
 export const processFileWorkflow = createWorkflow({

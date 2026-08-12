@@ -21,6 +21,7 @@ import type { SafeId } from "@/lib/safe-id";
 import { mastra } from "@/mastra";
 
 export const FILE_UPLOAD_TTL_SECONDS = 60;
+export const FILE_PROCESSING_TTL_SECONDS = 60;
 
 type UploadFileCtx = Kits<[DbKit, S3Kit]>;
 
@@ -183,6 +184,15 @@ export const processFile = createServerFn({ method: "POST" })
     const workflowResult = await Result.tryPromise(async () => {
       const workflow = mastra.getWorkflow("process-file");
       const run = await workflow.createRun();
+      const abortSignal = AbortSignal.timeout(FILE_PROCESSING_TTL_SECONDS * 1000);
+
+      abortSignal.addEventListener(
+        "abort",
+        () => {
+          void run.cancel();
+        },
+        { once: true },
+      );
 
       return run.start({
         inputData: {
