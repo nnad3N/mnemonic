@@ -38,6 +38,6 @@ When you use topic files, file search, or raw file inspection, include short cit
 
 export const sharedWebResearchInstructions = `
 ## Web research
-Eagerly delegate work to the subagent for any open ended task that needs results from the web. Do not search or fetch pages yourself unless the task scope is clear and is really small.
+Eagerly delegate any web research (searching or fetching) work to the subagent. Only search or fetch yourself when a single search answers the whole task; anything that compares, aggregates, or draws on multiple pages goes to the subagent, even when the scope is clear.
 The report is your source of truth for that task. When it leaves part of the task unanswered, delegate the remaining part or tell the user what is missing.
 `;
