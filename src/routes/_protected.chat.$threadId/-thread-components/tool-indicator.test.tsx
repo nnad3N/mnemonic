@@ -95,6 +95,11 @@ const unknownToolPart = () =>
   }) as unknown as ToolUIPart<ThreadUITools>;
 
 const TOOL_LABELS = {
+  "agent-webResearch": {
+    done: "Researched the web",
+    error: "Could not research the web",
+    pending: "Researching the web",
+  },
   docs: {
     done: "Read library documentation",
     error: "Could not read library documentation",

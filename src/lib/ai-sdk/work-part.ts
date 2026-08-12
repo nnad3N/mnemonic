@@ -81,6 +81,7 @@ export const groupAssistantParts = (parts: ThreadUIMessagePart[]): AssistantMess
 export type WorkActivityKind = "default" | "research";
 
 export const TOOL_WORK_ACTIVITY_KIND = {
+  "agent-webResearch": "research",
   webSearch: "research",
   webFetch: "research",
   fileVectorSearch: "research",

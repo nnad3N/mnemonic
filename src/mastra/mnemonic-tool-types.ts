@@ -33,8 +33,34 @@ type InferContextualUITool<TTool> =
     ? { input: Input; output: Output }
     : never;
 
+// Mastra synthesizes a delegation tool per subagent at runtime, so its schemas cannot be
+// inferred from a tool object the way the rest are.
+type SubagentUITool = {
+  input: {
+    prompt: string;
+    threadId?: string | null;
+    resourceId?: string | null;
+    instructions?: string | null;
+    maxSteps?: number | null;
+  };
+  output: {
+    text: string;
+    subAgentThreadId?: string;
+    subAgentResourceId?: string;
+    subAgentToolResults?: {
+      toolName: string;
+      toolCallId: string;
+      result?: unknown;
+      args?: unknown;
+      isError?: boolean;
+    }[];
+  };
+};
+
 export type MnemonicUITools = {
   [K in keyof MnemonicTools]: InferContextualUITool<MnemonicTools[K]>;
+} & {
+  "agent-webResearch": SubagentUITool;
 };
 
 export type MnemonicToolName = keyof MnemonicUITools;

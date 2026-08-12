@@ -50,6 +50,7 @@ const isRecoverableFailure = (part: ToolUIPart<ThreadUITools>): boolean => {
         case "success":
           return false;
       }
+    case "tool-agent-webResearch":
     case "tool-fileGraphRag":
     case "tool-fileVectorSearch":
     case "tool-recall":
@@ -60,6 +61,15 @@ const isRecoverableFailure = (part: ToolUIPart<ThreadUITools>): boolean => {
 
 const renderToolLabel = (toolName: MnemonicToolName, status: ToolPartStatus): ReactNode => {
   switch (toolName) {
+    case "agent-webResearch":
+      switch (status) {
+        case "pending":
+          return <T>Researching the web</T>;
+        case "done":
+          return <T>Researched the web</T>;
+        case "error":
+          return <T>Could not research the web</T>;
+      }
     case "docs":
       switch (status) {
         case "pending":

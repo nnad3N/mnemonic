@@ -1,7 +1,12 @@
 import { Agent } from "@mastra/core/agent";
 import { Memory } from "@mastra/memory";
 
-import { baseInstructions, sharedSourceInstructions } from "@/mastra/agents/base-instructions";
+import {
+  baseInstructions,
+  sharedSourceInstructions,
+  sharedWebResearchInstructions,
+} from "@/mastra/agents/base-instructions";
+import { webResearchAgent } from "@/mastra/agents/web-research-agent";
 import { getAgentModel, models, observationalMemoryOptions } from "@/mastra/models";
 import { stripNonNativeFilePartsProcessor } from "@/mastra/processors/strip-non-native-file-parts";
 import { workSegmentTimingProcessor } from "@/mastra/processors/work-segment-timing";
@@ -61,6 +66,8 @@ Prefer the web for current events, external documentation, explicit web requests
 
 When gathering from topic files, pick the tool that fits the question. You do not need to run every file tool.
 
+${sharedWebResearchInstructions}
+
 ## Conversation history
 Use recall to browse past messages within the current topic:
 - mode "threads" — list thread IDs and titles under the current topic.
@@ -68,6 +75,7 @@ Use recall to browse past messages within the current topic:
 - mode "search" with query — find relevant messages across threads in the current topic.
 Threads from other topics or standalone conversations are not accessible.
 `,
+  agents: { webResearch: webResearchAgent },
   inputProcessors: [stripNonNativeFilePartsProcessor],
   outputProcessors: [workSegmentTimingProcessor],
   memory: topicMemory,

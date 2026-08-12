@@ -1,7 +1,12 @@
 import { Agent } from "@mastra/core/agent";
 import { Memory } from "@mastra/memory";
 
-import { baseInstructions, sharedSourceInstructions } from "@/mastra/agents/base-instructions";
+import {
+  baseInstructions,
+  sharedSourceInstructions,
+  sharedWebResearchInstructions,
+} from "@/mastra/agents/base-instructions";
+import { webResearchAgent } from "@/mastra/agents/web-research-agent";
 import { getAgentModel, models, observationalMemoryOptions } from "@/mastra/models";
 import { stripNonNativeFilePartsProcessor } from "@/mastra/processors/strip-non-native-file-parts";
 import { workSegmentTimingProcessor } from "@/mastra/processors/work-segment-timing";
@@ -49,11 +54,14 @@ Available sources:
 - Referenced files: content the user has pointed at in this conversation.
 - Web: current or external information. Prefer it when the question needs facts from outside this conversation or up-to-date information, or when conversation recall did not fully answer.
 
+${sharedWebResearchInstructions}
+
 ## Conversation history
 Use recall to browse past messages in the current conversation only:
 - mode "messages" — read messages from the current thread.
 - mode "search" with query — find relevant messages in the current thread.
 `,
+  agents: { webResearch: webResearchAgent },
   inputProcessors: [stripNonNativeFilePartsProcessor],
   outputProcessors: [workSegmentTimingProcessor],
   memory: conversationMemory,
