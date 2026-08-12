@@ -14,6 +14,7 @@ import { webSearchTool } from "@/mastra/tools/web-search-tool";
 export const WEB_RESEARCH_AGENT_ID = "web-research-agent";
 
 const MAX_WEB_SEARCH_CALLS = 3;
+const WEB_FETCH_TOOL_NAME = "webFetch" satisfies MnemonicToolName;
 const WEB_SEARCH_TOOL_NAME = "webSearch" satisfies MnemonicToolName;
 
 /** Without its own memory a subagent inherits the parent's, including observational memory. */
@@ -60,6 +61,7 @@ You research a task on the live web and report back to the assistant that delega
 ## Decisions
 - Cover every part of the delegated task.
 - Stop as soon as you can answer the task, or as soon as it is clear you cannot.
+- You may search at most ${MAX_WEB_SEARCH_CALLS} times. After that, report with what you have. If nothing relevant turned up, say so.
 - Never ask questions back. When the task is ambiguous, research the most useful reading of it and state in the report which reading you took.
 - When sources disagree on something that matters, report the disagreement and who says what, rather than silently picking one.
 
@@ -76,7 +78,7 @@ Reply with the report only, no preamble and no narration of how you searched.
   ],
   defaultOptions: {
     maxSteps: 15,
-    stopWhen: ({ steps }: { steps: { toolCalls: { toolName: string }[] }[] }) => {
+    prepareStep: ({ steps }) => {
       let webSearchCallCount = 0;
 
       for (const step of steps) {
@@ -87,7 +89,11 @@ Reply with the report only, no preamble and no narration of how you searched.
         }
       }
 
-      return webSearchCallCount > MAX_WEB_SEARCH_CALLS;
+      if (webSearchCallCount < MAX_WEB_SEARCH_CALLS) {
+        return;
+      }
+
+      return { activeTools: [WEB_FETCH_TOOL_NAME] };
     },
   },
   memory: webResearchMemory,
