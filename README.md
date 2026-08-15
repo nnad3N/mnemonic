@@ -1,5 +1,7 @@
 # Mnemonic
 
+<img width="2547" height="1263" alt="image" src="https://github.com/user-attachments/assets/bd7bb2d7-5ceb-4dd8-95dc-3c8abd0530b0" />
+
 Mnemonic is under active development, and some of the core features are not implemented yet.
 
 ## What Mnemonic is trying to be
