@@ -4,8 +4,8 @@ import { T, useGT } from "gt-tanstack-start";
 import { toast } from "sonner";
 
 import { Spinner } from "@/components/ui/spinner";
-import { threadKeys } from "@/routes/_protected.chat.$threadId/-thread-api/query-keys";
-import { getOrCreateLatestConversation } from "@/routes/_protected.chat.$threadId/-thread-api/sidebar-data";
+import { getOrCreateLatestConversation } from "@/routes/-sidebar/sidebar.functions";
+import { sidebarQueries } from "@/routes/-sidebar/sidebar.functions";
 import { byokQueries, createMyByok } from "@/routes/_protected.settings/-byok.functions";
 import { OpenrouterKeyForm } from "@/routes/_protected.settings/-provider-key-form";
 
@@ -25,7 +25,7 @@ export const Route = createFileRoute("/_protected/")({
 
     if (conversation.created) {
       await context.queryClient.invalidateQueries({
-        queryKey: threadKeys.sidebarThreads(undefined),
+        queryKey: sidebarQueries.threads(undefined).queryKey,
       });
     }
 
@@ -64,7 +64,7 @@ const Onboarding = () => {
 
       if (conversation.created) {
         await queryClient.invalidateQueries({
-          queryKey: threadKeys.sidebarThreads(undefined),
+          queryKey: sidebarQueries.threads(undefined).queryKey,
         });
       }
 

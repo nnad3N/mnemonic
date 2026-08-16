@@ -19,10 +19,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  sidebarThreadsQuery,
-  sidebarTopicsQuery,
-} from "@/routes/_protected.chat.$threadId/-thread-api/sidebar-data";
+import { sidebarQueries } from "@/routes/-sidebar/sidebar.functions";
 
 import { DeleteTopicDialog, RenameTopicField, ThreadContextMenu } from "./thread-actions";
 
@@ -36,13 +33,13 @@ export const ThreadHeader = ({ threadId }: ThreadHeaderProps) => {
     select: (search) => search.topic,
   });
   const thread = useQuery({
-    ...sidebarThreadsQuery(topicId),
+    ...sidebarQueries.threads(topicId),
     select: (listed) =>
       listed.find((thread) => thread.id === threadId)?.title ??
       panic(`Thread ${threadId} missing from sidebar threads`),
   });
   const topic = useQuery({
-    ...sidebarTopicsQuery(),
+    ...sidebarQueries.topics(),
     enabled: topicId !== undefined,
     select: (listed) => listed.find((topic) => topic.id === topicId),
   });

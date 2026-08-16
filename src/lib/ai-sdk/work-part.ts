@@ -2,7 +2,7 @@ import { getToolName, isToolUIPart } from "ai";
 
 import { KnownToolName } from "@/lib/ai-sdk/known-tool-name";
 import { isVisibleIntermediatePart } from "@/lib/ai-sdk/tool-parts";
-import type { MnemonicToolName } from "@/mastra/mnemonic-tool-types";
+import type { MnemonicToolName } from "@/mastra/mnemonic-tool-types.server";
 import type {
   ThreadUIMessagePart,
   WorkEndPart,

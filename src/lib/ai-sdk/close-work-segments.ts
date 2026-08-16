@@ -1,6 +1,6 @@
 import type { MastraDBMessage } from "@mastra/core/agent/message-list";
 
-import { createWorkEndPart } from "@/mastra/processors/work-segment-timing";
+import { createWorkEndPart } from "@/mastra/processors/work-segment-timing.server";
 import type {
   ThreadUIMessagePart,
   WorkEndPart,

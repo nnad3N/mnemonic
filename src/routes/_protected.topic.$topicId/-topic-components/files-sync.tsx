@@ -1,11 +1,10 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 
-import { topicKeys } from "@/routes/_protected.topic.$topicId/-topic-api/query-keys";
+import { mentionQueries } from "@/routes/_protected.chat.$threadId/-thread-api/mentions.functions";
+import { fileQueries } from "@/routes/_protected.topic.$topicId/-files/files.functions";
 
-import { getPendingFiles } from "../-files-api/get-pending-files";
 import { useChatStore } from "../../-chat-store";
-import { threadKeys } from "../../_protected.chat.$threadId/-thread-api/query-keys";
 
 const POLL_MS = 2000;
 
@@ -18,12 +17,8 @@ export const FilesSync = ({ topicId }: FilesSyncProps) => {
   const previousPendingFileIds = useRef<string[]>([]);
   const isPolling = useChatStore((state) => state.pollingTopicIds.has(topicId));
   const { data: pendingFiles } = useQuery({
-    queryFn: async () =>
-      getPendingFiles({
-        data: { topicId },
-      }),
+    ...fileQueries.pending(topicId),
     select: (data) => data.map((fileItem) => fileItem.id),
-    queryKey: [topicId, "pending-files"] as const,
     refetchInterval: isPolling ? POLL_MS : false,
   });
 
@@ -45,17 +40,17 @@ export const FilesSync = ({ topicId }: FilesSyncProps) => {
 
     for (const fileId of removedFileIds) {
       void queryClient.invalidateQueries({
-        queryKey: threadKeys.mention("file", fileId),
+        queryKey: mentionQueries.byId({ type: "file", id: fileId }).queryKey,
       });
     }
 
     if (removedFileIds.length > 0) {
       void queryClient.invalidateQueries({
-        queryKey: threadKeys.mentions(topicId),
+        queryKey: mentionQueries.lists(topicId),
       });
 
       void queryClient.invalidateQueries({
-        queryKey: topicKeys.files(topicId),
+        queryKey: fileQueries.lists(topicId),
       });
     }
   }, [queryClient, topicId, pendingFiles]);

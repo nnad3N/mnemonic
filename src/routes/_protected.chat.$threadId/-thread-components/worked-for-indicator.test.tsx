@@ -1,7 +1,7 @@
 import { act, fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { MnemonicToolName } from "@/mastra/mnemonic-tool-types";
+import type { MnemonicToolName } from "@/mastra/mnemonic-tool-types.server";
 import { render } from "@/test/render-message";
 
 import type { ThreadUIMessagePart } from "../-thread-types";

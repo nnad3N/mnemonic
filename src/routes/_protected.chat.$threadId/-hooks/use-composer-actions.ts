@@ -10,14 +10,14 @@ import { useEditorRef, useEditorSelector } from "platejs/react";
 import { useStickToBottomContext } from "use-stick-to-bottom";
 
 import { closeWorkSegments } from "@/lib/ai-sdk/close-work-segments";
-import { sidebarThreadsQuery } from "@/routes/_protected.chat.$threadId/-thread-api/sidebar-data";
+import { sidebarQueries } from "@/routes/-sidebar/sidebar.functions";
 
 import { getThreadEditorId, plateToMarkdown } from "../-thread-components/composer/plate";
 import type { ThreadMetadataAttachment, ThreadUIMessage } from "../-thread-types";
 import type { ThreadInputLocation } from "../../-chat-store";
 import { useChatStore } from "../../-chat-store";
 import { useCreateThreadTitle } from "./use-create-thread-title";
-import { threadChatQuery, useThreadChat } from "./use-thread-chat";
+import { threadQueries, useThreadChat } from "./use-thread-chat";
 
 const Route = getRouteApi("/_protected/chat/$threadId");
 
@@ -29,7 +29,7 @@ type MoveSidebarThreadToTopInput = {
 const moveSidebarThreadToTop = (queryClient: QueryClient, input: MoveSidebarThreadToTopInput) => {
   const updatedAt = Temporal.Now.instant().toString();
 
-  queryClient.setQueryData(sidebarThreadsQuery(input.topicId).queryKey, (current) =>
+  queryClient.setQueryData(sidebarQueries.threads(input.topicId).queryKey, (current) =>
     produce(current, (draft) => {
       if (!draft) return;
 
@@ -136,7 +136,7 @@ export const useComposerActions = (location: ThreadInputLocation) => {
   const queryClient = useQueryClient();
   const { scrollToBottom } = useStickToBottomContext();
   const { data: topicId } = useSuspenseQuery({
-    ...threadChatQuery(threadId),
+    ...threadQueries.chat(threadId),
     select: (data) => data.topicId,
   });
   const createThreadTitleMutation = useCreateThreadTitle();

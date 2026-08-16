@@ -18,13 +18,12 @@ import {
 } from "@/components/ui/combobox";
 import { InputGroupAddon, InputGroupButton } from "@/components/ui/input-group";
 import { SidebarMenuItem } from "@/components/ui/sidebar";
+import { sidebarQueries } from "@/routes/-sidebar/sidebar.functions";
 import {
   createConversation,
   createTopic,
   createTopicThread,
-} from "@/routes/_protected.chat.$threadId/-thread-api/create-thread";
-import { threadKeys } from "@/routes/_protected.chat.$threadId/-thread-api/query-keys";
-import { sidebarTopicsQuery } from "@/routes/_protected.chat.$threadId/-thread-api/sidebar-data";
+} from "@/routes/_protected.chat.$threadId/-thread-api/thread.functions";
 
 import { navigateToScopeThread } from "./navigate-to-scope-thread";
 
@@ -38,7 +37,7 @@ export const SidebarScopeCombobox = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const selectedTopicId = useSearch({ from: "/_protected", select: (search) => search.topic });
-  const { data: topics } = useSuspenseQuery(sidebarTopicsQuery());
+  const { data: topics } = useSuspenseQuery(sidebarQueries.topics());
   const conversationsScope: SidebarScope = { id: null, title: gt("Conversations") };
   const scopes: SidebarScope[] = [
     conversationsScope,
@@ -66,8 +65,8 @@ export const SidebarScopeCombobox = () => {
       toast.error(gt("Could not create topic"));
     },
     onSuccess: async ({ topicId, threadId }) => {
-      await queryClient.invalidateQueries({ queryKey: threadKeys.sidebarTopics() });
-      await queryClient.invalidateQueries({ queryKey: threadKeys.sidebarThreads(topicId) });
+      await queryClient.invalidateQueries({ queryKey: sidebarQueries.topics().queryKey });
+      await queryClient.invalidateQueries({ queryKey: sidebarQueries.threads(topicId).queryKey });
       await navigate({
         params: { threadId },
         replace: true,
@@ -95,7 +94,7 @@ export const SidebarScopeCombobox = () => {
     onSuccess: async (thread) => {
       await navigate({ params: { threadId: thread.id }, to: "/chat/$threadId" });
       await queryClient.invalidateQueries({
-        queryKey: threadKeys.sidebarThreads(selectedTopic?.id),
+        queryKey: sidebarQueries.threads(selectedTopic?.id).queryKey,
       });
     },
   });

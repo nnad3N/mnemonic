@@ -28,9 +28,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getVisiblePageNumbers } from "@/lib/pagination";
-import { filesQuery } from "@/routes/_protected.topic.$topicId/-files-api/list-files";
 import { FileRow } from "@/routes/_protected.topic.$topicId/-files-components/file-row";
 import { FileSearch } from "@/routes/_protected.topic.$topicId/-files-components/file-search";
+import { fileQueries } from "@/routes/_protected.topic.$topicId/-files/files.functions";
 
 const PAGE_SIZE = 20;
 
@@ -54,7 +54,7 @@ function RouteComponent() {
   const [debouncedQuery] = useDebounce(search, 300);
 
   const { data, isError, isLoading, isSuccess, refetch } = useQuery(
-    filesQuery({
+    fileQueries.list({
       page,
       pageSize: PAGE_SIZE,
       search: debouncedQuery,

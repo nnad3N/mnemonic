@@ -5,9 +5,9 @@ import {
   getEmbeddingModel,
   getObservationalMemoryModel,
   observationalMemoryOptions,
-} from "@/mastra/models";
-import type { MnemonicRequestContext } from "@/mastra/request-context";
-import { libsqlStore, libsqlVector } from "@/mastra/storage";
+} from "@/mastra/models.server";
+import type { MnemonicRequestContext } from "@/mastra/request-context.server";
+import { libsqlStore, libsqlVector } from "@/mastra/storage.server";
 
 type ObservationalMemoryScope = "thread" | "resource";
 

@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import { KnownToolName } from "@/lib/ai-sdk/known-tool-name";
 import { getToolPartStatus, type ToolPartStatus } from "@/lib/ai-sdk/tool-parts";
 import { cn } from "@/lib/utils";
-import type { MnemonicToolName } from "@/mastra/mnemonic-tool-types";
+import type { MnemonicToolName } from "@/mastra/mnemonic-tool-types.server";
 import {
   ToolIndicator,
   type ToolIndicatorProps,

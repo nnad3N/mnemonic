@@ -3,7 +3,7 @@ import { matchError, Result } from "better-result";
 
 import { toServerFnError } from "@/lib/errors/server-fn-error";
 import { getProviderKey } from "@/lib/get-provider-key.server";
-import { authMiddleware } from "@/lib/middleware/auth-middleware";
+import { authMiddleware } from "@/lib/middleware/auth.middleware";
 
 export const providerKeyMiddleware = createMiddleware()
   .middleware([authMiddleware])

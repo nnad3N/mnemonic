@@ -27,17 +27,18 @@ import {
 } from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
 import { navigateToScopeThread } from "@/routes/-sidebar/navigate-to-scope-thread";
+import { sidebarQueries } from "@/routes/-sidebar/sidebar.functions";
 import type { SidebarSearch } from "@/routes/_protected";
+import { threadQueries } from "@/routes/_protected.chat.$threadId/-hooks/use-thread-chat";
+import { mentionQueries } from "@/routes/_protected.chat.$threadId/-thread-api/mentions.functions";
 import {
   deleteConversation,
   deleteTopic,
-} from "@/routes/_protected.chat.$threadId/-thread-api/delete-thread";
-import { threadKeys } from "@/routes/_protected.chat.$threadId/-thread-api/query-keys";
+} from "@/routes/_protected.chat.$threadId/-thread-api/thread.functions";
 import {
   renameConversation,
   renameTopic,
-} from "@/routes/_protected.chat.$threadId/-thread-api/rename-thread";
-import { sidebarThreadsQuery } from "@/routes/_protected.chat.$threadId/-thread-api/sidebar-data";
+} from "@/routes/_protected.chat.$threadId/-thread-api/thread.functions";
 
 type RenameFieldProps = {
   initialValue: string;
@@ -119,7 +120,11 @@ export const RenameThreadField = ({ initialValue, onCancel, threadId }: RenameTh
       toast.error(gt("Could not rename conversation"));
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: threadKeys.all });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: sidebarQueries.all() }),
+        queryClient.invalidateQueries({ queryKey: threadQueries.all() }),
+        queryClient.invalidateQueries({ queryKey: mentionQueries.all() }),
+      ]);
       onCancel();
     },
   });
@@ -151,7 +156,11 @@ export const RenameTopicField = ({ initialValue, onCancel, topicId }: RenameTopi
       toast.error(gt("Could not rename topic"));
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: threadKeys.all });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: sidebarQueries.all() }),
+        queryClient.invalidateQueries({ queryKey: threadQueries.all() }),
+        queryClient.invalidateQueries({ queryKey: mentionQueries.all() }),
+      ]);
       onCancel();
     },
   });
@@ -186,11 +195,11 @@ export const DeleteThreadDialog = ({ onOpenChange, open, threadId }: DeleteThrea
     },
     onSuccess: async () => {
       queryClient.setQueryData(
-        sidebarThreadsQuery(topicId).queryKey,
+        sidebarQueries.threads(topicId).queryKey,
         (current) => current?.filter((thread) => thread.id !== threadId) ?? [],
       );
       await navigateToScopeThread({ navigate, queryClient, topicId });
-      await queryClient.invalidateQueries({ queryKey: threadKeys.sidebar() });
+      await queryClient.invalidateQueries({ queryKey: sidebarQueries.all() });
       onOpenChange(false);
     },
   });
@@ -323,11 +332,11 @@ export const DeleteTopicDialog = ({ onOpenChange, open, topicId }: DeleteTopicDi
       });
       queryClient.removeQueries({
         exact: true,
-        queryKey: threadKeys.sidebarThreads(topicId),
+        queryKey: sidebarQueries.threads(topicId).queryKey,
       });
       await queryClient.invalidateQueries({
         exact: true,
-        queryKey: threadKeys.sidebarTopics(),
+        queryKey: sidebarQueries.topics().queryKey,
       });
       onOpenChange(false);
     },

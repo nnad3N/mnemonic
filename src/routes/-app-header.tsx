@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { sidebarTopicsQuery } from "@/routes/_protected.chat.$threadId/-thread-api/sidebar-data";
+import { sidebarQueries } from "@/routes/-sidebar/sidebar.functions";
 import { ThreadHeader } from "@/routes/_protected.chat.$threadId/-thread-components/thread-header";
 import { adminQueries } from "@/routes/_protected.settings_.admin/-admin-queries";
 
@@ -65,7 +65,7 @@ type TopicFilesCrumbsProps = {
 
 const TopicFilesCrumbs = ({ topicId }: TopicFilesCrumbsProps) => {
   const topic = useQuery({
-    ...sidebarTopicsQuery(),
+    ...sidebarQueries.topics(),
     select: (listed) => listed.find((topic) => topic.id === topicId),
   });
 

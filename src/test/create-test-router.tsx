@@ -3,12 +3,9 @@ import type { QueryClient } from "@tanstack/react-query";
 import { RouterProvider, createMemoryHistory, createRouter } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
+import { sidebarQueries } from "@/routes/-sidebar/sidebar.functions";
 import { RootAppShell } from "@/routes/__root";
-import { authSessionQuery } from "@/routes/_auth/-auth.api";
-import {
-  sidebarThreadsQuery,
-  sidebarTopicsQuery,
-} from "@/routes/_protected.chat.$threadId/-thread-api/sidebar-data";
+import { authQueries } from "@/routes/_auth/-auth.functions";
 import { byokQueries } from "@/routes/_protected.settings/-byok.functions";
 import type { ByokItem } from "@/routes/_protected.settings/-byok.functions";
 import { routeTree } from "@/routeTree.gen";
@@ -44,12 +41,12 @@ const TestDocumentShell = ({ children, queryClient }: TestDocumentShellProps) =>
  * Starts at `/`. Navigate to a chat route when the test needs chat context.
  */
 export const createTestRouter = ({ queryClient, session, user }: CreateTestRouterOptions) => {
-  queryClient.setQueryData(authSessionQuery.queryKey, {
+  queryClient.setQueryData(authQueries.session().queryKey, {
     data: { session, user },
     error: null,
   });
-  queryClient.setQueryData(sidebarThreadsQuery(undefined).queryKey, []);
-  queryClient.setQueryData(sidebarTopicsQuery().queryKey, []);
+  queryClient.setQueryData(sidebarQueries.threads(undefined).queryKey, []);
+  queryClient.setQueryData(sidebarQueries.topics().queryKey, []);
   queryClient.setQueryData(byokQueries.mine().queryKey, [
     {
       active: true,

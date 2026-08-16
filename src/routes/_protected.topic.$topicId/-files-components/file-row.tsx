@@ -16,13 +16,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { TableCell, TableRow } from "@/components/ui/table";
-import type { FileStatus } from "@/db/schema";
+import type { FileStatus } from "@/db/schema.server";
 import type { GT } from "@/lib/gt";
 import { cn } from "@/lib/utils";
-import { getFileDownloadUrl } from "@/routes/_protected.topic.$topicId/-files-api/get-file-download-url";
-import type { FileItem } from "@/routes/_protected.topic.$topicId/-files-api/list-files";
-import { renameFile } from "@/routes/_protected.topic.$topicId/-files-api/rename-file";
-import { topicKeys } from "@/routes/_protected.topic.$topicId/-topic-api/query-keys";
+import { getFileDownloadUrl } from "@/routes/_protected.topic.$topicId/-files/files.functions";
+import type { FileItem } from "@/routes/_protected.topic.$topicId/-files/files.functions";
+import { fileQueries, renameFile } from "@/routes/_protected.topic.$topicId/-files/files.functions";
 
 import { DeleteFileDialog } from "./delete-file-dialog";
 
@@ -176,7 +175,7 @@ const RenameFileField = ({ file, stopRenaming, topicId }: RenameFileFieldProps) 
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: topicKeys.files(topicId),
+        queryKey: fileQueries.lists(topicId),
       });
       stopRenaming();
     },

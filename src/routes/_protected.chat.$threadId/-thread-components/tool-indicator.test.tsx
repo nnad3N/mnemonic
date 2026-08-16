@@ -3,7 +3,7 @@ import type { ToolUIPart } from "ai";
 import { describe, expect, it } from "vitest";
 
 import { KnownToolName } from "@/lib/ai-sdk/known-tool-name";
-import type { MnemonicToolName } from "@/mastra/mnemonic-tool-types";
+import type { MnemonicToolName } from "@/mastra/mnemonic-tool-types.server";
 import { render } from "@/test/render-message";
 
 import type { ThreadUITools } from "../-thread-types";

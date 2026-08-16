@@ -1,8 +1,8 @@
 import { Result } from "better-result";
 import type { Result as ResultType } from "better-result";
 
-import { dbKit } from "@/lib/db-kit";
-import type { DatabaseError } from "@/lib/db-kit";
+import { dbKit } from "@/lib/db-kit.server";
+import type { DatabaseError } from "@/lib/db-kit.server";
 import { decryptSecret } from "@/lib/encryption.server";
 import { ConfigError, toConfigError } from "@/lib/errors/config-error";
 import type { EncryptionError } from "@/lib/errors/encryption-error";

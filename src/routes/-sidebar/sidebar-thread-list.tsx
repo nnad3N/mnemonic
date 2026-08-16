@@ -12,9 +12,9 @@ import {
 } from "@/components/ui/sidebar";
 import { matchesQuery } from "@/lib/string-match";
 import { cn } from "@/lib/utils";
+import type { SidebarThread } from "@/routes/-sidebar/sidebar.functions";
+import { sidebarQueries } from "@/routes/-sidebar/sidebar.functions";
 import type { SidebarSearch } from "@/routes/_protected";
-import type { SidebarThread } from "@/routes/_protected.chat.$threadId/-thread-api/sidebar-data";
-import { sidebarThreadsQuery } from "@/routes/_protected.chat.$threadId/-thread-api/sidebar-data";
 import { ThreadContextMenu } from "@/routes/_protected.chat.$threadId/-thread-components/thread-actions";
 
 import type { ThreadIndicator } from "../-chat-store";
@@ -70,7 +70,7 @@ export const SidebarThreadList = () => {
     from: "/_protected",
     select: (search) => ({ q: search.q, range: search.range, topic: search.topic }),
   });
-  const threads = useQuery(sidebarThreadsQuery(topic));
+  const threads = useQuery(sidebarQueries.threads(topic));
   const bounds = resolveDateRange(range);
   const visibleThreads = (threads.data ?? []).filter(
     (thread) => matchesQuery(thread.title, q) && isWithinRange(thread.updatedAt, bounds),

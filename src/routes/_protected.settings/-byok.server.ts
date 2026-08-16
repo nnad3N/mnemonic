@@ -1,8 +1,8 @@
 import { Result } from "better-result";
 import { and, eq, ne } from "drizzle-orm";
 
-import { byok } from "@/db/schema";
-import type { DbKit } from "@/lib/db-kit";
+import { byok } from "@/db/schema.server";
+import type { DbKit } from "@/lib/db-kit.server";
 import { decryptSecret, encryptSecret } from "@/lib/encryption.server";
 import { toServerFnError } from "@/lib/errors/server-fn-error";
 import * as Kit from "@/lib/kit";

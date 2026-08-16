@@ -2,7 +2,7 @@ import type { DataOmPart } from "@mastra/memory/processors";
 import type { UIMessage, UIMessagePart, DataUIPart } from "ai";
 import * as v from "valibot";
 
-import type { MnemonicUITools } from "@/mastra/mnemonic-tool-types";
+import type { MnemonicUITools } from "@/mastra/mnemonic-tool-types.server";
 
 type OmDataKey<P extends DataOmPart> = P["type"] extends `data-${infer K}` ? K : never;
 

@@ -1,7 +1,7 @@
 import { Result } from "better-result";
 
-import { createS3Kit, S3Error } from "@/lib/s3-kit";
-import type { S3Api } from "@/lib/s3-kit";
+import { createS3Kit, S3Error } from "@/lib/s3-kit.server";
+import type { S3Api } from "@/lib/s3-kit.server";
 
 type S3Call =
   | { method: "deleteObject"; key: string }

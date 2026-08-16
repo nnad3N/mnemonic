@@ -19,7 +19,7 @@ import { authClient } from "@/lib/better-auth/auth-client";
 import TanStackQueryDevtools from "@/lib/tanstack-query/devtools";
 import type { RouterContext } from "@/lib/tanstack-query/root-provider";
 import loadTranslations from "@/loadTranslations";
-import { authKeys, authSessionQuery } from "@/routes/_auth/-auth.api";
+import { authQueries } from "@/routes/_auth/-auth.functions";
 
 import gtConfig from "../../gt.config.json";
 
@@ -35,7 +35,7 @@ initializeGT({
 export const Route = createRootRouteWithContext<RouterContext>()({
   beforeLoad: async ({ context }) => {
     const session = await context.queryClient.ensureQueryData({
-      ...authSessionQuery,
+      ...authQueries.session(),
       revalidateIfStale: true,
     });
 
@@ -100,7 +100,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
  * @see https://www.better-auth.com/docs/basic-usage#use-session — reactive session on the client
  */
 const useAuthSessionQuery = (): void => {
-  useSuspenseQuery(authSessionQuery);
+  useSuspenseQuery(authQueries.session());
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data, error, isPending, isRefetching } = authClient.useSession();
@@ -112,13 +112,13 @@ const useAuthSessionQuery = (): void => {
     // carry no user id), so when the live session disagrees every cached query belongs to
     // someone else — nuke it all. Better Auth reports sign-out, sign-in, and cross-tab
     // session changes through `useSession`, making this the single boundary for all of them.
-    const cached = queryClient.getQueryData(authSessionQuery.queryKey);
+    const cached = queryClient.getQueryData(authQueries.session().queryKey);
 
     if ((cached?.data?.user.id ?? null) !== (data?.user.id ?? null)) {
       queryClient.clear();
     }
 
-    queryClient.setQueryData(authKeys.session(), { data, error });
+    queryClient.setQueryData(authQueries.session().queryKey, { data, error: null });
     void router.invalidate();
   }, [data, error, isPending, isRefetching, queryClient, router]);
 };

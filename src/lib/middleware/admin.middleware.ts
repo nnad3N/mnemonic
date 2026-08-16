@@ -1,6 +1,6 @@
 import { createMiddleware } from "@tanstack/react-start";
 
-import { authMiddleware } from "@/lib/middleware/auth-middleware";
+import { authMiddleware } from "@/lib/middleware/auth.middleware";
 
 import { toServerFnError } from "../errors/server-fn-error";
 

@@ -3,7 +3,7 @@ import type { useNavigate } from "@tanstack/react-router";
 import { produce } from "immer";
 import { nanoid } from "nanoid";
 
-import { sidebarThreadsQuery } from "@/routes/_protected.chat.$threadId/-thread-api/sidebar-data";
+import { sidebarQueries } from "@/routes/-sidebar/sidebar.functions";
 
 type Navigate = ReturnType<typeof useNavigate>;
 
@@ -19,7 +19,7 @@ export const navigateToScopeThread = async ({
   queryClient,
   topicId,
 }: NavigateToScopeThreadInput) => {
-  const threads = await queryClient.ensureQueryData(sidebarThreadsQuery(topicId));
+  const threads = await queryClient.ensureQueryData(sidebarQueries.threads(topicId));
   const latest = threads.at(0);
 
   await navigate({

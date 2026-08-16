@@ -21,9 +21,8 @@ import {
 import { authClient } from "@/lib/better-auth/auth-client";
 import { toAuthError } from "@/lib/errors/auth-error";
 import type { GT } from "@/lib/gt";
-import { authKeys } from "@/routes/_auth/-auth.api";
-import { sessionsQuery } from "@/routes/_protected.settings/-sessions-api";
-import type { SessionItem } from "@/routes/_protected.settings/-sessions-api";
+import { sessionQueries } from "@/routes/_protected.settings/-sessions.functions";
+import type { SessionItem } from "@/routes/_protected.settings/-sessions.functions";
 import {
   SettingsSection,
   SettingsSectionHeader,
@@ -76,7 +75,7 @@ type SessionsSectionProps = {
 export const SessionsSection = ({ currentSessionId }: SessionsSectionProps) => {
   const gt = useGT();
   const navigate = useNavigate();
-  const sessions = useQuery(sessionsQuery);
+  const sessions = useQuery(sessionQueries.list());
 
   const revokeAllMutation = useMutation({
     mutationFn: async () => {
@@ -172,7 +171,7 @@ const SessionRow = ({ isCurrent, session }: SessionRowProps) => {
       toast.error(gt("Could not revoke session"));
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: authKeys.sessions() });
+      await queryClient.invalidateQueries({ queryKey: sessionQueries.all() });
     },
   });
 

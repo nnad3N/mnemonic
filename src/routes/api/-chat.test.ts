@@ -3,9 +3,9 @@ import type { StorageListMessagesOutput } from "@mastra/core/storage";
 import { Result } from "better-result";
 import { describe, expect, it, vi } from "vitest";
 
-import { dbKit } from "@/lib/db-kit";
+import { dbKit } from "@/lib/db-kit.server";
 import * as Kit from "@/lib/kit";
-import { createMemoryKit, type MemoryApi } from "@/lib/memory-kit";
+import { createMemoryKit, type MemoryApi } from "@/lib/memory-kit.server";
 import { expectOk } from "@/test/result";
 
 import { persistSealedAssistantOnEnd } from "./chat";

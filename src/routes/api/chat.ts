@@ -8,20 +8,20 @@ import { produce } from "immer";
 import * as v from "valibot";
 
 import { closeWorkSegments } from "@/lib/ai-sdk/close-work-segments";
-import type { DbKit } from "@/lib/db-kit";
-import { dbKit } from "@/lib/db-kit";
+import type { DbKit } from "@/lib/db-kit.server";
+import { dbKit } from "@/lib/db-kit.server";
 import { getProviderKey } from "@/lib/get-provider-key.server";
 import type { Kits } from "@/lib/kit";
 import * as Kit from "@/lib/kit";
-import type { MemoryKit } from "@/lib/memory-kit";
-import { memoryKit } from "@/lib/memory-kit";
-import { authMiddleware } from "@/lib/middleware/auth-middleware";
+import type { MemoryKit } from "@/lib/memory-kit.server";
+import { memoryKit } from "@/lib/memory-kit.server";
+import { authMiddleware } from "@/lib/middleware/auth.middleware";
 import { modelCapabilityLevels } from "@/lib/model-capability";
 import type { SafeId } from "@/lib/safe-id";
 import { toSafeId } from "@/lib/safe-id";
-import { mastra } from "@/mastra";
-import { getMnemonicAgentId } from "@/mastra/agents/id";
-import type { MnemonicRequestContext } from "@/mastra/request-context";
+import { getMnemonicAgentId } from "@/mastra/agents/id.server";
+import { mastra } from "@/mastra/instance.server";
+import type { MnemonicRequestContext } from "@/mastra/request-context.server";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 
 export const uiMessageSchema = v.object({

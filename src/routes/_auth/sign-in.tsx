@@ -12,7 +12,7 @@ import {
   cancelledPasskeyCodes,
   toAuthError,
 } from "@/lib/errors/auth-error";
-import { authKeys } from "@/routes/_auth/-auth.api";
+import { authQueries } from "@/routes/_auth/-auth.functions";
 
 export const Route = createFileRoute("/_auth/sign-in")({
   component: RouteComponent,
@@ -45,7 +45,7 @@ function RouteComponent() {
     // The session query is staleTime Infinity and root beforeLoad reads it from the
     // cache, so navigating before it refetches would bounce back to /sign-in.
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: authKeys.session() });
+      await queryClient.invalidateQueries({ queryKey: authQueries.session().queryKey });
       await navigate({ to: "/" });
     },
   });

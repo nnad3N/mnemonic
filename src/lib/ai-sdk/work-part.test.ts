@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { MnemonicToolName } from "@/mastra/mnemonic-tool-types";
+import type { MnemonicToolName } from "@/mastra/mnemonic-tool-types.server";
 import type { ThreadUIMessagePart } from "@/routes/_protected.chat.$threadId/-thread-types";
 
 import { getDominantWorkActivityKind, groupAssistantParts } from "./work-part";

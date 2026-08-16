@@ -4,9 +4,8 @@ import { getRouteApi } from "@tanstack/react-router";
 import type { PrepareSendMessagesRequest, UIMessage } from "ai";
 import { DefaultChatTransport } from "ai";
 
-import { getThread } from "../-thread-api/get-thread";
-import { threadKeys } from "../-thread-api/query-keys";
-import { threadSettingsQuery } from "../-thread-api/settings";
+import { threadSettingsQueries } from "../-thread-api/thread-settings.functions";
+import { getThread } from "../-thread-api/thread.functions";
 import type { ThreadUIMessage } from "../-thread-types";
 import { useChatStore } from "../../-chat-store";
 
@@ -35,61 +34,66 @@ export const getMessagesToSend = <TMessage extends UIMessage>(
   return [lastMessage];
 };
 
-export const threadChatQuery = (threadId: string) =>
-  queryOptions({
-    gcTime: Infinity,
-    staleTime: Infinity,
-    structuralSharing: false,
-    queryKey: threadKeys.chat(threadId),
-    queryFn: async ({ client }) => {
-      const data = await getThread({
-        data: { threadId },
-      });
+export const threadQueries = {
+  all: () => ["thread"] as const,
+  chat: (threadId: string) =>
+    queryOptions({
+      gcTime: Infinity,
+      staleTime: Infinity,
+      structuralSharing: false,
+      queryKey: [...threadQueries.all(), threadId, "chat"] as const,
+      queryFn: async ({ client }) => {
+        const data = await getThread({
+          data: { threadId },
+        });
 
-      const messages = data.messages as ThreadUIMessage[];
+        const messages = data.messages as ThreadUIMessage[];
 
-      const chat = new Chat({
-        id: threadId,
-        messages,
-        onFinish: ({ isError, messages }) => {
-          useChatStore.getState().hydrateAttachments(threadId, messages);
-          useChatStore.getState().setThreadIndicator(threadId, isError ? "error" : "ready");
-        },
-        onError: (error) => {
-          console.error(error);
-        },
-        transport: new DefaultChatTransport({
-          api: "/api/chat",
-          prepareSendMessagesRequest: async ({ messages: requestMessages, ...body }) => {
-            useChatStore.getState().setThreadIndicator(threadId, "pending");
-            const settings = await client.ensureQueryData(threadSettingsQuery(threadId));
-
-            return {
-              body: {
-                ...body,
-                messages: getMessagesToSend(requestMessages, body.trigger),
-                resourceId: data.resourceId,
-                settings: { modelCapability: settings.modelCapability },
-                threadId,
-              },
-            };
+        const chat = new Chat({
+          id: threadId,
+          messages,
+          onFinish: ({ isError, messages }) => {
+            useChatStore.getState().hydrateAttachments(threadId, messages);
+            useChatStore.getState().setThreadIndicator(threadId, isError ? "error" : "ready");
           },
-        }),
-      });
+          onError: (error) => {
+            console.error(error);
+          },
+          transport: new DefaultChatTransport({
+            api: "/api/chat",
+            prepareSendMessagesRequest: async ({ messages: requestMessages, ...body }) => {
+              useChatStore.getState().setThreadIndicator(threadId, "pending");
+              const settings = await client.ensureQueryData(
+                threadSettingsQueries.byThread(threadId),
+              );
 
-      return {
-        chat,
-        resourceId: data.resourceId,
-        topicId: data.topicId,
-      };
-    },
-  });
+              return {
+                body: {
+                  ...body,
+                  messages: getMessagesToSend(requestMessages, body.trigger),
+                  resourceId: data.resourceId,
+                  settings: { modelCapability: settings.modelCapability },
+                  threadId,
+                },
+              };
+            },
+          }),
+        });
+
+        return {
+          chat,
+          resourceId: data.resourceId,
+          topicId: data.topicId,
+        };
+      },
+    }),
+};
 
 export const useThreadChat = () => {
   const threadId = Route.useParams({
     select: (params) => params.threadId,
   });
-  const { data } = useSuspenseQuery(threadChatQuery(threadId));
+  const { data } = useSuspenseQuery(threadQueries.chat(threadId));
 
   return useChat({
     chat: data.chat,

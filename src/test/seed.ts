@@ -1,13 +1,13 @@
 import { Result } from "better-result";
 import { nanoid } from "nanoid";
 
-import { user } from "@/db/auth-schema";
-import { file, byok, topic } from "@/db/schema";
-import type { FileStatus } from "@/db/schema";
-import { dbKit } from "@/lib/db-kit";
+import { user } from "@/db/auth-schema.server";
+import { file, byok, topic } from "@/db/schema.server";
+import type { FileStatus } from "@/db/schema.server";
+import { dbKit } from "@/lib/db-kit.server";
 import { encryptSecret } from "@/lib/encryption.server";
 import * as Kit from "@/lib/kit";
-import { memoryKit } from "@/lib/memory-kit";
+import { memoryKit } from "@/lib/memory-kit.server";
 import type { SafeId } from "@/lib/safe-id";
 import { createSafeId, toSafeId } from "@/lib/safe-id";
 

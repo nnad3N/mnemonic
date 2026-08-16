@@ -8,19 +8,19 @@ import {
   MessageScrollerProvider,
 } from "@/components/ui/message-scroller";
 import { ServerFnError } from "@/lib/errors/server-fn-error";
+import { sidebarQueries } from "@/routes/-sidebar/sidebar.functions";
+import { threadSettingsQueries } from "@/routes/_protected.chat.$threadId/-thread-api/thread-settings.functions";
 import {
   createConversation,
   createTopicThread,
-} from "@/routes/_protected.chat.$threadId/-thread-api/create-thread";
-import { threadKeys } from "@/routes/_protected.chat.$threadId/-thread-api/query-keys";
-import { threadSettingsQuery } from "@/routes/_protected.chat.$threadId/-thread-api/settings";
+} from "@/routes/_protected.chat.$threadId/-thread-api/thread.functions";
 import { ThreadComposer } from "@/routes/_protected.chat.$threadId/-thread-components/composer/thread-composer";
 
 export const Route = createFileRoute("/_protected/chat/$threadId")({
   component: RouteComponent,
   beforeLoad: async ({ context, params, search }) => {
     try {
-      await context.queryClient.ensureQueryData(threadSettingsQuery(params.threadId));
+      await context.queryClient.ensureQueryData(threadSettingsQueries.byThread(params.threadId));
       return;
     } catch (error) {
       if (!ServerFnError.is(error) || error.status !== "not-found") {
@@ -50,9 +50,9 @@ export const Route = createFileRoute("/_protected/chat/$threadId")({
 
     await Promise.all([
       context.queryClient.invalidateQueries({
-        queryKey: threadKeys.sidebarThreads(search.topic),
+        queryKey: sidebarQueries.threads(search.topic).queryKey,
       }),
-      context.queryClient.prefetchQuery(threadSettingsQuery(params.threadId)),
+      context.queryClient.prefetchQuery(threadSettingsQueries.byThread(params.threadId)),
     ]);
   },
 });

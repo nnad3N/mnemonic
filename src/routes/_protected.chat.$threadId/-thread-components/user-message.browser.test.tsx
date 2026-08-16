@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 
 import { useChatStore } from "@/routes/-chat-store";
-import { threadSettingsQuery } from "@/routes/_protected.chat.$threadId/-thread-api/settings";
+import { threadSettingsQueries } from "@/routes/_protected.chat.$threadId/-thread-api/thread-settings.functions";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 import { renderThreadBrowser } from "@/test/render-thread-browser";
 import { waitForFrames } from "@/test/utils";
@@ -135,7 +135,7 @@ describe("UserMessage browser", () => {
     await userEvent.click(page.elementLocator(balancedButton!));
 
     expect(useChatStore.getState().editingState?.messageId).toBe(MESSAGE_ID);
-    expect(queryClient.getQueryData(threadSettingsQuery(threadId).queryKey)).toEqual({
+    expect(queryClient.getQueryData(threadSettingsQueries.byThread(threadId).queryKey)).toEqual({
       modelCapability: "balanced",
     });
     expect(getEditCapabilityTrigger()?.textContent).toMatch(/Balanced/);

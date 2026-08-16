@@ -9,8 +9,8 @@ import { FieldError } from "@/components/field-error";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import type { SignUpContext } from "@/lib/better-auth/auth";
 import { authClient } from "@/lib/better-auth/auth-client";
+import type { SignUpContext } from "@/lib/better-auth/auth.server";
 import {
   getAuthErrorDescription,
   cancelledPasskeyCodes,
@@ -18,7 +18,7 @@ import {
 } from "@/lib/errors/auth-error";
 import type { ToAuthErrorProps } from "@/lib/errors/auth-error";
 import type { GT } from "@/lib/gt";
-import { authKeys } from "@/routes/_auth/-auth.api";
+import { authQueries } from "@/routes/_auth/-auth.functions";
 
 export const Route = createFileRoute("/_auth/sign-up")({
   component: RouteComponent,
@@ -81,7 +81,7 @@ function RouteComponent() {
 
       // The session query is staleTime Infinity and root beforeLoad reads it from the
       // cache, so navigating before it refetches would bounce back to /sign-in.
-      await queryClient.invalidateQueries({ queryKey: authKeys.session() });
+      await queryClient.invalidateQueries({ queryKey: authQueries.session().queryKey });
       await navigate({ to: "/" });
     },
     validationLogic: revalidateLogic(),

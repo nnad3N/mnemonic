@@ -3,12 +3,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { matchError } from "better-result";
 import * as v from "valibot";
 
-import { dbKit } from "@/lib/db-kit";
+import { dbKit } from "@/lib/db-kit.server";
 import { duration } from "@/lib/durations";
 import { ServerFnError, toServerFnError } from "@/lib/errors/server-fn-error";
 import * as Kit from "@/lib/kit";
 import { adminMiddleware } from "@/lib/middleware/admin.middleware";
-import { authMiddleware } from "@/lib/middleware/auth-middleware";
+import { authMiddleware } from "@/lib/middleware/auth.middleware";
 import { toSafeId } from "@/lib/safe-id";
 import {
   activateByokFn,
