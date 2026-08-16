@@ -51,6 +51,7 @@ export const deleteTopicFn = Kit.gen(async function* (
     ctx.vector.deleteVectors({
       filter: { topicId: input.topicId },
     }),
+    ctx.memory.clearResourceObservations({ resourceId: input.topicId }),
     ...threads.map(async (thread) => ctx.memory.deleteThread({ threadId: thread.id })),
   ]);
   // Keep durable rows until external deletes succeed so a failed S3/vector/memory
@@ -113,11 +114,10 @@ const deleteThreadCtx = Kit.createContext(dbKit, s3Kit, memoryKit, vectorKit);
 
 export const deleteTopic = createServerFn({ method: "POST" })
   .middleware([topicAccessMiddleware])
-  .handler(async ({ context }) => {
-    const topicId = context.topic.id;
-    const input = { topicId };
-
-    return Kit.run(async () => deleteTopicFn(deleteThreadCtx, input)).throws<ServerFnError>(() =>
-      toServerFnError.serverError("Failed to delete topic"),
-    );
-  });
+  .handler(async ({ context }) =>
+    Kit.run(async () =>
+      deleteTopicFn(deleteThreadCtx, {
+        topicId: context.topic.id,
+      }),
+    ).throws<ServerFnError>(() => toServerFnError.serverError("Failed to delete topic")),
+  );

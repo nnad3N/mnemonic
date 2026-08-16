@@ -6,9 +6,10 @@ import { ServerFnError } from "@/lib/errors/server-fn-error";
 import { UPLOAD_MAX_BYTES } from "@/lib/file-validation";
 import * as Kit from "@/lib/kit";
 import { createSafeId, type SafeId } from "@/lib/safe-id";
+import { clearDatabase } from "@/test/clear-database";
 import { createFakeS3 } from "@/test/fake-s3";
 import { expectErr, expectOk } from "@/test/result";
-import { clearDatabase, seedFile, seedTopic, seedUser } from "@/test/seed";
+import { seedFile, seedTopic, seedUser } from "@/test/seed";
 
 import { getPresignedUrlFn } from "./upload-file";
 

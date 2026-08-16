@@ -9,6 +9,7 @@ import * as v from "valibot";
 import { topic } from "@/db/schema";
 import { dbKit } from "@/lib/db-kit";
 import type { DbKit } from "@/lib/db-kit";
+import { duration } from "@/lib/durations";
 import { toServerFnError } from "@/lib/errors/server-fn-error";
 import type { ServerFnError } from "@/lib/errors/server-fn-error";
 import * as Kit from "@/lib/kit";
@@ -64,8 +65,7 @@ export const listSidebarConversationsFn = Kit.gen(async function* (
   const expiredThreads = getExpiredThreads(oldestThreads.threads);
   yield* await Kit.promiseAll(
     expiredThreads.map(async (thread) =>
-      ctx.memory.deleteAgentThread({
-        agentId: "conversation-agent",
+      ctx.memory.deleteThread({
         threadId: thread.id,
       }),
     ),
@@ -175,6 +175,7 @@ export const sidebarTopicsQuery = () =>
   queryOptions({
     queryKey: threadKeys.sidebarTopics(),
     queryFn: async () => listSidebarTopics(),
+    staleTime: duration.FIVE.MINUTES,
   });
 
 export const sidebarThreadsQuery = (topicId: string | undefined) =>
@@ -188,4 +189,5 @@ export const sidebarThreadsQuery = (topicId: string | undefined) =>
       return listSidebarConversations();
     },
     placeholderData: keepPreviousData,
+    staleTime: duration.FIVE.MINUTES,
   });

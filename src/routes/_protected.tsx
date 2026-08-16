@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import * as Kit from "@/lib/kit";
+import { byokQueries } from "@/routes/_protected.settings/-byok.functions";
 
 import { AppHeader } from "./-app-header";
 import { SidebarFooterSection } from "./-sidebar/sidebar-menu";
@@ -49,9 +50,18 @@ export type SidebarSearch = v.InferInput<typeof sidebarSearchSchema>;
 export const Route = createFileRoute("/_protected")({
   search: { middlewares: [retainSearchParams(["topic", "q", "range"])] },
   validateSearch: sidebarSearchSchema,
-  beforeLoad: ({ context }) => {
+  beforeLoad: async ({ context, location }) => {
     if (!context.user || !context.session) {
       throw redirect({ to: "/sign-in" });
+    }
+
+    const byoks = await context.queryClient.ensureQueryData({
+      ...byokQueries.mine(),
+      revalidateIfStale: true,
+    });
+
+    if (byoks.length === 0 && location.pathname !== "/") {
+      throw redirect({ to: "/" });
     }
 
     return { session: context.session, user: context.user };

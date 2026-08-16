@@ -37,7 +37,7 @@ const buildFileMentionsWhereClause = (topicId: SafeId<"topic">, query: string) =
     return eq(file.topicId, topicId);
   }
 
-  return and(eq(file.topicId, topicId), ilike(file.displayName, `%${trimmedQuery}%`));
+  return and(eq(file.topicId, topicId), ilike(file.displayName, trimmedQuery));
 };
 
 const getMentionsInputSchema = v.object({

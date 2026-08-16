@@ -4,8 +4,9 @@ import { dbKit } from "@/lib/db-kit";
 import * as Kit from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit";
 import { createSafeId } from "@/lib/safe-id";
+import { clearDatabase } from "@/test/clear-database";
 import { expectOk } from "@/test/result";
-import { clearDatabase, seedThread, seedUser } from "@/test/seed";
+import { seedThread, seedUser } from "@/test/seed";
 
 import { listSidebarConversationsFn } from "./sidebar-data";
 

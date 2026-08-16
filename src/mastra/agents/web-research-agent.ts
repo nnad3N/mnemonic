@@ -4,7 +4,7 @@ import type { CompatRule } from "@mastra/core/processors";
 import { Memory } from "@mastra/memory";
 
 import type { MnemonicToolName } from "@/mastra/mnemonic-tool-types";
-import { models } from "@/mastra/models";
+import { getSubagentModel } from "@/mastra/models";
 import { stripNonNativeFilePartsProcessor } from "@/mastra/processors/strip-non-native-file-parts";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context";
 import { libsqlStore } from "@/mastra/storage";
@@ -98,7 +98,7 @@ Reply with the report only, no preamble and no narration of how you searched.
   },
   memory: webResearchMemory,
   requestContextSchema: mnemonicRequestContextSchema,
-  model: models.forModelCapability("standard"),
+  model: getSubagentModel,
   name: "WebResearch",
   tools: {
     webFetch: webFetchTool,

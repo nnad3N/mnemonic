@@ -10,6 +10,7 @@ import * as v from "valibot";
 import { closeWorkSegments } from "@/lib/ai-sdk/close-work-segments";
 import type { DbKit } from "@/lib/db-kit";
 import { dbKit } from "@/lib/db-kit";
+import { getProviderKey } from "@/lib/get-provider-key.server";
 import type { Kits } from "@/lib/kit";
 import * as Kit from "@/lib/kit";
 import type { MemoryKit } from "@/lib/memory-kit";
@@ -19,7 +20,6 @@ import { modelCapabilityLevels } from "@/lib/model-capability";
 import type { SafeId } from "@/lib/safe-id";
 import { toSafeId } from "@/lib/safe-id";
 import { mastra } from "@/mastra";
-import type { MnemonicAgentId } from "@/mastra/agents/id";
 import { getMnemonicAgentId } from "@/mastra/agents/id";
 import type { MnemonicRequestContext } from "@/mastra/request-context";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
@@ -63,7 +63,6 @@ class ChatStreamError extends TaggedError("ChatStreamError")<{
 }> {}
 
 type PersistSealedAssistantOnEndInput = {
-  agentId: MnemonicAgentId;
   completedAt: Temporal.Instant;
   threadId: string;
 };
@@ -99,7 +98,6 @@ export const persistSealedAssistantOnEnd = Kit.gen(async function* (
   }
 
   yield* await ctx.memory.saveMessages({
-    agentId: input.agentId,
     messages: [sealed],
   });
 
@@ -115,16 +113,19 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
     return Result.err(new ChatNotFoundError({ message: "Thread not found" }));
   }
 
-  const topic = yield* await ctx.db.run((db) =>
-    db.query.topic.findFirst({
-      where: {
-        // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId check.
-        id: toSafeId<"topic">(thread.resourceId),
-        userId: input.userId,
-      },
-      columns: { id: true },
-    }),
-  );
+  const [topic, apiKey] = yield* await Kit.promiseAll([
+    ctx.db.run((db) =>
+      db.query.topic.findFirst({
+        where: {
+          // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId check.
+          id: toSafeId<"topic">(thread.resourceId),
+          userId: input.userId,
+        },
+        columns: { id: true },
+      }),
+    ),
+    getProviderKey(input.userId),
+  ]);
 
   if (thread.resourceId !== input.userId && !topic) {
     return Result.err(new ChatNotFoundError({ message: "Thread not found" }));
@@ -145,12 +146,13 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
       const messageIds = storedMessages.slice(messageIndex).map((message) => message.id);
 
       if (messageIds.length > 0) {
-        yield* await ctx.memory.deleteMessages({ agentId, messageIds });
+        yield* await ctx.memory.deleteMessages({ messageIds });
       }
     }
   }
 
   const requestContext = new RequestContext<MnemonicRequestContext>();
+  requestContext.set("apiKey", apiKey);
   requestContext.set("userId", input.userId);
   requestContext.set("modelCapability", input.body.settings.modelCapability);
   requestContext.set("threadId", input.body.threadId);
@@ -216,7 +218,6 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
         // an onAbort hook: onAbort fires before the abort reaches the stream and races
         // observational memory's writes to the same row.
         const sealed = await persistSealedAssistantOnEnd(ctx, {
-          agentId,
           completedAt: endedAt,
           threadId: input.body.threadId,
         });
@@ -254,7 +255,9 @@ export const Route = createFileRoute("/api/chat")({
             matchError(error, {
               ChatNotFoundError: () => new Response("Not Found", { status: 404 }),
               ChatStreamError: () => new Response("Internal Server Error", { status: 500 }),
+              ConfigError: () => new Response("Bad Request", { status: 400 }),
               DatabaseError: () => new Response("Internal Server Error", { status: 500 }),
+              EncryptionError: () => new Response("Internal Server Error", { status: 500 }),
               MemoryError: () => new Response("Internal Server Error", { status: 500 }),
             }),
         });

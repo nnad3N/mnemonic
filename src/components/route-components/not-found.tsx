@@ -29,7 +29,7 @@ export const NotFoundComponent = () => {
         </EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
-        <Button render={<Link to="/" />}>
+        <Button nativeButton={false} render={<Link to="/" />}>
           <T>Back to home</T>
         </Button>
       </EmptyContent>

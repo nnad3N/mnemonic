@@ -66,7 +66,10 @@ const isWithinRange = (updatedAt: string, bounds: InstantRange | null) => {
 };
 
 export const SidebarThreadList = () => {
-  const { q, range, topic } = useSearch({ from: "/_protected" });
+  const { q, range, topic } = useSearch({
+    from: "/_protected",
+    select: (search) => ({ q: search.q, range: search.range, topic: search.topic }),
+  });
   const threads = useQuery(sidebarThreadsQuery(topic));
   const bounds = resolveDateRange(range);
   const visibleThreads = (threads.data ?? []).filter(

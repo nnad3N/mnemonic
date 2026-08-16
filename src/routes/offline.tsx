@@ -36,7 +36,7 @@ function RouteComponent() {
         </EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
-        <Button render={<Link to="/" />}>
+        <Button nativeButton={false} render={<Link to="/" />}>
           <T>Try again</T>
         </Button>
       </EmptyContent>

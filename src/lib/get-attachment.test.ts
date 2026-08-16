@@ -41,7 +41,7 @@ const createUserMessage = (input: {
 });
 
 const createMemoryApi = (listMessages: MemoryApi["listMessages"]): MemoryApi => ({
-  deleteAgentThread: async () => Promise.resolve(Result.ok(undefined)),
+  clearResourceObservations: async () => Promise.resolve(Result.ok(undefined)),
   deleteMessages: async () => Promise.resolve(Result.ok(undefined)),
   listThreads: async () =>
     Promise.resolve(

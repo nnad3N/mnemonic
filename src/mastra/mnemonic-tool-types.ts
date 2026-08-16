@@ -1,22 +1,13 @@
 import type { Tool } from "@mastra/core/tools";
+import type { Memory } from "@mastra/memory";
 
-import type {
-  ConversationAgentTools,
-  conversationMemory,
-} from "@/mastra/agents/conversation-agent";
-import type { TopicAgentTools, topicMemory } from "@/mastra/agents/topic-agent";
+import type { ConversationAgentTools } from "@/mastra/agents/conversation-agent";
+import type { TopicAgentTools } from "@/mastra/agents/topic-agent";
 
 type EnabledMemoryToolName = "recall";
-type ConversationMemoryTools = Pick<
-  ReturnType<typeof conversationMemory.listTools>,
-  EnabledMemoryToolName
->;
-type TopicMemoryTools = Pick<ReturnType<typeof topicMemory.listTools>, EnabledMemoryToolName>;
+type MemoryTools = Pick<ReturnType<Memory["listTools"]>, EnabledMemoryToolName>;
 
-type MnemonicTools = ConversationAgentTools &
-  ConversationMemoryTools &
-  TopicAgentTools &
-  TopicMemoryTools;
+type MnemonicTools = ConversationAgentTools & MemoryTools & TopicAgentTools;
 
 // Mastra's InferUITool only matches the first four Tool generics, so tools with a typed
 // request context fail its conditional type and infer input/output as never.

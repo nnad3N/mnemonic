@@ -13,6 +13,8 @@ The goal is not runtime validation. The goal is to make Drizzle calls explicit a
 - `file.id` is `SafeId<"file">`.
 - `file.userId` is `SafeId<"user">`.
 - `file.topicId` is `SafeId<"topic">`.
+- `providerKey.id` is `SafeId<"providerKey">`.
+- `providerKey.userId` is `SafeId<"user">`.
 
 Do not brand Better Auth tables in `src/db/auth-schema.ts`. Better Auth owns that schema. Brand the authenticated `user.id` only after Better Auth returns the session in backend context.
 

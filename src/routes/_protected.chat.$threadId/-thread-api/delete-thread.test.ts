@@ -6,11 +6,13 @@ import * as Kit from "@/lib/kit";
 import { createMemoryKit, type MemoryApi, MemoryError, memoryKit } from "@/lib/memory-kit";
 import { createSafeId, toSafeId } from "@/lib/safe-id";
 import { createVectorKit, type VectorApi, VectorError, vectorKit } from "@/lib/vector-kit";
-import { FILE_EMBEDDING_DIMENSION, FILE_EMBEDDINGS_INDEX } from "@/mastra/file-rag-config";
+import { FILE_EMBEDDINGS_INDEX } from "@/mastra/file-rag-config";
+import { FILE_EMBEDDING_DIMENSION } from "@/mastra/models";
 import { libsqlVector } from "@/mastra/storage";
+import { clearDatabase } from "@/test/clear-database";
 import { createFakeS3 } from "@/test/fake-s3";
 import { expectErr, expectOk } from "@/test/result";
-import { clearDatabase, seedFile, seedThread, seedTopic, seedUser } from "@/test/seed";
+import { seedFile, seedThread, seedTopic, seedUser } from "@/test/seed";
 
 import { deleteTopicFn } from "./delete-thread";
 
@@ -102,7 +104,7 @@ const createFailingVectorKit = () => {
 
 const createFailingMemoryKit = () => {
   const api: MemoryApi = {
-    deleteAgentThread: memory.deleteAgentThread,
+    clearResourceObservations: memory.clearResourceObservations,
     deleteMessages: memory.deleteMessages,
     listThreads: memory.listThreads,
     deleteThread: async () =>
@@ -155,7 +157,9 @@ describe("deleteTopicFn", () => {
     fakeS3.put(second.s3Key, new TextEncoder().encode("two"));
     const ctx = Kit.createContext(dbKit, fakeS3.kit, memoryKit, vectorKit);
 
-    expect(expectOk(await deleteTopicFn(ctx, { topicId }))).toEqual({ id: topicId });
+    expect(expectOk(await deleteTopicFn(ctx, { topicId }))).toEqual({
+      id: topicId,
+    });
 
     expect(await topicExists(topicId)).toBe(false);
     expect(await fileIdsForTopic(topicId)).toEqual([]);

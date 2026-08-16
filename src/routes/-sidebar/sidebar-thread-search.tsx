@@ -28,7 +28,10 @@ type RangePreset = "today" | "7d" | "30d" | "custom";
 export const SidebarThreadSearch = () => {
   const gt = useGT();
   const navigate = useNavigate();
-  const { q, range } = useSearch({ from: "/_protected" });
+  const { q, range } = useSearch({
+    from: "/_protected",
+    select: (search) => ({ q: search.q, range: search.range }),
+  });
 
   const setSearch = async (update: (draft: SidebarSearch) => void) =>
     navigate({

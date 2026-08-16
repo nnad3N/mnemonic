@@ -47,7 +47,9 @@ export const Route = createFileRoute("/_protected/topic/$topicId/files")({
 function RouteComponent() {
   const gt = useGT();
   const topicId = Route.useParams({ select: (params) => params.topicId });
-  const { search, page } = Route.useSearch();
+  const { page, search } = Route.useSearch({
+    select: (search) => ({ page: search.page, search: search.search }),
+  });
   const navigate = Route.useNavigate();
   const [debouncedQuery] = useDebounce(search, 300);
 

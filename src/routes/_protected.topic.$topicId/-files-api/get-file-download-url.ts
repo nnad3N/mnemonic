@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { Result } from "better-result";
 
 import { toServerFnError } from "@/lib/errors/server-fn-error";
 import * as Kit from "@/lib/kit";
@@ -20,7 +21,7 @@ export const getFileDownloadUrl = createServerFn({ method: "GET" })
       contentDisposition: `attachment; filename*=UTF-8''${encodeURIComponent(context.file.displayName)}`,
     });
 
-    if (result.isErr()) {
+    if (Result.isError(result)) {
       throw toServerFnError.serverError("Failed to get file download URL");
     }
 

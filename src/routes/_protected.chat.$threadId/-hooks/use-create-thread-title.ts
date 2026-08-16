@@ -6,15 +6,16 @@ import { produce } from "immer";
 import * as v from "valibot";
 
 import { ServerFnError, toServerFnError } from "@/lib/errors/server-fn-error";
-import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
-import { memoryKit } from "@/lib/memory-kit";
+import * as Kit from "@/lib/kit";
 import type { MemoryKit } from "@/lib/memory-kit";
+import { memoryKit } from "@/lib/memory-kit";
 import { threadAccessMiddleware } from "@/lib/middleware/assert-thread-access";
-import { models } from "@/mastra/models";
+import { providerKeyMiddleware } from "@/lib/middleware/provider-key.middleware";
+import { getThreadTitleModel } from "@/mastra/models";
 import { sidebarThreadsQuery } from "@/routes/_protected.chat.$threadId/-thread-api/sidebar-data";
 
-const TITLE_SYSTEM_PROMPT = `
+const TITLE_INSTRUCTIONS = `
 You generate concise thread titles for a conversation sidebar.
 
 Rules:
@@ -50,6 +51,7 @@ const createThreadTitleSchema = v.object({
 type CreateThreadTitleCtx = Kits<[MemoryKit]>;
 
 type CreateThreadTitleInput = {
+  apiKey: string;
   metadata: Record<string, unknown>;
   text: string;
   threadId: string;
@@ -64,7 +66,7 @@ const createThreadTitleFn = Kit.gen(async function* (
       try: async () => {
         const result = await generateText({
           abortSignal: AbortSignal.timeout(TITLE_GENERATION_TIMEOUT_MS),
-          model: models.threadTitle,
+          model: getThreadTitleModel(input.apiKey),
           prompt: input.text,
           providerOptions: {
             openrouter: {
@@ -73,7 +75,7 @@ const createThreadTitleFn = Kit.gen(async function* (
               },
             },
           },
-          system: TITLE_SYSTEM_PROMPT,
+          instructions: TITLE_INSTRUCTIONS,
         });
 
         return result.text;
@@ -112,23 +114,21 @@ const createThreadTitleCtx = Kit.createContext(memoryKit);
 
 export const createThreadTitle = createServerFn({ method: "POST" })
   .validator(createThreadTitleSchema)
-  .middleware([threadAccessMiddleware])
+  .middleware([threadAccessMiddleware, providerKeyMiddleware])
   .handler(async ({ context, data }) =>
     Kit.run(async () =>
       createThreadTitleFn(createThreadTitleCtx, {
+        apiKey: context.apiKey,
         metadata: context.thread.metadata ?? {},
         text: data.text,
         threadId: context.thread.id,
       }),
-    ).throws<ServerFnError>((error) => {
-      if (ServerFnError.is(error)) {
-        return error;
-      }
-
-      return matchError(error, {
+    ).throws<ServerFnError>((error) =>
+      matchError(error, {
         MemoryError: () => toServerFnError.serverError("Failed to save conversation title"),
-      });
-    }),
+        ServerFnError: (error) => error,
+      }),
+    ),
   );
 
 type CreateThreadTitleVars = {

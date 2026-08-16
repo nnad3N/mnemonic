@@ -12,7 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as OfflineRouteImport } from './routes/offline'
 import { Route as ProtectedRouteImport } from './routes/_protected'
 import { Route as AuthRouteRouteImport } from './routes/_auth/route'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as ProtectedIndexRouteImport } from './routes/_protected.index'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ProtectedSettingsRouteImport } from './routes/_protected.settings'
 import { Route as AuthSignUpRouteImport } from './routes/_auth/sign-up'
@@ -20,8 +20,10 @@ import { Route as AuthSignInRouteImport } from './routes/_auth/sign-in'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ProtectedTopicTopicIdRouteRouteImport } from './routes/_protected.topic.$topicId/route'
 import { Route as ProtectedChatThreadIdRouteRouteImport } from './routes/_protected.chat.$threadId/route'
+import { Route as ProtectedSettingsAdminIndexRouteImport } from './routes/_protected.settings_.admin/index'
 import { Route as ProtectedChatThreadIdIndexRouteImport } from './routes/_protected.chat.$threadId/index'
 import { Route as ProtectedTopicTopicIdFilesRouteImport } from './routes/_protected.topic.$topicId/files'
+import { Route as ProtectedSettingsAdminUserIdByokRouteImport } from './routes/_protected.settings_.admin/$userId.byok'
 
 const OfflineRoute = OfflineRouteImport.update({
   id: '/offline',
@@ -36,10 +38,10 @@ const AuthRouteRoute = AuthRouteRouteImport.update({
   id: '/_auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
+const ProtectedIndexRoute = ProtectedIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => ProtectedRoute,
 } as any)
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
@@ -78,6 +80,12 @@ const ProtectedChatThreadIdRouteRoute =
     path: '/chat/$threadId',
     getParentRoute: () => ProtectedRoute,
   } as any)
+const ProtectedSettingsAdminIndexRoute =
+  ProtectedSettingsAdminIndexRouteImport.update({
+    id: '/settings_/admin/',
+    path: '/settings/admin/',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
 const ProtectedChatThreadIdIndexRoute =
   ProtectedChatThreadIdIndexRouteImport.update({
     id: '/',
@@ -90,9 +98,15 @@ const ProtectedTopicTopicIdFilesRoute =
     path: '/files',
     getParentRoute: () => ProtectedTopicTopicIdRouteRoute,
   } as any)
+const ProtectedSettingsAdminUserIdByokRoute =
+  ProtectedSettingsAdminUserIdByokRouteImport.update({
+    id: '/settings_/admin/$userId/byok',
+    path: '/settings/admin/$userId/byok',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof ProtectedIndexRoute
   '/offline': typeof OfflineRoute
   '/sign-in': typeof AuthSignInRoute
   '/sign-up': typeof AuthSignUpRoute
@@ -103,9 +117,11 @@ export interface FileRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/topic/$topicId/files': typeof ProtectedTopicTopicIdFilesRoute
   '/chat/$threadId/': typeof ProtectedChatThreadIdIndexRoute
+  '/settings/admin/': typeof ProtectedSettingsAdminIndexRoute
+  '/settings/admin/$userId/byok': typeof ProtectedSettingsAdminUserIdByokRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
+  '/': typeof ProtectedIndexRoute
   '/offline': typeof OfflineRoute
   '/sign-in': typeof AuthSignInRoute
   '/sign-up': typeof AuthSignUpRoute
@@ -115,10 +131,11 @@ export interface FileRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/topic/$topicId/files': typeof ProtectedTopicTopicIdFilesRoute
   '/chat/$threadId': typeof ProtectedChatThreadIdIndexRoute
+  '/settings/admin': typeof ProtectedSettingsAdminIndexRoute
+  '/settings/admin/$userId/byok': typeof ProtectedSettingsAdminUserIdByokRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
   '/_auth': typeof AuthRouteRouteWithChildren
   '/_protected': typeof ProtectedRouteWithChildren
   '/offline': typeof OfflineRoute
@@ -126,11 +143,14 @@ export interface FileRoutesById {
   '/_auth/sign-up': typeof AuthSignUpRoute
   '/_protected/settings': typeof ProtectedSettingsRoute
   '/api/chat': typeof ApiChatRoute
+  '/_protected/': typeof ProtectedIndexRoute
   '/_protected/chat/$threadId': typeof ProtectedChatThreadIdRouteRouteWithChildren
   '/_protected/topic/$topicId': typeof ProtectedTopicTopicIdRouteRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/_protected/topic/$topicId/files': typeof ProtectedTopicTopicIdFilesRoute
   '/_protected/chat/$threadId/': typeof ProtectedChatThreadIdIndexRoute
+  '/_protected/settings_/admin/': typeof ProtectedSettingsAdminIndexRoute
+  '/_protected/settings_/admin/$userId/byok': typeof ProtectedSettingsAdminUserIdByokRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -146,6 +166,8 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/topic/$topicId/files'
     | '/chat/$threadId/'
+    | '/settings/admin/'
+    | '/settings/admin/$userId/byok'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -158,9 +180,10 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/topic/$topicId/files'
     | '/chat/$threadId'
+    | '/settings/admin'
+    | '/settings/admin/$userId/byok'
   id:
     | '__root__'
-    | '/'
     | '/_auth'
     | '/_protected'
     | '/offline'
@@ -168,15 +191,17 @@ export interface FileRouteTypes {
     | '/_auth/sign-up'
     | '/_protected/settings'
     | '/api/chat'
+    | '/_protected/'
     | '/_protected/chat/$threadId'
     | '/_protected/topic/$topicId'
     | '/api/auth/$'
     | '/_protected/topic/$topicId/files'
     | '/_protected/chat/$threadId/'
+    | '/_protected/settings_/admin/'
+    | '/_protected/settings_/admin/$userId/byok'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
   AuthRouteRoute: typeof AuthRouteRouteWithChildren
   ProtectedRoute: typeof ProtectedRouteWithChildren
   OfflineRoute: typeof OfflineRoute
@@ -207,12 +232,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
+    '/_protected/': {
+      id: '/_protected/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof ProtectedIndexRouteImport
+      parentRoute: typeof ProtectedRoute
     }
     '/api/chat': {
       id: '/api/chat'
@@ -263,6 +288,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedChatThreadIdRouteRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/_protected/settings_/admin/': {
+      id: '/_protected/settings_/admin/'
+      path: '/settings/admin'
+      fullPath: '/settings/admin/'
+      preLoaderRoute: typeof ProtectedSettingsAdminIndexRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
     '/_protected/chat/$threadId/': {
       id: '/_protected/chat/$threadId/'
       path: '/'
@@ -276,6 +308,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/topic/$topicId/files'
       preLoaderRoute: typeof ProtectedTopicTopicIdFilesRouteImport
       parentRoute: typeof ProtectedTopicTopicIdRouteRoute
+    }
+    '/_protected/settings_/admin/$userId/byok': {
+      id: '/_protected/settings_/admin/$userId/byok'
+      path: '/settings/admin/$userId/byok'
+      fullPath: '/settings/admin/$userId/byok'
+      preLoaderRoute: typeof ProtectedSettingsAdminUserIdByokRouteImport
+      parentRoute: typeof ProtectedRoute
     }
   }
 }
@@ -324,14 +363,20 @@ const ProtectedTopicTopicIdRouteRouteWithChildren =
 
 interface ProtectedRouteChildren {
   ProtectedSettingsRoute: typeof ProtectedSettingsRoute
+  ProtectedIndexRoute: typeof ProtectedIndexRoute
   ProtectedChatThreadIdRouteRoute: typeof ProtectedChatThreadIdRouteRouteWithChildren
   ProtectedTopicTopicIdRouteRoute: typeof ProtectedTopicTopicIdRouteRouteWithChildren
+  ProtectedSettingsAdminIndexRoute: typeof ProtectedSettingsAdminIndexRoute
+  ProtectedSettingsAdminUserIdByokRoute: typeof ProtectedSettingsAdminUserIdByokRoute
 }
 
 const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedSettingsRoute: ProtectedSettingsRoute,
+  ProtectedIndexRoute: ProtectedIndexRoute,
   ProtectedChatThreadIdRouteRoute: ProtectedChatThreadIdRouteRouteWithChildren,
   ProtectedTopicTopicIdRouteRoute: ProtectedTopicTopicIdRouteRouteWithChildren,
+  ProtectedSettingsAdminIndexRoute: ProtectedSettingsAdminIndexRoute,
+  ProtectedSettingsAdminUserIdByokRoute: ProtectedSettingsAdminUserIdByokRoute,
 }
 
 const ProtectedRouteWithChildren = ProtectedRoute._addFileChildren(
@@ -339,7 +384,6 @@ const ProtectedRouteWithChildren = ProtectedRoute._addFileChildren(
 )
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
   AuthRouteRoute: AuthRouteRouteWithChildren,
   ProtectedRoute: ProtectedRouteWithChildren,
   OfflineRoute: OfflineRoute,

@@ -1,11 +1,8 @@
-import type { Session, User } from "better-auth";
+import type { authClient } from "@/lib/better-auth/auth-client";
 
 const now = new Date("2026-01-01T00:00:00.000Z");
 
-export type TestAuthSession = {
-  session: Session;
-  user: User;
-};
+export type TestAuthSession = typeof authClient.$Infer.Session;
 
 export const testAuthSession: TestAuthSession = {
   user: {
@@ -14,6 +11,8 @@ export const testAuthSession: TestAuthSession = {
     email: "test@example.com",
     emailVerified: true,
     image: null,
+    banned: false,
+    role: "user",
     createdAt: now,
     updatedAt: now,
   },

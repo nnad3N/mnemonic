@@ -5,12 +5,14 @@ import { dbKit } from "@/lib/db-kit";
 import * as Kit from "@/lib/kit";
 import { createSafeId, toSafeId } from "@/lib/safe-id";
 import { vectorKit } from "@/lib/vector-kit";
-import { FILE_EMBEDDING_DIMENSION, FILE_EMBEDDINGS_INDEX } from "@/mastra/file-rag-config";
+import { FILE_EMBEDDINGS_INDEX } from "@/mastra/file-rag-config";
+import { FILE_EMBEDDING_DIMENSION } from "@/mastra/models";
 import { libsqlVector } from "@/mastra/storage";
+import { clearDatabase } from "@/test/clear-database";
 import { createFakeS3 } from "@/test/fake-s3";
 import ragSampleXml from "@/test/fixtures/rag-sample.xml?raw";
 import { expectErr, expectOk } from "@/test/result";
-import { clearDatabase, seedFile, seedTopic, seedUser } from "@/test/seed";
+import { seedFile, seedByok, seedTopic, seedUser } from "@/test/seed";
 
 import {
   FileProcessingError,
@@ -62,6 +64,7 @@ beforeEach(async () => {
   fakeS3.reset();
   await seedUser({ id: userId });
   await seedTopic({ userId, id: topicId });
+  await seedByok({ userId });
 });
 
 afterEach(async () => {
@@ -131,6 +134,7 @@ describe("validateFileFn", () => {
     expect(value).toEqual({
       topicId,
       fileId,
+      userId,
       displayName: "hello.txt",
       mimeType: "text/plain",
       s3Key,
@@ -153,6 +157,7 @@ describe("processForRagFn", () => {
       await processForRagFn(ctx, {
         fileId,
         topicId,
+        userId,
         displayName: "shot.png",
         mimeType: "image/png",
         s3Key,
@@ -179,6 +184,7 @@ describe("processForRagFn", () => {
       await processForRagFn(ctx, {
         fileId,
         topicId,
+        userId,
         displayName: "empty.txt",
         mimeType: "text/plain",
         s3Key,
@@ -205,6 +211,7 @@ describe("processForRagFn", () => {
       await processForRagFn(ctx, {
         fileId,
         topicId,
+        userId,
         displayName: "broken.pdf",
         mimeType: "application/pdf",
         s3Key,
@@ -230,6 +237,7 @@ describe("processForRagFn", () => {
       await processForRagFn(ctx, {
         fileId,
         topicId,
+        userId,
         displayName: "rag-sample.xml",
         mimeType: XML_MIME,
         s3Key,

@@ -2,6 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 
 import { dbKit } from "@/lib/db-kit";
+import { duration } from "@/lib/durations";
 import { toServerFnError } from "@/lib/errors/server-fn-error";
 import * as Kit from "@/lib/kit";
 import { threadAccessMiddleware } from "@/lib/middleware/assert-thread-access";
@@ -30,4 +31,5 @@ export const threadSettingsQuery = (threadId: string) =>
   queryOptions({
     queryFn: async () => getThreadSettings({ data: { threadId } }),
     queryKey: threadKeys.settings(threadId),
+    staleTime: duration.FIVE.MINUTES,
   });

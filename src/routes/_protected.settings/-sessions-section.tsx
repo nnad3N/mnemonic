@@ -11,6 +11,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableEmptyRow,
   TableErrorRow,
   TableHead,
   TableHeader,
@@ -133,6 +134,11 @@ export const SessionsSection = ({ currentSessionId }: SessionsSectionProps) => {
               <TableErrorRow colSpan={5} onRetry={sessions.refetch}>
                 <T>Could not load sessions</T>
               </TableErrorRow>
+            )}
+            {sessions.isSuccess && items.length === 0 && (
+              <TableEmptyRow colSpan={5}>
+                <T>No active sessions</T>
+              </TableEmptyRow>
             )}
             {items.map((item) => (
               <SessionRow isCurrent={item.id === currentSessionId} key={item.id} session={item} />

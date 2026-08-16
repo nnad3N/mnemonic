@@ -1,50 +1,47 @@
 import { Agent } from "@mastra/core/agent";
-import { Memory } from "@mastra/memory";
+import type { RequestContext } from "@mastra/core/request-context";
 
+import { getAgentMemory } from "@/mastra/agent-memory.server";
 import {
   baseInstructions,
   sharedSourceInstructions,
   sharedWebResearchInstructions,
 } from "@/mastra/agents/base-instructions";
 import { webResearchAgent } from "@/mastra/agents/web-research-agent";
-import { getAgentModel, models, observationalMemoryOptions } from "@/mastra/models";
+import { getAgentModel } from "@/mastra/models";
 import { stripNonNativeFilePartsProcessor } from "@/mastra/processors/strip-non-native-file-parts";
 import { workSegmentTimingProcessor } from "@/mastra/processors/work-segment-timing";
+import type { MnemonicRequestContext } from "@/mastra/request-context";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context";
-import { libsqlStore, libsqlVector } from "@/mastra/storage";
 import { docsTool } from "@/mastra/tools/docs-tool";
 import { executeCodeTool } from "@/mastra/tools/execute-code-tool";
-import { fileGraphRagTool } from "@/mastra/tools/file-graph-rag-tool";
-import { fileVectorSearchTool } from "@/mastra/tools/file-vector-search-tool";
+import { createFileGraphRagTool } from "@/mastra/tools/file-graph-rag-tool";
+import { createFileVectorSearchTool } from "@/mastra/tools/file-vector-search-tool";
 import { getFileTool } from "@/mastra/tools/get-file-tool";
 import { webFetchTool } from "@/mastra/tools/web-fetch-tool";
 import { webSearchTool } from "@/mastra/tools/web-search-tool";
 
 export const TOPIC_AGENT_ID = "topic-agent";
 
-export const topicMemory = new Memory({
-  embedder: models.embedding,
-  options: {
-    observationalMemory: observationalMemoryOptions({
-      scope: "resource",
-      vector: true,
-    }),
-  },
-  storage: libsqlStore,
-  vector: libsqlVector,
-});
+const getTopicAgentTools = ({
+  requestContext,
+}: {
+  requestContext: RequestContext<MnemonicRequestContext>;
+}) => {
+  const apiKey = requestContext.get("apiKey");
 
-const topicAgentTools = {
-  docs: docsTool,
-  executeCode: executeCodeTool,
-  fileGraphRag: fileGraphRagTool,
-  fileVectorSearch: fileVectorSearchTool,
-  getFile: getFileTool,
-  webFetch: webFetchTool,
-  webSearch: webSearchTool,
-} as const;
+  return {
+    docs: docsTool,
+    executeCode: executeCodeTool,
+    fileGraphRag: createFileGraphRagTool(apiKey),
+    fileVectorSearch: createFileVectorSearchTool(apiKey),
+    getFile: getFileTool,
+    webFetch: webFetchTool,
+    webSearch: webSearchTool,
+  };
+};
 
-export type TopicAgentTools = typeof topicAgentTools;
+export type TopicAgentTools = ReturnType<typeof getTopicAgentTools>;
 
 export const topicAgent = new Agent({
   description:
@@ -78,9 +75,9 @@ Threads from other topics or standalone conversations are not accessible.
   agents: { webResearch: webResearchAgent },
   inputProcessors: [stripNonNativeFilePartsProcessor],
   outputProcessors: [workSegmentTimingProcessor],
-  memory: topicMemory,
+  memory: getAgentMemory("resource"),
   requestContextSchema: mnemonicRequestContextSchema,
   model: getAgentModel,
   name: "Topic",
-  tools: topicAgentTools,
+  tools: getTopicAgentTools,
 });

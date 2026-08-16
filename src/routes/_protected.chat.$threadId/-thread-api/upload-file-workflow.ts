@@ -11,6 +11,7 @@ import { file } from "@/db/schema";
 import { dbKit } from "@/lib/db-kit";
 import type { DbKit } from "@/lib/db-kit";
 import { ImageMimeType } from "@/lib/file-validation";
+import { getProviderKey } from "@/lib/get-provider-key.server";
 import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
 import { s3Kit } from "@/lib/s3-kit";
@@ -18,7 +19,8 @@ import type { S3Kit } from "@/lib/s3-kit";
 import { safeId, toSafeId } from "@/lib/safe-id";
 import { vectorKit } from "@/lib/vector-kit";
 import type { VectorKit } from "@/lib/vector-kit";
-import { FILE_EMBEDDING_DIMENSION, fileEmbeddingModel } from "@/mastra/file-rag-config";
+import { getFileEmbeddingModel } from "@/mastra/file-rag-config";
+import { FILE_EMBEDDING_DIMENSION } from "@/mastra/models";
 
 const workflowInputSchema = v.object({
   fileId: v.pipe(v.string(), v.nanoid()),
@@ -29,6 +31,7 @@ const workflowInputSchema = v.object({
 const validatedFileSchema = v.object({
   topicId: safeId<"topic">(),
   fileId: safeId<"file">(),
+  userId: safeId<"user">(),
   displayName: v.pipe(v.string(), v.nonEmpty()),
   mimeType: v.pipe(v.string(), v.nonEmpty()),
   s3Key: v.pipe(v.string(), v.nonEmpty()),
@@ -62,6 +65,7 @@ export const validateFileFn = Kit.gen(async function* (
       columns: {
         id: true,
         topicId: true,
+        userId: true,
         displayName: true,
         mimeType: true,
         s3Key: true,
@@ -109,6 +113,7 @@ export const validateFileFn = Kit.gen(async function* (
   return Result.ok({
     topicId: row.topicId,
     fileId: row.id,
+    userId: row.userId,
     displayName: row.displayName,
     mimeType: row.mimeType,
     s3Key: row.s3Key,
@@ -141,7 +146,10 @@ export const processForRagFn = Kit.gen(async function* (
     return Result.ok({ fileId: input.fileId });
   }
 
-  const object = yield* await ctx.s3.getObject(input.s3Key);
+  const [object, key] = yield* await Kit.promiseAll([
+    ctx.s3.getObject(input.s3Key),
+    getProviderKey(input.userId),
+  ]);
   const chunks = yield* await Result.tryPromise(async () => {
     const extraction = await extractBytes(Buffer.from(object), input.mimeType);
     const doc = MDocument.fromText(extraction.content);
@@ -164,7 +172,7 @@ export const processForRagFn = Kit.gen(async function* (
   const { embeddings } = yield* await Result.tryPromise(async () =>
     embedMany({
       abortSignal: input.abortSignal,
-      model: fileEmbeddingModel,
+      model: getFileEmbeddingModel(key),
       values: chunks.map((chunk) => chunk.text),
     }),
   );

@@ -91,9 +91,10 @@ function RouteComponent() {
   return (
     <form
       className="flex flex-col gap-4"
-      onSubmit={(event) => {
+      onSubmit={async (event) => {
         event.preventDefault();
-        void form.handleSubmit();
+        event.stopPropagation();
+        await form.handleSubmit();
       }}
     >
       <FieldGroup>

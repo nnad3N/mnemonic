@@ -2,6 +2,7 @@ import { getAuthenticatorName, passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
+import { admin } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import * as v from "valibot";
 
@@ -52,11 +53,14 @@ export const auth = betterAuth({
           const existing = await ctx.context.internalAdapter.findUserByEmail(email);
 
           if (!existing) {
-            const created = await ctx.context.internalAdapter.createUser({
-              email,
-              emailVerified: false,
-              name,
-            });
+            const created = await ctx.context.internalAdapter.createUser(
+              {
+                email,
+                emailVerified: false,
+                name,
+              },
+              { method: "passkey" },
+            );
 
             return { displayName: name, id: created.id, name: email };
           }
@@ -81,6 +85,7 @@ export const auth = betterAuth({
       },
       rpName: "Mnemonic",
     }),
+    admin(),
     tanstackStartCookies(),
   ],
 });

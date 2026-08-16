@@ -7,11 +7,13 @@ import { S3Error } from "@/lib/s3-kit";
 import { createSafeId, toSafeId } from "@/lib/safe-id";
 import { createVectorKit, VectorError, vectorKit } from "@/lib/vector-kit";
 import type { VectorApi } from "@/lib/vector-kit";
-import { FILE_EMBEDDING_DIMENSION, FILE_EMBEDDINGS_INDEX } from "@/mastra/file-rag-config";
+import { FILE_EMBEDDINGS_INDEX } from "@/mastra/file-rag-config";
+import { FILE_EMBEDDING_DIMENSION } from "@/mastra/models";
 import { libsqlVector } from "@/mastra/storage";
+import { clearDatabase } from "@/test/clear-database";
 import { createFakeS3 } from "@/test/fake-s3";
 import { expectErr, expectOk } from "@/test/result";
-import { clearDatabase, seedFile, seedTopic, seedUser } from "@/test/seed";
+import { seedFile, seedTopic, seedUser } from "@/test/seed";
 
 import { deleteFileFn } from "./delete-file";
 

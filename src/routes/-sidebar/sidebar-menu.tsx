@@ -8,6 +8,7 @@ import {
   LogOutIcon,
   MoonIcon,
   SettingsIcon,
+  ShieldIcon,
   SunIcon,
 } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -57,6 +58,7 @@ type SidebarFooterSectionProps = {
     email: string;
     image?: string | null;
     name?: string | null;
+    role?: string | null;
   };
 };
 
@@ -103,6 +105,12 @@ export const SidebarFooterSection = ({ user }: SidebarFooterSectionProps) => {
                   <SettingsIcon />
                   <T>Settings</T>
                 </DropdownMenuItem>
+                {user.role === "admin" && (
+                  <DropdownMenuItem render={<Link to="/settings/admin" />}>
+                    <ShieldIcon />
+                    <T>Admin</T>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
                     <SunIcon />

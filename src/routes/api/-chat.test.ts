@@ -11,7 +11,6 @@ import { expectOk } from "@/test/result";
 import { persistSealedAssistantOnEnd } from "./chat";
 
 const THREAD_ID = "thread-seal-abort-test";
-const AGENT_ID = "conversation-agent" as const;
 const COMPLETED_AT = Temporal.Instant.from("2026-01-01T00:00:20.000Z");
 
 const unusedThread = {
@@ -41,7 +40,7 @@ const createMemoryApi = (input: {
   listMessages: MemoryApi["listMessages"];
   saveMessages?: MemoryApi["saveMessages"];
 }): MemoryApi => ({
-  deleteAgentThread: async () => Promise.resolve(Result.ok()),
+  clearResourceObservations: async () => Promise.resolve(Result.ok()),
   deleteMessages: async () => Promise.resolve(Result.ok()),
   listThreads: async () =>
     Promise.resolve(
@@ -134,7 +133,7 @@ describe("persistSealedAssistantOnEnd", () => {
           return Promise.resolve(Result.ok({ messages }));
         },
       }),
-      { agentId: AGENT_ID, completedAt: COMPLETED_AT, threadId: THREAD_ID },
+      { completedAt: COMPLETED_AT, threadId: THREAD_ID },
     );
 
     expectOk(result);
@@ -188,7 +187,7 @@ describe("persistSealedAssistantOnEnd", () => {
         ],
         saveMessages,
       }),
-      { agentId: AGENT_ID, completedAt: COMPLETED_AT, threadId: THREAD_ID },
+      { completedAt: COMPLETED_AT, threadId: THREAD_ID },
     );
 
     expectOk(result);
@@ -211,7 +210,7 @@ describe("persistSealedAssistantOnEnd", () => {
         ],
         saveMessages,
       }),
-      { agentId: AGENT_ID, completedAt: COMPLETED_AT, threadId: THREAD_ID },
+      { completedAt: COMPLETED_AT, threadId: THREAD_ID },
     );
 
     expectOk(result);

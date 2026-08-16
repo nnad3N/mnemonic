@@ -1,7 +1,6 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
 import { RouterProvider, createMemoryHistory, createRouter } from "@tanstack/react-router";
-import type { Session, User } from "better-auth";
 import type { ReactNode } from "react";
 
 import { RootAppShell } from "@/routes/__root";
@@ -10,15 +9,18 @@ import {
   sidebarThreadsQuery,
   sidebarTopicsQuery,
 } from "@/routes/_protected.chat.$threadId/-thread-api/sidebar-data";
+import { byokQueries } from "@/routes/_protected.settings/-byok.functions";
+import type { ByokItem } from "@/routes/_protected.settings/-byok.functions";
 import { routeTree } from "@/routeTree.gen";
 
 import { createTestQueryClient } from "./create-test-query-client";
 import { testAuthSession } from "./fixtures/session";
+import type { TestAuthSession } from "./fixtures/session";
 
 type CreateTestRouterOptions = {
   queryClient: QueryClient;
-  session: Session;
-  user: User;
+  session: TestAuthSession["session"];
+  user: TestAuthSession["user"];
 };
 
 type TestDocumentShellProps = {
@@ -48,6 +50,15 @@ export const createTestRouter = ({ queryClient, session, user }: CreateTestRoute
   });
   queryClient.setQueryData(sidebarThreadsQuery(undefined).queryKey, []);
   queryClient.setQueryData(sidebarTopicsQuery().queryKey, []);
+  queryClient.setQueryData(byokQueries.mine().queryKey, [
+    {
+      active: true,
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      id: "byok_test",
+      keyPreview: "test",
+      name: "OpenRouter",
+    } satisfies ByokItem,
+  ]);
 
   // `update()`'s public type omits Start's `shellComponent`; set it on the live options.
   Object.assign(routeTree.options, {

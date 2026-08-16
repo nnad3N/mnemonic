@@ -2,15 +2,14 @@ import { Result } from "better-result";
 import { nanoid } from "nanoid";
 
 import { user } from "@/db/auth-schema";
-import { file, topic } from "@/db/schema";
+import { file, byok, topic } from "@/db/schema";
 import type { FileStatus } from "@/db/schema";
 import { dbKit } from "@/lib/db-kit";
+import { encryptSecret } from "@/lib/encryption.server";
 import * as Kit from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit";
 import type { SafeId } from "@/lib/safe-id";
-import { toSafeId } from "@/lib/safe-id";
-
-export { clearDatabase } from "./clear-database";
+import { createSafeId, toSafeId } from "@/lib/safe-id";
 
 const db = Kit.get(dbKit);
 const memory = Kit.get(memoryKit);
@@ -36,6 +35,36 @@ export const seedUser = async (overrides?: { id?: string; email?: string; name?:
 
   // oxlint-disable-next-line eslint-js/no-restricted-syntax -- test seeder brands known inserted ids.
   return toSafeId<"user">(id);
+};
+
+export const seedByok = async (input: {
+  userId: SafeId<"user">;
+  key?: string;
+  active?: boolean;
+}) => {
+  const id = createSafeId<"byok">();
+  const key = input.key ?? "sk-or-v1-test";
+  const value = encryptSecret(key, { byokId: id, userId: input.userId });
+
+  if (Result.isError(value)) {
+    throw value.error;
+  }
+
+  const result = await db.run((db) =>
+    db.insert(byok).values({
+      id,
+      userId: input.userId,
+      value: value.value,
+      keyPreview: `…${key.slice(-4)}`,
+      active: input.active ?? true,
+    }),
+  );
+
+  if (Result.isError(result)) {
+    throw result.error;
+  }
+
+  return id;
 };
 
 export const seedTopic = async (input: {

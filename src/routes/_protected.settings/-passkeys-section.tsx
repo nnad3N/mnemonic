@@ -30,6 +30,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableEmptyRow,
   TableErrorRow,
   TableHead,
   TableHeader,
@@ -117,6 +118,11 @@ export const PasskeysSection = () => {
               <TableErrorRow colSpan={4} onRetry={passkeys.refetch}>
                 <T>Could not load passkeys</T>
               </TableErrorRow>
+            )}
+            {!passkeys.isPending && !passkeys.error && items.length === 0 && (
+              <TableEmptyRow colSpan={4}>
+                <T>No passkeys yet</T>
+              </TableEmptyRow>
             )}
             {items.map((item) => (
               <PasskeyRow isOnlyPasskey={items.length === 1} key={item.id} passkey={item} />

@@ -4,8 +4,9 @@ import { dbKit } from "@/lib/db-kit";
 import * as Kit from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit";
 import { createSafeId } from "@/lib/safe-id";
+import { clearDatabase } from "@/test/clear-database";
 import { expectOk } from "@/test/result";
-import { clearDatabase, seedFile, seedThread, seedTopic, seedUser } from "@/test/seed";
+import { seedFile, seedThread, seedTopic, seedUser } from "@/test/seed";
 
 import { getMentionsFn, MENTIONS_QUERY_LIMIT } from "./get-mentions";
 

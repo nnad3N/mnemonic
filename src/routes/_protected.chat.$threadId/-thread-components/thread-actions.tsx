@@ -68,10 +68,10 @@ const RenameForm = ({ initialValue, onRename, onCancel }: RenameFieldProps) => {
 
   return (
     <form
-      onSubmit={(event) => {
+      onSubmit={async (event) => {
         event.preventDefault();
         event.stopPropagation();
-        void form.handleSubmit();
+        await form.handleSubmit();
       }}
     >
       <form.Field name="title">
@@ -80,9 +80,9 @@ const RenameForm = ({ initialValue, onRename, onCancel }: RenameFieldProps) => {
             autoFocus
             className="h-6 py-0 text-foreground"
             name={field.name}
-            onBlur={() => {
+            onBlur={async () => {
               field.handleBlur();
-              void form.handleSubmit();
+              await form.handleSubmit();
             }}
             onChange={(event) => {
               field.handleChange(event.target.value);

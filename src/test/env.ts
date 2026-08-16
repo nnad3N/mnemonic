@@ -4,8 +4,9 @@ import type { RequiredServerEnv } from "@/env";
 export const TEST_ENV = {
   BETTER_AUTH_URL: "http://localhost:3000",
   DATABASE_URL: "file:./node_modules/.vitest/placeholder.db",
+  ENCRYPTION_KEYS:
+    "test-v2:0000000000000000000000000000000000000000000000000000000000000000,test-v1:0101010101010101010101010101010101010101010101010101010101010101",
   FIRECRAWL_API_URL: "http://127.0.0.1:4010",
-  OPENROUTER_API_KEY: "test-openrouter-key",
   S3_ACCESS_KEY_ID: "test-access-key",
   S3_BUCKET: "test-bucket",
   S3_ENDPOINT: "http://127.0.0.1:9000",

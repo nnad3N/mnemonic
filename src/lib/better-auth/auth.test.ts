@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { drizzleDb } from "@/db";
 import { passkey, user } from "@/db/auth-schema";
 import { auth } from "@/lib/better-auth/auth";
-import { clearDatabase } from "@/test/seed";
+import { clearDatabase } from "@/test/clear-database";
 
 const EMAIL = "passkey-user@example.com";
 

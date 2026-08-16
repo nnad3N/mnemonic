@@ -26,7 +26,7 @@ const buildWhereClause = (topicId: SafeId<"topic">, search: string) => {
     return eq(file.topicId, topicId);
   }
 
-  return and(eq(file.topicId, topicId), ilike(file.displayName, `%${trimmedSearch}%`));
+  return and(eq(file.topicId, topicId), ilike(file.displayName, trimmedSearch));
 };
 
 export const listFiles = createServerFn({ method: "GET" })

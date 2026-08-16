@@ -17,6 +17,7 @@ export const getRouter = () => {
     context,
     defaultPreload: "intent",
     defaultPreloadStaleTime: 0,
+    defaultStructuralSharing: true,
     routeTree,
     scrollRestoration: true,
   });

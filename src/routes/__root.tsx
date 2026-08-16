@@ -34,7 +34,10 @@ initializeGT({
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   beforeLoad: async ({ context }) => {
-    const session = await context.queryClient.ensureQueryData(authSessionQuery);
+    const session = await context.queryClient.ensureQueryData({
+      ...authSessionQuery,
+      revalidateIfStale: true,
+    });
 
     return { session: session?.data?.session, user: session?.data?.user };
   },
