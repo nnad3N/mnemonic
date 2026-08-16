@@ -33,9 +33,9 @@ export const AppHeader = () => {
       {chat && <ThreadHeader threadId={chat.params.threadId} />}
       {settings && (
         <Breadcrumb className="min-w-0">
-          <BreadcrumbList className="flex-nowrap gap-0.5 overflow-hidden sm:gap-0.5">
+          <BreadcrumbList className="flex-nowrap gap-0.5 max-md:overflow-hidden sm:gap-0.5">
             <BreadcrumbItem className="min-w-0">
-              <BreadcrumbPage className="truncate px-1.5">
+              <BreadcrumbPage className="px-1.5 max-md:truncate">
                 <T>Settings</T>
               </BreadcrumbPage>
             </BreadcrumbItem>
@@ -47,7 +47,7 @@ export const AppHeader = () => {
           <SettingsCrumb />
           <BreadcrumbSeparator className="shrink-0" />
           <BreadcrumbItem className="min-w-0">
-            <BreadcrumbPage className="truncate px-1.5">
+            <BreadcrumbPage className="px-1.5 max-md:truncate">
               <T>Admin</T>
             </BreadcrumbPage>
           </BreadcrumbItem>
@@ -75,17 +75,17 @@ const TopicFilesCrumbs = ({ topicId }: TopicFilesCrumbsProps) => {
 
   return (
     <Breadcrumb className="min-w-0">
-      <BreadcrumbList className="flex-nowrap gap-0.5 overflow-hidden sm:gap-0.5">
+      <BreadcrumbList className="flex-nowrap gap-0.5 max-md:overflow-hidden sm:gap-0.5">
         {topic.data && (
           <>
-            <BreadcrumbItem className="max-w-[45%] min-w-0 shrink">
-              <span className="truncate px-1.5">{topic.data.title}</span>
+            <BreadcrumbItem className="min-w-0 shrink max-md:max-w-[45%]">
+              <span className="px-1.5 max-md:truncate">{topic.data.title}</span>
             </BreadcrumbItem>
             <BreadcrumbSeparator className="shrink-0" />
           </>
         )}
         <BreadcrumbItem className="min-w-0">
-          <BreadcrumbPage className="truncate px-1.5">
+          <BreadcrumbPage className="px-1.5 max-md:truncate">
             <T>Files</T>
           </BreadcrumbPage>
         </BreadcrumbItem>
@@ -96,7 +96,7 @@ const TopicFilesCrumbs = ({ topicId }: TopicFilesCrumbsProps) => {
 
 const Crumbs = ({ children }: PropsWithChildren) => (
   <Breadcrumb className="min-w-0">
-    <BreadcrumbList className="flex-nowrap gap-0.5 overflow-hidden sm:gap-0.5">
+    <BreadcrumbList className="flex-nowrap gap-0.5 max-md:overflow-hidden sm:gap-0.5">
       {children}
     </BreadcrumbList>
   </Breadcrumb>
@@ -105,7 +105,7 @@ const Crumbs = ({ children }: PropsWithChildren) => (
 const SettingsCrumb = () => (
   <BreadcrumbItem className="min-w-0">
     <BreadcrumbLink
-      className="truncate rounded-md px-1.5 py-1.5 hover:bg-accent hover:text-accent-foreground"
+      className="rounded-md px-1.5 py-1.5 hover:bg-accent hover:text-accent-foreground max-md:truncate"
       render={<Link to="/settings" />}
     >
       <T>Settings</T>
@@ -126,7 +126,7 @@ const AdminByokCrumbs = ({ userId }: AdminByokCrumbsProps) => {
       <BreadcrumbSeparator className="shrink-0" />
       <BreadcrumbItem className="min-w-0">
         <BreadcrumbLink
-          className="truncate rounded-md px-1.5 py-1.5 hover:bg-accent hover:text-accent-foreground"
+          className="rounded-md px-1.5 py-1.5 hover:bg-accent hover:text-accent-foreground max-md:truncate"
           render={<Link to="/settings/admin" />}
         >
           <T>Admin</T>
@@ -135,7 +135,7 @@ const AdminByokCrumbs = ({ userId }: AdminByokCrumbsProps) => {
       <BreadcrumbSeparator className="shrink-0" />
       <BreadcrumbItem className="min-w-0">
         {owner.isSuccess ? (
-          <BreadcrumbPage className="truncate px-1.5">{owner.data.email}</BreadcrumbPage>
+          <BreadcrumbPage className="px-1.5 max-md:truncate">{owner.data.email}</BreadcrumbPage>
         ) : (
           <Skeleton className="h-4 w-40" />
         )}

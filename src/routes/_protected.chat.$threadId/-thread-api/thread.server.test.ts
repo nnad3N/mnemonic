@@ -9,12 +9,13 @@ import { createVectorKit, type VectorApi, VectorError, vectorKit } from "@/lib/v
 import { FILE_EMBEDDINGS_INDEX } from "@/mastra/file-rag-config.server";
 import { FILE_EMBEDDING_DIMENSION } from "@/mastra/models.server";
 import { libsqlVector } from "@/mastra/storage.server";
+import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 import { clearDatabase } from "@/test/clear-database";
 import { createFakeS3 } from "@/test/fake-s3";
 import { expectErr, expectOk } from "@/test/result";
 import { seedFile, seedThread, seedTopic, seedUser } from "@/test/seed";
 
-import { deleteTopicFn } from "./thread.server";
+import { deleteTopicFn, mergeConsecutiveAssistantMessages } from "./thread.server";
 
 const db = Kit.get(dbKit);
 const memory = Kit.get(memoryKit);
@@ -30,15 +31,13 @@ const unitVector = Array.from({ length: FILE_EMBEDDING_DIMENSION }, (_, index) =
 );
 
 const upsertTopicVector = async (vectorTopicId: string, fileId: string) => {
-  const result = await vector.upsert({
-    ids: [`${fileId}:0`],
-    metadata: [{ fileId, topicId: vectorTopicId, text: "chunk" }],
-    vectors: [unitVector],
-  });
-
-  if (Result.isError(result)) {
-    throw result.error;
-  }
+  expectOk(
+    await vector.upsert({
+      ids: [`${fileId}:0`],
+      metadata: [{ fileId, topicId: vectorTopicId, text: "chunk" }],
+      vectors: [unitVector],
+    }),
+  );
 };
 
 const vectorIdsForTopic = async (vectorTopicId: string) => {
@@ -126,20 +125,20 @@ const createFailingMemoryKit = () => {
   return createMemoryKit(api);
 };
 
-beforeEach(async () => {
-  fakeS3.reset();
-  await Promise.all([
-    vector.createIndex({ dimension: FILE_EMBEDDING_DIMENSION }).then(expectOk),
-    seedUser({ id: userId }),
-  ]);
-  await seedTopic({ userId, id: topicId });
-});
-
-afterEach(async () => {
-  await clearDatabase();
-});
-
 describe("deleteTopicFn", () => {
+  beforeEach(async () => {
+    fakeS3.reset();
+    await Promise.all([
+      vector.createIndex({ dimension: FILE_EMBEDDING_DIMENSION }).then(expectOk),
+      seedUser({ id: userId }),
+    ]);
+    await seedTopic({ userId, id: topicId });
+  });
+
+  afterEach(async () => {
+    await clearDatabase();
+  });
+
   it("removes the topic row, its files, its objects, its vectors, and its threads", async () => {
     const [first, second] = await Promise.all([
       seedFile({ userId, topicId, status: "ready" }),
@@ -245,10 +244,6 @@ describe("deleteTopicFn", () => {
     expect(fakeS3.objects.has(s3Key)).toBe(false);
   });
 });
-
-import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
-
-import { mergeConsecutiveAssistantMessages } from "./thread.server";
 
 const message = ({
   id,

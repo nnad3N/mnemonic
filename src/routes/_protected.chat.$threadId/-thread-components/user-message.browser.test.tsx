@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { describe, expect, it } from "vitest";
+import { assert, describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 
 import { useChatStore } from "@/routes/-chat-store";
@@ -37,10 +37,7 @@ const whitespaceUserMessage = {
 
 const getClampRoot = () => {
   const root = document.querySelector<HTMLElement>('[data-test-id="user-message-clamp"]');
-
-  if (!root) {
-    throw new Error("Expected clamp root");
-  }
+  assert(root, "Expected clamp root");
 
   return root;
 };
@@ -48,10 +45,7 @@ const getClampRoot = () => {
 const getFirstTextTop = (root: HTMLElement) => {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   const textNode = walker.nextNode();
-
-  if (!textNode?.parentElement) {
-    throw new Error("Expected user message text node");
-  }
+  assert(textNode?.parentElement, "Expected user message text node");
 
   return textNode.parentElement.getBoundingClientRect().top;
 };
@@ -77,10 +71,7 @@ describe("UserMessage browser", () => {
     const clampContent = document.querySelector<HTMLElement>(
       '[data-test-id="user-message-clamp-content"]',
     );
-
-    if (!clampContent) {
-      throw new Error("Expected clamp content");
-    }
+    assert(clampContent, "Expected clamp content");
 
     const computedLineHeight = Number.parseFloat(getComputedStyle(clampRoot).lineHeight);
     const hookLineHeight = Number.parseFloat(clampRoot.style.lineHeight);
@@ -100,9 +91,7 @@ describe("UserMessage browser", () => {
     await expect.element(page.getByText("Line 1 of the user message")).toBeVisible();
 
     const editRoot = getEditComposerRoot();
-    if (!editRoot) {
-      throw new Error("Expected edit composer");
-    }
+    assert(editRoot, "Expected edit composer");
 
     expect(useChatStore.getState().editingState?.messageId).toBe(MESSAGE_ID);
     expect(getEditCapabilityTrigger()).toBeTruthy();
@@ -120,9 +109,7 @@ describe("UserMessage browser", () => {
     expect(useChatStore.getState().editingState?.messageId).toBe(MESSAGE_ID);
 
     const capabilityTrigger = getEditCapabilityTrigger();
-    if (!capabilityTrigger) {
-      throw new Error("Expected edit capability trigger");
-    }
+    assert(capabilityTrigger, "Expected edit capability trigger");
 
     await userEvent.click(page.elementLocator(capabilityTrigger));
     await expect.element(page.getByText("Capability")).toBeVisible();
@@ -130,9 +117,9 @@ describe("UserMessage browser", () => {
     const balancedButton = document.querySelector<HTMLButtonElement>(
       '[data-test-id="capability-option-balanced"]',
     );
+    assert(balancedButton, "Expected the balanced capability option");
 
-    expect(balancedButton).toBeTruthy();
-    await userEvent.click(page.elementLocator(balancedButton!));
+    await userEvent.click(page.elementLocator(balancedButton));
 
     expect(useChatStore.getState().editingState?.messageId).toBe(MESSAGE_ID);
     expect(queryClient.getQueryData(threadSettingsQueries.byThread(threadId).queryKey)).toEqual({
@@ -151,10 +138,7 @@ describe("UserMessage browser", () => {
     const displayText = clampRoot.querySelector<HTMLElement>(
       '[data-test-id="user-message-clamp-content"] > *',
     );
-
-    if (!displayText) {
-      throw new Error("Expected display message text root");
-    }
+    assert(displayText, "Expected display message text root");
 
     expect(getComputedStyle(displayText).whiteSpace).toMatch(/pre-wrap/);
 
@@ -167,9 +151,7 @@ describe("UserMessage browser", () => {
     await userEvent.click(page.getByText(/Line one  with   spaced   words/));
 
     const editRoot = getEditComposerRoot();
-    if (!editRoot) {
-      throw new Error("Expected edit composer");
-    }
+    assert(editRoot, "Expected edit composer");
 
     expect(getComputedStyle(editRoot).whiteSpace).toMatch(/pre-wrap/);
     expect(Math.abs(getFirstTextTop(editRoot) - textTopBefore)).toBeLessThanOrEqual(1);

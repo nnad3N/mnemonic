@@ -6,18 +6,10 @@ import { describe, expect, it } from "vitest";
 import { GetAttachmentError, getAttachment } from "@/lib/get-attachment.server";
 import { hashBytes } from "@/lib/hash";
 import * as Kit from "@/lib/kit";
-import { createMemoryKit, type MemoryApi } from "@/lib/memory-kit.server";
+import { createFakeMemory } from "@/test/fake-memory";
 import { expectErr, expectOk } from "@/test/result";
 
 const THREAD_ID = "thread-attachment-test";
-
-const unusedThread = {
-  id: THREAD_ID,
-  resourceId: "resource",
-  title: "title",
-  createdAt: new Date(),
-  updatedAt: new Date(),
-};
 
 const createUserMessage = (input: {
   attachments?: Array<{ filename: string; mediaType: string; sha256: string }>;
@@ -40,31 +32,10 @@ const createUserMessage = (input: {
   },
 });
 
-const createMemoryApi = (listMessages: MemoryApi["listMessages"]): MemoryApi => ({
-  clearResourceObservations: async () => Promise.resolve(Result.ok(undefined)),
-  deleteMessages: async () => Promise.resolve(Result.ok(undefined)),
-  listThreads: async () =>
-    Promise.resolve(
-      Result.ok({
-        threads: [],
-        total: 0,
-        page: 0,
-        perPage: false as const,
-        hasMore: false,
-      }),
-    ),
-  deleteThread: async () => Promise.resolve(Result.ok(undefined)),
-  getThreadById: async () => Promise.resolve(Result.ok(null)),
-  listMessages,
-  saveMessages: async () => Promise.resolve(Result.ok({ messages: [] })),
-  saveThread: async () => Promise.resolve(Result.ok(unusedThread)),
-  updateThread: async () => Promise.resolve(Result.ok(unusedThread)),
-});
-
 const createMemoryCtx = (messages: MastraDBMessage[]) =>
   Kit.createContext(
-    createMemoryKit(
-      createMemoryApi(async () =>
+    createFakeMemory({
+      listMessages: async () =>
         Promise.resolve(
           Result.ok({
             messages,
@@ -74,8 +45,7 @@ const createMemoryCtx = (messages: MastraDBMessage[]) =>
             hasMore: false,
           } satisfies StorageListMessagesOutput),
         ),
-      ),
-    ),
+    }),
   );
 
 describe("getAttachment", () => {

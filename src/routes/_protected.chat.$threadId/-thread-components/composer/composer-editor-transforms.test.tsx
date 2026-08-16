@@ -2,7 +2,7 @@ import { ElementApi, TextApi } from "platejs";
 import type { TElement } from "platejs";
 import type { PlateEditor } from "platejs/react";
 import { act } from "react";
-import { describe, expect, it } from "vitest";
+import { assert, describe, expect, it } from "vitest";
 
 import { createComposerEditor } from "@/test/create-composer-editor";
 
@@ -16,9 +16,10 @@ type ComposerLinkElement = TElement & {
 
 const paragraphChildren = (editor: PlateEditor) => {
   const paragraph = editor.children.at(0);
-  expect(paragraph).toBeDefined();
+  assert(paragraph, "Expected a paragraph as the first editor child");
   expect(ElementApi.isElement(paragraph)).toBe(true);
-  return paragraph!.children;
+
+  return paragraph.children;
 };
 
 const findLink = (nodes: readonly unknown[]): ComposerLinkElement | undefined => {

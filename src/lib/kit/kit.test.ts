@@ -2,6 +2,7 @@ import { Panic, Result, TaggedError } from "better-result";
 import { describe, expect, it } from "vitest";
 
 import { ServerFnError } from "@/lib/errors/server-fn-error";
+import { expectErr } from "@/test/result";
 
 import * as Kit from ".";
 import type { Kits } from ".";
@@ -134,9 +135,7 @@ describe("kit", () => {
       Promise.resolve(Result.err(secondError)),
     ]);
 
-    expect(Result.isError(result)).toBeTruthy();
-    const returnedError = Result.isError(result) ? result.error : undefined;
-    expect(returnedError).toBe(firstError);
+    expect(expectErr(result)).toBe(firstError);
   });
 
   it("combines an empty list of Result promises", async () => {

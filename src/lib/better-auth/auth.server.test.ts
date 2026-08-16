@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, assert, describe, expect, it } from "vitest";
 
 import { passkey, user } from "@/db/auth-schema.server";
 import { drizzleDb } from "@/db/client.server";
@@ -46,6 +46,7 @@ describe("passkey registration resolveUser", () => {
   it("reuses an account whose registration was abandoned before a passkey existed", async () => {
     await generateRegistrationOptions();
     const [abandonedUserId] = await findUserIds();
+    assert(abandonedUserId, "Expected the abandoned registration to have created a user");
 
     await generateRegistrationOptions();
 
@@ -54,7 +55,8 @@ describe("passkey registration resolveUser", () => {
 
   it("rejects an email that already owns a passkey", async () => {
     await generateRegistrationOptions();
-    const [existingUserId = ""] = await findUserIds();
+    const [existingUserId] = await findUserIds();
+    assert(existingUserId, "Expected the first registration to have created a user");
     await seedPasskeyFor(existingUserId);
 
     await expect(generateRegistrationOptions()).rejects.toThrow(

@@ -37,23 +37,17 @@ const fileExists = async (fileId: string) => {
     }),
   );
 
-  if (Result.isError(result)) {
-    throw result.error;
-  }
-
-  return result.value !== undefined;
+  return expectOk(result) !== undefined;
 };
 
 const upsertFileVector = async (fileId: string) => {
-  const result = await vector.upsert({
-    ids: [`${fileId}:0`],
-    metadata: [{ fileId, text: "chunk" }],
-    vectors: [unitVector],
-  });
-
-  if (Result.isError(result)) {
-    throw result.error;
-  }
+  expectOk(
+    await vector.upsert({
+      ids: [`${fileId}:0`],
+      metadata: [{ fileId, text: "chunk" }],
+      vectors: [unitVector],
+    }),
+  );
 };
 
 const vectorIdsForFile = async (fileId: string) => {

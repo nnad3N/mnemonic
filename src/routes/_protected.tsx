@@ -15,7 +15,7 @@ import {
   SidebarProvider,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-media-query";
 import * as Kit from "@/lib/kit";
 import { byokQueries } from "@/routes/_protected.settings/-byok.functions";
 

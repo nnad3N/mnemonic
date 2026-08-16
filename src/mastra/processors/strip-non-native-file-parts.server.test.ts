@@ -1,5 +1,5 @@
 import type { ProcessLLMRequestArgs } from "@mastra/core/processors";
-import { describe, expect, it } from "vitest";
+import { assert, describe, expect, it } from "vitest";
 
 import { stripNonNativeFilePartsProcessor } from "./strip-non-native-file-parts.server";
 
@@ -19,9 +19,7 @@ const processPrompt = (prompt: LanguageModelV2Prompt): LanguageModelV2Prompt => 
     retryCount: 0,
   });
 
-  if (result?.prompt == null) {
-    throw new Error("expected processLLMRequest to return a prompt");
-  }
+  assert(result?.prompt, "expected processLLMRequest to return a prompt");
 
   return result.prompt;
 };

@@ -180,7 +180,6 @@ describe("AssistantToolPart", () => {
 
     const label = screen.getByText("Recalling memories");
     expect(label.closest("div")).toHaveClass("shimmer");
-    expect(label.closest("div")?.tagName).toBe("DIV");
   });
 
   it("shows done recall copy without shimmer after output", () => {

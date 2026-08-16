@@ -5,21 +5,14 @@ import { describe, expect, it, vi } from "vitest";
 
 import { dbKit } from "@/lib/db-kit.server";
 import * as Kit from "@/lib/kit";
-import { createMemoryKit, type MemoryApi } from "@/lib/memory-kit.server";
+import type { MemoryApi } from "@/lib/memory-kit.server";
+import { createFakeMemory } from "@/test/fake-memory";
 import { expectOk } from "@/test/result";
 
 import { persistSealedAssistantOnEnd } from "./chat";
 
 const THREAD_ID = "thread-seal-abort-test";
 const COMPLETED_AT = Temporal.Instant.from("2026-01-01T00:00:20.000Z");
-
-const unusedThread = {
-  id: THREAD_ID,
-  resourceId: "resource",
-  title: "title",
-  createdAt: new Date(),
-  updatedAt: new Date(),
-};
 
 const createMessage = (input: {
   id: string;
@@ -36,51 +29,25 @@ const createMessage = (input: {
   },
 });
 
-const createMemoryApi = (input: {
-  listMessages: MemoryApi["listMessages"];
-  saveMessages?: MemoryApi["saveMessages"];
-}): MemoryApi => ({
-  clearResourceObservations: async () => Promise.resolve(Result.ok()),
-  deleteMessages: async () => Promise.resolve(Result.ok()),
-  listThreads: async () =>
-    Promise.resolve(
-      Result.ok({
-        threads: [],
-        total: 0,
-        page: 0,
-        perPage: false as const,
-        hasMore: false,
-      }),
-    ),
-  deleteThread: async () => Promise.resolve(Result.ok()),
-  getThreadById: async () => Promise.resolve(Result.ok(null)),
-  listMessages: input.listMessages,
-  saveMessages: input.saveMessages ?? (async () => Promise.resolve(Result.ok({ messages: [] }))),
-  saveThread: async () => Promise.resolve(Result.ok(unusedThread)),
-  updateThread: async () => Promise.resolve(Result.ok(unusedThread)),
-});
-
 const createCtx = (input: {
   messages: MastraDBMessage[];
   saveMessages?: MemoryApi["saveMessages"];
 }) =>
   Kit.createContext(
     dbKit,
-    createMemoryKit(
-      createMemoryApi({
-        listMessages: async () =>
-          Promise.resolve(
-            Result.ok({
-              messages: input.messages,
-              total: input.messages.length,
-              page: 0,
-              perPage: false as const,
-              hasMore: false,
-            } satisfies StorageListMessagesOutput),
-          ),
-        saveMessages: input.saveMessages,
-      }),
-    ),
+    createFakeMemory({
+      listMessages: async () =>
+        Promise.resolve(
+          Result.ok({
+            messages: input.messages,
+            total: input.messages.length,
+            page: 0,
+            perPage: false as const,
+            hasMore: false,
+          } satisfies StorageListMessagesOutput),
+        ),
+      ...(input.saveMessages === undefined ? {} : { saveMessages: input.saveMessages }),
+    }),
   );
 
 describe("persistSealedAssistantOnEnd", () => {

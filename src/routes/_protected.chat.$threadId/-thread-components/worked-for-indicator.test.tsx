@@ -1,5 +1,5 @@
 import { act, fireEvent, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, assert, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { MnemonicToolName } from "@/mastra/mnemonic-tool-types.server";
 import { render } from "@/test/render-message";
@@ -29,9 +29,7 @@ const workEnd: ThreadUIMessagePart = {
 
 const tickerRow = (container: HTMLElement): HTMLElement => {
   const row = container.querySelector<HTMLElement>('[data-test-id="work-ticker-current"]');
-  if (!row) {
-    throw new Error("Expected the work ticker row");
-  }
+  assert(row, "Expected the work ticker row");
 
   return row;
 };

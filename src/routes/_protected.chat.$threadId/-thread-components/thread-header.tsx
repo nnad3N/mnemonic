@@ -51,9 +51,9 @@ export const ThreadHeader = ({ threadId }: ThreadHeaderProps) => {
 
   return (
     <Breadcrumb className="min-w-0">
-      <BreadcrumbList className="flex-nowrap gap-0.5 overflow-hidden sm:gap-0.5">
+      <BreadcrumbList className="flex-nowrap gap-0.5 max-md:overflow-hidden sm:gap-0.5">
         {topic.data && (
-          <BreadcrumbItem className="max-w-[45%] min-w-0 shrink">
+          <BreadcrumbItem className="min-w-0 shrink max-md:max-w-[45%]">
             <TopicCrumb title={topic.data.title} topicId={topic.data.id} />
           </BreadcrumbItem>
         )}
@@ -95,7 +95,7 @@ const TopicCrumb = ({ title, topicId }: TopicCrumbProps) => {
         <ContextMenuTrigger
           render={
             <BreadcrumbLink
-              className="truncate rounded-md px-1.5 py-1.5 hover:bg-accent hover:text-accent-foreground"
+              className="rounded-md px-1.5 py-1.5 hover:bg-accent hover:text-accent-foreground max-md:truncate"
               render={<Link params={{ topicId }} to="/topic/$topicId/files" />}
             />
           }
@@ -142,7 +142,7 @@ const ThreadCrumb = ({ threadId, title }: ThreadCrumbProps) => (
     render={
       <button
         aria-current="page"
-        className="truncate rounded-md px-1.5 py-1.5 font-normal text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+        className="rounded-md px-1.5 py-1.5 font-normal text-foreground transition-colors hover:bg-accent hover:text-accent-foreground max-md:truncate"
         type="button"
       />
     }

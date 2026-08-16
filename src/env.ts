@@ -5,8 +5,8 @@ const ENCRYPTION_KEY_BYTES = 32;
 const ENCRYPTION_KEY_HEX_LENGTH = ENCRYPTION_KEY_BYTES * 2;
 
 export type EncryptionKey = {
-  id: string;
   key: Buffer;
+  version: number;
 };
 
 const encryptionKeysSchema = v.pipe(
@@ -22,27 +22,27 @@ const encryptionKeysSchema = v.pipe(
         continue;
       }
 
-      const [id, encodedKey, ...rest] = entry.split(":");
+      const [version, encodedKey, ...rest] = entry.split(":");
 
-      if (!id || !encodedKey || rest.length > 0 || !/^[\w-]+$/.test(id)) {
-        throw new Error('ENCRYPTION_KEYS entry is not in "id:hex" format');
+      if (!version || !encodedKey || rest.length > 0 || !/^\d+$/.test(version)) {
+        throw new Error('ENCRYPTION_KEYS entry is not in "version:hex" format');
       }
 
       if (!/^[0-9a-fA-F]+$/.test(encodedKey) || encodedKey.length !== ENCRYPTION_KEY_HEX_LENGTH) {
         throw new Error(
-          `ENCRYPTION_KEYS key "${id}" must be ${String(ENCRYPTION_KEY_HEX_LENGTH)} hex characters`,
+          `ENCRYPTION_KEYS key ${version} must be ${String(ENCRYPTION_KEY_HEX_LENGTH)} hex characters`,
         );
       }
 
-      keys.push({ id, key: Buffer.from(encodedKey, "hex") });
+      keys.push({ key: Buffer.from(encodedKey, "hex"), version: Number(version) });
     }
 
     if (keys.length === 0) {
       throw new Error("ENCRYPTION_KEYS must contain at least one entry");
     }
 
-    if (new Set(keys.map(({ id }) => id)).size !== keys.length) {
-      throw new Error("ENCRYPTION_KEYS ids must be unique");
+    if (new Set(keys.map(({ version }) => version)).size !== keys.length) {
+      throw new Error("ENCRYPTION_KEYS versions must be unique");
     }
 
     return keys;

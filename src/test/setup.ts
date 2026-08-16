@@ -29,5 +29,4 @@ if (typeof Element.prototype.getAnimations !== "function") {
 
 afterEach(() => {
   cleanup();
-  localStorage.clear();
 });

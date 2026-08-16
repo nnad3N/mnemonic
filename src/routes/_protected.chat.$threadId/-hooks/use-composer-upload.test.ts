@@ -27,10 +27,7 @@ describe("findAttachmentFilename", () => {
       file: firstPaste,
     });
 
-    // uploadFiles uses existingFilename ?? file.name for the mention text
-    expect(findAttachmentFilename("thread-1", [], sha256) ?? secondPaste.name).toBe(
-      firstPaste.name,
-    );
+    expect(findAttachmentFilename("thread-1", [], sha256)).toBe(firstPaste.name);
   });
 
   it("reuses a filename already sent on a prior message", async () => {
@@ -48,12 +45,6 @@ describe("findAttachmentFilename", () => {
       },
     ];
 
-    const secondPaste = new File([new Uint8Array([9])], "notes (copy).txt", {
-      type: "text/plain",
-    });
-
-    expect(findAttachmentFilename("thread-1", messages, sha256) ?? secondPaste.name).toBe(
-      "notes.txt",
-    );
+    expect(findAttachmentFilename("thread-1", messages, sha256)).toBe("notes.txt");
   });
 });

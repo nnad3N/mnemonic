@@ -18,13 +18,11 @@ type SecretAad = {
 
 const toAad = ({ byokId, userId }: SecretAad): Buffer => Buffer.from(`${userId}:${byokId}`, "utf8");
 
-const keyring = env.ENCRYPTION_KEYS;
-
 export const encryptSecret = (
   plaintext: string,
   aad: SecretAad,
 ): ResultType<string, EncryptionError> => {
-  const [{ id, key }] = keyring;
+  const [{ key, version }] = env.ENCRYPTION_KEYS;
   const iv = randomBytes(IV_BYTES);
   const cipher = createCipheriv("aes-256-gcm", key, iv, { authTagLength: AUTH_TAG_BYTES });
   cipher.setAAD(toAad(aad));
@@ -34,7 +32,7 @@ export const encryptSecret = (
   return Result.ok(
     [
       CIPHERTEXT_VERSION,
-      id,
+      String(version),
       iv.toString("hex"),
       ciphertext.toString("hex"),
       tag.toString("hex"),
@@ -46,11 +44,11 @@ export const decryptSecret = (
   value: string,
   aad: SecretAad,
 ): ResultType<string, EncryptionError> => {
-  const [version, keyId, ivHex, ciphertextHex, tagHex, ...rest] = value.split(".");
+  const [version, keyVersion, ivHex, ciphertextHex, tagHex, ...rest] = value.split(".");
 
   if (
     version !== CIPHERTEXT_VERSION ||
-    !keyId ||
+    !keyVersion ||
     !ivHex ||
     !ciphertextHex ||
     !tagHex ||
@@ -58,17 +56,17 @@ export const decryptSecret = (
   ) {
     return Result.err(
       new EncryptionError({
-        message: "Encrypted value is not in version.keyId.iv.ciphertext.tag format",
+        message: "Encrypted value is not in version.keyVersion.iv.ciphertext.tag format",
       }),
     );
   }
 
-  const key = keyring.find((entry) => entry.id === keyId);
+  const key = env.ENCRYPTION_KEYS.find((entry) => String(entry.version) === keyVersion);
 
   if (!key) {
     return Result.err(
       new EncryptionError({
-        message: `Encrypted value uses key "${keyId}" which is not in ENCRYPTION_KEYS`,
+        message: `Encrypted value uses key ${keyVersion} which is not in ENCRYPTION_KEYS`,
       }),
     );
   }
