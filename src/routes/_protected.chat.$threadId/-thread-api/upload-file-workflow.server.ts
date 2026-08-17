@@ -11,16 +11,16 @@ import { file } from "@/db/schema.server";
 import { dbKit } from "@/lib/db-kit.server";
 import type { DbKit } from "@/lib/db-kit.server";
 import { ImageMimeType } from "@/lib/file-validation";
-import { getProviderKey } from "@/lib/get-provider-key.server";
 import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
+import { resolveProviderKey } from "@/lib/middleware/resolve-provider-key.server";
 import { s3Kit } from "@/lib/s3-kit.server";
 import type { S3Kit } from "@/lib/s3-kit.server";
 import { safeId, toSafeId } from "@/lib/safe-id";
 import { vectorKit } from "@/lib/vector-kit.server";
 import type { VectorKit } from "@/lib/vector-kit.server";
 import { getFileEmbeddingModel } from "@/mastra/file-rag-config.server";
-import { FILE_EMBEDDING_DIMENSION } from "@/mastra/models.server";
+import { FILE_EMBEDDING_DIMENSION } from "@/mastra/file-rag-config.server";
 
 const workflowInputSchema = v.object({
   fileId: v.pipe(v.string(), v.nanoid()),
@@ -148,7 +148,7 @@ export const processForRagFn = Kit.gen(async function* (
 
   const [object, key] = yield* await Kit.promiseAll([
     ctx.s3.getObject(input.s3Key),
-    getProviderKey(input.userId),
+    resolveProviderKey(ctx, input.userId),
   ]);
   const chunks = yield* await Result.tryPromise(async () => {
     const extraction = await extractBytes(Buffer.from(object), input.mimeType);
@@ -172,7 +172,7 @@ export const processForRagFn = Kit.gen(async function* (
   const { embeddings } = yield* await Result.tryPromise(async () =>
     embedMany({
       abortSignal: input.abortSignal,
-      model: getFileEmbeddingModel(key),
+      model: getFileEmbeddingModel(key.key),
       values: chunks.map((chunk) => chunk.text),
     }),
   );

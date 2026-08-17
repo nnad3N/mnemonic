@@ -9,7 +9,7 @@ import type { MemoryApi } from "@/lib/memory-kit.server";
 import { createFakeMemory } from "@/test/fake-memory";
 import { expectOk } from "@/test/result";
 
-import { persistSealedAssistantOnEnd } from "./chat";
+import { persistStreamResult } from "./chat";
 
 const THREAD_ID = "thread-seal-abort-test";
 const COMPLETED_AT = Temporal.Instant.from("2026-01-01T00:00:20.000Z");
@@ -67,7 +67,7 @@ describe("persistSealedAssistantOnEnd", () => {
 
     let saved: MastraDBMessage[] | undefined;
 
-    const result = await persistSealedAssistantOnEnd(
+    const result = await persistStreamResult(
       createCtx({
         messages: [
           createMessage({
@@ -130,7 +130,7 @@ describe("persistSealedAssistantOnEnd", () => {
       Promise.resolve(Result.ok({ messages: [] })),
     );
 
-    const result = await persistSealedAssistantOnEnd(
+    const result = await persistStreamResult(
       createCtx({
         messages: [
           createMessage({
@@ -166,7 +166,7 @@ describe("persistSealedAssistantOnEnd", () => {
       Promise.resolve(Result.ok({ messages: [] })),
     );
 
-    const result = await persistSealedAssistantOnEnd(
+    const result = await persistStreamResult(
       createCtx({
         messages: [
           createMessage({

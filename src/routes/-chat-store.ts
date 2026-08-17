@@ -33,15 +33,11 @@ type EditingState = {
   markdown: string;
 };
 
-export type ThreadIndicator = "error" | "pending" | "ready";
-
 type State = {
   composerState: Map<ThreadId, ComposerState>;
   editingState: EditingState | null;
   attachments: Map<ThreadId, ThreadAttachment[]>;
   pollingTopicIds: Set<TopicId>;
-  threadIndicators: Map<ThreadId, ThreadIndicator>;
-  viewedThreadId: ThreadId | null;
 };
 
 type Actions = {
@@ -53,9 +49,6 @@ type Actions = {
   removeComposerState: (threadId: ThreadId) => void;
   addPollingTopicId: (topicId: TopicId) => void;
   removePollingTopicId: (topicId: TopicId) => void;
-  setViewedThreadId: (threadId: ThreadId | null) => void;
-  setThreadIndicator: (threadId: ThreadId, indicator: ThreadIndicator) => void;
-  clearThreadIndicator: (threadId: ThreadId) => void;
 };
 
 export const useChatStore = create<State & Actions>()(
@@ -64,8 +57,6 @@ export const useChatStore = create<State & Actions>()(
     editingState: null,
     attachments: new Map(),
     pollingTopicIds: new Set(),
-    threadIndicators: new Map(),
-    viewedThreadId: null,
     setEditingState: (data) => {
       set((state) => {
         state.editingState = data;
@@ -160,32 +151,6 @@ export const useChatStore = create<State & Actions>()(
     removePollingTopicId: (topicId) => {
       set((state) => {
         state.pollingTopicIds.delete(topicId);
-      });
-    },
-    setViewedThreadId: (threadId) => {
-      set((state) => {
-        state.viewedThreadId = threadId;
-      });
-    },
-    setThreadIndicator: (threadId, indicator) => {
-      set((state) => {
-        // Settled results are only for threads the user is not viewing —
-        // finishing while viewing drops pending without leaving a badge.
-        if ((indicator === "ready" || indicator === "error") && state.viewedThreadId === threadId) {
-          state.threadIndicators.delete(threadId);
-          return;
-        }
-
-        state.threadIndicators.set(threadId, indicator);
-      });
-    },
-    clearThreadIndicator: (threadId) => {
-      set((state) => {
-        // A running stream keeps its indicator: viewing the thread only
-        // acknowledges a settled result.
-        if (state.threadIndicators.get(threadId) === "pending") return;
-
-        state.threadIndicators.delete(threadId);
       });
     },
   })),

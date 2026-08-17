@@ -71,6 +71,7 @@ export const env = createEnv({
     DATABASE_URL: v.pipe(v.string(), v.nonEmpty()),
     ENCRYPTION_KEYS: encryptionKeysSchema,
     FIRECRAWL_API_URL: v.pipe(v.string(), v.url()),
+    REDIS_URL: v.pipe(v.string(), v.nonEmpty()),
     S3_ACCESS_KEY_ID: v.pipe(v.string(), v.nonEmpty()),
     S3_BUCKET: v.pipe(v.string(), v.nonEmpty()),
     S3_ENDPOINT: v.pipe(v.string(), v.url()),

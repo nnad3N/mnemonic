@@ -1,5 +1,5 @@
 import { createMiddleware } from "@tanstack/react-start";
-import { Result } from "better-result";
+import { matchError, Result } from "better-result";
 import * as v from "valibot";
 
 import { dbKit } from "@/lib/db-kit.server";
@@ -7,6 +7,7 @@ import { toServerFnError } from "@/lib/errors/server-fn-error";
 import * as Kit from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit.server";
 import { authMiddleware } from "@/lib/middleware/auth.middleware";
+import { resolveThread } from "@/lib/middleware/resolve-thread.server";
 import { toSafeId } from "@/lib/safe-id";
 
 const threadAccessInputSchema = v.looseObject({
@@ -20,47 +21,26 @@ type ThreadAccessInputSchema = v.InferOutput<typeof threadAccessInputSchema>;
 // from being merged into handler `data`. Later server-fn `v.object(...)`
 // validators strip unknown keys at runtime, so handlers should read these IDs
 // from context instead.
+const threadAccessCtx = Kit.createContext(dbKit, memoryKit);
+
 export const threadAccessMiddleware = createMiddleware({ type: "function" })
   .middleware([authMiddleware])
   .validator((data: ThreadAccessInputSchema) => data as unknown)
   .server(async ({ context, data, next }) => {
     const { threadId } = v.parse(threadAccessInputSchema, data);
-    const threadResult = await Kit.get(memoryKit).getThreadById({ threadId });
+    const result = await resolveThread(threadAccessCtx, { threadId, userId: context.user.id });
 
-    if (Result.isError(threadResult)) {
-      throw toServerFnError.serverError("Failed to verify thread access");
-    }
-
-    const thread = threadResult.value;
-
-    if (!thread) {
-      throw toServerFnError.notFound();
-    }
-
-    if (thread.resourceId !== context.user.id) {
-      const topicResult = await Kit.get(dbKit).run((db) =>
-        db.query.topic.findFirst({
-          where: {
-            // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId check.
-            id: toSafeId<"topic">(thread.resourceId),
-            userId: context.user.id,
-          },
-          columns: { id: true },
-        }),
-      );
-
-      if (Result.isError(topicResult)) {
-        throw toServerFnError.serverError("Failed to verify thread access");
-      }
-
-      if (!topicResult.value) {
-        throw toServerFnError.notFound();
-      }
+    if (Result.isError(result)) {
+      throw matchError(result.error, {
+        DatabaseError: () => toServerFnError.serverError("Failed to verify thread access"),
+        MemoryError: () => toServerFnError.serverError("Failed to verify thread access"),
+        ThreadNotFoundError: () => toServerFnError.notFound(),
+      });
     }
 
     return next({
       context: {
-        thread,
+        thread: result.value.thread,
       },
     });
   });

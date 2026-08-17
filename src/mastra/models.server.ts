@@ -1,12 +1,15 @@
 import type { ObservationalMemoryOptions } from "@mastra/core/memory";
 import type { RequestContext } from "@mastra/core/request-context";
 import { createOpenRouter, type OpenRouterProviderOptions } from "@openrouter/ai-sdk-provider";
+import { Result } from "better-result";
+import * as v from "valibot";
 
+import { dbKit } from "@/lib/db-kit.server";
+import * as Kit from "@/lib/kit";
+import { resolveProviderKeyById } from "@/lib/middleware/resolve-provider-key.server";
 import type { ModelCapability } from "@/lib/model-capability";
-import type { MnemonicRequestContext } from "@/mastra/request-context.server";
-
-/** Qwen3 Embedding 8B native output size. */
-export const FILE_EMBEDDING_DIMENSION = 4096;
+import { DEFAULT_MODEL_CAPABILITY } from "@/lib/model-capability";
+import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
 
 const createOpenrouterProvider = (apiKey: string) =>
   createOpenRouter({
@@ -14,12 +17,12 @@ const createOpenrouterProvider = (apiKey: string) =>
     appName: "Mnemonic",
   });
 
-type ModelCapabilityModel = {
+type OpenrouterModel = {
   model: string;
   openrouter?: OpenRouterProviderOptions;
 };
 
-export const modelCapabilityModels: Record<ModelCapability, ModelCapabilityModel> = {
+const models: Record<ModelCapability, OpenrouterModel> = {
   standard: {
     model: "xiaomi/mimo-v2.5",
   },
@@ -64,15 +67,41 @@ export const getEmbeddingModel = (apiKey: string) => {
   };
 };
 
-export const getAgentModel = ({
-  requestContext,
-}: {
-  requestContext: RequestContext<MnemonicRequestContext>;
-}) => {
-  const config = modelCapabilityModels[requestContext.get("modelCapability")];
+const providerKeyCtx = Kit.createContext(dbKit);
 
-  return createOpenrouterProvider(requestContext.get("apiKey"))(config.model, config.openrouter);
+type ModelResolverInput = {
+  requestContext: RequestContext<any>;
 };
+
+const resolveCapabilityModel = async (
+  input: ModelResolverInput,
+  overrideCapability?: (modelCapability: ModelCapability) => ModelCapability,
+) => {
+  const parsed = v.safeParse(mnemonicRequestContextSchema, input.requestContext.all);
+
+  // `DurableAgent`'s constructor probes `getModel()` with an empty context to describe the agent it
+  // wraps; execution always goes through the wrapped agent with a real one. The schema is the
+  // single test for which case this is. The probe gets a bare model id — it names the right model
+  // without minting a provider that could only ever fail against OpenRouter.
+  if (!parsed.success) {
+    return models[DEFAULT_MODEL_CAPABILITY].model;
+  }
+
+  const { providerKeyId, modelCapability } = parsed.output;
+
+  const config = models[overrideCapability?.(modelCapability) ?? modelCapability];
+  const result = await resolveProviderKeyById(providerKeyCtx, providerKeyId);
+
+  if (Result.isError(result)) {
+    throw result.error;
+  }
+
+  const apiKey = result.value.key;
+
+  return createOpenrouterProvider(apiKey)(config.model, config.openrouter);
+};
+
+export const getAgentModel = async (input: ModelResolverInput) => resolveCapabilityModel(input);
 
 const subagentModelCapability = {
   standard: "standard",
@@ -80,19 +109,11 @@ const subagentModelCapability = {
   max: "balanced",
 } as const satisfies Record<ModelCapability, ModelCapability>;
 
-export const getSubagentModel = ({
-  requestContext,
-}: {
-  requestContext: RequestContext<MnemonicRequestContext>;
-}) => {
-  const config =
-    modelCapabilityModels[subagentModelCapability[requestContext.get("modelCapability")]];
-
-  return createOpenrouterProvider(requestContext.get("apiKey"))(config.model, config.openrouter);
-};
+export const getSubagentModel = async (input: ModelResolverInput) =>
+  resolveCapabilityModel(input, (capability) => subagentModelCapability[capability]);
 
 export const getObservationalMemoryModel = (apiKey: string) =>
-  createOpenrouterProvider(apiKey)(modelCapabilityModels.standard.model);
+  createOpenrouterProvider(apiKey)(models.standard.model);
 
 export const getThreadTitleModel = (apiKey: string) =>
   createOpenrouterProvider(apiKey)(THREAD_TITLE_MODEL);

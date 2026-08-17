@@ -1,28 +1,28 @@
-import { toAISdkStream } from "@mastra/ai-sdk";
 import { RequestContext } from "@mastra/core/request-context";
 import { createFileRoute } from "@tanstack/react-router";
-import type { InferUIMessageChunk } from "ai";
-import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
+import { createUIMessageStreamResponse } from "ai";
 import { matchError, Result, TaggedError } from "better-result";
+import { eq } from "drizzle-orm";
 import { produce } from "immer";
 import * as v from "valibot";
 
+import { threadRun } from "@/db/schema.server";
 import { closeWorkSegments } from "@/lib/ai-sdk/close-work-segments";
-import type { DbKit } from "@/lib/db-kit.server";
-import { dbKit } from "@/lib/db-kit.server";
-import { getProviderKey } from "@/lib/get-provider-key.server";
-import type { Kits } from "@/lib/kit";
+import { dbKit, type DbKit } from "@/lib/db-kit.server";
+import { durableAgentsKit, type DurableAgentsKit } from "@/lib/durable-agents-kit.server";
 import * as Kit from "@/lib/kit";
-import type { MemoryKit } from "@/lib/memory-kit.server";
-import { memoryKit } from "@/lib/memory-kit.server";
+import type { Kits } from "@/lib/kit";
+import { memoryKit, type MemoryKit } from "@/lib/memory-kit.server";
 import { authMiddleware } from "@/lib/middleware/auth.middleware";
+import { resolveProviderKey } from "@/lib/middleware/resolve-provider-key.server";
+import { resolveThread } from "@/lib/middleware/resolve-thread.server";
 import { modelCapabilityLevels } from "@/lib/model-capability";
 import type { SafeId } from "@/lib/safe-id";
-import { toSafeId } from "@/lib/safe-id";
-import { getMnemonicAgentId } from "@/mastra/agents/id.server";
-import { mastra } from "@/mastra/instance.server";
+import { createSafeId } from "@/lib/safe-id";
+import { getMnemonicAgent } from "@/mastra/agents/id.server";
 import type { MnemonicRequestContext } from "@/mastra/request-context.server";
-import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
+
+import { toThreadUIStream } from "./-chat-shared.server";
 
 export const uiMessageSchema = v.object({
   id: v.pipe(v.string(), v.nanoid()),
@@ -45,31 +45,27 @@ const chatRequestSchema = v.object({
 });
 
 type ChatRequest = v.InferOutput<typeof chatRequestSchema>;
-type ChatCtx = Kits<[DbKit, MemoryKit]>;
 
 type ChatInput = {
-  abortSignal: AbortSignal;
   body: ChatRequest;
   userId: SafeId<"user">;
 };
-
-class ChatNotFoundError extends TaggedError("ChatNotFoundError")<{
-  message: string;
-}> {}
 
 class ChatStreamError extends TaggedError("ChatStreamError")<{
   cause: unknown;
   message: string;
 }> {}
 
-type PersistSealedAssistantOnEndInput = {
+type PersistStreamResultInput = {
   completedAt: Temporal.Instant;
   threadId: string;
 };
 
-export const persistSealedAssistantOnEnd = Kit.gen(async function* (
-  ctx: ChatCtx,
-  input: PersistSealedAssistantOnEndInput,
+type PersistStreamResultCtx = Kits<[MemoryKit]>;
+
+export const persistStreamResult = Kit.gen(async function* (
+  ctx: PersistStreamResultCtx,
+  input: PersistStreamResultInput,
 ) {
   const { messages } = yield* await ctx.memory.listMessages({
     threadId: input.threadId,
@@ -104,34 +100,13 @@ export const persistSealedAssistantOnEnd = Kit.gen(async function* (
   return Result.ok();
 });
 
+type ChatCtx = Kits<[DbKit, MemoryKit, DurableAgentsKit]>;
+
 const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
-  const thread = yield* await ctx.memory.getThreadById({
-    threadId: input.body.threadId,
-  });
-
-  if (!thread) {
-    return Result.err(new ChatNotFoundError({ message: "Thread not found" }));
-  }
-
-  const [topic, apiKey] = yield* await Kit.promiseAll([
-    ctx.db.run((db) =>
-      db.query.topic.findFirst({
-        where: {
-          // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId check.
-          id: toSafeId<"topic">(thread.resourceId),
-          userId: input.userId,
-        },
-        columns: { id: true },
-      }),
-    ),
-    getProviderKey(input.userId),
+  const [{ agentId, thread, topicId }, providerKey] = yield* await Kit.promiseAll([
+    resolveThread(ctx, { threadId: input.body.threadId, userId: input.userId }),
+    resolveProviderKey(ctx, input.userId),
   ]);
-
-  if (thread.resourceId !== input.userId && !topic) {
-    return Result.err(new ChatNotFoundError({ message: "Thread not found" }));
-  }
-
-  const agentId = getMnemonicAgentId({ topicId: topic?.id });
 
   if (input.body.messageId) {
     const { messages: storedMessages } = yield* await ctx.memory.listMessages({
@@ -152,13 +127,13 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
   }
 
   const requestContext = new RequestContext<MnemonicRequestContext>();
-  requestContext.set("apiKey", apiKey);
+  requestContext.set("providerKeyId", providerKey.id);
   requestContext.set("userId", input.userId);
   requestContext.set("modelCapability", input.body.settings.modelCapability);
   requestContext.set("threadId", input.body.threadId);
 
-  if (topic) {
-    requestContext.set("filter", { topicId: topic.id });
+  if (topicId) {
+    requestContext.set("filter", { topicId });
   }
 
   const lastMessage = input.body.messages.at(-1);
@@ -168,16 +143,72 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
       ? input.body.messages.slice(0, -1)
       : input.body.messages;
 
+  const threadId = input.body.threadId;
+  const userId = input.userId;
+  const runId = createSafeId<"run">();
+  const abortController = new AbortController();
+
+  const [unsubscribeCancel] = yield* await Kit.promiseAll([
+    ctx.durableAgents.subscribeCancel({ onCancel: () => abortController.abort(), runId }),
+    ctx.durableAgents.connect(),
+  ]);
+
+  const settle = async (status: "errored" | "finished" | "interrupted") => {
+    await unsubscribeCancel();
+
+    const finishedAt = new Date();
+    const recorded = await ctx.db.run((db) =>
+      db.update(threadRun).set({ status, finishedAt }).where(eq(threadRun.runId, runId)),
+    );
+
+    if (Result.isError(recorded)) {
+      console.error(recorded.error);
+    }
+
+    const published = await ctx.durableAgents.publishRunEvent({
+      finishedAt,
+      runId,
+      status,
+      threadId,
+      userId,
+    });
+
+    if (Result.isError(published)) {
+      console.error(published.error);
+    }
+  };
+
   const result = yield* await Result.tryPromise({
     try: async () =>
-      mastra.getAgentById(agentId).stream(messagesToSend, {
-        abortSignal: input.abortSignal,
+      getMnemonicAgent(agentId).stream(messagesToSend, {
+        abortSignal: abortController.signal,
         maxSteps: 10,
         memory: {
           resource: thread.resourceId,
-          thread: input.body.threadId,
+          thread: threadId,
         },
         requestContext,
+        runId,
+        untilIdle: true,
+        onFinish: async ({ finishReason }) => {
+          if (finishReason === "error") return;
+
+          await settle(finishReason === "abort" ? "interrupted" : "finished");
+        },
+        onError: async () => {
+          // Abort and tool-error results are flushed by the durable loop's final step, but a fatal
+          // LLM error throws out of the loop before that runs, leaving the work segment open.
+          const sealed = await persistStreamResult(ctx, {
+            completedAt: Temporal.Now.instant(),
+            threadId,
+          });
+
+          if (Result.isError(sealed)) {
+            console.error(sealed.error);
+          }
+
+          await settle("errored");
+        },
       }),
     catch: (cause) =>
       new ChatStreamError({
@@ -186,51 +217,43 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
       }),
   });
 
-  const stream = toAISdkStream(result, {
-    from: "agent",
-    version: "v6",
-    lastMessageId,
-    sendReasoning: true,
-    sendSources: true,
+  const runRow = {
+    runId,
+    agentId,
+    status: "running" as const,
+    startedAt: new Date(),
+    finishedAt: null,
+  };
+
+  yield* await ctx.db.run((db) =>
+    db
+      .insert(threadRun)
+      .values({ threadId, userId, ...runRow })
+      .onConflictDoUpdate({ target: threadRun.threadId, set: runRow }),
+  );
+
+  const published = await ctx.durableAgents.publishRunEvent({
+    finishedAt: null,
+    runId,
+    status: "running",
+    threadId,
+    userId,
   });
 
+  if (Result.isError(published)) {
+    console.error(published.error);
+  }
+
   return Result.ok(
-    createUIMessageStream<ThreadUIMessage>({
+    toThreadUIStream({
+      lastMessageId,
       originalMessages: input.body.messages,
-      execute: async ({ writer }) => {
-        let endedAt: Temporal.Instant | undefined;
-
-        for await (const part of stream) {
-          if (part.type === "abort" || part.type === "error") {
-            endedAt = Temporal.Now.instant();
-          }
-
-          // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-          writer.write(part as InferUIMessageChunk<ThreadUIMessage>);
-        }
-
-        if (!endedAt) {
-          return;
-        }
-
-        // Mastra runs no persistence of its own once a run ends aborted or errored, so the
-        // work-segment output processor never closes the segment. Seal here rather than from
-        // an onAbort hook: onAbort fires before the abort reaches the stream and races
-        // observational memory's writes to the same row.
-        const sealed = await persistSealedAssistantOnEnd(ctx, {
-          completedAt: endedAt,
-          threadId: input.body.threadId,
-        });
-
-        if (Result.isError(sealed)) {
-          console.error(sealed.error);
-        }
-      },
+      output: result.output,
     }),
   );
 });
 
-const chatCtx = Kit.createContext(dbKit, memoryKit);
+const chatCtx = Kit.createContext(dbKit, memoryKit, durableAgentsKit);
 
 export const Route = createFileRoute("/api/chat")({
   server: {
@@ -244,7 +267,6 @@ export const Route = createFileRoute("/api/chat")({
         }
 
         const chatResult = await chatFn(chatCtx, {
-          abortSignal: request.signal,
           body: result.output,
           userId: context.user.id,
         });
@@ -253,12 +275,13 @@ export const Route = createFileRoute("/api/chat")({
           ok: (stream) => createUIMessageStreamResponse({ stream }),
           err: (error) =>
             matchError(error, {
-              ChatNotFoundError: () => new Response("Not Found", { status: 404 }),
               ChatStreamError: () => new Response("Internal Server Error", { status: 500 }),
-              ConfigError: () => new Response("Bad Request", { status: 400 }),
+              ProviderKeyNotFoundError: () => new Response("Bad Request", { status: 400 }),
               DatabaseError: () => new Response("Internal Server Error", { status: 500 }),
               EncryptionError: () => new Response("Internal Server Error", { status: 500 }),
               MemoryError: () => new Response("Internal Server Error", { status: 500 }),
+              DurableAgentsError: () => new Response("Internal Server Error", { status: 500 }),
+              ThreadNotFoundError: () => new Response("Not Found", { status: 404 }),
             }),
         });
       },

@@ -1,6 +1,10 @@
 import { Agent } from "@mastra/core/agent";
 import type { RequestContext } from "@mastra/core/request-context";
+import { Result } from "better-result";
 
+import { dbKit } from "@/lib/db-kit.server";
+import * as Kit from "@/lib/kit";
+import { resolveProviderKeyById } from "@/lib/middleware/resolve-provider-key.server";
 import { getAgentMemory } from "@/mastra/agent-memory.server";
 import {
   baseInstructions,
@@ -23,12 +27,20 @@ import { webSearchTool } from "@/mastra/tools/web-search-tool.server";
 
 export const TOPIC_AGENT_ID = "topic-agent";
 
-const getTopicAgentTools = ({
-  requestContext,
-}: {
+const providerKeyCtx = Kit.createContext(dbKit);
+
+type GetTopicAgentToolsInput = {
   requestContext: RequestContext<MnemonicRequestContext>;
-}) => {
-  const apiKey = requestContext.get("apiKey");
+};
+
+const getTopicAgentTools = async ({ requestContext }: GetTopicAgentToolsInput) => {
+  const result = await resolveProviderKeyById(providerKeyCtx, requestContext.get("providerKeyId"));
+
+  if (Result.isError(result)) {
+    throw result.error;
+  }
+
+  const apiKey = result.value.key;
 
   return {
     docs: docsTool,
@@ -41,7 +53,7 @@ const getTopicAgentTools = ({
   };
 };
 
-export type TopicAgentTools = ReturnType<typeof getTopicAgentTools>;
+export type TopicAgentTools = Awaited<ReturnType<typeof getTopicAgentTools>>;
 
 export const topicAgent = new Agent({
   description:
@@ -73,6 +85,7 @@ Use recall to browse past messages within the current topic:
 Threads from other topics or standalone conversations are not accessible.
 `,
   agents: { webResearch: webResearchAgent },
+  durable: true,
   inputProcessors: [stripNonNativeFilePartsProcessor],
   outputProcessors: [workSegmentTimingProcessor],
   memory: getAgentMemory("resource"),

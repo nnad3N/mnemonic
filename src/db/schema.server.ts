@@ -7,6 +7,7 @@ import { now } from "@/db/sql.server";
 import type { ModelCapability } from "@/lib/model-capability";
 import { DEFAULT_MODEL_CAPABILITY } from "@/lib/model-capability";
 import type { SafeId } from "@/lib/safe-id";
+import type { MnemonicAgentId } from "@/mastra/agents/id.server";
 
 export type FileStatus = "uploading" | "processing" | "ready" | "failed";
 
@@ -108,6 +109,9 @@ export const threadSettings = sqliteTable("thread_settings", {
     .notNull()
     .default(DEFAULT_MODEL_CAPABILITY),
 
+  /** Compared against `threadRun.finishedAt` to decide whether a finished run is still unseen. */
+  viewedAt: integer("viewed_at", { mode: "timestamp_ms" }),
+
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" })
     .notNull()
@@ -115,8 +119,30 @@ export const threadSettings = sqliteTable("thread_settings", {
     .default(now),
 });
 
+export type ThreadRunStatus = "running" | "finished" | "errored" | "interrupted";
+
+export const threadRun = sqliteTable(
+  "thread_run",
+  {
+    threadId: text("thread_id").primaryKey(),
+    userId: text("user_id")
+      .$type<SafeId<"user">>()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+
+    runId: text("run_id").$type<SafeId<"run">>().notNull(),
+    agentId: text("agent_id").$type<MnemonicAgentId>().notNull(),
+
+    status: text("status").$type<ThreadRunStatus>().notNull().default("running"),
+
+    startedAt: integer("started_at", { mode: "timestamp_ms" }).notNull().default(now),
+    finishedAt: integer("finished_at", { mode: "timestamp_ms" }),
+  },
+  (table) => [index("thread_run_user_id_idx").on(table.userId)],
+);
+
 export const appRelations = defineRelationsPart(
-  { file, byok, threadSettings, topic, user },
+  { file, byok, threadRun, threadSettings, topic, user },
   (r) => ({
     file: {
       topic: r.one.topic({
@@ -139,11 +165,18 @@ export const appRelations = defineRelationsPart(
     },
     user: {
       byoks: r.many.byok(),
+      threadRuns: r.many.threadRun(),
       threadSettings: r.many.threadSettings(),
     },
     threadSettings: {
       user: r.one.user({
         from: r.threadSettings.userId,
+        to: r.user.id,
+      }),
+    },
+    threadRun: {
+      user: r.one.user({
+        from: r.threadRun.userId,
         to: r.user.id,
       }),
     },

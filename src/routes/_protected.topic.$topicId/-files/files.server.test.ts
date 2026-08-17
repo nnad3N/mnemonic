@@ -8,7 +8,7 @@ import { createSafeId, toSafeId } from "@/lib/safe-id";
 import { createVectorKit, VectorError, vectorKit } from "@/lib/vector-kit.server";
 import type { VectorApi } from "@/lib/vector-kit.server";
 import { FILE_EMBEDDINGS_INDEX } from "@/mastra/file-rag-config.server";
-import { FILE_EMBEDDING_DIMENSION } from "@/mastra/models.server";
+import { FILE_EMBEDDING_DIMENSION } from "@/mastra/file-rag-config.server";
 import { libsqlVector } from "@/mastra/storage.server";
 import { clearDatabase } from "@/test/clear-database";
 import { createFakeS3 } from "@/test/fake-s3";

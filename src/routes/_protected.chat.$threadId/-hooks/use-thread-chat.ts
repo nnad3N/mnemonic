@@ -52,9 +52,8 @@ export const threadQueries = {
         const chat = new Chat({
           id: threadId,
           messages,
-          onFinish: ({ isError, messages }) => {
+          onFinish: ({ messages }) => {
             useChatStore.getState().hydrateAttachments(threadId, messages);
-            useChatStore.getState().setThreadIndicator(threadId, isError ? "error" : "ready");
           },
           onError: (error) => {
             console.error(error);
@@ -62,7 +61,6 @@ export const threadQueries = {
           transport: new DefaultChatTransport({
             api: "/api/chat",
             prepareSendMessagesRequest: async ({ messages: requestMessages, ...body }) => {
-              useChatStore.getState().setThreadIndicator(threadId, "pending");
               const settings = await client.ensureQueryData(
                 threadSettingsQueries.byThread(threadId),
               );
@@ -97,6 +95,7 @@ export const useThreadChat = () => {
 
   return useChat({
     chat: data.chat,
+    resume: true,
     // Dense tool-input-delta bursts (e.g. executeCode) otherwise nest
     // synchronous replaceMessage → useSyncExternalStore re-renders past React's limit.
     throttle: 32,

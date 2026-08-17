@@ -49,6 +49,7 @@ Use recall to browse past messages in the current conversation only:
 - mode "search" with query — find relevant messages in the current thread.
 `,
   agents: { webResearch: webResearchAgent },
+  durable: true,
   inputProcessors: [stripNonNativeFilePartsProcessor],
   outputProcessors: [workSegmentTimingProcessor],
   memory: getAgentMemory("thread"),

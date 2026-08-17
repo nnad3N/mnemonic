@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/use-media-query";
 import * as Kit from "@/lib/kit";
+import { useSyncRunStates } from "@/routes/_protected.chat.$threadId/-hooks/use-sync-run-states";
 import { byokQueries } from "@/routes/_protected.settings/-byok.functions";
 
 import { AppHeader } from "./-app-header";
@@ -78,6 +79,7 @@ export const Route = createFileRoute("/_protected")({
 });
 
 function LayoutComponent() {
+  useSyncRunStates();
   const { sidebarOpen, sidebarWidth } = Route.useLoaderData();
 
   return (

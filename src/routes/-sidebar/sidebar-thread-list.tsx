@@ -15,10 +15,10 @@ import { cn } from "@/lib/utils";
 import type { SidebarThread } from "@/routes/-sidebar/sidebar.functions";
 import { sidebarQueries } from "@/routes/-sidebar/sidebar.functions";
 import type { SidebarSearch } from "@/routes/_protected";
+import { threadRunQueries } from "@/routes/_protected.chat.$threadId/-thread-api/thread-run.functions";
+import type { ThreadRunState } from "@/routes/_protected.chat.$threadId/-thread-api/thread-run.server";
 import { ThreadContextMenu } from "@/routes/_protected.chat.$threadId/-thread-components/thread-actions";
 
-import type { ThreadIndicator } from "../-chat-store";
-import { useChatStore } from "../-chat-store";
 import { SidebarGroupEmpty } from "./sidebar-empty";
 import { SidebarThreadsSkeleton } from "./sidebar-skeleton";
 
@@ -71,6 +71,10 @@ export const SidebarThreadList = () => {
     select: (search) => ({ q: search.q, range: search.range, topic: search.topic }),
   });
   const threads = useQuery(sidebarQueries.threads(topic));
+  const runStates = useQuery({
+    ...threadRunQueries.states(),
+    select: (states) => new Map(states.map((state) => [state.threadId, state])),
+  }).data;
   const bounds = resolveDateRange(range);
   const visibleThreads = (threads.data ?? []).filter(
     (thread) => matchesQuery(thread.title, q) && isWithinRange(thread.updatedAt, bounds),
@@ -83,7 +87,7 @@ export const SidebarThreadList = () => {
           {threads.isSuccess ? (
             visibleThreads.map((thread) => (
               <SidebarMenuItem key={thread.id}>
-                <SidebarThreadItem thread={thread} />
+                <SidebarThreadItem runState={runStates?.get(thread.id)} thread={thread} />
               </SidebarMenuItem>
             ))
           ) : (
@@ -101,12 +105,12 @@ export const SidebarThreadList = () => {
 };
 
 type SidebarThreadItemProps = {
+  runState: ThreadRunState | undefined;
   thread: SidebarThread;
 };
 
-const SidebarThreadItem = ({ thread }: SidebarThreadItemProps) => {
+const SidebarThreadItem = ({ runState, thread }: SidebarThreadItemProps) => {
   const locale = useLocale();
-  const indicator = useChatStore((state) => state.threadIndicators.get(thread.id));
 
   return (
     <ThreadContextMenu
@@ -116,13 +120,15 @@ const SidebarThreadItem = ({ thread }: SidebarThreadItemProps) => {
     >
       {(isActive) => (
         <>
-          <span className={cn("min-w-0 flex-1 truncate", indicator === "pending" && "shimmer")}>
+          <span
+            className={cn("min-w-0 flex-1 truncate", runState?.status === "running" && "shimmer")}
+          >
             {thread.title}
           </span>
           <ThreadTrailing
-            indicator={indicator}
             isActive={isActive}
             locale={locale}
+            runState={runState}
             updatedAt={thread.updatedAt}
           />
         </>
@@ -168,19 +174,33 @@ const formatLastActive = (locale: string, updatedAt: string) => {
   return duration.format({ days: Math.floor(elapsed / DAY_SECONDS) });
 };
 
+const isUnseen = (runState: ThreadRunState | undefined) => {
+  if (runState?.finishedAt == null) {
+    return false;
+  }
+
+  if (runState.viewedAt === null) {
+    return true;
+  }
+
+  return runState.finishedAt > runState.viewedAt;
+};
+
 type ThreadTrailingProps = {
-  indicator: ThreadIndicator | undefined;
   isActive: boolean;
   locale: string;
+  runState: ThreadRunState | undefined;
   updatedAt: string;
 };
 
-const ThreadTrailing = ({ indicator, isActive, locale, updatedAt }: ThreadTrailingProps) => {
-  if (!isActive && indicator === "ready") {
+const ThreadTrailing = ({ isActive, locale, runState, updatedAt }: ThreadTrailingProps) => {
+  const unseen = !isActive && isUnseen(runState);
+
+  if (unseen && runState?.status === "finished") {
     return <CircleIcon className="size-1.5 shrink-0 text-f-blue" />;
   }
 
-  if (!isActive && indicator === "error") {
+  if (unseen) {
     return <AlertCircleIcon className="size-1.5 shrink-0 text-f-red" />;
   }
 

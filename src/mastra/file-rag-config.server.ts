@@ -1,9 +1,12 @@
 import { MockEmbeddingModelV3 } from "ai/test";
 
-import { FILE_EMBEDDING_DIMENSION, getEmbeddingModel } from "@/mastra/models.server";
+import { getEmbeddingModel } from "@/mastra/models.server";
 
 /** Physical index name; includes embedder id so model changes can reindex into a new index. */
 export const FILE_EMBEDDINGS_INDEX = "file_embeddings_v001";
+
+/** Qwen3 Embedding 8B native output size. */
+export const FILE_EMBEDDING_DIMENSION = 4096;
 
 export const getFileEmbeddingModel = (apiKey: string) => {
   if (process.env.VITEST === "true") {

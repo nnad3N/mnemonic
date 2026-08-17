@@ -1,7 +1,7 @@
 import { createGraphRAGTool } from "@mastra/rag";
 
 import { FILE_EMBEDDINGS_INDEX, getFileEmbeddingModel } from "@/mastra/file-rag-config.server";
-import { FILE_EMBEDDING_DIMENSION } from "@/mastra/models.server";
+import { FILE_EMBEDDING_DIMENSION } from "@/mastra/file-rag-config.server";
 
 import { VECTOR_STORE_NAME } from "../storage.server";
 
