@@ -2,7 +2,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { produce } from "immer";
 
 import { sidebarQueries } from "@/routes/-sidebar/sidebar.functions";
-export { sanitizeTitle } from "../-thread-api/thread.server";
 
 import { createThreadTitle } from "../-thread-api/thread.functions";
 

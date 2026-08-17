@@ -3,7 +3,7 @@ import type { ProcessOutputStreamArgs, ProcessorStreamWriter } from "@mastra/cor
 import type { ChunkType } from "@mastra/core/stream";
 import { describe, expect, it, vi } from "vitest";
 
-import { workSegmentTimingProcessor } from "./work-segment-timing.server";
+import { workSegmentTimingProcessor } from "./work-segment-timing";
 
 const createCustomMock = () => vi.fn<ProcessorStreamWriter["custom"]>();
 
