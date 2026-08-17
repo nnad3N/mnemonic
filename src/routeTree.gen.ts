@@ -13,6 +13,7 @@ import { Route as OfflineRouteImport } from './routes/offline'
 import { Route as ProtectedRouteImport } from './routes/_protected'
 import { Route as AuthRouteRouteImport } from './routes/_auth/route'
 import { Route as ProtectedIndexRouteImport } from './routes/_protected.index'
+import { Route as ApiRunEventsRouteImport } from './routes/api/run-events'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ProtectedSettingsRouteImport } from './routes/_protected.settings'
 import { Route as AuthSignUpRouteImport } from './routes/_auth/sign-up'
@@ -43,6 +44,11 @@ const ProtectedIndexRoute = ProtectedIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => ProtectedRoute,
+} as any)
+const ApiRunEventsRoute = ApiRunEventsRouteImport.update({
+  id: '/api/run-events',
+  path: '/api/run-events',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
@@ -118,6 +124,7 @@ export interface FileRoutesByFullPath {
   '/sign-up': typeof AuthSignUpRoute
   '/settings': typeof ProtectedSettingsRoute
   '/api/chat': typeof ApiChatRouteWithChildren
+  '/api/run-events': typeof ApiRunEventsRoute
   '/chat/$threadId': typeof ProtectedChatThreadIdRouteRouteWithChildren
   '/topic/$topicId': typeof ProtectedTopicTopicIdRouteRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -134,6 +141,7 @@ export interface FileRoutesByTo {
   '/sign-up': typeof AuthSignUpRoute
   '/settings': typeof ProtectedSettingsRoute
   '/api/chat': typeof ApiChatRouteWithChildren
+  '/api/run-events': typeof ApiRunEventsRoute
   '/topic/$topicId': typeof ProtectedTopicTopicIdRouteRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/topic/$topicId/files': typeof ProtectedTopicTopicIdFilesRoute
@@ -151,6 +159,7 @@ export interface FileRoutesById {
   '/_auth/sign-up': typeof AuthSignUpRoute
   '/_protected/settings': typeof ProtectedSettingsRoute
   '/api/chat': typeof ApiChatRouteWithChildren
+  '/api/run-events': typeof ApiRunEventsRoute
   '/_protected/': typeof ProtectedIndexRoute
   '/_protected/chat/$threadId': typeof ProtectedChatThreadIdRouteRouteWithChildren
   '/_protected/topic/$topicId': typeof ProtectedTopicTopicIdRouteRouteWithChildren
@@ -170,6 +179,7 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/settings'
     | '/api/chat'
+    | '/api/run-events'
     | '/chat/$threadId'
     | '/topic/$topicId'
     | '/api/auth/$'
@@ -186,6 +196,7 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/settings'
     | '/api/chat'
+    | '/api/run-events'
     | '/topic/$topicId'
     | '/api/auth/$'
     | '/topic/$topicId/files'
@@ -202,6 +213,7 @@ export interface FileRouteTypes {
     | '/_auth/sign-up'
     | '/_protected/settings'
     | '/api/chat'
+    | '/api/run-events'
     | '/_protected/'
     | '/_protected/chat/$threadId'
     | '/_protected/topic/$topicId'
@@ -218,6 +230,7 @@ export interface RootRouteChildren {
   ProtectedRoute: typeof ProtectedRouteWithChildren
   OfflineRoute: typeof OfflineRoute
   ApiChatRoute: typeof ApiChatRouteWithChildren
+  ApiRunEventsRoute: typeof ApiRunEventsRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -250,6 +263,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof ProtectedIndexRouteImport
       parentRoute: typeof ProtectedRoute
+    }
+    '/api/run-events': {
+      id: '/api/run-events'
+      path: '/api/run-events'
+      fullPath: '/api/run-events'
+      preLoaderRoute: typeof ApiRunEventsRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/chat': {
       id: '/api/chat'
@@ -418,6 +438,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProtectedRoute: ProtectedRouteWithChildren,
   OfflineRoute: OfflineRoute,
   ApiChatRoute: ApiChatRouteWithChildren,
+  ApiRunEventsRoute: ApiRunEventsRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

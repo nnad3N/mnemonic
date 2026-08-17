@@ -167,7 +167,6 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
     }
 
     const published = await ctx.durableAgents.publishRunEvent({
-      finishedAt,
       runId,
       status,
       threadId,
@@ -250,7 +249,6 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
   );
 
   const published = await ctx.durableAgents.publishRunEvent({
-    finishedAt: null,
     runId,
     status: "running",
     threadId,

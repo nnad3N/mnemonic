@@ -1,13 +1,11 @@
-import { EventEmitter, on } from "node:events";
-
 import { queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
-import { getRequest } from "@tanstack/react-start/server";
 import { matchError, Result } from "better-result";
+import { and, eq, ne } from "drizzle-orm";
 
-import { threadSettings } from "@/db/schema.server";
+import { threadRun } from "@/db/schema.server";
 import { dbKit } from "@/lib/db-kit.server";
-import { durableAgentsKit, type ThreadRunEvent } from "@/lib/durable-agents-kit.server";
+import { durableAgentsKit } from "@/lib/durable-agents-kit.server";
 import { ServerFnError, toServerFnError } from "@/lib/errors/server-fn-error";
 import * as Kit from "@/lib/kit";
 import { threadAccessMiddleware } from "@/lib/middleware/assert-thread-access.middleware";
@@ -24,31 +22,6 @@ export const threadRunQueries = {
     }),
 };
 
-export const streamThreadRunEvents = createServerFn({ method: "GET" })
-  .middleware([authMiddleware])
-  .handler(async function* ({ context }) {
-    const emitter = new EventEmitter<{ event: [ThreadRunEvent] }>();
-
-    const subscribed = await Kit.get(durableAgentsKit).subscribeRunEvents({
-      onEvent: (event) => {
-        emitter.emit("event", event);
-      },
-      userId: context.user.id,
-    });
-
-    if (Result.isError(subscribed)) {
-      throw toServerFnError.serverError("Failed to subscribe to thread run events");
-    }
-
-    try {
-      for await (const [event] of on(emitter, "event", { signal: getRequest().signal })) {
-        yield event;
-      }
-    } finally {
-      await subscribed.value();
-    }
-  });
-
 const threadStatesCtx = Kit.createContext(dbKit, durableAgentsKit);
 
 export const getThreadStates = createServerFn({ method: "GET" })
@@ -64,27 +37,17 @@ export const getThreadStates = createServerFn({ method: "GET" })
     ),
   );
 
-export const markThreadViewed = createServerFn({ method: "POST" })
+export const deleteThreadRun = createServerFn({ method: "POST" })
   .middleware([threadAccessMiddleware])
   .handler(async ({ context }) => {
-    const viewedAt = new Date();
-
     const result = await Kit.get(dbKit).run((db) =>
       db
-        .insert(threadSettings)
-        .values({
-          threadId: context.thread.id,
-          userId: context.user.id,
-          viewedAt,
-        })
-        .onConflictDoUpdate({
-          target: threadSettings.threadId,
-          set: { viewedAt },
-        }),
+        .delete(threadRun)
+        .where(and(eq(threadRun.threadId, context.thread.id), ne(threadRun.status, "running"))),
     );
 
     if (Result.isError(result)) {
-      throw toServerFnError.serverError("Failed to mark conversation as viewed");
+      throw toServerFnError.serverError("Failed to dismiss the conversation run");
     }
   });
 

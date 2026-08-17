@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { T, useLocale } from "gt-tanstack-start";
-import { AlertCircleIcon, CircleIcon } from "lucide-react";
+import { CircleIcon } from "lucide-react";
 
 import {
   SidebarGroup,
@@ -174,18 +174,6 @@ const formatLastActive = (locale: string, updatedAt: string) => {
   return duration.format({ days: Math.floor(elapsed / DAY_SECONDS) });
 };
 
-const isUnseen = (runState: ThreadRunState | undefined) => {
-  if (runState?.finishedAt == null) {
-    return false;
-  }
-
-  if (runState.viewedAt === null) {
-    return true;
-  }
-
-  return runState.finishedAt > runState.viewedAt;
-};
-
 type ThreadTrailingProps = {
   isActive: boolean;
   locale: string;
@@ -194,14 +182,14 @@ type ThreadTrailingProps = {
 };
 
 const ThreadTrailing = ({ isActive, locale, runState, updatedAt }: ThreadTrailingProps) => {
-  const unseen = !isActive && isUnseen(runState);
+  const unseen = !isActive && runState && runState.status !== "running";
 
-  if (unseen && runState?.status === "finished") {
+  if (unseen && runState.status === "finished") {
     return <CircleIcon className="size-1.5 shrink-0 text-f-blue" />;
   }
 
   if (unseen) {
-    return <AlertCircleIcon className="size-1.5 shrink-0 text-f-red" />;
+    return <CircleIcon className="size-1.5 shrink-0 text-f-red" />;
   }
 
   return (

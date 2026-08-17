@@ -56,7 +56,6 @@ export type RunTiming = {
 };
 
 export type ThreadRunEvent = {
-  finishedAt: Date | null;
   status: ThreadRunStatus;
   threadId: string;
 };
@@ -133,12 +132,12 @@ export const durableAgentsKit = createDurableAgentsKit({
       catch: (cause) =>
         new DurableAgentsError({ cause, message: "Failed to publish the cancel event" }),
     }),
-  publishRunEvent: async ({ finishedAt, runId, status, threadId, userId }) =>
+  publishRunEvent: async ({ runId, status, threadId, userId }) =>
     Result.tryPromise({
       try: async () =>
         durableAgentsPubsub.publish(getUserThreadsTopic(userId), {
           type: "thread-run",
-          data: { finishedAt, status, threadId } satisfies ThreadRunEvent,
+          data: { status, threadId } satisfies ThreadRunEvent,
           runId,
         }),
       catch: (cause) =>
@@ -172,11 +171,15 @@ export const durableAgentsKit = createDurableAgentsKit({
       // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- `publishRunTiming` owns this topic.
       onTiming(event.data as RunTiming);
     }),
-  subscribeRunEvents: async ({ onEvent, userId }) =>
-    subscribe(getUserThreadsTopic(userId), (event) => {
+  subscribeRunEvents: async ({ onEvent, userId }) => {
+    const subscribedAt = Date.now();
+
+    return subscribe(getUserThreadsTopic(userId), (event) => {
+      if (event.createdAt.getTime() < subscribedAt) return;
       // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- `publishRunEvent` owns this topic.
       onEvent(event.data as ThreadRunEvent);
-    }),
+    });
+  },
 });
 
 export type DurableAgentsKit = typeof durableAgentsKit;

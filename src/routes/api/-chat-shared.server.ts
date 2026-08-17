@@ -3,7 +3,7 @@ import type { DurableAgentStreamResult } from "@mastra/core/agent/durable";
 import type { InferUIMessageChunk } from "ai";
 import { createUIMessageStream } from "ai";
 import { Result, TaggedError } from "better-result";
-import { inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
 import { threadRun } from "@/db/schema.server";
 import type { DbKit } from "@/lib/db-kit.server";
@@ -30,7 +30,7 @@ type ReconcileRunsCtx = Kits<[DbKit, DurableAgentsKit]>;
 /**
  * A run that dies with its process never reaches its terminal callback, so its row stays
  * `running` with nothing left to flip it. Settled at read time rather than by a boot job so
- * nothing depends on a process outliving anything. Returns the run ids that turned out dead.
+ * nothing depends on a process outliving anything. Returns the run ids it interrupted.
  */
 export const reconcileRuns = Kit.gen(async function* (ctx: ReconcileRunsCtx, runs: Run[]) {
   if (runs.length === 0) {
@@ -54,20 +54,19 @@ export const reconcileRuns = Kit.gen(async function* (ctx: ReconcileRunsCtx, run
     return Result.ok(dead);
   }
 
-  const finishedAt = new Date();
-
-  yield* await ctx.db.run((db) =>
+  // A run that settled between the DB read and here already wrote its own status.
+  const interrupted = yield* await ctx.db.run((db) =>
     db
       .update(threadRun)
-      .set({ status: "interrupted", finishedAt })
-      .where(inArray(threadRun.runId, dead)),
+      .set({ status: "interrupted", finishedAt: new Date() })
+      .where(and(inArray(threadRun.runId, dead), eq(threadRun.status, "running")))
+      .returning({ runId: threadRun.runId }),
   );
 
   for (const run of runs) {
-    if (dead.includes(run.runId)) {
+    if (interrupted.some(({ runId }) => runId === run.runId)) {
       const published = await ctx.durableAgents.publishRunEvent({
         ...run,
-        finishedAt,
         status: "interrupted",
       });
 
@@ -77,7 +76,7 @@ export const reconcileRuns = Kit.gen(async function* (ctx: ReconcileRunsCtx, run
     }
   }
 
-  return Result.ok(dead);
+  return Result.ok(interrupted.map(({ runId }) => runId));
 });
 
 type SentTiming = { ends: number; startedAt?: string };

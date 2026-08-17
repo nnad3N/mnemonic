@@ -109,9 +109,6 @@ export const threadSettings = sqliteTable("thread_settings", {
     .notNull()
     .default(DEFAULT_MODEL_CAPABILITY),
 
-  /** Compared against `threadRun.finishedAt` to decide whether a finished run is still unseen. */
-  viewedAt: integer("viewed_at", { mode: "timestamp_ms" }),
-
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" })
     .notNull()
