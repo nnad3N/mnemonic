@@ -69,24 +69,29 @@ Kit tagged errors are the TypeScript analogue of `thiserror` types with
 `message`.
 
 ```ts
-// Good — stable Display, cause preserved for logs/debugging
-const toMemoryError = (cause: unknown): MemoryError =>
-  new MemoryError({
-    cause,
-    message: "Memory operation failed",
-  });
+// Good — stable Display naming the operation, cause preserved for logs/debugging
+Result.tryPromise({
+  try: async () => memory.deleteThread(id),
+  catch: (cause) => new MemoryError({ cause, message: "Failed to delete the thread" }),
+});
 
 // Bad — flattens the source into the wrapper's Display
 new MemoryError({
   cause,
-  message: cause instanceof Error ? cause.message : "Memory operation failed",
+  message: cause instanceof Error ? cause.message : "Failed to delete the thread",
 });
+
+// Bad — one helper, one message for every operation in the kit
+const toMemoryError = (cause: unknown) =>
+  new MemoryError({ cause, message: "Memory operation failed" });
 ```
 
 Rules:
 
-- Wrap catch handlers always use a constant domain string
-  (`"Database operation failed"`, `"S3 operation failed"`, …).
+- Wrap catch handlers use a constant string that names the failed operation,
+  written inline at each call site (`"Failed to delete the thread"`,
+  `"Failed to upsert file embeddings"`, …); no shared `toXError` helper with a
+  generic message.
 - Keep structured metadata from SDKs when useful (`code`, `requestId`,
   `statusCode` on `S3Error`) — that is not the same as copying Display text.
 - Kits should not `throw` the same tagged error their catch maps to. Return

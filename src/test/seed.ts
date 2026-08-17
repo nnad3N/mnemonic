@@ -40,7 +40,7 @@ export const seedUser = async (overrides?: { id?: string; email?: string; name?:
 export const seedByok = async (input: {
   userId: SafeId<"user">;
   key?: string;
-  active?: boolean;
+  activatedAt?: Date | null;
 }) => {
   const id = createSafeId<"byok">();
   const key = input.key ?? "sk-or-v1-test";
@@ -56,7 +56,7 @@ export const seedByok = async (input: {
       userId: input.userId,
       value: value.value,
       keyPreview: `…${key.slice(-4)}`,
-      active: input.active ?? true,
+      activatedAt: input.activatedAt ?? new Date(),
     }),
   );
 

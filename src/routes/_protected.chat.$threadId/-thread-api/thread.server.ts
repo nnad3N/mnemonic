@@ -5,7 +5,7 @@ import { Result } from "better-result";
 import { eq, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
-import { file, threadSettings, topic } from "@/db/schema.server";
+import { file, threadRun, threadSettings, topic } from "@/db/schema.server";
 import type { DbKit } from "@/lib/db-kit.server";
 import { toServerFnError } from "@/lib/errors/server-fn-error";
 import * as Kit from "@/lib/kit";
@@ -98,6 +98,12 @@ export const deleteTopicFn = Kit.gen(async function* (
           threads.map((thread) => thread.id),
         ),
       ),
+      tx.delete(threadRun).where(
+        inArray(
+          threadRun.threadId,
+          threads.map((thread) => thread.id),
+        ),
+      ),
       tx.delete(topic).where(eq(topic.id, input.topicId)),
     ]),
   );
@@ -119,8 +125,11 @@ export const deleteConversationFn = Kit.gen(async function* (
     threadId: input.threadId,
   });
 
-  yield* await ctx.db.run((db) =>
-    db.delete(threadSettings).where(eq(threadSettings.threadId, input.threadId)),
+  yield* await ctx.db.transaction(async (tx) =>
+    Promise.all([
+      tx.delete(threadSettings).where(eq(threadSettings.threadId, input.threadId)),
+      tx.delete(threadRun).where(eq(threadRun.threadId, input.threadId)),
+    ]),
   );
 
   return Result.ok({ id: input.threadId });

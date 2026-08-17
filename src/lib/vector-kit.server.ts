@@ -10,12 +10,6 @@ export class VectorError extends TaggedError("VectorError")<{
   message: string;
 }> {}
 
-const toVectorError = (cause: unknown): VectorError =>
-  new VectorError({
-    cause,
-    message: "Vector operation failed",
-  });
-
 type DeleteVectorsParams = Parameters<typeof libsqlVector.deleteVectors>[0];
 type CreateIndexInput = Omit<Parameters<typeof libsqlVector.createIndex>[0], "indexName">;
 type UpsertInput = Omit<Parameters<typeof libsqlVector.upsert>[0], "indexName">;
@@ -41,7 +35,8 @@ export const vectorKit = createVectorKit({
           indexName: FILE_EMBEDDINGS_INDEX,
         });
       },
-      catch: toVectorError,
+      catch: (cause) =>
+        new VectorError({ cause, message: "Failed to create the file embeddings index" }),
     }),
   deleteVectors: async (input) =>
     Result.tryPromise({
@@ -51,7 +46,7 @@ export const vectorKit = createVectorKit({
           filter: input.filter,
         });
       },
-      catch: toVectorError,
+      catch: (cause) => new VectorError({ cause, message: "Failed to delete file embeddings" }),
     }),
   upsert: async (input) =>
     Result.tryPromise({
@@ -61,7 +56,7 @@ export const vectorKit = createVectorKit({
           indexName: FILE_EMBEDDINGS_INDEX,
         });
       },
-      catch: toVectorError,
+      catch: (cause) => new VectorError({ cause, message: "Failed to upsert file embeddings" }),
     }),
 });
 

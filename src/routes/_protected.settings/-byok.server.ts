@@ -1,5 +1,5 @@
 import { Result } from "better-result";
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, isNotNull, ne } from "drizzle-orm";
 
 import { byok } from "@/db/schema.server";
 import type { DbKit } from "@/lib/db-kit.server";
@@ -18,14 +18,14 @@ export const listByokFn = Kit.gen(async function* (ctx: ByokCtx, userId: SafeId<
   const rows = yield* await ctx.db.run((db) =>
     db.query.byok.findMany({
       where: { userId },
-      columns: { active: true, createdAt: true, id: true, keyPreview: true, name: true },
+      columns: { activatedAt: true, createdAt: true, id: true, keyPreview: true, name: true },
       orderBy: { createdAt: "asc" },
     }),
   );
 
   return Result.ok(
     rows.map((row) => ({
-      active: row.active,
+      activatedAt: row.activatedAt,
       createdAt: row.createdAt,
       id: rawId(row.id),
       keyPreview: row.keyPreview,
@@ -56,7 +56,7 @@ export const createByokFn = Kit.gen(async function* (ctx: ByokCtx, input: Create
 
   yield* await ctx.db.run((db) =>
     db.insert(byok).values({
-      active: existing === undefined,
+      activatedAt: existing === undefined ? new Date() : null,
       id,
       keyPreview: keyPreviewFromSecret(input.key),
       name: input.name,
@@ -99,7 +99,7 @@ export const deleteByokFn = Kit.gen(async function* (ctx: ByokCtx, input: Delete
   const row = yield* await ctx.db.run((db) =>
     db.query.byok.findFirst({
       where: { id: input.id, userId: input.userId },
-      columns: { active: true, id: true },
+      columns: { activatedAt: true, id: true },
     }),
   );
 
@@ -107,7 +107,7 @@ export const deleteByokFn = Kit.gen(async function* (ctx: ByokCtx, input: Delete
     return Result.err(toServerFnError.notFound("API key not found"));
   }
 
-  if (row.active) {
+  if (row.activatedAt !== null) {
     const other = yield* await ctx.db.run((db) =>
       db
         .select({ id: byok.id })
@@ -137,7 +137,7 @@ export const activateByokFn = Kit.gen(async function* (ctx: ByokCtx, input: Acti
   const row = yield* await ctx.db.run((db) =>
     db.query.byok.findFirst({
       where: { id: input.id, userId: input.userId },
-      columns: { active: true, id: true },
+      columns: { activatedAt: true, id: true },
     }),
   );
 
@@ -145,19 +145,19 @@ export const activateByokFn = Kit.gen(async function* (ctx: ByokCtx, input: Acti
     return Result.err(toServerFnError.notFound("API key not found"));
   }
 
-  if (row.active) {
+  if (row.activatedAt !== null) {
     return Result.ok();
   }
 
   yield* await ctx.db.transaction(async (tx) => {
     await tx
       .update(byok)
-      .set({ active: false })
-      .where(and(eq(byok.userId, input.userId), eq(byok.active, true)));
+      .set({ activatedAt: null })
+      .where(and(eq(byok.userId, input.userId), isNotNull(byok.activatedAt)));
 
     await tx
       .update(byok)
-      .set({ active: true })
+      .set({ activatedAt: new Date() })
       .where(and(eq(byok.id, input.id), eq(byok.userId, input.userId)));
   });
 

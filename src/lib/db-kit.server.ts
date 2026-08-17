@@ -12,12 +12,6 @@ export class DatabaseError extends TaggedError("DatabaseError")<{
   message: string;
 }> {}
 
-const toDatabaseError = (cause: unknown): DatabaseError =>
-  new DatabaseError({
-    cause,
-    message: "Database operation failed",
-  });
-
 export type DbApi = {
   run: <TValue>(
     operation: (db: DrizzleDb) => Promise<TValue>,
@@ -33,12 +27,12 @@ export const dbKit = createDbKit({
   run: async (operation) =>
     Result.tryPromise({
       try: async () => operation(drizzleDb),
-      catch: toDatabaseError,
+      catch: (cause) => new DatabaseError({ cause, message: "Database query failed" }),
     }),
   transaction: async (operation) =>
     Result.tryPromise({
       try: async () => drizzleDb.transaction(async (tx) => operation(tx)),
-      catch: toDatabaseError,
+      catch: (cause) => new DatabaseError({ cause, message: "Database transaction failed" }),
     }),
 });
 

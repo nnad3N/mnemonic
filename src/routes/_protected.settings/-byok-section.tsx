@@ -159,7 +159,7 @@ const ByokRow = ({ item, itemCount }: ByokRowProps) => {
   const router = useRouter();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
-  const canDelete = !(item.active && itemCount > 1);
+  const canDelete = item.activatedAt === null || itemCount === 1;
 
   const renameKey = useMutation({
     mutationFn: async (name: string) => renameMyByok({ data: { id: item.id, name } }),
@@ -222,7 +222,7 @@ const ByokRow = ({ item, itemCount }: ByokRowProps) => {
                 {item.name}
               </span>
             )}
-            {item.active && (
+            {item.activatedAt !== null && (
               <Badge variant="outline">
                 <T>Active</T>
               </Badge>
@@ -255,7 +255,7 @@ const ByokRow = ({ item, itemCount }: ByokRowProps) => {
                 <PencilIcon />
                 <T>Rename</T>
               </DropdownMenuItem>
-              {!item.active && (
+              {item.activatedAt === null && (
                 <DropdownMenuItem
                   disabled={activateKey.isPending}
                   onClick={() => {
@@ -288,7 +288,7 @@ const ByokRow = ({ item, itemCount }: ByokRowProps) => {
               <T>Delete API key?</T>
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {item.active && itemCount === 1 ? (
+              {item.activatedAt !== null && itemCount === 1 ? (
                 <T>The assistant cannot answer without an API key.</T>
               ) : (
                 <T>This removes the key from your account.</T>

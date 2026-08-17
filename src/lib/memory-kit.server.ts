@@ -30,12 +30,6 @@ export class MemoryError extends TaggedError("MemoryError")<{
   message: string;
 }> {}
 
-const toMemoryError = (cause: unknown): MemoryError =>
-  new MemoryError({
-    cause,
-    message: "Memory operation failed",
-  });
-
 export type MemoryApi = {
   clearResourceObservations: (input: {
     resourceId: string;
@@ -125,17 +119,18 @@ export const memoryKit = createMemoryKit({
         await memoryStore.clearObservationalMemory(null, resourceId);
         await deleteObservationVectors({ resource_id: resourceId });
       },
-      catch: toMemoryError,
+      catch: (cause) =>
+        new MemoryError({ cause, message: "Failed to clear the resource observations" }),
     }),
   deleteMessages: async ({ messageIds }) =>
     Result.tryPromise({
       try: async () => memory.deleteMessages(messageIds),
-      catch: toMemoryError,
+      catch: (cause) => new MemoryError({ cause, message: "Failed to delete messages" }),
     }),
   listThreads: async (input) =>
     Result.tryPromise({
       try: async () => memory.listThreads(input),
-      catch: toMemoryError,
+      catch: (cause) => new MemoryError({ cause, message: "Failed to list threads" }),
     }),
   deleteThread: async ({ threadId }) =>
     Result.tryPromise({
@@ -149,12 +144,12 @@ export const memoryKit = createMemoryKit({
           }),
         );
       },
-      catch: toMemoryError,
+      catch: (cause) => new MemoryError({ cause, message: "Failed to delete the thread" }),
     }),
   getThreadById: async (input) =>
     Result.tryPromise({
       try: async () => memory.getThreadById(input),
-      catch: toMemoryError,
+      catch: (cause) => new MemoryError({ cause, message: "Failed to load the thread" }),
     }),
   listMessages: async (input) =>
     Result.tryPromise({
@@ -162,17 +157,17 @@ export const memoryKit = createMemoryKit({
         const memoryStore = await getMemoryStore();
         return memoryStore.listMessages(input);
       },
-      catch: toMemoryError,
+      catch: (cause) => new MemoryError({ cause, message: "Failed to list messages" }),
     }),
   saveMessages: async ({ messages }) =>
     Result.tryPromise({
       try: async () => memory.saveMessages({ messages }),
-      catch: toMemoryError,
+      catch: (cause) => new MemoryError({ cause, message: "Failed to save messages" }),
     }),
   saveThread: async (input) =>
     Result.tryPromise({
       try: async () => memory.saveThread(input),
-      catch: toMemoryError,
+      catch: (cause) => new MemoryError({ cause, message: "Failed to save the thread" }),
     }),
   updateMessageMetadata: async ({ id, metadata }) =>
     Result.tryPromise({
@@ -197,12 +192,13 @@ export const memoryKit = createMemoryKit({
           ],
         });
       },
-      catch: toMemoryError,
+      catch: (cause) =>
+        new MemoryError({ cause, message: "Failed to update the message metadata" }),
     }),
   updateThread: async (input) =>
     Result.tryPromise({
       try: async () => memory.updateThread(input),
-      catch: toMemoryError,
+      catch: (cause) => new MemoryError({ cause, message: "Failed to update the thread" }),
     }),
 });
 

@@ -38,7 +38,7 @@ export const byokQueries = {
 const byokCtx = Kit.createContext(dbKit);
 
 export type ByokItem = {
-  active: boolean;
+  activatedAt: Date | null;
   createdAt: Date;
   id: string;
   keyPreview: string;

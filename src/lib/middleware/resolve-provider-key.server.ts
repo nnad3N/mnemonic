@@ -15,7 +15,7 @@ type Ctx = Kits<[DbKit]>;
 export const resolveProviderKey = Kit.gen(async function* (ctx: Ctx, userId: SafeId<"user">) {
   const byok = yield* await ctx.db.run((db) =>
     db.query.byok.findFirst({
-      where: { userId, active: true },
+      where: { userId, activatedAt: { isNotNull: true } },
       columns: { id: true, value: true },
     }),
   );

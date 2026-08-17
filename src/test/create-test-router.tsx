@@ -49,7 +49,7 @@ export const createTestRouter = ({ queryClient, session, user }: CreateTestRoute
   queryClient.setQueryData(sidebarQueries.topics().queryKey, []);
   queryClient.setQueryData(byokQueries.mine().queryKey, [
     {
-      active: true,
+      activatedAt: new Date("2026-01-01T00:00:00.000Z"),
       createdAt: new Date("2026-01-01T00:00:00.000Z"),
       id: "byok_test",
       keyPreview: "test",

@@ -147,6 +147,7 @@ export const byokQueries = {
 - Prefer early returns over nested conditionals for error cases
 - **Never render raw error messages in client UI** — do not display `error.message`, provider/API payloads, stack traces, or other server-derived text. Show user-safe copy via GT translations or an error-code lookup (see [`src/lib/errors/auth-error.ts`](src/lib/errors/auth-error.ts)); log details server-side for debugging
 - **Kit infra errors** — fixed domain `message` + `cause`; never copy `cause.message` into the wrapper. See [`.agents/architecture/kit-services.md`](.agents/architecture/kit-services.md) (Kit errors).
+- **One message per failure site** — construct the tagged error inline in each `catch` with a message naming the operation that failed (`"Failed to delete the thread"`), not through a shared `toXError` helper with one generic message for the whole kit. A generic `"Memory operation failed"` tells a log reader nothing about which call failed.
 
 ### Better Result and Kit patterns
 
@@ -503,6 +504,10 @@ Use GT with `gt-tanstack-start` throughout the app. Import `useGT`, `useLocale`,
 - Reuse the same English source string for shared UI words (“Cancel”, “Delete”, “Search”, …) instead of inventing near-duplicate copy.
 
 ---
+
+## Database schema
+
+- **Dates over booleans.** Model a state that flips at a point in time as a nullable timestamp (`activatedAt`, `finishedAt`, `verifiedAt`), not a boolean (`active`, `finished`, `verified`). `IS NOT NULL` gives the same predicate and index, and the column also records *when* it happened, which a boolean throws away.
 
 ## Dates (Temporal)
 

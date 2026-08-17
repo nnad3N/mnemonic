@@ -1,4 +1,4 @@
-import { defineRelationsPart, sql } from "drizzle-orm";
+import { defineRelationsPart, isNotNull } from "drizzle-orm";
 import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { nanoid } from "nanoid";
 
@@ -81,7 +81,7 @@ export const byok = sqliteTable(
     /** Encrypted with `encryptSecret`; never returned to the client. */
     value: text("value").notNull(),
     keyPreview: text("key_preview").notNull(),
-    active: integer("active", { mode: "boolean" }).notNull().default(false),
+    activatedAt: integer("activated_at", { mode: "timestamp_ms" }),
 
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" })
@@ -91,9 +91,7 @@ export const byok = sqliteTable(
   },
   (table) => [
     index("byok_userId_idx").on(table.userId),
-    uniqueIndex("byok_one_active_per_user")
-      .on(table.userId)
-      .where(sql`${table.active} = 1`),
+    uniqueIndex("byok_one_active_per_user").on(table.userId).where(isNotNull(table.activatedAt)),
   ],
 );
 

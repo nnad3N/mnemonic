@@ -90,7 +90,7 @@ const createFailingVectorKit = () => {
       Promise.resolve(
         Result.err(
           new VectorError({
-            message: "Vector operation failed",
+            message: "Failed to delete file embeddings",
             cause: new Error("forced vector failure"),
           }),
         ),
@@ -110,7 +110,7 @@ const createFailingMemoryKit = () => {
       Promise.resolve(
         Result.err(
           new MemoryError({
-            message: "Memory operation failed",
+            message: "Failed to delete the thread",
             cause: new Error("forced memory failure"),
           }),
         ),
