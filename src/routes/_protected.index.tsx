@@ -59,7 +59,9 @@ const Onboarding = () => {
   const createKey = useMutation({
     mutationFn: async (input: { key: string; name: string }) => {
       await createMyByok({ data: { key: input.key, name: input.name } });
-      await queryClient.invalidateQueries({ queryKey: byokQueries.all() });
+      // Nothing observes byokQueries.mine() here, so the _protected gate would
+      // read the stale empty list and bounce us back to "/".
+      await queryClient.invalidateQueries({ queryKey: byokQueries.all(), refetchType: "all" });
       const conversation = await getOrCreateLatestConversation();
 
       if (conversation.created) {
