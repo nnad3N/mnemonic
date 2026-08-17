@@ -217,15 +217,31 @@ export const useComposerActions = (location: ThreadInputLocation) => {
   };
 
   const stopStream = async () => {
-    // Optimistic: drop the client stream first so the UI settles at once, then cancel the run
-    // server-side. If that fails the run is still going, so reattach rather than leave the user
-    // looking at a stopped view of a live run.
+    // Optimistic: close the open work and drop the client stream first so the UI settles at
+    // once, then cancel the run server-side. The dropped stream would have carried the run's
+    // end, so it is closed here with the client's clock; the settled run replaces it on the
+    // next load. If the cancel fails the run is still going, so undo and reattach rather than
+    // leave the user looking at a stopped view of a live run.
+    const setWorkEndedAt = (update: (workEndedAt: string[]) => string[]) => {
+      chat.setMessages((messages) =>
+        produce(messages, (draft) => {
+          const last = draft.findLast((message) => message.role === "assistant");
+
+          if (last?.metadata?.type === "assistant") {
+            last.metadata.workEndedAt = update(last.metadata.workEndedAt ?? []);
+          }
+        }),
+      );
+    };
+
+    setWorkEndedAt((workEndedAt) => [...workEndedAt, Temporal.Now.instant().toString()]);
     await chat.stop();
 
     const stopped = await Result.tryPromise(async () => stopThreadRun({ data: { threadId } }));
 
     if (Result.isError(stopped)) {
       await chat.resumeStream();
+      setWorkEndedAt((workEndedAt) => workEndedAt.slice(0, -1));
       return;
     }
 

@@ -65,6 +65,10 @@ function RouteComponent() {
     useChatStore.getState().hydrateAttachments(threadId, data.chat.messages);
   }, [data.chat, threadId]);
 
+  useEffect(() => {
+    void data.chat.resumeStream();
+  }, [data.chat]);
+
   return (
     <>
       {data.topicId && <FilesSync topicId={data.topicId} />}

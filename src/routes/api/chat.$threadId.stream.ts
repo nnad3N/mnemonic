@@ -4,7 +4,7 @@ import { matchError, Result, TaggedError } from "better-result";
 
 import type { DbKit } from "@/lib/db-kit.server";
 import { dbKit } from "@/lib/db-kit.server";
-import type { DurableAgentsKit } from "@/lib/durable-agents-kit.server";
+import type { DurableAgentsKit, RunTiming } from "@/lib/durable-agents-kit.server";
 import { durableAgentsKit } from "@/lib/durable-agents-kit.server";
 import type { Kits } from "@/lib/kit";
 import * as Kit from "@/lib/kit";
@@ -62,7 +62,20 @@ const reconnectFn = Kit.gen(async function* (ctx: ChatCtx, input: ReconnectInput
     return Result.err(new ActiveRunError({ message: "No active run" }));
   }
 
-  yield* await ctx.durableAgents.connect();
+  // The run's clock lives with the request that runs it; its topic replays what has happened
+  // so far and keeps moving with the run.
+  const timing: RunTiming = { workEndedAt: [] };
+
+  const [unsubscribeTiming] = yield* await Kit.promiseAll([
+    ctx.durableAgents.subscribeRunTiming({
+      runId,
+      onTiming: (published) => {
+        timing.startedAt = published.startedAt;
+        timing.workEndedAt = published.workEndedAt;
+      },
+    }),
+    ctx.durableAgents.connect(),
+  ]);
 
   const result = yield* await Result.tryPromise({
     try: async () =>
@@ -80,7 +93,16 @@ const reconnectFn = Kit.gen(async function* (ctx: ChatCtx, input: ReconnectInput
     catch: () => new ActiveRunError({ message: "Run is no longer observable" }),
   });
 
-  return Result.ok(toThreadUIStream({ result }));
+  return Result.ok(
+    toThreadUIStream({
+      cleanup: () => {
+        result.cleanup();
+        void unsubscribeTiming();
+      },
+      output: result.output,
+      timing,
+    }),
+  );
 });
 
 const reconnectCtx = Kit.createContext(dbKit, memoryKit, durableAgentsKit);

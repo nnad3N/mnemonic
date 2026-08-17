@@ -46,7 +46,14 @@ export class DurableAgentsError extends TaggedError("DurableAgentsError")<{
 /** Mastra has no cancel channel. */
 const getCancelTopic = (runId: SafeId<"run">) => `mnemonic:agent-cancel:${runId}`;
 
+const getRunTimingTopic = (runId: SafeId<"run">) => `mnemonic:run-timing:${runId}`;
+
 const getUserThreadsTopic = (userId: SafeId<"user">) => `mnemonic:user-threads:${userId}`;
+
+export type RunTiming = {
+  startedAt?: string;
+  workEndedAt: string[];
+};
 
 export type ThreadRunEvent = {
   finishedAt: Date | null;
@@ -66,8 +73,16 @@ export type DurableAgentsApi = {
   connect: () => Promise<ResultType<void, DurableAgentsError>>;
   publishCancel: (input: { runId: SafeId<"run"> }) => Promise<ResultType<void, DurableAgentsError>>;
   publishRunEvent: (input: PublishRunEventInput) => Promise<ResultType<void, DurableAgentsError>>;
+  publishRunTiming: (input: {
+    runId: SafeId<"run">;
+    timing: RunTiming;
+  }) => Promise<ResultType<void, DurableAgentsError>>;
   subscribeCancel: (input: {
     onCancel: () => void;
+    runId: SafeId<"run">;
+  }) => Promise<ResultType<Unsubscribe, DurableAgentsError>>;
+  subscribeRunTiming: (input: {
+    onTiming: (timing: RunTiming) => void;
     runId: SafeId<"run">;
   }) => Promise<ResultType<Unsubscribe, DurableAgentsError>>;
   subscribeRunEvents: (input: {
@@ -129,6 +144,17 @@ export const durableAgentsKit = createDurableAgentsKit({
       catch: (cause) =>
         new DurableAgentsError({ cause, message: "Failed to publish the thread run event" }),
     }),
+  publishRunTiming: async ({ runId, timing }) =>
+    Result.tryPromise({
+      try: async () =>
+        durableAgentsPubsub.publish(getRunTimingTopic(runId), {
+          type: "run-timing",
+          data: { ...timing, workEndedAt: [...timing.workEndedAt] } satisfies RunTiming,
+          runId,
+        }),
+      catch: (cause) =>
+        new DurableAgentsError({ cause, message: "Failed to publish the run timing" }),
+    }),
   subscribeCancel: async ({ onCancel, runId }) => {
     const topic = getCancelTopic(runId);
     const subscribed = await subscribe(topic, onCancel);
@@ -141,6 +167,11 @@ export const durableAgentsKit = createDurableAgentsKit({
       return result;
     });
   },
+  subscribeRunTiming: async ({ onTiming, runId }) =>
+    subscribe(getRunTimingTopic(runId), (event) => {
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- `publishRunTiming` owns this topic.
+      onTiming(event.data as RunTiming);
+    }),
   subscribeRunEvents: async ({ onEvent, userId }) =>
     subscribe(getUserThreadsTopic(userId), (event) => {
       // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- `publishRunEvent` owns this topic.

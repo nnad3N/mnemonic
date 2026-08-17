@@ -7,15 +7,12 @@ import { inArray } from "drizzle-orm";
 
 import { threadRun } from "@/db/schema.server";
 import type { DbKit } from "@/lib/db-kit.server";
-import type { DurableAgentsKit } from "@/lib/durable-agents-kit.server";
+import type { DurableAgentsKit, RunTiming } from "@/lib/durable-agents-kit.server";
 import type { Kits } from "@/lib/kit";
 import * as Kit from "@/lib/kit";
 import type { SafeId } from "@/lib/safe-id";
 import { getMnemonicAgent, MnemonicAgentIds } from "@/mastra/agents/id.server";
-import type {
-  AssistantMessageMetadata,
-  ThreadUIMessage,
-} from "@/routes/_protected.chat.$threadId/-thread-types";
+import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 
 class ReconcileRunsError extends TaggedError("ReconcileRunsError")<{
   message: string;
@@ -83,8 +80,6 @@ export const reconcileRuns = Kit.gen(async function* (ctx: ReconcileRunsCtx, run
   return Result.ok(dead);
 });
 
-export type RunTiming = Omit<AssistantMessageMetadata, "type"> & { workEndedAt: string[] };
-
 type SentTiming = { ends: number; startedAt?: string };
 
 const hasTimingMoved = (timing: RunTiming | undefined, sent: SentTiming): timing is RunTiming => {
@@ -100,26 +95,24 @@ const hasTimingMoved = (timing: RunTiming | undefined, sent: SentTiming): timing
 };
 
 type ToThreadUIStreamInput = {
+  cleanup: () => void;
   lastMessageId?: string;
   originalMessages?: ThreadUIMessage[];
-  result: Pick<DurableAgentStreamResult, "cleanup" | "output">;
-  /**
-   * The run's own clock, mutated by whoever records the run; only the request that started it
-   * has one, an observer does not. Every change is forwarded to the client as message metadata.
-   */
+  output: DurableAgentStreamResult["output"];
   timing?: RunTiming;
 };
 
 export const toThreadUIStream = ({
+  cleanup,
   lastMessageId,
   originalMessages,
-  result,
+  output,
   timing,
 }: ToThreadUIStreamInput) =>
   createUIMessageStream<ThreadUIMessage>({
     originalMessages,
     execute: async ({ writer }) => {
-      const stream = toAISdkStream(result.output, {
+      const stream = toAISdkStream(output, {
         from: "agent",
         version: "v6",
         lastMessageId,
@@ -129,7 +122,7 @@ export const toThreadUIStream = ({
 
       // The recorder moves the clock as soon as a chunk is published; the matching UI part
       // arrives here a tick later, so the metadata always follows the part that caused it.
-      let sent: SentTiming = { startedAt: timing?.startedAt, ends: 0 };
+      let sent: SentTiming = { ends: 0 };
 
       try {
         for await (const part of stream) {
@@ -152,7 +145,7 @@ export const toThreadUIStream = ({
         // The loop only ends once the run's topic is terminal (the writer swallows a gone
         // client), and Mastra's own delayed cleanup clears the topic without unsubscribing,
         // leaking a Redis reader per run.
-        result.cleanup();
+        cleanup();
       }
     },
   });

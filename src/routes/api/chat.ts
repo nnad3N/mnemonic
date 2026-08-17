@@ -9,7 +9,11 @@ import * as v from "valibot";
 
 import { threadRun } from "@/db/schema.server";
 import { dbKit, type DbKit } from "@/lib/db-kit.server";
-import { durableAgentsKit, type DurableAgentsKit } from "@/lib/durable-agents-kit.server";
+import {
+  durableAgentsKit,
+  type DurableAgentsKit,
+  type RunTiming,
+} from "@/lib/durable-agents-kit.server";
 import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
 import { memoryKit, type MemoryKit } from "@/lib/memory-kit.server";
@@ -23,7 +27,7 @@ import { getMnemonicAgent } from "@/mastra/agents/id.server";
 import type { MnemonicRequestContext } from "@/mastra/request-context.server";
 import type { AssistantMessageMetadata } from "@/routes/_protected.chat.$threadId/-thread-types";
 
-import { toThreadUIStream, type RunTiming } from "./-chat-shared.server";
+import { toThreadUIStream } from "./-chat-shared.server";
 
 export const uiMessageSchema = v.object({
   id: v.pipe(v.string(), v.nanoid()),
@@ -114,7 +118,17 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
   // recorded here: streamed to the client as it happens and written to the reply once settled.
   // Work starts with the first tool call, not the request.
   const timing: RunTiming = { workEndedAt: [] };
-  const endWork = () => timing.workEndedAt.push(Temporal.Now.instant().toString());
+  const publishTiming = async () => {
+    const published = await ctx.durableAgents.publishRunTiming({ runId, timing });
+
+    if (Result.isError(published)) {
+      console.error(published.error);
+    }
+  };
+  const endWork = async () => {
+    timing.workEndedAt.push(Temporal.Now.instant().toString());
+    await publishTiming();
+  };
 
   // The durable loop only writes to memory when it finishes, so a reload mid-run would load
   // the thread without the message that started it. Save it now; the loop's final flush
@@ -182,23 +196,24 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
         requestContext,
         runId,
         untilIdle: true,
-        onChunk: (chunk) => {
+        onChunk: async (chunk) => {
           if (chunk.type === "text-start") {
-            endWork();
+            await endWork();
           }
 
           if (!timing.startedAt && WorkStartChunk.is(chunk.type)) {
             timing.startedAt = Temporal.Now.instant().toString();
+            await publishTiming();
           }
         },
         onFinish: async ({ finishReason }) => {
           if (finishReason === "error") return;
 
-          endWork();
+          await endWork();
           await settle(finishReason === "abort" ? "interrupted" : "finished");
         },
         onError: async () => {
-          endWork();
+          await endWork();
           // A fatal error throws out of the durable loop before its final step, which is the
           // only place the reply is written; keep the steps that completed and were shown.
           const saved = await ctx.memory.saveMessages({
@@ -248,9 +263,10 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
 
   return Result.ok(
     toThreadUIStream({
+      cleanup: result.cleanup,
       lastMessageId,
       originalMessages: input.body.messages,
-      result,
+      output: result.output,
       timing,
     }),
   );
