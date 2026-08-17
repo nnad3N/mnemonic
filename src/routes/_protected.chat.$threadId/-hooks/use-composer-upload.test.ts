@@ -40,6 +40,7 @@ describe("findAttachmentFilename", () => {
         role: "user",
         parts: [{ type: "text", text: "hi" }],
         metadata: {
+          type: "user",
           attachments: [{ filename: "notes.txt", mediaType: "text/plain", sha256 }],
         },
       },

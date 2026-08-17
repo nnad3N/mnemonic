@@ -6,25 +6,9 @@ import type { MnemonicUITools } from "@/mastra/mnemonic-tool-types.server";
 
 type OmDataKey<P extends DataOmPart> = P["type"] extends `data-${infer K}` ? K : never;
 
-export type WorkStartData = {
-  segmentId: string;
-  startedAt: string;
-};
-
-export type WorkEndData = {
-  segmentId: string;
-  completedAt: string;
-  durationMs: number;
-};
-
-export type WorkUIDataTypes = {
-  "work-start": WorkStartData;
-  "work-end": WorkEndData;
-};
-
 export type ThreadUIDataTypes = {
   [P in DataOmPart as OmDataKey<P>]: Extract<DataOmPart, { type: P["type"] }>["data"];
-} & WorkUIDataTypes;
+};
 
 export type ThreadUITools = MnemonicUITools;
 
@@ -34,11 +18,33 @@ export const threadMetadataAttachmentSchema = v.object({
   sha256: v.pipe(v.string(), v.length(64)),
 });
 
-export const threadMessageMetadataSchema = v.object({
+export const userMessageMetadataSchema = v.object({
+  type: v.literal("user"),
   attachments: v.optional(v.array(threadMetadataAttachmentSchema)),
 });
 
+/**
+ * The reply's timing (server clock): when work started (the first reasoning or tool call), and
+ * when each stretch of work ended — a text part began streaming, or the run finished, aborted
+ * or failed. Streamed as message metadata while the run is live and written to the last
+ * fragment once it settles, so both read the same way.
+ */
+export const assistantMessageMetadataSchema = v.object({
+  type: v.literal("assistant"),
+  startedAt: v.optional(v.string()),
+  workEndedAt: v.optional(v.array(v.string())),
+});
+
+export const threadMessageMetadataSchema = v.variant("type", [
+  userMessageMetadataSchema,
+  assistantMessageMetadataSchema,
+]);
+
 export type ThreadMetadataAttachment = v.InferOutput<typeof threadMetadataAttachmentSchema>;
+
+export type UserMessageMetadata = v.InferOutput<typeof userMessageMetadataSchema>;
+
+export type AssistantMessageMetadata = v.InferOutput<typeof assistantMessageMetadataSchema>;
 
 export type ThreadMessageMetadata = v.InferOutput<typeof threadMessageMetadataSchema>;
 
@@ -47,6 +53,3 @@ export type ThreadUIMessage = UIMessage<ThreadMessageMetadata, ThreadUIDataTypes
 export type ThreadUIMessagePart = UIMessagePart<ThreadUIDataTypes, ThreadUITools>;
 
 export type ThreadDataUIPart = DataUIPart<ThreadUIDataTypes>;
-
-export type WorkStartPart = Extract<ThreadDataUIPart, { type: "data-work-start" }>;
-export type WorkEndPart = Extract<ThreadDataUIPart, { type: "data-work-end" }>;

@@ -31,7 +31,12 @@ export const durableAgentsCache = new RedisServerCache(
   { ...nodeRedisPreset, ttlSeconds: CACHE_TTL_SECONDS },
 );
 
-export const durableAgentsPubsub = new RedisStreamsPubSub({ url: env.REDIS_URL });
+export const durableAgentsPubsub = new RedisStreamsPubSub({
+  url: env.REDIS_URL,
+  // Every subscribe replays its topic's stream from the beginning, and Redis keeps a stream
+  // until something deletes it. Nothing older than the cache is replayable anyway.
+  streamIdleTtlMs: CACHE_TTL_SECONDS * 1000,
+});
 
 export class DurableAgentsError extends TaggedError("DurableAgentsError")<{
   cause: unknown;
@@ -124,7 +129,18 @@ export const durableAgentsKit = createDurableAgentsKit({
       catch: (cause) =>
         new DurableAgentsError({ cause, message: "Failed to publish the thread run event" }),
     }),
-  subscribeCancel: async ({ onCancel, runId }) => subscribe(getCancelTopic(runId), onCancel),
+  subscribeCancel: async ({ onCancel, runId }) => {
+    const topic = getCancelTopic(runId);
+    const subscribed = await subscribe(topic, onCancel);
+
+    return subscribed.map((unsubscribe) => async () => {
+      const result = await unsubscribe();
+      // Nothing publishes to a run's cancel topic after its run settles, so the stream Redis
+      // keeps behind it would otherwise outlive the run.
+      await durableAgentsPubsub.clearTopic(topic);
+      return result;
+    });
+  },
   subscribeRunEvents: async ({ onEvent, userId }) =>
     subscribe(getUserThreadsTopic(userId), (event) => {
       // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- `publishRunEvent` owns this topic.

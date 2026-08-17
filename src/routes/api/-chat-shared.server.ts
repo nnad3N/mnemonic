@@ -12,7 +12,10 @@ import type { Kits } from "@/lib/kit";
 import * as Kit from "@/lib/kit";
 import type { SafeId } from "@/lib/safe-id";
 import { getMnemonicAgent, MnemonicAgentIds } from "@/mastra/agents/id.server";
-import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
+import type {
+  AssistantMessageMetadata,
+  ThreadUIMessage,
+} from "@/routes/_protected.chat.$threadId/-thread-types";
 
 class ReconcileRunsError extends TaggedError("ReconcileRunsError")<{
   message: string;
@@ -80,21 +83,43 @@ export const reconcileRuns = Kit.gen(async function* (ctx: ReconcileRunsCtx, run
   return Result.ok(dead);
 });
 
+export type RunTiming = Omit<AssistantMessageMetadata, "type"> & { workEndedAt: string[] };
+
+type SentTiming = { ends: number; startedAt?: string };
+
+const hasTimingMoved = (timing: RunTiming | undefined, sent: SentTiming): timing is RunTiming => {
+  if (!timing) {
+    return false;
+  }
+
+  if (timing.startedAt !== sent.startedAt) {
+    return true;
+  }
+
+  return timing.workEndedAt.length !== sent.ends;
+};
+
 type ToThreadUIStreamInput = {
   lastMessageId?: string;
   originalMessages?: ThreadUIMessage[];
-  output: DurableAgentStreamResult["output"];
+  result: Pick<DurableAgentStreamResult, "cleanup" | "output">;
+  /**
+   * The run's own clock, mutated by whoever records the run; only the request that started it
+   * has one, an observer does not. Every change is forwarded to the client as message metadata.
+   */
+  timing?: RunTiming;
 };
 
 export const toThreadUIStream = ({
   lastMessageId,
   originalMessages,
-  output,
+  result,
+  timing,
 }: ToThreadUIStreamInput) =>
   createUIMessageStream<ThreadUIMessage>({
     originalMessages,
     execute: async ({ writer }) => {
-      const stream = toAISdkStream(output, {
+      const stream = toAISdkStream(result.output, {
         from: "agent",
         version: "v6",
         lastMessageId,
@@ -102,9 +127,32 @@ export const toThreadUIStream = ({
         sendSources: true,
       });
 
-      for await (const part of stream) {
-        // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-        writer.write(part as InferUIMessageChunk<ThreadUIMessage>);
+      // The recorder moves the clock as soon as a chunk is published; the matching UI part
+      // arrives here a tick later, so the metadata always follows the part that caused it.
+      let sent: SentTiming = { startedAt: timing?.startedAt, ends: 0 };
+
+      try {
+        for await (const part of stream) {
+          // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+          writer.write(part as InferUIMessageChunk<ThreadUIMessage>);
+
+          if (hasTimingMoved(timing, sent)) {
+            sent = { startedAt: timing.startedAt, ends: timing.workEndedAt.length };
+            writer.write({
+              type: "message-metadata",
+              messageMetadata: {
+                type: "assistant",
+                startedAt: timing.startedAt,
+                workEndedAt: [...timing.workEndedAt],
+              },
+            });
+          }
+        }
+      } finally {
+        // The loop only ends once the run's topic is terminal (the writer swallows a gone
+        // client), and Mastra's own delayed cleanup clears the topic without unsubscribing,
+        // leaking a Redis reader per run.
+        result.cleanup();
       }
     },
   });

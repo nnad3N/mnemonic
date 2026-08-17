@@ -30,6 +30,7 @@ export const createFakeMemory = (overrides: Partial<MemoryApi> = {}) => {
       ),
     saveMessages: async () => Promise.resolve(Result.ok({ messages: [] })),
     saveThread: async () => Promise.resolve(Result.ok(unusedThread)),
+    updateMessageMetadata: async () => Promise.resolve(Result.ok()),
     updateThread: async () => Promise.resolve(Result.ok(unusedThread)),
     ...overrides,
   };

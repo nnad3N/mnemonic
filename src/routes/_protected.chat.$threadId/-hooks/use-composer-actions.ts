@@ -10,7 +10,6 @@ import type { PlateEditor } from "platejs/react";
 import { useEditorRef, useEditorSelector } from "platejs/react";
 import { useStickToBottomContext } from "use-stick-to-bottom";
 
-import { closeWorkSegments } from "@/lib/ai-sdk/close-work-segments";
 import { sidebarQueries } from "@/routes/-sidebar/sidebar.functions";
 
 import { stopThreadRun } from "../-thread-api/thread-run.functions";
@@ -91,8 +90,8 @@ export const getComposerAttachments = async (
   const files = editedMessage?.parts.filter((part) => part.type === "file") ?? [];
   const attachments: ThreadMetadataAttachment[] = [];
 
-  for (const attachment of editedMessage?.metadata?.attachments ?? []) {
-    attachments.push(attachment);
+  if (editedMessage?.metadata?.type === "user" && editedMessage.metadata.attachments) {
+    attachments.push(...editedMessage.metadata.attachments);
   }
 
   const draftFiles: File[] = [];
@@ -198,6 +197,7 @@ export const useComposerActions = (location: ThreadInputLocation) => {
       text,
       files,
       metadata: {
+        type: "user",
         attachments,
       },
       messageId: location === "edit" ? editingState?.messageId : undefined,
@@ -228,18 +228,6 @@ export const useComposerActions = (location: ThreadInputLocation) => {
       await chat.resumeStream();
       return;
     }
-
-    chat.setMessages((messages) =>
-      produce(messages, (draft) => {
-        const last = draft.findLast((message) => message.role === "assistant");
-
-        if (!last) {
-          return;
-        }
-
-        closeWorkSegments(last.parts, Temporal.Now.instant());
-      }),
-    );
 
     const lastMessage = chat.messages.at(-1);
 

@@ -1,13 +1,13 @@
+import { MessageList } from "@mastra/core/agent/message-list";
 import { RequestContext } from "@mastra/core/request-context";
+import type { ChunkType } from "@mastra/core/stream";
 import { createFileRoute } from "@tanstack/react-router";
 import { createUIMessageStreamResponse } from "ai";
 import { matchError, Result, TaggedError } from "better-result";
 import { eq } from "drizzle-orm";
-import { produce } from "immer";
 import * as v from "valibot";
 
 import { threadRun } from "@/db/schema.server";
-import { closeWorkSegments } from "@/lib/ai-sdk/close-work-segments";
 import { dbKit, type DbKit } from "@/lib/db-kit.server";
 import { durableAgentsKit, type DurableAgentsKit } from "@/lib/durable-agents-kit.server";
 import * as Kit from "@/lib/kit";
@@ -21,8 +21,9 @@ import type { SafeId } from "@/lib/safe-id";
 import { createSafeId } from "@/lib/safe-id";
 import { getMnemonicAgent } from "@/mastra/agents/id.server";
 import type { MnemonicRequestContext } from "@/mastra/request-context.server";
+import type { AssistantMessageMetadata } from "@/routes/_protected.chat.$threadId/-thread-types";
 
-import { toThreadUIStream } from "./-chat-shared.server";
+import { toThreadUIStream, type RunTiming } from "./-chat-shared.server";
 
 export const uiMessageSchema = v.object({
   id: v.pipe(v.string(), v.nanoid()),
@@ -51,54 +52,16 @@ type ChatInput = {
   userId: SafeId<"user">;
 };
 
+const WorkStartChunk = Kit.literals.from()([
+  "reasoning-start",
+  "tool-call-input-streaming-start",
+  "tool-call",
+] satisfies ChunkType["type"][]);
+
 class ChatStreamError extends TaggedError("ChatStreamError")<{
   cause: unknown;
   message: string;
 }> {}
-
-type PersistStreamResultInput = {
-  completedAt: Temporal.Instant;
-  threadId: string;
-};
-
-type PersistStreamResultCtx = Kits<[MemoryKit]>;
-
-export const persistStreamResult = Kit.gen(async function* (
-  ctx: PersistStreamResultCtx,
-  input: PersistStreamResultInput,
-) {
-  const { messages } = yield* await ctx.memory.listMessages({
-    threadId: input.threadId,
-    page: 0,
-    perPage: false,
-  });
-
-  const lastIdx = messages.findLastIndex((message) => message.role === "assistant");
-
-  if (lastIdx === -1) {
-    return Result.ok();
-  }
-
-  const message = messages.at(lastIdx);
-
-  if (!message) {
-    return Result.ok();
-  }
-
-  const sealed = produce(message, (draft) => {
-    closeWorkSegments(draft.content.parts, input.completedAt);
-  });
-
-  if (sealed === message) {
-    return Result.ok();
-  }
-
-  yield* await ctx.memory.saveMessages({
-    messages: [sealed],
-  });
-
-  return Result.ok();
-});
 
 type ChatCtx = Kits<[DbKit, MemoryKit, DurableAgentsKit]>;
 
@@ -147,22 +110,46 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
   const userId = input.userId;
   const runId = createSafeId<"run">();
   const abortController = new AbortController();
+  // Mastra stamps a reply's fragments only when each step ends, so the run's own timing is
+  // recorded here: streamed to the client as it happens and written to the reply once settled.
+  // Work starts with the first tool call, not the request.
+  const timing: RunTiming = { workEndedAt: [] };
+  const endWork = () => timing.workEndedAt.push(Temporal.Now.instant().toString());
 
+  // The durable loop only writes to memory when it finishes, so a reload mid-run would load
+  // the thread without the message that started it. Save it now; the loop's final flush
+  // upserts the same id.
   const [unsubscribeCancel] = yield* await Kit.promiseAll([
     ctx.durableAgents.subscribeCancel({ onCancel: () => abortController.abort(), runId }),
     ctx.durableAgents.connect(),
+    ctx.memory.saveMessages({
+      messages: new MessageList({ threadId, resourceId: thread.resourceId })
+        .add(messagesToSend, "user")
+        .get.all.db(),
+    }),
   ]);
 
   const settle = async (status: "errored" | "finished" | "interrupted") => {
-    await unsubscribeCancel();
-
     const finishedAt = new Date();
-    const recorded = await ctx.db.run((db) =>
-      db.update(threadRun).set({ status, finishedAt }).where(eq(threadRun.runId, runId)),
-    );
+    const lastFragmentId = result.output.messageList.get.response.db().at(-1)?.id;
+    const [recorded, timed] = await Promise.all([
+      ctx.db.run((db) =>
+        db.update(threadRun).set({ status, finishedAt }).where(eq(threadRun.runId, runId)),
+      ),
+      lastFragmentId
+        ? ctx.memory.updateMessageMetadata({
+            id: lastFragmentId,
+            metadata: { type: "assistant", ...timing } satisfies AssistantMessageMetadata,
+          })
+        : Result.ok(),
+    ]);
 
     if (Result.isError(recorded)) {
       console.error(recorded.error);
+    }
+
+    if (Result.isError(timed)) {
+      console.error(timed.error);
     }
 
     const published = await ctx.durableAgents.publishRunEvent({
@@ -176,6 +163,11 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
     if (Result.isError(published)) {
       console.error(published.error);
     }
+
+    // Last: tearing down a Redis Streams reader takes up to its block interval, and Mastra
+    // has already dropped the run's snapshot, so a `reconcileRuns` in between would mark a
+    // still-`running` row interrupted.
+    await unsubscribeCancel();
   };
 
   const result = yield* await Result.tryPromise({
@@ -190,21 +182,31 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
         requestContext,
         runId,
         untilIdle: true,
+        onChunk: (chunk) => {
+          if (chunk.type === "text-start") {
+            endWork();
+          }
+
+          if (!timing.startedAt && WorkStartChunk.is(chunk.type)) {
+            timing.startedAt = Temporal.Now.instant().toString();
+          }
+        },
         onFinish: async ({ finishReason }) => {
           if (finishReason === "error") return;
 
+          endWork();
           await settle(finishReason === "abort" ? "interrupted" : "finished");
         },
         onError: async () => {
-          // Abort and tool-error results are flushed by the durable loop's final step, but a fatal
-          // LLM error throws out of the loop before that runs, leaving the work segment open.
-          const sealed = await persistStreamResult(ctx, {
-            completedAt: Temporal.Now.instant(),
-            threadId,
+          endWork();
+          // A fatal error throws out of the durable loop before its final step, which is the
+          // only place the reply is written; keep the steps that completed and were shown.
+          const saved = await ctx.memory.saveMessages({
+            messages: result.output.messageList.get.response.db(),
           });
 
-          if (Result.isError(sealed)) {
-            console.error(sealed.error);
+          if (Result.isError(saved)) {
+            console.error(saved.error);
           }
 
           await settle("errored");
@@ -248,7 +250,8 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
     toThreadUIStream({
       lastMessageId,
       originalMessages: input.body.messages,
-      output: result.output,
+      result,
+      timing,
     }),
   );
 });

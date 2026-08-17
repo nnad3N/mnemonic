@@ -17,16 +17,6 @@ const toolPart = (toolName: MnemonicToolName, toolCallId: string): ThreadUIMessa
     output: {},
   }) as ThreadUIMessagePart;
 
-const workStart: ThreadUIMessagePart = {
-  type: "data-work-start",
-  data: { segmentId: "seg-1", startedAt: "2026-01-01T00:00:00Z" },
-};
-
-const workEnd: ThreadUIMessagePart = {
-  type: "data-work-end",
-  data: { segmentId: "seg-1", completedAt: "2026-01-01T00:00:05Z", durationMs: 5000 },
-};
-
 const tickerRow = (container: HTMLElement): HTMLElement => {
   const row = container.querySelector<HTMLElement>('[data-test-id="work-ticker-current"]');
   assert(row, "Expected the work ticker row");
@@ -34,8 +24,19 @@ const tickerRow = (container: HTMLElement): HTMLElement => {
   return row;
 };
 
+const STARTED_AT = "2026-01-01T00:00:00Z";
+
+const indicator = (parts: ThreadUIMessagePart[], completedAt?: string) => (
+  <WorkedForIndicator
+    completedAt={completedAt}
+    messageParts={parts}
+    parts={parts}
+    startedAt={STARTED_AT}
+  />
+);
+
 const renderIndicator = (parts: ThreadUIMessagePart[]) =>
-  render(<WorkedForIndicator messageParts={parts} parts={parts} />, { isStreaming: true });
+  render(indicator(parts), { isStreaming: true });
 
 describe("WorkedForIndicator ticker", () => {
   beforeEach(() => {
@@ -54,11 +55,11 @@ describe("WorkedForIndicator ticker", () => {
   };
 
   it("holds the current part through the animation and hold time, then jumps to the latest", () => {
-    const initial = [workStart, toolPart("recall", "c1")];
+    const initial = [toolPart("recall", "c1")];
     const { container, rerender } = renderIndicator(initial);
 
     const grown = [...initial, toolPart("getFile", "c2"), toolPart("fileVectorSearch", "c3")];
-    rerender(<WorkedForIndicator messageParts={grown} parts={grown} />);
+    rerender(indicator(grown));
 
     expect(screen.getByText("Recalled memories")).toBeInTheDocument();
     expect(screen.queryByText("Read file")).not.toBeInTheDocument();
@@ -85,7 +86,7 @@ describe("WorkedForIndicator ticker", () => {
   });
 
   it("drops the animation classes and the exiting row once the handover has played", () => {
-    const initial = [workStart, toolPart("recall", "c1")];
+    const initial = [toolPart("recall", "c1")];
     const { container } = renderIndicator(initial);
 
     expect(tickerRow(container)).toHaveClass("animate-in");
@@ -96,44 +97,44 @@ describe("WorkedForIndicator ticker", () => {
   });
 
   it("advances immediately when a part arrives after the hold has elapsed", () => {
-    const initial = [workStart, toolPart("recall", "c1")];
+    const initial = [toolPart("recall", "c1")];
     const { container, rerender } = renderIndicator(initial);
 
     settle(tickerRow(container));
 
     const grown = [...initial, toolPart("getFile", "c2")];
-    rerender(<WorkedForIndicator messageParts={grown} parts={grown} />);
+    rerender(indicator(grown));
 
     expect(screen.getByText("Read file")).toBeInTheDocument();
   });
 
   it("ignores animation ends bubbling from inside the row", () => {
-    const initial = [workStart, toolPart("recall", "c1")];
+    const initial = [toolPart("recall", "c1")];
     const { rerender } = renderIndicator(initial);
 
     settle(screen.getByText("Recalled memories"));
 
     const grown = [...initial, toolPart("getFile", "c2")];
-    rerender(<WorkedForIndicator messageParts={grown} parts={grown} />);
+    rerender(indicator(grown));
 
     expect(screen.queryByText("Read file")).not.toBeInTheDocument();
   });
 
   it("collapses immediately when the work run ends, keeping the row mounted for the exit", () => {
-    const initial = [workStart, toolPart("recall", "c1")];
+    const initial = [toolPart("recall", "c1")];
     const { container, rerender } = renderIndicator(initial);
 
-    const ended = [...initial, workEnd];
-    rerender(<WorkedForIndicator messageParts={ended} parts={ended} />);
+    rerender(indicator(initial, "2026-01-01T00:00:05Z"));
 
     expect(screen.getByText("Recalled memories")).toBeInTheDocument();
     expect(tickerRow(container).closest(".grid")).toHaveClass("grid-rows-[0fr]");
   });
 
   it("renders no ticker for a finished message", () => {
-    const parts = [workStart, toolPart("recall", "c1"), workEnd];
-    render(<WorkedForIndicator messageParts={parts} parts={parts} />);
+    const parts = [toolPart("recall", "c1")];
+    render(indicator(parts, "2026-01-01T00:00:05Z"));
 
     expect(screen.queryByText("Recalled memories")).not.toBeInTheDocument();
+    expect(screen.getByText("Worked for 5s")).toBeInTheDocument();
   });
 });

@@ -14,7 +14,6 @@ import {
 import { webResearchAgent } from "@/mastra/agents/web-research-agent.server";
 import { getAgentModel } from "@/mastra/models.server";
 import { stripNonNativeFilePartsProcessor } from "@/mastra/processors/strip-non-native-file-parts.server";
-import { workSegmentTimingProcessor } from "@/mastra/processors/work-segment-timing";
 import type { MnemonicRequestContext } from "@/mastra/request-context.server";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
 import { docsTool } from "@/mastra/tools/docs-tool.server";
@@ -87,7 +86,6 @@ Threads from other topics or standalone conversations are not accessible.
   agents: { webResearch: webResearchAgent },
   durable: true,
   inputProcessors: [stripNonNativeFilePartsProcessor],
-  outputProcessors: [workSegmentTimingProcessor],
   memory: getAgentMemory("resource"),
   requestContextSchema: mnemonicRequestContextSchema,
   model: getAgentModel,

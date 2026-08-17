@@ -3,11 +3,7 @@ import { useState } from "react";
 
 import { CollapsibleContent } from "@/components/ui/collapsible";
 import { isVisibleIntermediatePart } from "@/lib/ai-sdk/tool-parts";
-import {
-  getDominantWorkActivityKind,
-  getWorkRunTiming,
-  type WorkActivityKind,
-} from "@/lib/ai-sdk/work-part";
+import { getDominantWorkActivityKind, type WorkActivityKind } from "@/lib/ai-sdk/work-part";
 import { cn } from "@/lib/utils";
 import { useElapsedMs } from "@/routes/_protected.chat.$threadId/-hooks/use-elapsed-ms";
 import { useMessageState } from "@/routes/_protected.chat.$threadId/-hooks/use-message-state";
@@ -36,9 +32,22 @@ const formatDuration = (locale: string, durationMs: number): string => {
   });
 };
 
+const getDurationMs = (startedAt?: string, completedAt?: string): number | undefined => {
+  if (!startedAt || !completedAt) {
+    return undefined;
+  }
+
+  const duration = Temporal.Instant.from(completedAt).since(Temporal.Instant.from(startedAt));
+
+  return Math.max(0, duration.total("milliseconds"));
+};
+
 type WorkedForIndicatorProps = {
+  /** When the text closing this run started; unset while the run is still going. */
+  completedAt: string | undefined;
   messageParts: ThreadUIMessagePart[];
   parts: ThreadUIMessagePart[];
+  startedAt: string | undefined;
 };
 
 type WorkTickerState = {
@@ -49,11 +58,16 @@ type WorkTickerState = {
 
 const TICKER_HOLD_MS = 700;
 
-export const WorkedForIndicator = ({ messageParts, parts }: WorkedForIndicatorProps) => {
+export const WorkedForIndicator = ({
+  completedAt,
+  messageParts,
+  parts,
+  startedAt,
+}: WorkedForIndicatorProps) => {
   const { isStreaming } = useMessageState();
-  const { startedAt, durationMs } = getWorkRunTiming(parts);
   const activityKind = getDominantWorkActivityKind(parts);
-  const pending = isStreaming && durationMs === undefined;
+  const pending = isStreaming && !completedAt;
+  const durationMs = getDurationMs(startedAt, completedAt);
   const elapsedMs = useElapsedMs(
     pending && startedAt ? { enabled: true, startedAt } : { enabled: false },
   );

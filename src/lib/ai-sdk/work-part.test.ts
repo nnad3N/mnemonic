@@ -15,12 +15,8 @@ const toolPart = (toolName: MnemonicToolName, toolCallId?: string): ThreadUIMess
 });
 
 describe("groupAssistantParts", () => {
-  it("groups work markers and intermediates before text into one run", () => {
+  it("groups intermediates before text into one run", () => {
     const parts: ThreadUIMessagePart[] = [
-      {
-        type: "data-work-start",
-        data: { segmentId: "seg-1", startedAt: "2026-01-01T00:00:00Z" },
-      },
       { type: "reasoning", text: "thinking", state: "done" },
       toolPart("getFile"),
       {
@@ -36,10 +32,6 @@ describe("groupAssistantParts", () => {
           threadId: "thread-1",
         },
       },
-      {
-        type: "data-work-end",
-        data: { segmentId: "seg-1", completedAt: "2026-01-01T00:00:10Z", durationMs: 10_000 },
-      },
       { type: "text", text: "answer" },
     ];
 
@@ -49,13 +41,13 @@ describe("groupAssistantParts", () => {
     expect(blocks.at(0)).toMatchObject({
       type: "run",
       id: "run-0",
-      parts: parts.slice(0, 5),
+      parts: parts.slice(0, 3),
       startIndex: 0,
     });
     expect(blocks.at(1)).toMatchObject({
       type: "text",
-      id: "text-5",
-      index: 5,
+      id: "text-3",
+      index: 3,
     });
   });
 
@@ -96,25 +88,18 @@ describe("groupAssistantParts", () => {
     ]);
   });
 
-  it("omits marker-only runs with no visible intermediates", () => {
+  it("omits runs with no visible intermediates", () => {
     const parts: ThreadUIMessagePart[] = [
-      {
-        type: "data-work-start",
-        data: { segmentId: "seg-1", startedAt: "2026-01-01T00:00:00Z" },
-      },
-      {
-        type: "data-work-end",
-        data: { segmentId: "seg-1", completedAt: "2026-01-01T00:00:01Z", durationMs: 1000 },
-      },
+      { type: "step-start" },
       { type: "text", text: "only text" },
     ];
 
     expect(groupAssistantParts(parts)).toEqual([
       {
         type: "text",
-        id: "text-2",
-        part: parts.at(2),
-        index: 2,
+        id: "text-1",
+        part: parts.at(1),
+        index: 1,
       },
     ]);
   });
@@ -123,13 +108,7 @@ describe("groupAssistantParts", () => {
 describe("getDominantWorkActivityKind", () => {
   it("returns default when there are no tool parts", () => {
     expect(
-      getDominantWorkActivityKind([
-        { type: "reasoning", text: "thinking", state: "done" },
-        {
-          type: "data-work-start",
-          data: { segmentId: "seg-1", startedAt: "2026-01-01T00:00:00.000Z" },
-        },
-      ]),
+      getDominantWorkActivityKind([{ type: "reasoning", text: "thinking", state: "done" }]),
     ).toBe("default");
   });
 

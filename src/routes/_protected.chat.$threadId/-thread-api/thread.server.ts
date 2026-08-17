@@ -134,7 +134,8 @@ type GetThreadInput = {
   userId: SafeId<"user">;
 };
 
-// Collapse Mastra's split assistants so the UI always sees user → assistant → user.
+// Collapse Mastra's split assistants so the UI always sees user → assistant → user. The last
+// fragment's metadata carries the reply's timing, so it is the one kept.
 export const mergeConsecutiveAssistantMessages = <TMessage extends ThreadUIMessage>(
   messages: TMessage[],
 ): TMessage[] => {

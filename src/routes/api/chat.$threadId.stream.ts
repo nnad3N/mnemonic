@@ -80,7 +80,7 @@ const reconnectFn = Kit.gen(async function* (ctx: ChatCtx, input: ReconnectInput
     catch: () => new ActiveRunError({ message: "Run is no longer observable" }),
   });
 
-  return Result.ok(toThreadUIStream({ output: result.output }));
+  return Result.ok(toThreadUIStream({ result }));
 });
 
 const reconnectCtx = Kit.createContext(dbKit, memoryKit, durableAgentsKit);

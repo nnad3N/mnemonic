@@ -119,6 +119,7 @@ const createFailingMemoryKit = () => {
     listMessages: memory.listMessages,
     saveMessages: memory.saveMessages,
     saveThread: memory.saveThread,
+    updateMessageMetadata: memory.updateMessageMetadata,
     updateThread: memory.updateThread,
   };
 
@@ -272,29 +273,18 @@ describe("mergeConsecutiveAssistantMessages", () => {
     expect(mergeConsecutiveAssistantMessages(messages)).toEqual(messages);
   });
 
-  it("merges consecutive assistants after a user, keeping last id and concatenating parts", () => {
-    const firstParts: ThreadUIMessage["parts"] = [
-      { type: "text", text: "first" },
-      {
-        type: "data-work-start",
-        data: { segmentId: "seg-1", startedAt: "2026-01-01T00:00:00.000Z" },
-      },
-    ];
-    const secondParts: ThreadUIMessage["parts"] = [
-      { type: "text", text: "second" },
-      {
-        type: "data-work-end",
-        data: {
-          segmentId: "seg-1",
-          completedAt: "2026-01-01T00:01:00.000Z",
-          durationMs: 60_000,
-        },
-      },
-    ];
+  it("merges consecutive assistants after a user, keeping the last id and metadata and concatenating parts", () => {
+    const firstParts: ThreadUIMessage["parts"] = [{ type: "text", text: "first" }];
+    const secondParts: ThreadUIMessage["parts"] = [{ type: "text", text: "second" }];
     const messages = [
       message({ id: "u1", role: "user" }),
-      message({ id: "a1", role: "assistant", parts: firstParts, metadata: { attachments: [] } }),
-      message({ id: "a2", role: "assistant", parts: secondParts }),
+      message({ id: "a1", role: "assistant", parts: firstParts, metadata: { type: "assistant" } }),
+      message({
+        id: "a2",
+        role: "assistant",
+        parts: secondParts,
+        metadata: { type: "assistant", startedAt: "2026-01-01T00:00:00.000Z" },
+      }),
     ];
 
     expect(mergeConsecutiveAssistantMessages(messages)).toEqual([
@@ -303,6 +293,7 @@ describe("mergeConsecutiveAssistantMessages", () => {
         id: "a2",
         role: "assistant",
         parts: firstParts.concat(secondParts),
+        metadata: { type: "assistant", startedAt: "2026-01-01T00:00:00.000Z" },
       },
     ]);
   });

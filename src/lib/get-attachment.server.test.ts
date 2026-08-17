@@ -26,6 +26,7 @@ const createUserMessage = (input: {
       ? {}
       : {
           metadata: {
+            type: "user",
             attachments: input.attachments,
           },
         }),

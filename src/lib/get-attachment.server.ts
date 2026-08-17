@@ -7,7 +7,7 @@ import { hashBytes } from "@/lib/hash";
 import type { Kits } from "@/lib/kit";
 import * as Kit from "@/lib/kit";
 import type { MemoryKit } from "@/lib/memory-kit.server";
-import { threadMessageMetadataSchema } from "@/routes/_protected.chat.$threadId/-thread-types";
+import { userMessageMetadataSchema } from "@/routes/_protected.chat.$threadId/-thread-types";
 
 export class GetAttachmentError extends TaggedError("GetAttachmentError")<{
   message: string;
@@ -22,7 +22,7 @@ type GetAttachmentInput = {
 type GetAttachmentCtx = Kits<[MemoryKit]>;
 
 const getMessageAttachments = (metadata: unknown) => {
-  const parsed = v.safeParse(threadMessageMetadataSchema, metadata);
+  const parsed = v.safeParse(userMessageMetadataSchema, metadata);
 
   if (!parsed.success) {
     return [];

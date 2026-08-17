@@ -3,10 +3,7 @@ import { getToolName, isToolUIPart } from "ai";
 import { KnownToolName } from "@/lib/ai-sdk/known-tool-name";
 import { isVisibleIntermediatePart } from "@/lib/ai-sdk/tool-parts";
 import type { MnemonicToolName } from "@/mastra/mnemonic-tool-types.server";
-import type {
-  ThreadUIMessagePart,
-  WorkEndPart,
-} from "@/routes/_protected.chat.$threadId/-thread-types";
+import type { ThreadUIMessagePart } from "@/routes/_protected.chat.$threadId/-thread-types";
 
 type TextPart = Extract<ThreadUIMessagePart, { type: "text" }>;
 
@@ -25,21 +22,6 @@ type AssistantMessageRunBlock = {
 };
 
 export type AssistantMessageBlock = AssistantMessageTextBlock | AssistantMessageRunBlock;
-
-export const getWorkRunTiming = (parts: ThreadUIMessagePart[]) => {
-  const start = parts.find((part) => part.type === "data-work-start");
-
-  const end = parts.findLast(
-    (part): part is WorkEndPart =>
-      part.type === "data-work-end" && part.data.segmentId === start?.data.segmentId,
-  );
-
-  return {
-    startedAt: start?.data.startedAt,
-    completedAt: end?.data.completedAt,
-    durationMs: end?.data.durationMs,
-  };
-};
 
 export const groupAssistantParts = (parts: ThreadUIMessagePart[]): AssistantMessageBlock[] => {
   const blocks: AssistantMessageBlock[] = [];

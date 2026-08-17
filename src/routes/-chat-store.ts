@@ -111,7 +111,11 @@ export const useChatStore = create<State & Actions>()(
         const attachments: ThreadAttachment[] = [];
 
         for (const message of messages) {
-          for (const attachment of message.metadata?.attachments ?? []) {
+          if (message.metadata?.type !== "user") {
+            continue;
+          }
+
+          for (const attachment of message.metadata.attachments ?? []) {
             attachments.push({
               status: "persisted",
               filename: attachment.filename,

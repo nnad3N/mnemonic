@@ -1,16 +1,19 @@
 import { describe, expect, it } from "vitest";
 
 import { useChatStore } from "./-chat-store";
-import type { ThreadUIMessage } from "./_protected.chat.$threadId/-thread-types";
+import type {
+  ThreadUIMessage,
+  UserMessageMetadata,
+} from "./_protected.chat.$threadId/-thread-types";
 
 const userMessageWithAttachments = (
   id: string,
-  attachments: NonNullable<ThreadUIMessage["metadata"]>["attachments"],
+  attachments: UserMessageMetadata["attachments"],
 ): ThreadUIMessage => ({
   id,
   role: "user",
   parts: [{ type: "text", text: id }],
-  metadata: { attachments },
+  metadata: { type: "user", attachments },
 });
 
 describe("useChatStore attachments", () => {

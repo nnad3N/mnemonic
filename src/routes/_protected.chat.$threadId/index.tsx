@@ -31,7 +31,7 @@ function RouteComponent() {
   });
 
   const { mutate: markViewed } = useMutation({
-    mutationFn: async (threadId: string) => markThreadViewed({ data: { threadId } }),
+    mutationFn: async () => markThreadViewed({ data: { threadId } }),
     onMutate: async () => {
       const queryKey = threadRunQueries.states().queryKey;
       await queryClient.cancelQueries({ queryKey });
@@ -58,8 +58,8 @@ function RouteComponent() {
   useEffect(() => {
     if (runStatus === "running") return;
 
-    markViewed(threadId);
-  }, [markViewed, runStatus, threadId]);
+    markViewed();
+  }, [markViewed, runStatus]);
 
   useEffect(() => {
     useChatStore.getState().hydrateAttachments(threadId, data.chat.messages);

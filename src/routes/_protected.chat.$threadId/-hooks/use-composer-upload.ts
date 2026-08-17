@@ -33,7 +33,11 @@ export const findAttachmentFilename = (
   }
 
   for (const message of messages) {
-    const attachment = message.metadata?.attachments?.find((entry) => entry.sha256 === sha256);
+    if (message.metadata?.type !== "user") {
+      continue;
+    }
+
+    const attachment = message.metadata.attachments?.find((entry) => entry.sha256 === sha256);
 
     if (attachment) {
       return attachment.filename;
