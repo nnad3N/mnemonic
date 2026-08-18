@@ -19,7 +19,7 @@ const isRecoverableFailure = (part: ToolUIPart<ThreadUITools>): boolean => {
   }
 
   switch (part.type) {
-    case "tool-calculateDocs":
+    case "tool-computeDocs":
       switch (part.output.type) {
         case "error":
           return true;
@@ -28,11 +28,18 @@ const isRecoverableFailure = (part: ToolUIPart<ThreadUITools>): boolean => {
         case "search":
           return false;
       }
-    case "tool-calculate":
+    case "tool-compute":
       switch (part.output.type) {
         case "error":
           return true;
         case "success":
+          return false;
+      }
+    case "tool-readVisuals":
+      switch (part.output.type) {
+        case "error":
+          return true;
+        case "visuals":
           return false;
       }
     case "tool-searchFile":
@@ -79,16 +86,16 @@ const renderToolLabel = (toolName: MnemonicToolName, status: ToolPartStatus): Re
         case "error":
           return <T>Could not research</T>;
       }
-    case "calculate":
+    case "compute":
       switch (status) {
         case "pending":
-          return <T>Calculating</T>;
+          return <T>Computing</T>;
         case "done":
-          return <T>Calculated</T>;
+          return <T>Computed</T>;
         case "error":
-          return <T>Could not calculate</T>;
+          return <T>Could not compute</T>;
       }
-    case "calculateDocs":
+    case "computeDocs":
       switch (status) {
         case "pending":
           return <T>Reading library documentation</T>;
@@ -114,6 +121,15 @@ const renderToolLabel = (toolName: MnemonicToolName, status: ToolPartStatus): Re
           return <T>Searched files</T>;
         case "error":
           return <T>Could not search files</T>;
+      }
+    case "readVisuals":
+      switch (status) {
+        case "pending":
+          return <T>Viewing the file</T>;
+        case "done":
+          return <T>Viewed the file</T>;
+        case "error":
+          return <T>Could not view the file</T>;
       }
     case "recall":
       switch (status) {

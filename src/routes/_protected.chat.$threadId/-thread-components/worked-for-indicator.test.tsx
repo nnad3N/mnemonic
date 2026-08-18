@@ -53,11 +53,11 @@ describe("WorkedForIndicator ticker", () => {
     const initial = [toolPart("recall", "c1")];
     const { container, rerender } = renderIndicator(initial);
 
-    const grown = [...initial, toolPart("calculate", "c2"), toolPart("fileVectorSearch", "c3")];
+    const grown = [...initial, toolPart("compute", "c2"), toolPart("fileVectorSearch", "c3")];
     rerender(indicator(grown));
 
     expect(screen.getByText("Recalled memories")).toBeInTheDocument();
-    expect(screen.queryByText("Calculated")).not.toBeInTheDocument();
+    expect(screen.queryByText("Computed")).not.toBeInTheDocument();
     expect(screen.queryByText("Searched files")).not.toBeInTheDocument();
 
     fireEvent.animationEnd(tickerRow(container));
@@ -72,7 +72,7 @@ describe("WorkedForIndicator ticker", () => {
     });
 
     expect(screen.getByText("Searched files")).toBeInTheDocument();
-    expect(screen.queryByText("Calculated")).not.toBeInTheDocument();
+    expect(screen.queryByText("Computed")).not.toBeInTheDocument();
     expect(screen.getByText("Recalled memories")).toBeInTheDocument();
 
     settle(tickerRow(container));
@@ -97,10 +97,10 @@ describe("WorkedForIndicator ticker", () => {
 
     settle(tickerRow(container));
 
-    const grown = [...initial, toolPart("calculate", "c2")];
+    const grown = [...initial, toolPart("compute", "c2")];
     rerender(indicator(grown));
 
-    expect(screen.getByText("Calculated")).toBeInTheDocument();
+    expect(screen.getByText("Computed")).toBeInTheDocument();
   });
 
   it("ignores animation ends bubbling from inside the row", () => {
@@ -109,10 +109,10 @@ describe("WorkedForIndicator ticker", () => {
 
     settle(screen.getByText("Recalled memories"));
 
-    const grown = [...initial, toolPart("calculate", "c2")];
+    const grown = [...initial, toolPart("compute", "c2")];
     rerender(indicator(grown));
 
-    expect(screen.queryByText("Calculated")).not.toBeInTheDocument();
+    expect(screen.queryByText("Computed")).not.toBeInTheDocument();
   });
 
   it("collapses immediately when the work run ends, keeping the row mounted for the exit", () => {

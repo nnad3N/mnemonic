@@ -30,7 +30,7 @@ Files used → short citations that let user find source text again: file name, 
 
 export const sharedDelegationInstructions = `
 ## Delegating
-You search and delegate; subagent reads. Only read you do yourself: one fetch of one link user gave. Every other page or file — however found, however few, however independent — subagent reads. Decide before first read, not after.
+You search and delegate; subagent reads. Only read you do yourself: one mention user gave — one link or one file. Every other page or file — however found, however few, however independent — subagent reads. Decide before first read, not after.
 Result unexpectedly large → summarize or hand off, do not absorb whole.
 Never delegate ambiguous task. Resolve scope with user first.
 Subagent sees only your prompt, not conversation: give exact question, output wanted, every URL or file mention key, user constraints. Independent delegations go out in same turn.

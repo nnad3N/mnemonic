@@ -13,11 +13,11 @@ import {
 } from "@/mastra/agents/base-instructions.server";
 import { workerAgent } from "@/mastra/agents/worker-agent.server";
 import { getAgentModel } from "@/mastra/models.server";
-import { stripNonNativeFilePartsProcessor } from "@/mastra/processors/strip-non-native-file-parts.server";
+import { stripFilePartsProcessor } from "@/mastra/processors/strip-file-parts.server";
 import type { MnemonicRequestContext } from "@/mastra/request-context.server";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
-import { calculateDocsTool } from "@/mastra/tools/calculate-docs-tool.server";
-import { calculateTool } from "@/mastra/tools/calculate-tool.server";
+import { computeDocsTool } from "@/mastra/tools/compute-docs-tool.server";
+import { computeTool } from "@/mastra/tools/compute-tool.server";
 import { createFileGraphRagTool } from "@/mastra/tools/file-graph-rag-tool.server";
 import { createFileVectorSearchTool } from "@/mastra/tools/file-vector-search-tool.server";
 import { webFetchTool } from "@/mastra/tools/web-fetch-tool.server";
@@ -41,8 +41,8 @@ const getTopicAgentTools = async ({ requestContext }: GetTopicAgentToolsInput) =
   const apiKey = result.value.key;
 
   return {
-    calculate: calculateTool,
-    calculateDocs: calculateDocsTool,
+    compute: computeTool,
+    computeDocs: computeDocsTool,
     fileGraphRag: createFileGraphRagTool(apiKey),
     fileVectorSearch: createFileVectorSearchTool(apiKey),
     webFetch: webFetchTool,
@@ -68,7 +68,7 @@ ${sharedDelegationInstructions}
 `,
   agents: { worker: workerAgent },
   durable: true,
-  inputProcessors: [stripNonNativeFilePartsProcessor],
+  inputProcessors: [stripFilePartsProcessor],
   memory: getAgentMemory("resource"),
   requestContextSchema: mnemonicRequestContextSchema,
   model: getAgentModel,

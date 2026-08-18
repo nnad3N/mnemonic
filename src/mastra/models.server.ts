@@ -1,9 +1,7 @@
 import type { ObservationalMemoryOptions } from "@mastra/core/memory";
 import type { RequestContext } from "@mastra/core/request-context";
 import { createOpenRouter, type OpenRouterChatSettings } from "@openrouter/ai-sdk-provider";
-import { type LanguageModelMiddleware, wrapLanguageModel } from "ai";
 import { Result } from "better-result";
-import type { JSONSchema7 } from "json-schema";
 import * as v from "valibot";
 
 import { dbKit } from "@/lib/db-kit.server";
@@ -18,43 +16,6 @@ const createOpenrouterProvider = (apiKey: string) =>
     apiKey,
     appName: "Mnemonic",
   });
-
-/**
- * Mastra injects a `resumeData` property into every subagent delegation tool, typed as every JSON
- * type at once because its source schema is `z.any()`. Gemini's function declarations take a
- * single `type` per property and reject the entire declaration when one property does not parse,
- * which surfaces as its `required` names being undefined. No tool of ours suspends, so the
- * property is dropped rather than given a type it does not have.
- */
-const dropMultiTypeToolProperties: LanguageModelMiddleware = {
-  // oxlint-disable-next-line typescript/require-await
-  transformParams: async ({ params }) => ({
-    ...params,
-    tools: params.tools?.map((tool) => {
-      if (tool.type !== "function") {
-        return tool;
-      }
-
-      const properties: JSONSchema7["properties"] = tool.inputSchema.properties;
-
-      if (properties === undefined) {
-        return tool;
-      }
-
-      return {
-        ...tool,
-        inputSchema: {
-          ...tool.inputSchema,
-          properties: Object.fromEntries(
-            Object.entries(properties).filter(
-              ([, property]) => typeof property === "boolean" || !Array.isArray(property.type),
-            ),
-          ),
-        },
-      };
-    }),
-  }),
-};
 
 type OpenrouterModel = {
   model: string;
@@ -74,7 +35,7 @@ const models: Record<ModelCapability, OpenrouterModel> = {
     },
   },
   balanced: {
-    model: "google/gemini-3.7-flash",
+    model: "openai/gpt-5.6-luna-pro",
     openrouter: {
       reasoning: {
         effort: "medium",
@@ -146,10 +107,7 @@ const resolveCapabilityModel = async (
 
   const apiKey = result.value.key;
 
-  return wrapLanguageModel({
-    middleware: dropMultiTypeToolProperties,
-    model: createOpenrouterProvider(apiKey)(config.model, config.openrouter),
-  });
+  return createOpenrouterProvider(apiKey)(config.model, config.openrouter);
 };
 
 export const getAgentModel = async (input: ModelResolverInput) => resolveCapabilityModel(input);
@@ -187,6 +145,7 @@ export const observationalMemoryOptions = (
   activateOnProviderChange: true,
   model,
   observation: {
+    observeAttachments: false,
     providerOptions: observationalMemoryReasoningOff,
   },
   reflection: {

@@ -83,8 +83,8 @@ const errorOutputSchema = v.object({
 
 const outputSchema = v.variant("type", [successOutputSchema, errorOutputSchema]);
 
-type CalculateSuccess = v.InferOutput<typeof successOutputSchema>;
-type CalculateError = v.InferOutput<typeof errorOutputSchema>;
+type ComputeSuccess = v.InferOutput<typeof successOutputSchema>;
+type ComputeError = v.InferOutput<typeof errorOutputSchema>;
 
 export type SandboxFile = {
   contents: string;
@@ -108,8 +108,8 @@ const toSandboxFile = async (file: FetchedFile) => {
   });
 };
 
-export const calculateTool = createTool({
-  id: "calculate",
+export const computeTool = createTool({
+  id: "compute",
   inputSchema: toToolInputSchema(inputSchema),
   outputSchema: toStandardJsonSchema(outputSchema),
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
@@ -131,13 +131,13 @@ export const calculateTool = createTool({
       });
 
       if (Result.isError(loaded)) {
-        return { type: "error", message: loaded.error.message } satisfies CalculateError;
+        return { type: "error", message: loaded.error.message } satisfies ComputeError;
       }
 
       const sandboxFile = await toSandboxFile(loaded.value);
 
       if (Result.isError(sandboxFile)) {
-        return { type: "error", message: sandboxFile.error.message } satisfies CalculateError;
+        return { type: "error", message: sandboxFile.error.message } satisfies ComputeError;
       }
 
       file = sandboxFile.value;
@@ -153,11 +153,11 @@ export const calculateTool = createTool({
         type: "success",
         result: executionResult.value.output,
         logs: executionResult.value.logs,
-      } satisfies CalculateSuccess;
+      } satisfies ComputeSuccess;
     }
 
     return matchError(executionResult.error, {
-      SandboxExecuteError: (error): CalculateError => ({
+      SandboxExecuteError: (error): ComputeError => ({
         type: "error",
         name: error.name,
         message: error.message,

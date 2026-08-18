@@ -105,12 +105,12 @@ const TOOL_LABELS = {
     error: "Could not research",
     pending: "Researching",
   },
-  calculate: {
-    done: "Calculated",
-    error: "Could not calculate",
-    pending: "Calculating",
+  compute: {
+    done: "Computed",
+    error: "Could not compute",
+    pending: "Computing",
   },
-  calculateDocs: {
+  computeDocs: {
     done: "Read library documentation",
     error: "Could not read library documentation",
     pending: "Reading library documentation",
@@ -124,6 +124,11 @@ const TOOL_LABELS = {
     done: "Searched files",
     error: "Could not search files",
     pending: "Searching files",
+  },
+  readVisuals: {
+    done: "Viewed the file",
+    error: "Could not view the file",
+    pending: "Viewing the file",
   },
   recall: {
     done: "Recalled memories",

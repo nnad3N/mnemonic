@@ -6,60 +6,60 @@ import { describe, expect, it } from "vitest";
 import { render } from "@/test/render-message";
 
 import type { ThreadUITools } from "../-thread-types";
-import { CalculatePart } from "./calculate-part";
+import { ComputePart } from "./compute-part";
 
-type CalculateToolPart = Extract<ToolUIPart<ThreadUITools>, { type: "tool-calculate" }>;
+type ComputeToolPart = Extract<ToolUIPart<ThreadUITools>, { type: "tool-compute" }>;
 
-const pendingCalculate = (code?: string): CalculateToolPart =>
+const pendingCompute = (code?: string): ComputeToolPart =>
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- tool UI fixture for component render.
   ({
-    type: "tool-calculate",
+    type: "tool-compute",
     toolCallId: "call-1",
     state: "input-available",
     input: code === undefined ? undefined : { code },
-  }) as CalculateToolPart;
+  }) as ComputeToolPart;
 
-const successCalculate = (
+const successCompute = (
   code: string,
   output: {
     result?: JSONValue;
     logs?: string;
   },
   args?: JSONValue,
-): CalculateToolPart =>
+): ComputeToolPart =>
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- tool UI fixture for component render.
   ({
-    type: "tool-calculate",
+    type: "tool-compute",
     toolCallId: "call-1",
     state: "output-available",
     input: { code, args },
     output: { type: "success", ...output },
-  }) as CalculateToolPart;
+  }) as ComputeToolPart;
 
-const errorCalculate = (code: string): CalculateToolPart =>
+const errorCompute = (code: string): ComputeToolPart =>
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- tool UI fixture for component render.
   ({
-    type: "tool-calculate",
+    type: "tool-compute",
     toolCallId: "call-1",
     state: "output-available",
     input: { code },
     output: { type: "error", name: "TypeError", message: "nope" },
-  }) as CalculateToolPart;
+  }) as ComputeToolPart;
 
-describe("CalculatePart", () => {
+describe("ComputePart", () => {
   it("falls back to the plain tool indicator when there is no code yet", () => {
-    render(<CalculatePart part={pendingCalculate()} />, { isStreaming: true });
+    render(<ComputePart part={pendingCompute()} />, { isStreaming: true });
 
-    const label = screen.getByText("Calculating");
+    const label = screen.getByText("Computing");
     expect(label.closest("div")).toHaveClass("shimmer");
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
   it("renders a collapsible trigger and shows code plus success output when expanded", async () => {
     const user = userEvent.setup();
-    render(<CalculatePart part={successCalculate("1 + 1", { result: 2, logs: "ok" })} />);
+    render(<ComputePart part={successCompute("1 + 1", { result: 2, logs: "ok" })} />);
 
-    const trigger = screen.getByRole("button", { name: /Calculated/i });
+    const trigger = screen.getByRole("button", { name: /Computed/i });
     expect(trigger.tagName).toBe("BUTTON");
 
     await user.click(trigger);
@@ -72,12 +72,10 @@ describe("CalculatePart", () => {
   it("renders args input as a JSON code block when present", async () => {
     const user = userEvent.setup();
     render(
-      <CalculatePart
-        part={successCalculate("1 + 1", { result: 2, logs: "ok" }, { hello: "world" })}
-      />,
+      <ComputePart part={successCompute("1 + 1", { result: 2, logs: "ok" }, { hello: "world" })} />,
     );
 
-    await user.click(screen.getByRole("button", { name: /Calculated/i }));
+    await user.click(screen.getByRole("button", { name: /Computed/i }));
 
     expect(screen.getByText(/"hello"/)).toBeInTheDocument();
     expect(screen.getByText(/"world"/)).toBeInTheDocument();
@@ -86,25 +84,25 @@ describe("CalculatePart", () => {
 
   it("does not render an args block when args are omitted", async () => {
     const user = userEvent.setup();
-    render(<CalculatePart part={successCalculate("1 + 1", { result: 2, logs: "ok" })} />);
+    render(<ComputePart part={successCompute("1 + 1", { result: 2, logs: "ok" })} />);
 
-    await user.click(screen.getByRole("button", { name: /Calculated/i }));
+    await user.click(screen.getByRole("button", { name: /Computed/i }));
 
     expect(document.querySelectorAll('[data-streamdown="code-block"]')).toHaveLength(3);
   });
 
   it("labels a failed run as a failure even though the tool call itself succeeded", () => {
-    render(<CalculatePart part={errorCalculate("bad")} />);
+    render(<ComputePart part={errorCompute("bad")} />);
 
-    expect(screen.getByRole("button", { name: /Could not calculate/i })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^Calculated/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Could not compute/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Computed/i })).not.toBeInTheDocument();
   });
 
   it("renders error output details when expanded", async () => {
     const user = userEvent.setup();
-    render(<CalculatePart part={errorCalculate("bad")} />);
+    render(<ComputePart part={errorCompute("bad")} />);
 
-    await user.click(screen.getByRole("button", { name: /Could not calculate/i }));
+    await user.click(screen.getByRole("button", { name: /Could not compute/i }));
 
     expect(screen.getByText(/TypeError: nope/)).toBeInTheDocument();
   });

@@ -96,7 +96,7 @@ describe("isVisibleIntermediatePart", () => {
     expect(isVisibleIntermediatePart(asPart({ type: "reasoning", text: "x", state: "done" }))).toBe(
       true,
     );
-    expect(isVisibleIntermediatePart(asPart({ type: "tool-calculate" }))).toBe(true);
+    expect(isVisibleIntermediatePart(asPart({ type: "tool-compute" }))).toBe(true);
     expect(isVisibleIntermediatePart(asPart({ type: "text", text: "hi" }))).toBe(false);
   });
 });

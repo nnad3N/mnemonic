@@ -4,10 +4,11 @@ import type { MnemonicToolName } from "@/mastra/mnemonic-tool-types.server";
 export const KnownToolName = Kit.literals.from<MnemonicToolName>()([
   "agent-reader",
   "agent-worker",
-  "calculate",
-  "calculateDocs",
+  "compute",
+  "computeDocs",
   "fileGraphRag",
   "fileVectorSearch",
+  "readVisuals",
   "recall",
   "searchFile",
   "webFetch",

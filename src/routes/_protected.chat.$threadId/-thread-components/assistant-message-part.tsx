@@ -8,7 +8,7 @@ import { Streamdown } from "streamdown";
 import { useMessageState } from "@/routes/_protected.chat.$threadId/-hooks/use-message-state";
 import { AssistantReasoningPart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-reasoning-part";
 import { AssistantToolPart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-tool-part";
-import { CalculatePart } from "@/routes/_protected.chat.$threadId/-thread-components/calculate-part.tsx";
+import { ComputePart } from "@/routes/_protected.chat.$threadId/-thread-components/compute-part.tsx";
 import { OmPart } from "@/routes/_protected.chat.$threadId/-thread-components/om-part";
 import { streamdownLinkSafety } from "@/routes/_protected.chat.$threadId/-thread-components/streamdown-link-safety-modal";
 import { WebFetchPart } from "@/routes/_protected.chat.$threadId/-thread-components/web-fetch-part";
@@ -17,7 +17,7 @@ import type { ThreadUIMessagePart } from "@/routes/_protected.chat.$threadId/-th
 
 const streamdownPlugins = {
   code: createCodePlugin(),
-  math: createMathPlugin({ singleDollarTextMath: true }),
+  math: createMathPlugin(),
   mermaid: createMermaidPlugin(),
 };
 
@@ -56,8 +56,8 @@ export const AssistantMessagePart = ({ part }: AssistantMessagePartProps) => {
     case "tool-webFetch": {
       return <WebFetchPart part={part} />;
     }
-    case "tool-calculate": {
-      return <CalculatePart part={part} />;
+    case "tool-compute": {
+      return <ComputePart part={part} />;
     }
     case "tool-recall": {
       return <AssistantToolPart part={part} />;

@@ -4,10 +4,8 @@ import type {
   Processor,
 } from "@mastra/core/processors";
 
-import { LlmNativeMimeType } from "@/lib/file-validation";
-
-export const stripNonNativeFilePartsProcessor = {
-  id: "strip-non-native-file-parts",
+export const stripFilePartsProcessor = {
+  id: "strip-file-parts",
   processLLMRequest({ prompt }: ProcessLLMRequestArgs): ProcessLLMRequestResult {
     return {
       prompt: prompt.map((message) => {
@@ -15,9 +13,7 @@ export const stripNonNativeFilePartsProcessor = {
           return message;
         }
 
-        const content = message.content.filter(
-          (part) => part.type !== "file" || LlmNativeMimeType.is(part.mediaType),
-        );
+        const content = message.content.filter((part) => part.type !== "file");
 
         if (content.length === message.content.length) {
           return message;

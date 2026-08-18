@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { sidebarQueries } from "@/routes/-sidebar/sidebar.functions";
 import { RootAppShell } from "@/routes/__root";
 import { authQueries } from "@/routes/_auth/-auth.functions";
+import { threadRunQueries } from "@/routes/_protected.chat.$threadId/-thread-api/thread-run.functions";
 import { byokQueries } from "@/routes/_protected.settings/-byok.functions";
 import type { ByokItem } from "@/routes/_protected.settings/-byok.functions";
 import { routeTree } from "@/routeTree.gen";
@@ -47,6 +48,7 @@ export const createTestRouter = ({ queryClient, session, user }: CreateTestRoute
   });
   queryClient.setQueryData(sidebarQueries.threads(undefined).queryKey, []);
   queryClient.setQueryData(sidebarQueries.topics().queryKey, []);
+  queryClient.setQueryData(threadRunQueries.states().queryKey, []);
   queryClient.setQueryData(byokQueries.mine().queryKey, [
     {
       activatedAt: new Date("2026-01-01T00:00:00.000Z"),
