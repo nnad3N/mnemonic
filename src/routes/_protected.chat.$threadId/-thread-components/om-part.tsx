@@ -26,25 +26,10 @@ type OmUiPart = Extract<
 
 type OmPartProps = {
   part: OmUiPart;
-  messageParts: ThreadUIMessagePart[];
 };
 
 type OmOperationType = "observation" | "reflection";
 type OmIndicatorStatus = "pending" | "success" | "error";
-
-const hasCompletedOmCycle = (parts: ThreadUIMessagePart[], cycleId: string): boolean =>
-  parts.some((part) => {
-    if (
-      part.type !== "data-om-observation-end" &&
-      part.type !== "data-om-observation-failed" &&
-      part.type !== "data-om-buffering-end" &&
-      part.type !== "data-om-buffering-failed"
-    ) {
-      return false;
-    }
-
-    return part.data.cycleId === cycleId;
-  });
 
 const renderOmLabel = ({
   kind,
@@ -130,13 +115,9 @@ const OmIndicator = ({ label, status, observations }: OmIndicatorProps) => {
   );
 };
 
-export const OmPart = ({ part, messageParts }: OmPartProps) => {
+export const OmPart = ({ part }: OmPartProps) => {
   switch (part.type) {
     case "data-om-observation-start": {
-      if (hasCompletedOmCycle(messageParts, part.data.cycleId)) {
-        return null;
-      }
-
       return (
         <OmIndicator
           label={renderOmLabel({
@@ -175,8 +156,6 @@ export const OmPart = ({ part, messageParts }: OmPartProps) => {
       );
     }
     case "data-om-buffering-start": {
-      if (hasCompletedOmCycle(messageParts, part.data.cycleId)) return null;
-
       return (
         <OmIndicator
           label={renderOmLabel({

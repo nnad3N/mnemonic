@@ -10,6 +10,7 @@ import type { ThreadRunStatus } from "@/db/schema.server";
 import { env } from "@/env";
 import * as Kit from "@/lib/kit";
 import type { SafeId } from "@/lib/safe-id";
+import type { WorkTiming } from "@/routes/_protected.chat.$threadId/-thread-types";
 
 /** Mastra's default is 5 minutes, shorter than a research run. */
 const CACHE_TTL_SECONDS = 60 * 60;
@@ -51,8 +52,7 @@ const getRunTimingTopic = (runId: SafeId<"run">) => `mnemonic:run-timing:${runId
 const getUserThreadsTopic = (userId: SafeId<"user">) => `mnemonic:user-threads:${userId}`;
 
 export type RunTiming = {
-  startedAt?: string;
-  workEndedAt: string[];
+  workTimings: WorkTiming[];
 };
 
 export type ThreadRunEvent = {
@@ -148,7 +148,9 @@ export const durableAgentsKit = createDurableAgentsKit({
       try: async () =>
         durableAgentsPubsub.publish(getRunTimingTopic(runId), {
           type: "run-timing",
-          data: { ...timing, workEndedAt: [...timing.workEndedAt] } satisfies RunTiming,
+          data: {
+            workTimings: timing.workTimings.map((work) => ({ ...work })),
+          } satisfies RunTiming,
           runId,
         }),
       catch: (cause) =>

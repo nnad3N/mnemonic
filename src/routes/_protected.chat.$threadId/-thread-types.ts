@@ -24,15 +24,22 @@ export const userMessageMetadataSchema = v.object({
 });
 
 /**
- * The reply's timing (server clock): when work started (the first reasoning or tool call), and
- * when each stretch of work ended — a text part began streaming, or the run finished, aborted
- * or failed. Streamed as message metadata while the run is live and written to the last
- * fragment once it settles, so both read the same way.
+ * One stretch of work in a reply (server clock): opened by its first reasoning or tool call and
+ * closed when a text part begins streaming or the run finishes, aborts or fails. Left open while
+ * the work is still going.
+ */
+export const workTimingSchema = v.object({
+  startedAt: v.string(),
+  endedAt: v.optional(v.string()),
+});
+
+/**
+ * Streamed as message metadata while the run is live and written to the last fragment once it
+ * settles, so both read the same way. Text-only replies record no work.
  */
 export const assistantMessageMetadataSchema = v.object({
   type: v.literal("assistant"),
-  startedAt: v.optional(v.string()),
-  workEndedAt: v.optional(v.array(v.string())),
+  workTimings: v.optional(v.array(workTimingSchema)),
 });
 
 export const threadMessageMetadataSchema = v.variant("type", [
@@ -43,6 +50,8 @@ export const threadMessageMetadataSchema = v.variant("type", [
 export type ThreadMetadataAttachment = v.InferOutput<typeof threadMetadataAttachmentSchema>;
 
 export type UserMessageMetadata = v.InferOutput<typeof userMessageMetadataSchema>;
+
+export type WorkTiming = v.InferOutput<typeof workTimingSchema>;
 
 export type AssistantMessageMetadata = v.InferOutput<typeof assistantMessageMetadataSchema>;
 

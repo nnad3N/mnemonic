@@ -64,14 +64,13 @@ const reconnectFn = Kit.gen(async function* (ctx: ChatCtx, input: ReconnectInput
 
   // The run's clock lives with the request that runs it; its topic replays what has happened
   // so far and keeps moving with the run.
-  const timing: RunTiming = { workEndedAt: [] };
+  const timing: RunTiming = { workTimings: [] };
 
   const [unsubscribeTiming] = yield* await Kit.promiseAll([
     ctx.durableAgents.subscribeRunTiming({
       runId,
       onTiming: (published) => {
-        timing.startedAt = published.startedAt;
-        timing.workEndedAt = published.workEndedAt;
+        timing.workTimings = published.workTimings;
       },
     }),
     ctx.durableAgents.connect(),

@@ -14,7 +14,7 @@ import { sidebarQueries } from "@/routes/-sidebar/sidebar.functions";
 
 import { stopThreadRun } from "../-thread-api/thread-run.functions";
 import { getThreadEditorId, plateToMarkdown } from "../-thread-components/composer/plate";
-import type { ThreadMetadataAttachment, ThreadUIMessage } from "../-thread-types";
+import type { ThreadMetadataAttachment, ThreadUIMessage, WorkTiming } from "../-thread-types";
 import type { ThreadInputLocation } from "../../-chat-store";
 import { useChatStore } from "../../-chat-store";
 import { useCreateThreadTitle } from "./use-create-thread-title";
@@ -222,26 +222,35 @@ export const useComposerActions = (location: ThreadInputLocation) => {
     // end, so it is closed here with the client's clock; the settled run replaces it on the
     // next load. If the cancel fails the run is still going, so undo and reattach rather than
     // leave the user looking at a stopped view of a live run.
-    const setWorkEndedAt = (update: (workEndedAt: string[]) => string[]) => {
+    const updateLastWork = (update: (work: WorkTiming) => void) => {
       chat.setMessages((messages) =>
         produce(messages, (draft) => {
           const last = draft.findLast((message) => message.role === "assistant");
+          const work =
+            last?.metadata?.type === "assistant" ? last.metadata.workTimings?.at(-1) : undefined;
 
-          if (last?.metadata?.type === "assistant") {
-            last.metadata.workEndedAt = update(last.metadata.workEndedAt ?? []);
+          if (work) {
+            update(work);
           }
         }),
       );
     };
+    const stoppedAt = Temporal.Now.instant().toString();
 
-    setWorkEndedAt((workEndedAt) => [...workEndedAt, Temporal.Now.instant().toString()]);
+    updateLastWork((work) => {
+      work.endedAt ??= stoppedAt;
+    });
     await chat.stop();
 
     const stopped = await Result.tryPromise(async () => stopThreadRun({ data: { threadId } }));
 
     if (Result.isError(stopped)) {
       await chat.resumeStream();
-      setWorkEndedAt((workEndedAt) => workEndedAt.slice(0, -1));
+      updateLastWork((work) => {
+        if (work.endedAt === stoppedAt) {
+          work.endedAt = undefined;
+        }
+      });
       return;
     }
 

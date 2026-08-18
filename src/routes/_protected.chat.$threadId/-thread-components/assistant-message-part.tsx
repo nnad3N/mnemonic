@@ -22,11 +22,10 @@ const streamdownPlugins = {
 };
 
 type AssistantMessagePartProps = {
-  messageParts: ThreadUIMessagePart[];
   part: ThreadUIMessagePart;
 };
 
-export const AssistantMessagePart = ({ messageParts, part }: AssistantMessagePartProps) => {
+export const AssistantMessagePart = ({ part }: AssistantMessagePartProps) => {
   const { isStreaming } = useMessageState();
   const { resolvedTheme } = useTheme();
 
@@ -70,7 +69,7 @@ export const AssistantMessagePart = ({ messageParts, part }: AssistantMessagePar
     case "data-om-buffering-end":
     case "data-om-buffering-failed":
     case "data-om-activation": {
-      return <OmPart messageParts={messageParts} part={part} />;
+      return <OmPart part={part} />;
     }
 
     default: {

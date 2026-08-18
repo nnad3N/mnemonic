@@ -2,7 +2,6 @@ import { T, useGT, useLocale } from "gt-tanstack-start";
 import { useState } from "react";
 
 import { CollapsibleContent } from "@/components/ui/collapsible";
-import { isVisibleIntermediatePart } from "@/lib/ai-sdk/tool-parts";
 import { getDominantWorkActivityKind, type WorkActivityKind } from "@/lib/ai-sdk/work-part";
 import { cn } from "@/lib/utils";
 import { useElapsedMs } from "@/routes/_protected.chat.$threadId/-hooks/use-elapsed-ms";
@@ -13,7 +12,10 @@ import {
   CollapsibleToolIndicatorTrigger,
   ToolIndicator,
 } from "@/routes/_protected.chat.$threadId/-thread-components/tool-indicator";
-import type { ThreadUIMessagePart } from "@/routes/_protected.chat.$threadId/-thread-types";
+import type {
+  ThreadUIMessagePart,
+  WorkTiming,
+} from "@/routes/_protected.chat.$threadId/-thread-types";
 
 const formatDuration = (locale: string, durationMs: number): string => {
   const totalSeconds = Math.max(1, Math.floor(durationMs / 1000));
@@ -32,22 +34,21 @@ const formatDuration = (locale: string, durationMs: number): string => {
   });
 };
 
-const getDurationMs = (startedAt?: string, completedAt?: string): number | undefined => {
-  if (!startedAt || !completedAt) {
+const getDurationMs = (timing: WorkTiming | undefined): number | undefined => {
+  if (!timing?.endedAt) {
     return undefined;
   }
 
-  const duration = Temporal.Instant.from(completedAt).since(Temporal.Instant.from(startedAt));
+  const duration = Temporal.Instant.from(timing.endedAt).since(
+    Temporal.Instant.from(timing.startedAt),
+  );
 
   return Math.max(0, duration.total("milliseconds"));
 };
 
 type WorkedForIndicatorProps = {
-  /** When the text closing this run started; unset while the run is still going. */
-  completedAt: string | undefined;
-  messageParts: ThreadUIMessagePart[];
   parts: ThreadUIMessagePart[];
-  startedAt: string | undefined;
+  timing: WorkTiming | undefined;
 };
 
 type WorkTickerState = {
@@ -58,22 +59,16 @@ type WorkTickerState = {
 
 const TICKER_HOLD_MS = 700;
 
-export const WorkedForIndicator = ({
-  completedAt,
-  messageParts,
-  parts,
-  startedAt,
-}: WorkedForIndicatorProps) => {
+export const WorkedForIndicator = ({ parts, timing }: WorkedForIndicatorProps) => {
   const { isStreaming } = useMessageState();
   const activityKind = getDominantWorkActivityKind(parts);
-  const pending = isStreaming && !completedAt;
-  const durationMs = getDurationMs(startedAt, completedAt);
+  const pending = isStreaming && !timing?.endedAt;
+  const durationMs = getDurationMs(timing);
   const elapsedMs = useElapsedMs(
-    pending && startedAt ? { enabled: true, startedAt } : { enabled: false },
+    pending && timing ? { enabled: true, startedAt: timing.startedAt } : { enabled: false },
   );
 
-  const visibleParts = parts.filter(isVisibleIntermediatePart);
-  const latestIndex = visibleParts.length - 1;
+  const latestIndex = parts.length - 1;
 
   const [ticker, setTicker] = useState<WorkTickerState>({
     current: latestIndex,
@@ -83,21 +78,34 @@ export const WorkedForIndicator = ({
     setTicker({ current: latestIndex, previous: ticker.current, phase: "entering" });
   }
 
-  const currentPart = visibleParts.at(ticker.current);
-  const previousPart = ticker.previous === undefined ? undefined : visibleParts.at(ticker.previous);
+  const currentPart = parts.at(ticker.current);
+  const previousPart = ticker.previous === undefined ? undefined : parts.at(ticker.previous);
+  // While the work is pending, a single part is already shown by the ticker below.
+  const collapsible = parts.length > 1 || !pending;
 
   return (
     <CollapsibleToolIndicator className="group/work">
-      <CollapsibleToolIndicatorTrigger
-        render={<ToolIndicator interactive="collapsible" pending={pending} />}
-      >
-        <WorkLabel
-          activityKind={activityKind}
-          durationMs={durationMs}
-          elapsedMs={elapsedMs}
-          pending={pending}
-        />
-      </CollapsibleToolIndicatorTrigger>
+      {collapsible ? (
+        <CollapsibleToolIndicatorTrigger
+          render={<ToolIndicator interactive="collapsible" pending={pending} />}
+        >
+          <WorkLabel
+            activityKind={activityKind}
+            durationMs={durationMs}
+            elapsedMs={elapsedMs}
+            pending={pending}
+          />
+        </CollapsibleToolIndicatorTrigger>
+      ) : (
+        <ToolIndicator pending={pending}>
+          <WorkLabel
+            activityKind={activityKind}
+            durationMs={durationMs}
+            elapsedMs={elapsedMs}
+            pending={pending}
+          />
+        </ToolIndicator>
+      )}
       {isStreaming && currentPart && (
         <div
           className={cn(
@@ -116,7 +124,7 @@ export const WorkedForIndicator = ({
                 className="pointer-events-none absolute inset-s-0 top-1 w-max max-w-full animate-out duration-700 ease-out fill-mode-forwards fade-out slide-out-to-top-4"
                 key={ticker.previous}
               >
-                <AssistantMessagePart messageParts={messageParts} part={previousPart} />
+                <AssistantMessagePart part={previousPart} />
               </div>
             )}
             <div
@@ -138,19 +146,21 @@ export const WorkedForIndicator = ({
                 }, TICKER_HOLD_MS);
               }}
             >
-              <AssistantMessagePart messageParts={messageParts} part={currentPart} />
+              <AssistantMessagePart part={currentPart} />
             </div>
           </div>
           <div className="pointer-events-none absolute inset-x-0 top-0 h-3 bg-linear-to-b from-background to-transparent" />
         </div>
       )}
-      <CollapsibleContent className="overflow-hidden pt-2">
-        <div className="flex flex-col gap-2">
-          {parts.map((part, offset) => (
-            <AssistantMessagePart key={offset} messageParts={messageParts} part={part} />
-          ))}
-        </div>
-      </CollapsibleContent>
+      {collapsible && (
+        <CollapsibleContent className="overflow-hidden pt-2">
+          <div className="flex flex-col gap-2">
+            {parts.map((part, offset) => (
+              <AssistantMessagePart key={offset} part={part} />
+            ))}
+          </div>
+        </CollapsibleContent>
+      )}
     </CollapsibleToolIndicator>
   );
 };
@@ -183,6 +193,10 @@ const WorkLabel = ({ activityKind, durationMs, elapsedMs, pending }: WorkLabelPr
       }
 
       return gt("Researched for {duration}", { duration: formatDuration(locale, durationMs) });
+    }
+    // Memory markers open no work timing, so there is no duration to report.
+    case "memory": {
+      return pending ? <T>Managing memory...</T> : <T>Managed memory</T>;
     }
     case "default": {
       if (pending) {

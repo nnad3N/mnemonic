@@ -26,13 +26,8 @@ const tickerRow = (container: HTMLElement): HTMLElement => {
 
 const STARTED_AT = "2026-01-01T00:00:00Z";
 
-const indicator = (parts: ThreadUIMessagePart[], completedAt?: string) => (
-  <WorkedForIndicator
-    completedAt={completedAt}
-    messageParts={parts}
-    parts={parts}
-    startedAt={STARTED_AT}
-  />
+const indicator = (parts: ThreadUIMessagePart[], endedAt?: string) => (
+  <WorkedForIndicator parts={parts} timing={{ startedAt: STARTED_AT, endedAt }} />
 );
 
 const renderIndicator = (parts: ThreadUIMessagePart[]) =>

@@ -283,7 +283,7 @@ describe("mergeConsecutiveAssistantMessages", () => {
         id: "a2",
         role: "assistant",
         parts: secondParts,
-        metadata: { type: "assistant", startedAt: "2026-01-01T00:00:00.000Z" },
+        metadata: { type: "assistant", workTimings: [{ startedAt: "2026-01-01T00:00:00.000Z" }] },
       }),
     ];
 
@@ -293,7 +293,7 @@ describe("mergeConsecutiveAssistantMessages", () => {
         id: "a2",
         role: "assistant",
         parts: firstParts.concat(secondParts),
-        metadata: { type: "assistant", startedAt: "2026-01-01T00:00:00.000Z" },
+        metadata: { type: "assistant", workTimings: [{ startedAt: "2026-01-01T00:00:00.000Z" }] },
       },
     ]);
   });

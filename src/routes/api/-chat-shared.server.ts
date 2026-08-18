@@ -79,19 +79,9 @@ export const reconcileRuns = Kit.gen(async function* (ctx: ReconcileRunsCtx, run
   return Result.ok(interrupted.map(({ runId }) => runId));
 });
 
-type SentTiming = { ends: number; startedAt?: string };
-
-const hasTimingMoved = (timing: RunTiming | undefined, sent: SentTiming): timing is RunTiming => {
-  if (!timing) {
-    return false;
-  }
-
-  if (timing.startedAt !== sent.startedAt) {
-    return true;
-  }
-
-  return timing.workEndedAt.length !== sent.ends;
-};
+// Work only ever opens or closes, in order, so the count of both is the clock's position.
+const countWorkSteps = (timing: RunTiming): number =>
+  timing.workTimings.reduce((steps, work) => steps + (work.endedAt ? 2 : 1), 0);
 
 type ToThreadUIStreamInput = {
   cleanup: () => void;
@@ -121,24 +111,26 @@ export const toThreadUIStream = ({
 
       // The recorder moves the clock as soon as a chunk is published; the matching UI part
       // arrives here a tick later, so the metadata always follows the part that caused it.
-      let sent: SentTiming = { ends: 0 };
+      let sentSteps = 0;
 
       try {
         for await (const part of stream) {
           // oxlint-disable-next-line typescript/no-unsafe-type-assertion
           writer.write(part as InferUIMessageChunk<ThreadUIMessage>);
 
-          if (hasTimingMoved(timing, sent)) {
-            sent = { startedAt: timing.startedAt, ends: timing.workEndedAt.length };
-            writer.write({
-              type: "message-metadata",
-              messageMetadata: {
-                type: "assistant",
-                startedAt: timing.startedAt,
-                workEndedAt: [...timing.workEndedAt],
-              },
-            });
-          }
+          if (!timing) continue;
+
+          const steps = countWorkSteps(timing);
+          if (steps === sentSteps) continue;
+
+          sentSteps = steps;
+          writer.write({
+            type: "message-metadata",
+            messageMetadata: {
+              type: "assistant",
+              workTimings: timing.workTimings.map((work) => ({ ...work })),
+            },
+          });
         }
       } finally {
         // The loop only ends once the run's topic is terminal (the writer swallows a gone

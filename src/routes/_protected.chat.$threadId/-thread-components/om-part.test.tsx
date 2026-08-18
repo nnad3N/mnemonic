@@ -40,43 +40,10 @@ describe("OmPart", () => {
       operationType: "observation",
     });
 
-    render(<OmPart messageParts={[part]} part={part} />, { isStreaming: true });
+    render(<OmPart part={part} />, { isStreaming: true });
 
     const indicator = screen.getByText("Observing conversation");
     expect(indicator.closest("div")).toHaveClass("shimmer");
-  });
-
-  it("hides the start indicator once the cycle has completed", () => {
-    const start = omPart("data-om-observation-start", {
-      cycleId: "cycle-1",
-      operationType: "observation",
-    });
-    const end = omPart("data-om-observation-end", {
-      cycleId: "cycle-1",
-      operationType: "observation",
-      observations: "summary",
-    });
-
-    const { container } = render(<OmPart messageParts={[start, end]} part={start} />, {
-      isStreaming: true,
-    });
-
-    expect(container).toBeEmptyDOMElement();
-  });
-
-  it("keeps a start indicator when only a different cycle has completed", () => {
-    const start = omPart("data-om-observation-start", {
-      cycleId: "cycle-1",
-      operationType: "observation",
-    });
-    const otherEnd = omPart("data-om-buffering-failed", {
-      cycleId: "other",
-      operationType: "observation",
-    });
-
-    render(<OmPart messageParts={[start, otherEnd]} part={start} />);
-
-    expect(screen.getByText("Observing conversation")).toBeInTheDocument();
   });
 
   it("renders reflection pending copy for reflection observations", () => {
@@ -85,7 +52,7 @@ describe("OmPart", () => {
       operationType: "reflection",
     });
 
-    render(<OmPart messageParts={[part]} part={part} />);
+    render(<OmPart part={part} />);
 
     expect(screen.getByText("Reflecting on memories")).toBeInTheDocument();
   });
@@ -98,7 +65,7 @@ describe("OmPart", () => {
       observations: "Noted the user's preference",
     });
 
-    render(<OmPart messageParts={[part]} part={part} />);
+    render(<OmPart part={part} />);
 
     const trigger = screen.getByRole("button", { name: /Observed conversation/i });
     await user.click(trigger);
@@ -112,7 +79,7 @@ describe("OmPart", () => {
       operationType: "observation",
     });
 
-    render(<OmPart messageParts={[part]} part={part} />);
+    render(<OmPart part={part} />);
 
     expect(screen.getByText("Prepared observations")).toBeInTheDocument();
   });
@@ -120,7 +87,7 @@ describe("OmPart", () => {
   it("renders activation success as a collapsible button when observations exist", () => {
     const part = omPart("data-om-activation", { cycleId: "cycle-1", observations: "activated" });
 
-    render(<OmPart messageParts={[part]} part={part} />);
+    render(<OmPart part={part} />);
 
     expect(screen.getByRole("button", { name: /Updated memory/i })).toBeInTheDocument();
   });
@@ -131,7 +98,7 @@ describe("OmPart", () => {
       operationType: "observation",
     });
 
-    render(<OmPart messageParts={[part]} part={part} />, { isStreaming: true });
+    render(<OmPart part={part} />, { isStreaming: true });
 
     const indicator = screen.getByText("Could not observe conversation");
     expect(indicator.closest("div")).toHaveClass("text-destructive");

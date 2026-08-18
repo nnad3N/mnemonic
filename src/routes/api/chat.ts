@@ -1,3 +1,4 @@
+import type { DurableAgentStreamResult } from "@mastra/core/agent/durable";
 import { MessageList } from "@mastra/core/agent/message-list";
 import { RequestContext } from "@mastra/core/request-context";
 import type { ChunkType } from "@mastra/core/stream";
@@ -25,7 +26,10 @@ import type { SafeId } from "@/lib/safe-id";
 import { createSafeId } from "@/lib/safe-id";
 import { getMnemonicAgent } from "@/mastra/agents/id.server";
 import type { MnemonicRequestContext } from "@/mastra/request-context.server";
-import type { AssistantMessageMetadata } from "@/routes/_protected.chat.$threadId/-thread-types";
+import type {
+  AssistantMessageMetadata,
+  WorkTiming,
+} from "@/routes/_protected.chat.$threadId/-thread-types";
 
 import { toThreadUIStream } from "./-chat-shared.server";
 
@@ -68,6 +72,65 @@ class ChatStreamError extends TaggedError("ChatStreamError")<{
 }> {}
 
 type ChatCtx = Kits<[DbKit, MemoryKit, DurableAgentsKit]>;
+
+const getOpenWork = (timing: RunTiming): WorkTiming | undefined => {
+  const last = timing.workTimings.at(-1);
+  return last && !last.endedAt ? last : undefined;
+};
+
+const endWork = async (ctx: ChatCtx, runId: SafeId<"run">, timing: RunTiming) => {
+  const openWork = getOpenWork(timing);
+  if (!openWork) return;
+
+  openWork.endedAt = Temporal.Now.instant().toString();
+  const published = await ctx.durableAgents.publishRunTiming({ runId, timing });
+
+  if (Result.isError(published)) {
+    console.error(published.error);
+  }
+};
+
+type SettleRunInput = {
+  status: "errored" | "finished" | "interrupted";
+  output: DurableAgentStreamResult["output"];
+  runId: SafeId<"run">;
+  threadId: string;
+  timing: RunTiming;
+  userId: SafeId<"user">;
+};
+
+const settleRun = async (
+  ctx: ChatCtx,
+  { status, output, runId, threadId, timing, userId }: SettleRunInput,
+) => {
+  const finishedAt = new Date();
+  const lastFragmentId = output.messageList.get.response.db().at(-1)?.id;
+  const [recorded, timed] = await Promise.all([
+    ctx.db.run((db) =>
+      db.update(threadRun).set({ status, finishedAt }).where(eq(threadRun.runId, runId)),
+    ),
+    lastFragmentId
+      ? ctx.memory.updateMessageMetadata({
+          id: lastFragmentId,
+          metadata: { type: "assistant", ...timing } satisfies AssistantMessageMetadata,
+        })
+      : Result.ok(),
+  ]);
+
+  if (Result.isError(recorded)) {
+    console.error(recorded.error);
+  }
+
+  if (Result.isError(timed)) {
+    console.error(timed.error);
+  }
+
+  const published = await ctx.durableAgents.publishRunEvent({ runId, status, threadId, userId });
+
+  if (Result.isError(published)) {
+    console.error(published.error);
+  }
+};
 
 const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
   const [{ agentId, thread, topicId }, providerKey] = yield* await Kit.promiseAll([
@@ -116,19 +179,8 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
   const abortController = new AbortController();
   // Mastra stamps a reply's fragments only when each step ends, so the run's own timing is
   // recorded here: streamed to the client as it happens and written to the reply once settled.
-  // Work starts with the first tool call, not the request.
-  const timing: RunTiming = { workEndedAt: [] };
-  const publishTiming = async () => {
-    const published = await ctx.durableAgents.publishRunTiming({ runId, timing });
-
-    if (Result.isError(published)) {
-      console.error(published.error);
-    }
-  };
-  const endWork = async () => {
-    timing.workEndedAt.push(Temporal.Now.instant().toString());
-    await publishTiming();
-  };
+  // Work starts with the first reasoning or tool call, not the request.
+  const timing: RunTiming = { workTimings: [] };
 
   // The durable loop only writes to memory when it finishes, so a reload mid-run would load
   // the thread without the message that started it. Save it now; the loop's final flush
@@ -142,46 +194,6 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
         .get.all.db(),
     }),
   ]);
-
-  const settle = async (status: "errored" | "finished" | "interrupted") => {
-    const finishedAt = new Date();
-    const lastFragmentId = result.output.messageList.get.response.db().at(-1)?.id;
-    const [recorded, timed] = await Promise.all([
-      ctx.db.run((db) =>
-        db.update(threadRun).set({ status, finishedAt }).where(eq(threadRun.runId, runId)),
-      ),
-      lastFragmentId
-        ? ctx.memory.updateMessageMetadata({
-            id: lastFragmentId,
-            metadata: { type: "assistant", ...timing } satisfies AssistantMessageMetadata,
-          })
-        : Result.ok(),
-    ]);
-
-    if (Result.isError(recorded)) {
-      console.error(recorded.error);
-    }
-
-    if (Result.isError(timed)) {
-      console.error(timed.error);
-    }
-
-    const published = await ctx.durableAgents.publishRunEvent({
-      runId,
-      status,
-      threadId,
-      userId,
-    });
-
-    if (Result.isError(published)) {
-      console.error(published.error);
-    }
-
-    // Last: tearing down a Redis Streams reader takes up to its block interval, and Mastra
-    // has already dropped the run's snapshot, so a `reconcileRuns` in between would mark a
-    // still-`running` row interrupted.
-    await unsubscribeCancel();
-  };
 
   const result = yield* await Result.tryPromise({
     try: async () =>
@@ -197,22 +209,30 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
         untilIdle: true,
         onChunk: async (chunk) => {
           if (chunk.type === "text-start") {
-            await endWork();
+            await endWork(ctx, runId, timing);
           }
 
-          if (!timing.startedAt && WorkStartChunk.is(chunk.type)) {
-            timing.startedAt = Temporal.Now.instant().toString();
-            await publishTiming();
+          if (WorkStartChunk.is(chunk.type) && !getOpenWork(timing)) {
+            timing.workTimings.push({ startedAt: Temporal.Now.instant().toString() });
+            (await ctx.durableAgents.publishRunTiming({ runId, timing })).tapError(console.error);
           }
         },
         onFinish: async ({ finishReason }) => {
           if (finishReason === "error") return;
 
-          await endWork();
-          await settle(finishReason === "abort" ? "interrupted" : "finished");
+          await endWork(ctx, runId, timing);
+          await settleRun(ctx, {
+            status: finishReason === "abort" ? "interrupted" : "finished",
+            output: result.output,
+            runId,
+            threadId,
+            timing,
+            userId,
+          });
+          await unsubscribeCancel();
         },
         onError: async () => {
-          await endWork();
+          await endWork(ctx, runId, timing);
           // A fatal error throws out of the durable loop before its final step, which is the
           // only place the reply is written; keep the steps that completed and were shown.
           const saved = await ctx.memory.saveMessages({
@@ -223,7 +243,15 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
             console.error(saved.error);
           }
 
-          await settle("errored");
+          await settleRun(ctx, {
+            status: "errored",
+            output: result.output,
+            runId,
+            threadId,
+            timing,
+            userId,
+          });
+          await unsubscribeCancel();
         },
       }),
     catch: (cause) =>
