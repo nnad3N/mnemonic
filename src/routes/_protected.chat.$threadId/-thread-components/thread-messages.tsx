@@ -1,8 +1,7 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type { ChatStatus } from "ai";
 import { T } from "gt-tanstack-start";
-import { useLayoutEffect, useState } from "react";
-import { useStickToBottomContext } from "use-stick-to-bottom";
+import { useLayoutEffect, useRef, useState } from "react";
 
 import { MessageScrollerContent, MessageScrollerViewport } from "@/components/ui/message-scroller";
 import { isVisibleToolPart } from "@/lib/ai-sdk/tool-parts";
@@ -21,6 +20,9 @@ const USER_MESSAGE_ESTIMATED_SIZE = 80;
 const ASSISTANT_MESSAGE_ESTIMATED_SIZE = 500;
 const USER_MESSAGE_GROUP_GAP = 48;
 const MESSAGE_OVERSCAN = 4;
+const SCROLL_END_EPSILON_PX = 1;
+const MIN_SCROLL_ALIGN_FRAMES = 16;
+const MAX_SCROLL_ALIGN_FRAMES = 32;
 
 const isPendingTurn = (status: ChatStatus, lastMessage: ThreadUIMessage | undefined): boolean => {
   if (status === "submitted") {
@@ -34,17 +36,13 @@ const isPendingTurn = (status: ChatStatus, lastMessage: ThreadUIMessage | undefi
   return !lastMessage?.parts.some((part) => isVisibleToolPart(part));
 };
 
-type ThreadMessagesProps = {
-  threadId: string;
-};
-
-export const ThreadMessages = ({ threadId }: ThreadMessagesProps) => {
+export const ThreadMessages = () => {
   const chat = useThreadChat();
   const editingMessageId = useChatStore((state) => state.editingState?.messageId);
   const isBusy = chat.status === "submitted" || chat.status === "streaming";
   const isPending = isPendingTurn(chat.status, chat.messages.at(-1));
   const [isLayoutReady, setIsLayoutReady] = useState(chat.messages.length === 0);
-  const { scrollRef, scrollToBottom } = useStickToBottomContext();
+  const viewportRef = useRef<HTMLDivElement>(null);
 
   const visibleMessages = chat.messages.filter(
     (message) => message.role === "user" || message.parts.some((part) => isVisibleToolPart(part)),
@@ -56,8 +54,9 @@ export const ThreadMessages = ({ threadId }: ThreadMessagesProps) => {
   const virtualizer = useVirtualizer({
     useFlushSync: false,
     anchorTo: "end",
+    followOnAppend: "smooth",
     count: visibleMessages.length,
-    getScrollElement: () => scrollRef.current,
+    getScrollElement: () => viewportRef.current,
     estimateSize: (index) => {
       const message = visibleMessages.at(index);
 
@@ -73,23 +72,46 @@ export const ThreadMessages = ({ threadId }: ThreadMessagesProps) => {
   });
 
   useLayoutEffect(() => {
-    // this setTimeout is a big hack, on slower CPUs 16 ms might not be enough, but I couldn't find anything better
-    // height of the messages changes when they are rendered, so if we scroll instantly we won't be put to the bottom sometimes.
-    // we rerun this hook on threadId change to scroll to the bottom again.
-    const timeoutId = setTimeout(() => {
-      void Promise.resolve(scrollToBottom({ animation: "instant" })).finally(() => {
-        virtualizer.scrollToEnd({ behavior: "instant" });
+    // Virtualized heights change after paint, so wait until a frame where we
+    // are already at the bottom before revealing. Auto-follow forces the
+    // scroller's `end` flag to false, so read the viewport instead.
+    let frameId = 0;
+    let hasChecked = false;
+    let frameCount = 0;
+
+    const alignToEnd = () => {
+      frameCount += 1;
+
+      const viewport = viewportRef.current;
+      if (viewport && viewport.clientHeight > 0) {
+        const remaining = viewport.scrollHeight - viewport.clientHeight - viewport.scrollTop;
+        const isAtEnd = remaining <= SCROLL_END_EPSILON_PX;
+
+        if (hasChecked && isAtEnd && frameCount >= MIN_SCROLL_ALIGN_FRAMES) {
+          setIsLayoutReady(true);
+          return;
+        }
+
+        hasChecked = true;
+      }
+
+      if (frameCount >= MAX_SCROLL_ALIGN_FRAMES) {
         setIsLayoutReady(true);
-      });
-    }, 16);
+        return;
+      }
+
+      frameId = requestAnimationFrame(alignToEnd);
+    };
+
+    frameId = requestAnimationFrame(alignToEnd);
 
     return () => {
-      clearTimeout(timeoutId);
+      cancelAnimationFrame(frameId);
     };
-  }, [threadId, scrollToBottom, virtualizer]);
+  }, []);
 
   return (
-    <MessageScrollerViewport>
+    <MessageScrollerViewport ref={viewportRef}>
       <div className="flex min-h-full flex-col">
         <MessageScrollerContent
           aria-busy={isBusy}

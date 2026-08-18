@@ -62,17 +62,16 @@ function RouteComponent() {
 
   return (
     <PlateController>
-      <MessageScrollerProvider
-        className="flex h-full min-h-0 w-full flex-1 flex-col"
-        key={threadId}
-      >
-        <MessageScroller className="min-h-0 flex-1">
-          <Outlet />
-          <MessageScrollerButton />
-        </MessageScroller>
+      <MessageScrollerProvider autoScroll defaultScrollPosition="end" key={threadId}>
+        <div className="flex h-full min-h-0 w-full flex-1 flex-col">
+          <MessageScroller className="min-h-0 flex-1">
+            <Outlet />
+            <MessageScrollerButton />
+          </MessageScroller>
 
-        <div className="relative mx-auto flex w-full max-w-3xl justify-center px-2 pb-3">
-          <ThreadComposer location="main" />
+          <div className="relative mx-auto flex w-full max-w-3xl justify-center px-2 pb-3">
+            <ThreadComposer location="main" />
+          </div>
         </div>
       </MessageScrollerProvider>
     </PlateController>

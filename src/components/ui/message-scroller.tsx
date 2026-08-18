@@ -1,19 +1,29 @@
 import { ScrollArea as ScrollAreaPrimitive } from "@base-ui/react/scroll-area";
+import {
+  MessageScroller as MessageScrollerPrimitive,
+  useMessageScroller,
+  useMessageScrollerScrollable,
+  useMessageScrollerVisibility,
+} from "@shadcn/react/message-scroller";
 import { ArrowDownIcon } from "lucide-react";
 import * as React from "react";
-import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 
 import { Button } from "@/components/ui/button";
 import { ScrollBar } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
-function MessageScrollerProvider(props: React.ComponentProps<typeof StickToBottom>) {
-  return <StickToBottom initial="instant" resize="smooth" {...props} />;
+function MessageScrollerProvider(
+  props: React.ComponentProps<typeof MessageScrollerPrimitive.Provider>,
+) {
+  return <MessageScrollerPrimitive.Provider {...props} />;
 }
 
-function MessageScroller({ className, ...props }: React.ComponentProps<"div">) {
+function MessageScroller({
+  className,
+  ...props
+}: React.ComponentProps<typeof MessageScrollerPrimitive.Root>) {
   return (
-    <div
+    <MessageScrollerPrimitive.Root
       data-slot="message-scroller"
       className={cn(
         "group/message-scroller relative flex size-full min-h-0 flex-col overflow-hidden",
@@ -27,26 +37,24 @@ function MessageScroller({ className, ...props }: React.ComponentProps<"div">) {
 function MessageScrollerViewport({
   className,
   ...props
-}: React.ComponentProps<typeof ScrollAreaPrimitive.Viewport>) {
-  const { scrollRef } = useStickToBottomContext();
-
+}: React.ComponentProps<typeof MessageScrollerPrimitive.Viewport>) {
   return (
     <ScrollAreaPrimitive.Root
       data-slot="message-scroller-scroll-area"
       className="relative size-full min-h-0 min-w-0"
     >
       <ScrollAreaPrimitive.Viewport
-        ref={scrollRef}
         data-slot="message-scroller-viewport"
         className={cn(
           "size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1",
           "overscroll-contain contain-content",
           className,
         )}
+        render={<MessageScrollerPrimitive.Viewport />}
         {...props}
       />
       {/* A mask-based fade (scroll-fade-b) on the viewport disables backdrop-filter
-          for the sticky thread header inside it, so fade over the background instead. */}
+          for the sticky thread header overlaying it, so fade over the background instead. */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-linear-to-b from-transparent to-background" />
       <ScrollBar className="z-20 mr-1 py-1" />
       <ScrollAreaPrimitive.Corner />
@@ -54,12 +62,12 @@ function MessageScrollerViewport({
   );
 }
 
-function MessageScrollerContent({ className, ...props }: React.ComponentProps<"div">) {
-  const { contentRef } = useStickToBottomContext();
-
+function MessageScrollerContent({
+  className,
+  ...props
+}: React.ComponentProps<typeof MessageScrollerPrimitive.Content>) {
   return (
-    <div
-      ref={contentRef}
+    <MessageScrollerPrimitive.Content
       data-slot="message-scroller-content"
       className={cn("flex h-max min-h-full flex-col gap-8", className)}
       {...props}
@@ -67,35 +75,57 @@ function MessageScrollerContent({ className, ...props }: React.ComponentProps<"d
   );
 }
 
+function MessageScrollerItem({
+  className,
+  scrollAnchor = false,
+  ...props
+}: React.ComponentProps<typeof MessageScrollerPrimitive.Item>) {
+  return (
+    <MessageScrollerPrimitive.Item
+      data-slot="message-scroller-item"
+      scrollAnchor={scrollAnchor}
+      className={cn(
+        "min-w-0 shrink-0 [contain-intrinsic-size:auto_10rem] [content-visibility:auto]",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
 function MessageScrollerButton({
+  direction = "end",
   className,
   children,
+  render,
   variant = "secondary",
   size = "icon-sm",
   ...props
-}: React.ComponentProps<typeof Button>) {
-  const { isAtBottom, scrollToBottom } = useStickToBottomContext();
-
+}: React.ComponentProps<typeof MessageScrollerPrimitive.Button> &
+  Pick<React.ComponentProps<typeof Button>, "variant" | "size">) {
   return (
-    <Button
+    <MessageScrollerPrimitive.Button
       data-slot="message-scroller-button"
-      data-active={!isAtBottom}
-      variant={variant}
-      size={size}
-      onClick={() => void scrollToBottom({ animation: "smooth", ignoreEscapes: true })}
+      data-direction={direction}
+      data-variant={variant}
+      data-size={size}
+      direction={direction}
       className={cn(
-        "absolute inset-s-1/2 bottom-4 -translate-x-1/2 border-border bg-background text-foreground transition-[translate,scale,opacity] duration-200 hover:bg-muted hover:text-foreground data-[active=false]:pointer-events-none data-[active=false]:translate-y-full data-[active=false]:scale-95 data-[active=false]:opacity-0 data-[active=false]:duration-400 data-[active=false]:ease-[cubic-bezier(0.7,0,0.84,0)] data-[active=true]:translate-y-0 data-[active=true]:scale-100 data-[active=true]:opacity-100 data-[active=true]:ease-[cubic-bezier(0.23,1,0.32,1)] rtl:translate-x-1/2",
+        "absolute inset-s-1/2 -translate-x-1/2 border-border bg-background text-foreground transition-[translate,scale,opacity] duration-200 hover:bg-muted hover:text-foreground data-[active=false]:pointer-events-none data-[active=false]:scale-95 data-[active=false]:opacity-0 data-[active=false]:duration-400 data-[active=false]:ease-[cubic-bezier(0.7,0,0.84,0)] data-[active=true]:translate-y-0 data-[active=true]:scale-100 data-[active=true]:opacity-100 data-[active=true]:ease-[cubic-bezier(0.23,1,0.32,1)] data-[direction=end]:bottom-4 data-[direction=end]:data-[active=false]:translate-y-full data-[direction=start]:top-4 data-[direction=start]:data-[active=false]:-translate-y-full rtl:translate-x-1/2 data-[direction=start]:[&_svg]:rotate-180",
         className,
       )}
+      render={render ?? <Button size={size} variant={variant} />}
       {...props}
     >
       {children ?? (
         <>
           <ArrowDownIcon />
-          <span className="sr-only">Scroll to end</span>
+          <span className="sr-only">
+            {direction === "end" ? "Scroll to end" : "Scroll to start"}
+          </span>
         </>
       )}
-    </Button>
+    </MessageScrollerPrimitive.Button>
   );
 }
 
@@ -104,5 +134,9 @@ export {
   MessageScroller,
   MessageScrollerViewport,
   MessageScrollerContent,
+  MessageScrollerItem,
   MessageScrollerButton,
+  useMessageScroller,
+  useMessageScrollerScrollable,
+  useMessageScrollerVisibility,
 };

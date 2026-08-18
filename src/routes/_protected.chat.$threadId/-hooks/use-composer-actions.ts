@@ -7,8 +7,8 @@ import type { Descendant } from "platejs";
 import { ElementApi, TextApi } from "platejs";
 import type { PlateEditor } from "platejs/react";
 import { useEditorRef, useEditorSelector } from "platejs/react";
-import { useStickToBottomContext } from "use-stick-to-bottom";
 
+import { useMessageScroller } from "@/components/ui/message-scroller";
 import { sidebarQueries } from "@/routes/-sidebar/sidebar.functions";
 
 import { stopThreadRun } from "../-thread-api/thread-run.functions";
@@ -134,7 +134,7 @@ export const useComposerActions = (location: ThreadInputLocation) => {
 
   const chat = useThreadChat();
   const queryClient = useQueryClient();
-  const { scrollToBottom } = useStickToBottomContext();
+  const { scrollToEnd } = useMessageScroller();
   const { data: topicId } = useSuspenseQuery({
     ...threadQueries.chat(threadId),
     select: (data) => data.topicId,
@@ -188,7 +188,7 @@ export const useComposerActions = (location: ThreadInputLocation) => {
       });
     }
 
-    void scrollToBottom({ animation: "smooth", ignoreEscapes: true });
+    scrollToEnd({ behavior: "smooth" });
 
     moveSidebarThreadToTop(queryClient, { threadId, topicId });
 

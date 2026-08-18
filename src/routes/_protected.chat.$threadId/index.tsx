@@ -34,7 +34,7 @@ function RouteComponent() {
   return (
     <>
       {data.topicId && <FilesSync topicId={data.topicId} />}
-      <ThreadMessages threadId={threadId} />
+      <ThreadMessages />
     </>
   );
 }
