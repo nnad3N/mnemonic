@@ -95,20 +95,25 @@ const unknownToolPart = () =>
   }) as unknown as ToolUIPart<ThreadUITools>;
 
 const TOOL_LABELS = {
-  "agent-webResearch": {
-    done: "Researched the web",
-    error: "Could not research the web",
-    pending: "Researching the web",
+  "agent-reader": {
+    done: "Read the source",
+    error: "Could not read the source",
+    pending: "Reading the source",
   },
-  docs: {
+  "agent-worker": {
+    done: "Researched",
+    error: "Could not research",
+    pending: "Researching",
+  },
+  calculate: {
+    done: "Calculated",
+    error: "Could not calculate",
+    pending: "Calculating",
+  },
+  calculateDocs: {
     done: "Read library documentation",
     error: "Could not read library documentation",
     pending: "Reading library documentation",
-  },
-  executeCode: {
-    done: "Executed code",
-    error: "Could not execute code",
-    pending: "Executing code",
   },
   fileGraphRag: {
     done: "Searched file connections",
@@ -120,15 +125,15 @@ const TOOL_LABELS = {
     error: "Could not search files",
     pending: "Searching files",
   },
-  getFile: {
-    done: "Read file",
-    error: "Could not read file",
-    pending: "Reading file",
-  },
   recall: {
     done: "Recalled memories",
     error: "Could not recall memories",
     pending: "Recalling memories",
+  },
+  searchFile: {
+    done: "Searched the file",
+    error: "Could not search the file",
+    pending: "Searching the file",
   },
   webFetch: {
     done: "Fetched the web page",

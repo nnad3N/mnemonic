@@ -25,7 +25,7 @@ describe("groupAssistantParts", () => {
   it("groups intermediates before text into one run", () => {
     const parts: ThreadUIMessagePart[] = [
       { type: "reasoning", text: "thinking", state: "done" },
-      toolPart("getFile"),
+      toolPart("calculate"),
       {
         type: "data-om-observation-end",
         data: {
@@ -59,7 +59,7 @@ describe("groupAssistantParts", () => {
 
   it("splits runs across text boundaries", () => {
     const parts: ThreadUIMessagePart[] = [
-      toolPart("getFile"),
+      toolPart("calculate"),
       { type: "text", text: "mid" },
       toolPart("webSearch"),
       toolPart("webFetch"),
@@ -96,7 +96,7 @@ describe("groupAssistantParts", () => {
 
   it("hands each work timing to the next run that did work, skipping memory-only runs", () => {
     const parts: ThreadUIMessagePart[] = [
-      toolPart("getFile"),
+      toolPart("calculate"),
       { type: "text", text: "first" },
       omPart("data-om-activation", "cycle-1"),
       { type: "text", text: "second" },
@@ -157,14 +157,14 @@ describe("getDominantWorkActivityKind", () => {
       getDominantWorkActivityKind([
         toolPart("webSearch", "c1"),
         toolPart("webFetch", "c2"),
-        toolPart("getFile", "c3"),
+        toolPart("calculate", "c3"),
       ]),
     ).toBe("research");
   });
 
   it("returns default on a tie", () => {
     expect(
-      getDominantWorkActivityKind([toolPart("webSearch", "c1"), toolPart("getFile", "c2")]),
+      getDominantWorkActivityKind([toolPart("webSearch", "c1"), toolPart("calculate", "c2")]),
     ).toBe("default");
   });
 });

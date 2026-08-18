@@ -1,27 +1,19 @@
-import type { RequestContext } from "@mastra/core/request-context";
 import { createTool } from "@mastra/core/tools";
 import { toStandardJsonSchema } from "@valibot/to-json-schema";
-import { matchError, panic, Result } from "better-result";
+import { matchError, Result } from "better-result";
 import * as v from "valibot";
 
-import { dbKit } from "@/lib/db-kit.server";
 import { docs } from "@/lib/docs/docs-index";
 import { docsLibraries } from "@/lib/docs/docs-types";
 import { ToolError } from "@/lib/errors/tool-error";
 import { LlmNativeMimeType } from "@/lib/file-validation";
-import { getAttachment } from "@/lib/get-attachment.server";
 import type { FetchedFile } from "@/lib/get-file.server";
-import { getFile, GetFileError, toFileText } from "@/lib/get-file.server";
-import * as Kit from "@/lib/kit";
-import { memoryKit } from "@/lib/memory-kit.server";
-import { mentionKeyShape, parseMentionKey } from "@/lib/mention-key";
-import { s3Kit } from "@/lib/s3-kit.server";
+import { toFileText } from "@/lib/get-file.server";
+import { mentionKeyShape } from "@/lib/mention-key";
 import { runCode } from "@/lib/sandbox/run-code.server";
-import type { MnemonicRequestContext } from "@/mastra/request-context.server";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
+import { loadMentionedFile } from "@/mastra/tools/mentioned-file.server";
 import { toToolInputSchema } from "@/mastra/tools/tool-input-schema.server";
-
-const getFileCtx = Kit.createContext(dbKit, s3Kit);
 
 const jsonValueSchema = v.union([
   v.string(),
@@ -91,8 +83,8 @@ const errorOutputSchema = v.object({
 
 const outputSchema = v.variant("type", [successOutputSchema, errorOutputSchema]);
 
-type ExecuteCodeSuccess = v.InferOutput<typeof successOutputSchema>;
-type ExecuteCodeError = v.InferOutput<typeof errorOutputSchema>;
+type CalculateSuccess = v.InferOutput<typeof successOutputSchema>;
+type CalculateError = v.InferOutput<typeof errorOutputSchema>;
 
 export type SandboxFile = {
   contents: string;
@@ -125,59 +117,13 @@ const toSandboxFile = async (file: FetchedFile) => {
   });
 };
 
-type LoadSandboxFileInput = {
-  fileKey: string;
-  flushMessages: (() => Promise<void>) | undefined;
-  requestContext: RequestContext<MnemonicRequestContext> | undefined;
-};
-
-const loadSandboxFile = async ({ fileKey, flushMessages, requestContext }: LoadSandboxFileInput) =>
-  Result.gen(async function* () {
-    const mention = parseMentionKey(fileKey);
-
-    if (mention.type === "file") {
-      const topicId = requestContext?.get("filter")?.topicId;
-
-      if (!topicId) {
-        panic("Missing topicId in request context");
-      }
-
-      const file = yield* await getFile(getFileCtx, {
-        fileId: mention.value,
-        topicId,
-      });
-
-      return await toSandboxFile(file);
-    }
-
-    if (mention.type === "attachment") {
-      const threadId = requestContext?.get("threadId");
-
-      if (!threadId) {
-        panic("Missing threadId in request context");
-      }
-
-      const file = yield* await getAttachment(Kit.createContext(memoryKit), {
-        flushMessages,
-        sha256: mention.value,
-        threadId,
-      });
-
-      return await toSandboxFile(file);
-    }
-
-    return Result.err(
-      new GetFileError({ message: `"${fileKey}" is not a usable file reference.` }),
-    );
-  });
-
-export const executeCodeTool = createTool({
-  id: "execute-code",
+export const calculateTool = createTool({
+  id: "calculate",
   inputSchema: toToolInputSchema(inputSchema),
   outputSchema: toStandardJsonSchema(outputSchema),
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
   description: [
-    "Runs a JavaScript module in a sandbox. No network, no filesystem, and nothing survives between calls.",
+    "Computes with JavaScript in a sandbox: arithmetic, statistics, unit conversions and parsing of text, CSV or JSON. No network, no filesystem, and nothing survives between calls.",
     'Always use mode "file" for operations over a file — `env.file` exists only in that mode.',
     `Available libraries: ${docsLibraries
       .map((library) => `\`${docs[library].library.importHint}\``)
@@ -187,35 +133,22 @@ export const executeCodeTool = createTool({
     let file: SandboxFile | undefined;
 
     if (input.mode === "file") {
-      const result = await loadSandboxFile({
+      const loaded = await loadMentionedFile({
         fileKey: input.fileKey,
-        flushMessages: context.agent?.flushMessages,
         requestContext: context.requestContext,
       });
 
-      if (Result.isError(result)) {
-        return matchError(result.error, {
-          GetAttachmentError: (error): ExecuteCodeError => ({
-            type: "error",
-            message: error.message,
-          }),
-          GetFileError: (error): ExecuteCodeError => ({
-            type: "error",
-            message: error.message,
-          }),
-          DatabaseError: (cause) => {
-            throw new ToolError({ message: "File could not be loaded.", cause });
-          },
-          MemoryError: (cause) => {
-            throw new ToolError({ message: "File could not be loaded.", cause });
-          },
-          S3Error: (cause) => {
-            throw new ToolError({ message: "File could not be loaded.", cause });
-          },
-        });
+      if (Result.isError(loaded)) {
+        return { type: "error", message: loaded.error.message } satisfies CalculateError;
       }
 
-      file = result.value;
+      const sandboxFile = await toSandboxFile(loaded.value);
+
+      if (Result.isError(sandboxFile)) {
+        return { type: "error", message: sandboxFile.error.message } satisfies CalculateError;
+      }
+
+      file = sandboxFile.value;
     }
 
     const executionResult = await runCode(input.code, {
@@ -228,11 +161,11 @@ export const executeCodeTool = createTool({
         type: "success",
         result: executionResult.value.output,
         logs: executionResult.value.logs,
-      } satisfies ExecuteCodeSuccess;
+      } satisfies CalculateSuccess;
     }
 
     return matchError(executionResult.error, {
-      SandboxExecuteError: (error): ExecuteCodeError => ({
+      SandboxExecuteError: (error): CalculateError => ({
         type: "error",
         name: error.name,
         message: error.message,

@@ -103,14 +103,15 @@ export const groupAssistantParts = (
 export type WorkActivityKind = "default" | "memory" | "research";
 
 export const TOOL_WORK_ACTIVITY_KIND = {
-  "agent-webResearch": "research",
+  "agent-reader": "default",
+  "agent-worker": "default",
   webSearch: "research",
   webFetch: "research",
   fileVectorSearch: "research",
   fileGraphRag: "research",
-  getFile: "default",
-  executeCode: "default",
-  docs: "default",
+  searchFile: "research",
+  calculate: "default",
+  calculateDocs: "default",
   recall: "default",
 } as const satisfies Record<MnemonicToolName, WorkActivityKind>;
 

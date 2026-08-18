@@ -14,7 +14,6 @@ export class GetAttachmentError extends TaggedError("GetAttachmentError")<{
 }> {}
 
 type GetAttachmentInput = {
-  flushMessages?: () => Promise<void>;
   sha256: string;
   threadId: string;
 };
@@ -35,14 +34,6 @@ export const getAttachment = Kit.gen(async function* (
   ctx: GetAttachmentCtx,
   input: GetAttachmentInput,
 ) {
-  // OM defers persistence until turn end; flush so same-turn attachments exist in storage.
-  if (input.flushMessages) {
-    await Result.tryPromise({
-      try: input.flushMessages,
-      catch: () => new GetAttachmentError({ message: "File not found." }),
-    });
-  }
-
   const listed = yield* await ctx.memory.listMessages({
     threadId: input.threadId,
     page: 0,

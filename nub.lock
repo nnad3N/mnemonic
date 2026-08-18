@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  isolated-vm: ^7.0.1
+
 importers:
 
   .:
@@ -53,6 +56,9 @@ importers:
       '@mastra/core':
         specifier: ^1.57.0
         version: 1.57.0(ai@7.0.58(zod@4.4.3))(zod@4.4.3)
+      '@mastra/isolated-vm':
+        specifier: ^0.1.0
+        version: 0.1.0(@mastra/core@1.57.0(zod@4.4.3))(ai@7.0.58(zod@4.4.3))
       '@mastra/libsql':
         specifier: ^1.19.0
         version: 1.19.0(@mastra/core@1.57.0(zod@4.4.3))(ai@7.0.58(zod@4.4.3))
@@ -2016,6 +2022,12 @@ packages:
     engines: {node: '>=22.13.0'}
     peerDependencies:
       '@mastra/core': '>=1.50.0-0 <2.0.0-0'
+
+  '@mastra/isolated-vm@0.1.0':
+    resolution: {integrity: sha512-COz0HIjZyqcxi+OameElw72Llia8EujwTh0wFsXzQve5YqTLGBnIkfgGDksrK2CiNOUQ+A5k+PctTNyQEdomwQ==}
+    engines: {node: '>=22.13.0'}
+    peerDependencies:
+      '@mastra/core': '>=1.55.0-0 <2.0.0-0'
 
   '@mastra/libsql@1.19.0':
     resolution: {integrity: sha512-BbxEMhHHhXJSL5Argwre3ybJRgwxGQu6N2fj4nTFEmDQ4wj+CjaeEAuen2wD6wLA58PB4BtMMCcHDm1GoeME7Q==}
@@ -6027,6 +6039,10 @@ packages:
   isexe@4.0.0:
     resolution: {integrity: sha512-FFUtZMpoZ8RqHS3XeXEmHWLA4thH+ZxCv2lOiPIn1Xc7CxrqhWzNSDzD+/chS/zbYezmiwWLdQC09JdQKmthOw==}
     engines: {node: '>=20'}
+
+  isolated-vm@7.0.1:
+    resolution: {integrity: sha512-nBCQ1hXEaYKYJ79wwfhaF44ITOJC30Hw0wPEsFeNsdD3hdeKK7FW1SGMQYBUA+qasvkqdOazI+iBuq0lcbN/aw==}
+    engines: {node: '>=24.0.0'}
 
   javascript-natural-sort@0.7.1:
     resolution: {integrity: sha512-nO6jcEfZWQXDhOiBtG2KvKyEptz7RVbpGP4vTD2hLBdmNQSsCiicO2Ioinv6UI4y9ukqnBpy+XZ9H6uLNgJTlw==}
@@ -10163,6 +10179,12 @@ snapshots:
       - supports-color
       - utf-8-validate
 
+  '@mastra/isolated-vm@0.1.0(@mastra/core@1.57.0(zod@4.4.3))(ai@7.0.58(zod@4.4.3))':
+    dependencies:
+      '@mastra/core': 1.57.0(ai@7.0.58(zod@4.4.3))(zod@4.4.3)
+      esbuild: 0.28.2
+      isolated-vm: 7.0.1
+
   '@mastra/libsql@1.19.0(@mastra/core@1.57.0(zod@4.4.3))(ai@7.0.58(zod@4.4.3))':
     dependencies:
       '@libsql/client': 0.17.4
@@ -13999,6 +14021,10 @@ snapshots:
   isexe@3.1.5: {}
 
   isexe@4.0.0: {}
+
+  isolated-vm@7.0.1:
+    dependencies:
+      node-gyp-build: 4.8.4
 
   javascript-natural-sort@0.7.1: {}
 

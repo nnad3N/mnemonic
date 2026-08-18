@@ -199,6 +199,8 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
     try: async () =>
       getMnemonicAgent(agentId).stream(messagesToSend, {
         abortSignal: abortController.signal,
+        // Subagents get only the delegation prompt; the parent's history stays out of them.
+        delegation: { messageFilter: () => [] },
         maxSteps: 10,
         memory: {
           resource: thread.resourceId,

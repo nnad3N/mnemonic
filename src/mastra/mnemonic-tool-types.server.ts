@@ -51,7 +51,8 @@ type SubagentUITool = {
 export type MnemonicUITools = {
   [K in keyof MnemonicTools]: InferContextualUITool<MnemonicTools[K]>;
 } & {
-  "agent-webResearch": SubagentUITool;
+  "agent-reader": SubagentUITool;
+  "agent-worker": SubagentUITool;
 };
 
 export type MnemonicToolName = keyof MnemonicUITools;

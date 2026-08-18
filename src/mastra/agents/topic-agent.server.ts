@@ -8,19 +8,18 @@ import { resolveProviderKeyById } from "@/lib/middleware/resolve-provider-key.se
 import { getAgentMemory } from "@/mastra/agent-memory.server";
 import {
   baseInstructions,
+  sharedDelegationInstructions,
   sharedSourceInstructions,
-  sharedWebResearchInstructions,
 } from "@/mastra/agents/base-instructions.server";
-import { webResearchAgent } from "@/mastra/agents/web-research-agent.server";
+import { workerAgent } from "@/mastra/agents/worker-agent.server";
 import { getAgentModel } from "@/mastra/models.server";
 import { stripNonNativeFilePartsProcessor } from "@/mastra/processors/strip-non-native-file-parts.server";
 import type { MnemonicRequestContext } from "@/mastra/request-context.server";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
-import { docsTool } from "@/mastra/tools/docs-tool.server";
-import { executeCodeTool } from "@/mastra/tools/execute-code-tool.server";
+import { calculateDocsTool } from "@/mastra/tools/calculate-docs-tool.server";
+import { calculateTool } from "@/mastra/tools/calculate-tool.server";
 import { createFileGraphRagTool } from "@/mastra/tools/file-graph-rag-tool.server";
 import { createFileVectorSearchTool } from "@/mastra/tools/file-vector-search-tool.server";
-import { getFileTool } from "@/mastra/tools/get-file-tool.server";
 import { webFetchTool } from "@/mastra/tools/web-fetch-tool.server";
 import { webSearchTool } from "@/mastra/tools/web-search-tool.server";
 
@@ -42,11 +41,10 @@ const getTopicAgentTools = async ({ requestContext }: GetTopicAgentToolsInput) =
   const apiKey = result.value.key;
 
   return {
-    docs: docsTool,
-    executeCode: executeCodeTool,
+    calculate: calculateTool,
+    calculateDocs: calculateDocsTool,
     fileGraphRag: createFileGraphRagTool(apiKey),
     fileVectorSearch: createFileVectorSearchTool(apiKey),
-    getFile: getFileTool,
     webFetch: webFetchTool,
     webSearch: webSearchTool,
   };
@@ -56,34 +54,19 @@ export type TopicAgentTools = Awaited<ReturnType<typeof getTopicAgentTools>>;
 
 export const topicAgent = new Agent({
   description:
-    "Uses current topic files, topic-scoped conversation recall, raw topic file access, and web search/fetch to answer topic-specific questions.",
+    "Uses topic file search, topic-scoped conversation recall, web search/fetch and a worker subagent to answer topic-specific questions.",
   id: TOPIC_AGENT_ID,
   instructions: `
 ${baseInstructions}
 
 ${sharedSourceInstructions}
 
-Available sources:
-- Topic files: uploaded files in the current topic. Prefer these for questions about the user's documents.
-- Web: external or current information via webSearch (discover pages) or webFetch (read a known URL).
-- Conversation recall: past messages within the current topic. Use when the answer may already appear in prior chat.
+Conflict → topic files over web, web over recall.
+Files: search by meaning or by connections yourself for pointed questions; no need to run every file tool. Reading files whole → delegation.
 
-When sources conflict, prefer topic files over web, and web over conversation recall.
-
-Prefer the web for current events, external documentation, explicit web requests, or when topic files plus conversation recall did not fully answer.
-
-When gathering from topic files, pick the tool that fits the question. You do not need to run every file tool.
-
-${sharedWebResearchInstructions}
-
-## Conversation history
-Use recall to browse past messages within the current topic:
-- mode "threads" — list thread IDs and titles under the current topic.
-- mode "messages" with threadId — read messages from a specific thread in the current topic.
-- mode "search" with query — find relevant messages across threads in the current topic.
-Threads from other topics or standalone conversations are not accessible.
+${sharedDelegationInstructions}
 `,
-  agents: { webResearch: webResearchAgent },
+  agents: { worker: workerAgent },
   durable: true,
   inputProcessors: [stripNonNativeFilePartsProcessor],
   memory: getAgentMemory("resource"),

@@ -19,7 +19,7 @@ const isRecoverableFailure = (part: ToolUIPart<ThreadUITools>): boolean => {
   }
 
   switch (part.type) {
-    case "tool-docs":
+    case "tool-calculateDocs":
       switch (part.output.type) {
         case "error":
           return true;
@@ -28,19 +28,18 @@ const isRecoverableFailure = (part: ToolUIPart<ThreadUITools>): boolean => {
         case "search":
           return false;
       }
-    case "tool-executeCode":
+    case "tool-calculate":
       switch (part.output.type) {
         case "error":
           return true;
         case "success":
           return false;
       }
-    case "tool-getFile":
+    case "tool-searchFile":
       switch (part.output.type) {
         case "error":
           return true;
-        case "file":
-        case "text":
+        case "matches":
           return false;
       }
     case "tool-webFetch":
@@ -50,7 +49,8 @@ const isRecoverableFailure = (part: ToolUIPart<ThreadUITools>): boolean => {
         case "success":
           return false;
       }
-    case "tool-agent-webResearch":
+    case "tool-agent-reader":
+    case "tool-agent-worker":
     case "tool-fileGraphRag":
     case "tool-fileVectorSearch":
     case "tool-recall":
@@ -61,16 +61,34 @@ const isRecoverableFailure = (part: ToolUIPart<ThreadUITools>): boolean => {
 
 const renderToolLabel = (toolName: MnemonicToolName, status: ToolPartStatus): ReactNode => {
   switch (toolName) {
-    case "agent-webResearch":
+    case "agent-reader":
       switch (status) {
         case "pending":
-          return <T>Researching the web</T>;
+          return <T>Reading the source</T>;
         case "done":
-          return <T>Researched the web</T>;
+          return <T>Read the source</T>;
         case "error":
-          return <T>Could not research the web</T>;
+          return <T>Could not read the source</T>;
       }
-    case "docs":
+    case "agent-worker":
+      switch (status) {
+        case "pending":
+          return <T>Researching</T>;
+        case "done":
+          return <T>Researched</T>;
+        case "error":
+          return <T>Could not research</T>;
+      }
+    case "calculate":
+      switch (status) {
+        case "pending":
+          return <T>Calculating</T>;
+        case "done":
+          return <T>Calculated</T>;
+        case "error":
+          return <T>Could not calculate</T>;
+      }
+    case "calculateDocs":
       switch (status) {
         case "pending":
           return <T>Reading library documentation</T>;
@@ -97,24 +115,6 @@ const renderToolLabel = (toolName: MnemonicToolName, status: ToolPartStatus): Re
         case "error":
           return <T>Could not search files</T>;
       }
-    case "executeCode":
-      switch (status) {
-        case "pending":
-          return <T>Executing code</T>;
-        case "done":
-          return <T>Executed code</T>;
-        case "error":
-          return <T>Could not execute code</T>;
-      }
-    case "getFile":
-      switch (status) {
-        case "pending":
-          return <T>Reading file</T>;
-        case "done":
-          return <T>Read file</T>;
-        case "error":
-          return <T>Could not read file</T>;
-      }
     case "recall":
       switch (status) {
         case "pending":
@@ -123,6 +123,15 @@ const renderToolLabel = (toolName: MnemonicToolName, status: ToolPartStatus): Re
           return <T>Recalled memories</T>;
         case "error":
           return <T>Could not recall memories</T>;
+      }
+    case "searchFile":
+      switch (status) {
+        case "pending":
+          return <T>Searching the file</T>;
+        case "done":
+          return <T>Searched the file</T>;
+        case "error":
+          return <T>Could not search the file</T>;
       }
     case "webFetch":
       switch (status) {

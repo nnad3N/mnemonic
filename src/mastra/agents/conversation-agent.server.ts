@@ -3,25 +3,25 @@ import { Agent } from "@mastra/core/agent";
 import { getAgentMemory } from "@/mastra/agent-memory.server";
 import {
   baseInstructions,
+  sharedDelegationInstructions,
   sharedSourceInstructions,
-  sharedWebResearchInstructions,
 } from "@/mastra/agents/base-instructions.server";
-import { webResearchAgent } from "@/mastra/agents/web-research-agent.server";
+import { readerAgent } from "@/mastra/agents/reader-agent.server";
 import { getAgentModel } from "@/mastra/models.server";
 import { stripNonNativeFilePartsProcessor } from "@/mastra/processors/strip-non-native-file-parts.server";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
-import { docsTool } from "@/mastra/tools/docs-tool.server";
-import { executeCodeTool } from "@/mastra/tools/execute-code-tool.server";
-import { getFileTool } from "@/mastra/tools/get-file-tool.server";
+import { calculateDocsTool } from "@/mastra/tools/calculate-docs-tool.server";
+import { calculateTool } from "@/mastra/tools/calculate-tool.server";
+import { searchFileTool } from "@/mastra/tools/search-file-tool.server";
 import { webFetchTool } from "@/mastra/tools/web-fetch-tool.server";
 import { webSearchTool } from "@/mastra/tools/web-search-tool.server";
 
 export const CONVERSATION_AGENT_ID = "conversation-agent";
 
 const conversationAgentTools = {
-  docs: docsTool,
-  executeCode: executeCodeTool,
-  getFile: getFileTool,
+  calculate: calculateTool,
+  calculateDocs: calculateDocsTool,
+  searchFile: searchFileTool,
   webFetch: webFetchTool,
   webSearch: webSearchTool,
 } as const;
@@ -35,19 +35,12 @@ ${baseInstructions}
 
 ${sharedSourceInstructions}
 
-Available sources:
-- Conversation recall: past messages in the current conversation only. Prefer this when the answer may already appear in prior chat.
-- Referenced files: content the user has pointed at in this conversation.
-- Web: current or external information. Prefer it when the question needs facts from outside this conversation or up-to-date information, or when conversation recall did not fully answer.
+Sources: files attached in this conversation, web (external or current facts; use when recall did not answer).
+Files: read only via delegation. Whether/where a file mentions something → file search yourself.
 
-${sharedWebResearchInstructions}
-
-## Conversation history
-Use recall to browse past messages in the current conversation only:
-- mode "messages" — read messages from the current thread.
-- mode "search" with query — find relevant messages in the current thread.
+${sharedDelegationInstructions}
 `,
-  agents: { webResearch: webResearchAgent },
+  agents: { reader: readerAgent },
   durable: true,
   inputProcessors: [stripNonNativeFilePartsProcessor],
   memory: getAgentMemory("thread"),

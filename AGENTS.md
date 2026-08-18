@@ -507,7 +507,7 @@ Use GT with `gt-tanstack-start` throughout the app. Import `useGT`, `useLocale`,
 
 ## Database schema
 
-- **Dates over booleans.** Model a state that flips at a point in time as a nullable timestamp (`activatedAt`, `finishedAt`, `verifiedAt`), not a boolean (`active`, `finished`, `verified`). `IS NOT NULL` gives the same predicate and index, and the column also records *when* it happened, which a boolean throws away.
+- **Dates over booleans.** Model a state that flips at a point in time as a nullable timestamp (`activatedAt`, `finishedAt`, `verifiedAt`), not a boolean (`active`, `finished`, `verified`). `IS NOT NULL` gives the same predicate and index, and the column also records _when_ it happened, which a boolean throws away.
 
 ## Dates (Temporal)
 

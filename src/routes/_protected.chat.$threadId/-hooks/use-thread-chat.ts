@@ -95,7 +95,7 @@ export const useThreadChat = () => {
 
   return useChat({
     chat: data.chat,
-    // Dense tool-input-delta bursts (e.g. executeCode) otherwise nest
+    // Dense tool-input-delta bursts (e.g. calculate) otherwise nest
     // synchronous replaceMessage → useSyncExternalStore re-renders past React's limit.
     throttle: 32,
   });

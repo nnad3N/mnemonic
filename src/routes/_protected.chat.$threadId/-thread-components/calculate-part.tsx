@@ -17,16 +17,16 @@ const streamdownPlugins = {
   code: createCodePlugin(),
 };
 
-type ExecuteCodeToolPart = Extract<ToolUIPart<ThreadUITools>, { type: "tool-executeCode" }>;
+type CalculateToolPart = Extract<ToolUIPart<ThreadUITools>, { type: "tool-calculate" }>;
 
-type ToExecuteCodeMarkdownInput = {
+type ToCalculateMarkdownInput = {
   gt: GT;
   code: string;
-  input: ExecuteCodeToolPart["input"];
-  output: ExecuteCodeToolPart["output"];
+  input: CalculateToolPart["input"];
+  output: CalculateToolPart["output"];
 };
 
-const toExecuteCodeMarkdown = ({ gt, code, input, output }: ToExecuteCodeMarkdownInput): string => {
+const toCalculateMarkdown = ({ gt, code, input, output }: ToCalculateMarkdownInput): string => {
   const sections: string[] = [];
 
   if (output?.type === "success") {
@@ -52,11 +52,11 @@ const toExecuteCodeMarkdown = ({ gt, code, input, output }: ToExecuteCodeMarkdow
   return sections.join("\n\n");
 };
 
-type ExecuteCodePartProps = {
-  part: ExecuteCodeToolPart;
+type CalculatePartProps = {
+  part: CalculateToolPart;
 };
 
-export const ExecuteCodePart = ({ part }: ExecuteCodePartProps) => {
+export const CalculatePart = ({ part }: CalculatePartProps) => {
   const gt = useGT();
   const { code, ...input } = part.input ?? {};
 
@@ -71,7 +71,7 @@ export const ExecuteCodePart = ({ part }: ExecuteCodePartProps) => {
       />
       <CollapsibleContent className="overflow-hidden pt-2">
         <Streamdown linkSafety={streamdownLinkSafety} mode="static" plugins={streamdownPlugins}>
-          {toExecuteCodeMarkdown({
+          {toCalculateMarkdown({
             gt,
             code,
             input,

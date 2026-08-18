@@ -57,11 +57,11 @@ describe("deleteThread", () => {
     // delegation appends another suffix on top of that.
     const subagentThreadId = await seedThread({
       id: `${threadId}-${crypto.randomUUID()}`,
-      resourceId: `${userId}-webResearch`,
+      resourceId: `${userId}-worker`,
     });
     await seedThread({
       id: `${subagentThreadId}-${crypto.randomUUID()}`,
-      resourceId: `${userId}-webResearch-deepResearch`,
+      resourceId: `${userId}-worker-reader`,
     });
     const otherThreadId = await seedThread({ resourceId: userId });
 
@@ -77,7 +77,7 @@ describe("deleteThread", () => {
     const threadId = await seedThread({ resourceId: userId });
     const subagentThreadId = await seedThread({
       id: `${threadId}-${crypto.randomUUID()}`,
-      resourceId: `${userId}-webResearch`,
+      resourceId: `${userId}-worker`,
     });
     const otherThreadId = await seedThread({ resourceId: userId });
 

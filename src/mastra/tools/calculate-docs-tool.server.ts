@@ -89,8 +89,8 @@ const outputSchema = v.variant("type", [
 
 type DocsOutput = v.InferOutput<typeof outputSchema>;
 
-export const docsTool = createTool({
-  id: "docs",
+export const calculateDocsTool = createTool({
+  id: "calculate-docs",
   inputSchema: toToolInputSchema(inputSchema),
   outputSchema: toStandardJsonSchema(outputSchema),
   description: [

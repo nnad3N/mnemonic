@@ -148,7 +148,7 @@ describe("stripNonNativeFilePartsProcessor", () => {
           {
             type: "tool-result",
             toolCallId: "call-1",
-            toolName: "getFile",
+            toolName: "calculate",
             output: { type: "text", value: "ok" },
           },
         ],
