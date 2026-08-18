@@ -18,7 +18,7 @@ import { AssistantMessage } from "./assistant-message";
 import { UserMessage } from "./user-message";
 
 const USER_MESSAGE_ESTIMATED_SIZE = 80;
-const ASSISTANT_MESSAGE_ESTIMATED_SIZE = 280;
+const ASSISTANT_MESSAGE_ESTIMATED_SIZE = 500;
 const USER_MESSAGE_GROUP_GAP = 48;
 const MESSAGE_OVERSCAN = 4;
 
@@ -34,7 +34,11 @@ const isPendingTurn = (status: ChatStatus, lastMessage: ThreadUIMessage | undefi
   return !lastMessage?.parts.some((part) => isVisibleToolPart(part));
 };
 
-export const ThreadMessages = () => {
+type ThreadMessagesProps = {
+  threadId: string;
+};
+
+export const ThreadMessages = ({ threadId }: ThreadMessagesProps) => {
   const chat = useThreadChat();
   const editingMessageId = useChatStore((state) => state.editingState?.messageId);
   const isBusy = chat.status === "submitted" || chat.status === "streaming";
@@ -50,6 +54,8 @@ export const ThreadMessages = () => {
     : Infinity;
 
   const virtualizer = useVirtualizer({
+    useFlushSync: false,
+    anchorTo: "end",
     count: visibleMessages.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: (index) => {
@@ -67,16 +73,20 @@ export const ThreadMessages = () => {
   });
 
   useLayoutEffect(() => {
-    const animationFrame = requestAnimationFrame(() => {
+    // this setTimeout is a big hack, on slower CPUs 16 ms might not be enough, but I couldn't find anything better
+    // height of the messages changes when they are rendered, so if we scroll instantly we won't be put to the bottom sometimes.
+    // we rerun this hook on threadId change to scroll to the bottom again.
+    const timeoutId = setTimeout(() => {
       void Promise.resolve(scrollToBottom({ animation: "instant" })).finally(() => {
+        virtualizer.scrollToEnd({ behavior: "instant" });
         setIsLayoutReady(true);
       });
-    });
+    }, 16);
 
     return () => {
-      cancelAnimationFrame(animationFrame);
+      clearTimeout(timeoutId);
     };
-  }, [scrollToBottom]);
+  }, [threadId, scrollToBottom, virtualizer]);
 
   return (
     <MessageScrollerViewport>
@@ -85,7 +95,7 @@ export const ThreadMessages = () => {
           aria-busy={isBusy}
           aria-hidden={!isLayoutReady}
           className={cn(
-            "typeset typeset-chat mx-auto mt-3 block h-auto min-h-0 w-full max-w-3xl min-w-0 flex-1 px-3 pt-12 pb-64 transition-opacity md:pt-10",
+            "typeset typeset-chat mx-auto mt-3 block h-auto w-full max-w-3xl min-w-0 px-3 pt-12 pb-64 transition-opacity md:pt-10",
             isLayoutReady ? "opacity-100" : "opacity-0",
           )}
         >
