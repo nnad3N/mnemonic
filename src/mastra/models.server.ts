@@ -36,11 +36,6 @@ const models: Record<ModelCapability, OpenrouterModel> = {
   },
   balanced: {
     model: "openai/gpt-5.6-luna-pro",
-    openrouter: {
-      reasoning: {
-        effort: "medium",
-      },
-    },
   },
   max: {
     model: "moonshotai/kimi-k3",

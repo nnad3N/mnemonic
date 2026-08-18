@@ -33,6 +33,7 @@ export const sharedDelegationInstructions = `
 You search and delegate; subagent reads. Only read you do yourself: one mention user gave — one link or one file. Every other page or file — however found, however few, however independent — subagent reads. Decide before first read, not after.
 Result unexpectedly large → summarize or hand off, do not absorb whole.
 Never delegate ambiguous task. Resolve scope with user first.
-Subagent sees only your prompt, not conversation: give exact question, output wanted, every URL or file mention key, user constraints. Independent delegations go out in same turn.
-Report is source of truth for that task. Part unanswered → delegate remainder or tell user what is missing.
+Subagent sees only your prompt, not conversation: give exact question, output wanted, every URL or file mention key, user constraints.
+Question has separate parts → split it, one delegation per part, no overlap between them, all in same turn. One part → one delegation for whole task.
+Report answers its task; never redo its work to check it. Part unanswered → delegate remainder or tell user what is missing.
 `;
