@@ -6,10 +6,10 @@
     "@/*": "./src/*"
   },
   "scripts": {
-    "dev": "NODE_OPTIONS=--no-node-snapshot vite dev",
+    "dev": "vite dev",
     "build": "vite build",
-    "preview": "NODE_OPTIONS=--no-node-snapshot vite preview",
-    "test": "NODE_OPTIONS=--no-node-snapshot vitest run --typecheck",
+    "preview": "vite preview",
+    "test": "vitest run --typecheck",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint --fix",
     "format": "oxfmt",
