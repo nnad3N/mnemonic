@@ -47,10 +47,6 @@ export type MemoryApi = {
     messages: MastraDBMessage[];
   }) => Promise<ResultType<SaveMessagesOutput, MemoryError>>;
   saveThread: (input: SaveThreadInput) => Promise<ResultType<SaveThreadOutput, MemoryError>>;
-  updateMessageMetadata: (input: {
-    id: string;
-    metadata: Record<string, unknown>;
-  }) => Promise<ResultType<void, MemoryError>>;
   updateThread: (input: UpdateThreadInput) => Promise<ResultType<UpdateThreadOutput, MemoryError>>;
 };
 
@@ -168,32 +164,6 @@ export const memoryKit = createMemoryKit({
     Result.tryPromise({
       try: async () => memory.saveThread(input),
       catch: (cause) => new MemoryError({ cause, message: "Failed to save the thread" }),
-    }),
-  updateMessageMetadata: async ({ id, metadata }) =>
-    Result.tryPromise({
-      try: async () => {
-        const memoryStore = await getMemoryStore();
-        const { messages } = await memoryStore.listMessagesById({ messageIds: [id] });
-        const message = messages.at(0);
-
-        if (!message) {
-          return;
-        }
-
-        await memoryStore.updateMessages({
-          messages: [
-            {
-              id,
-              content: {
-                ...message.content,
-                metadata: { ...message.content.metadata, ...metadata },
-              },
-            },
-          ],
-        });
-      },
-      catch: (cause) =>
-        new MemoryError({ cause, message: "Failed to update the message metadata" }),
     }),
   updateThread: async (input) =>
     Result.tryPromise({

@@ -5,7 +5,7 @@ import { Result } from "better-result";
 import { eq, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
-import { file, threadRun, threadSettings, topic } from "@/db/schema.server";
+import { file, threadRun, threadSettings, threadReply, topic } from "@/db/schema.server";
 import type { DbKit } from "@/lib/db-kit.server";
 import { toServerFnError } from "@/lib/errors/server-fn-error";
 import * as Kit from "@/lib/kit";
@@ -104,6 +104,12 @@ export const deleteTopicFn = Kit.gen(async function* (
           threads.map((thread) => thread.id),
         ),
       ),
+      tx.delete(threadReply).where(
+        inArray(
+          threadReply.threadId,
+          threads.map((thread) => thread.id),
+        ),
+      ),
       tx.delete(topic).where(eq(topic.id, input.topicId)),
     ]),
   );
@@ -129,6 +135,7 @@ export const deleteConversationFn = Kit.gen(async function* (
     Promise.all([
       tx.delete(threadSettings).where(eq(threadSettings.threadId, input.threadId)),
       tx.delete(threadRun).where(eq(threadRun.threadId, input.threadId)),
+      tx.delete(threadReply).where(eq(threadReply.threadId, input.threadId)),
     ]),
   );
 
@@ -143,8 +150,7 @@ type GetThreadInput = {
   userId: SafeId<"user">;
 };
 
-// Collapse Mastra's split assistants so the UI always sees user → assistant → user. The last
-// fragment's metadata carries the reply's timing, so it is the one kept.
+// Collapse Mastra's split assistants so the UI always sees user → assistant → user.
 export const mergeConsecutiveAssistantMessages = <TMessage extends ThreadUIMessage>(
   messages: TMessage[],
 ): TMessage[] => {
@@ -166,7 +172,7 @@ export const mergeConsecutiveAssistantMessages = <TMessage extends ThreadUIMessa
 };
 
 export const getThreadFn = Kit.gen(async function* (ctx: GetThreadCtx, input: GetThreadInput) {
-  const [{ messages }, topic] = yield* await Kit.promiseAll([
+  const [{ messages }, topic, replies] = yield* await Kit.promiseAll([
     ctx.memory.listMessages({
       threadId: input.threadId,
       page: 0,
@@ -182,15 +188,34 @@ export const getThreadFn = Kit.gen(async function* (ctx: GetThreadCtx, input: Ge
         },
       }),
     ),
+    ctx.db.run((db) =>
+      db
+        .select({ userMessageId: threadReply.userMessageId, workTimings: threadReply.workTimings })
+        .from(threadReply)
+        .where(eq(threadReply.threadId, input.threadId)),
+    ),
   ]);
 
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion
   const uiMessages = toAISdkMessages(messages, {
     version: "v6",
   }) as (ThreadUIMessage & TsrSerializable)[];
+  const merged = mergeConsecutiveAssistantMessages(uiMessages);
+  const workTimingsByUserMessageId = new Map(
+    replies.map((reply) => [reply.userMessageId, reply.workTimings]),
+  );
+
+  for (const [index, message] of merged.entries()) {
+    const reply = merged.at(index + 1);
+    const workTimings = workTimingsByUserMessageId.get(message.id);
+
+    if (workTimings && reply?.role === "assistant") {
+      merged[index + 1] = { ...reply, metadata: { type: "assistant", workTimings } };
+    }
+  }
 
   return Result.ok({
-    messages: mergeConsecutiveAssistantMessages(uiMessages),
+    messages: merged,
     resourceId: input.resourceId,
     topicId: topic?.id,
   });

@@ -119,7 +119,6 @@ const createFailingMemoryKit = () => {
     listMessages: memory.listMessages,
     saveMessages: memory.saveMessages,
     saveThread: memory.saveThread,
-    updateMessageMetadata: memory.updateMessageMetadata,
     updateThread: memory.updateThread,
   };
 

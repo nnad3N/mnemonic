@@ -1,14 +1,13 @@
-import type { DurableAgentStreamResult } from "@mastra/core/agent/durable";
 import { MessageList } from "@mastra/core/agent/message-list";
 import { RequestContext } from "@mastra/core/request-context";
 import type { ChunkType } from "@mastra/core/stream";
 import { createFileRoute } from "@tanstack/react-router";
 import { createUIMessageStreamResponse } from "ai";
 import { matchError, Result, TaggedError } from "better-result";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import * as v from "valibot";
 
-import { threadRun } from "@/db/schema.server";
+import { threadRun, threadReply } from "@/db/schema.server";
 import { dbKit, type DbKit } from "@/lib/db-kit.server";
 import {
   durableAgentsKit,
@@ -26,10 +25,7 @@ import type { SafeId } from "@/lib/safe-id";
 import { createSafeId } from "@/lib/safe-id";
 import { getMnemonicAgent } from "@/mastra/agents/id.server";
 import type { MnemonicRequestContext } from "@/mastra/request-context.server";
-import type {
-  AssistantMessageMetadata,
-  WorkTiming,
-} from "@/routes/_protected.chat.$threadId/-thread-types";
+import type { WorkTiming } from "@/routes/_protected.chat.$threadId/-thread-types";
 
 import { toThreadUIStream } from "./-chat-shared.server";
 
@@ -92,29 +88,31 @@ const endWork = async (ctx: ChatCtx, runId: SafeId<"run">, timing: RunTiming) =>
 
 type SettleRunInput = {
   status: "errored" | "finished" | "interrupted";
-  output: DurableAgentStreamResult["output"];
   runId: SafeId<"run">;
   threadId: string;
   timing: RunTiming;
   userId: SafeId<"user">;
+  userMessageId: string;
 };
 
 const settleRun = async (
   ctx: ChatCtx,
-  { status, output, runId, threadId, timing, userId }: SettleRunInput,
+  { status, runId, threadId, timing, userId, userMessageId }: SettleRunInput,
 ) => {
   const finishedAt = new Date();
-  const lastFragmentId = output.messageList.get.response.db().at(-1)?.id;
   const [recorded, timed] = await Promise.all([
     ctx.db.run((db) =>
       db.update(threadRun).set({ status, finishedAt }).where(eq(threadRun.runId, runId)),
     ),
-    lastFragmentId
-      ? ctx.memory.updateMessageMetadata({
-          id: lastFragmentId,
-          metadata: { type: "assistant", ...timing } satisfies AssistantMessageMetadata,
-        })
-      : Result.ok(),
+    ctx.db.run((db) =>
+      db
+        .insert(threadReply)
+        .values({ userMessageId, threadId, workTimings: timing.workTimings })
+        .onConflictDoUpdate({
+          target: threadReply.userMessageId,
+          set: { workTimings: timing.workTimings },
+        }),
+    ),
   ]);
 
   if (Result.isError(recorded)) {
@@ -151,7 +149,12 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
       const messageIds = storedMessages.slice(messageIndex).map((message) => message.id);
 
       if (messageIds.length > 0) {
-        yield* await ctx.memory.deleteMessages({ messageIds });
+        yield* await Kit.promiseAll([
+          ctx.memory.deleteMessages({ messageIds }),
+          ctx.db.run((db) =>
+            db.delete(threadReply).where(inArray(threadReply.userMessageId, messageIds)),
+          ),
+        ]);
       }
     }
   }
@@ -173,13 +176,19 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
       ? input.body.messages.slice(0, -1)
       : input.body.messages;
 
+  const userMessageId = messagesToSend.findLast((message) => message.role === "user")?.id;
+
+  if (!userMessageId) {
+    throw new Error("Chat request carries no user message");
+  }
+
   const threadId = input.body.threadId;
   const userId = input.userId;
   const runId = createSafeId<"run">();
   const abortController = new AbortController();
   // Mastra stamps a reply's fragments only when each step ends, so the run's own timing is
-  // recorded here: streamed to the client as it happens and written to the reply once settled.
-  // Work starts with the first reasoning or tool call, not the request.
+  // recorded here: streamed to the client as it happens and stored against the user message
+  // once settled. Work starts with the first reasoning or tool call, not the request.
   const timing: RunTiming = { workTimings: [] };
 
   // The durable loop only writes to memory when it finishes, so a reload mid-run would load
@@ -225,11 +234,11 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
           await endWork(ctx, runId, timing);
           await settleRun(ctx, {
             status: finishReason === "abort" ? "interrupted" : "finished",
-            output: result.output,
             runId,
             threadId,
             timing,
             userId,
+            userMessageId,
           });
           await unsubscribeCancel();
         },
@@ -247,11 +256,11 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
 
           await settleRun(ctx, {
             status: "errored",
-            output: result.output,
             runId,
             threadId,
             timing,
             userId,
+            userMessageId,
           });
           await unsubscribeCancel();
         },

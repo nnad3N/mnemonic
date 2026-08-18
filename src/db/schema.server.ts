@@ -8,6 +8,7 @@ import type { ModelCapability } from "@/lib/model-capability";
 import { DEFAULT_MODEL_CAPABILITY } from "@/lib/model-capability";
 import type { SafeId } from "@/lib/safe-id";
 import type { MnemonicAgentId } from "@/mastra/agents/id.server";
+import type { WorkTiming } from "@/routes/_protected.chat.$threadId/-thread-types";
 
 export type FileStatus = "uploading" | "processing" | "ready" | "failed";
 
@@ -134,6 +135,17 @@ export const threadRun = sqliteTable(
     finishedAt: integer("finished_at", { mode: "timestamp_ms" }),
   },
   (table) => [index("thread_run_user_id_idx").on(table.userId)],
+);
+
+/** What mnemonic records about a reply, keyed by the user message whose run produced it. */
+export const threadReply = sqliteTable(
+  "thread_reply",
+  {
+    userMessageId: text("user_message_id").primaryKey(),
+    threadId: text("thread_id").notNull(),
+    workTimings: text("work_timings", { mode: "json" }).$type<WorkTiming[]>().notNull(),
+  },
+  (table) => [index("thread_reply_thread_id_idx").on(table.threadId)],
 );
 
 export const appRelations = defineRelationsPart(
