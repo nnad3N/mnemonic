@@ -36,6 +36,11 @@ const models: Record<ModelCapability, OpenrouterModel> = {
   },
   balanced: {
     model: "openai/gpt-5.6-luna-pro",
+    openrouter: {
+      extraBody: {
+        verbosity: "low",
+      },
+    },
   },
   max: {
     model: "moonshotai/kimi-k3",
