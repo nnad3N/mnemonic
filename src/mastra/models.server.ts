@@ -1,6 +1,6 @@
 import type { ObservationalMemoryOptions } from "@mastra/core/memory";
 import type { RequestContext } from "@mastra/core/request-context";
-import { createOpenRouter, type OpenRouterProviderOptions } from "@openrouter/ai-sdk-provider";
+import { createOpenRouter, type OpenRouterChatSettings } from "@openrouter/ai-sdk-provider";
 import { type LanguageModelMiddleware, wrapLanguageModel } from "ai";
 import { Result } from "better-result";
 import type { JSONSchema7 } from "json-schema";
@@ -58,13 +58,16 @@ const dropMultiTypeToolProperties: LanguageModelMiddleware = {
 
 type OpenrouterModel = {
   model: string;
-  openrouter?: OpenRouterProviderOptions;
+  openrouter?: OpenRouterChatSettings;
 };
 
 const models: Record<ModelCapability, OpenrouterModel> = {
   standard: {
     model: "openai/gpt-5.6-luna",
     openrouter: {
+      extraBody: {
+        verbosity: "low",
+      },
       reasoning: {
         effort: "high",
       },
