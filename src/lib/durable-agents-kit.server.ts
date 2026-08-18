@@ -12,8 +12,8 @@ import * as Kit from "@/lib/kit";
 import type { SafeId } from "@/lib/safe-id";
 import type { WorkTiming } from "@/routes/_protected.chat.$threadId/-thread-types";
 
-/** Mastra's default is 5 minutes, shorter than a research run. */
-const CACHE_TTL_SECONDS = 60 * 60;
+const CACHE_TTL_SECONDS = 30 * 60;
+const STREAM_IDLE_TTL_MS = 5 * 60 * 1000;
 
 // node-redis emits `error` on the client itself; without a listener a dropped connection is an
 // unhandled event that takes the process down.
@@ -36,7 +36,7 @@ export const durableAgentsPubsub = new RedisStreamsPubSub({
   url: env.REDIS_URL,
   // Every subscribe replays its topic's stream from the beginning, and Redis keeps a stream
   // until something deletes it. Nothing older than the cache is replayable anyway.
-  streamIdleTtlMs: CACHE_TTL_SECONDS * 1000,
+  streamIdleTtlMs: STREAM_IDLE_TTL_MS,
 });
 
 export class DurableAgentsError extends TaggedError("DurableAgentsError")<{

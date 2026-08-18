@@ -67,7 +67,8 @@ services:
       retries: 10
       start_period: 5s
     cpus: 0.25
-    mem_limit: 256M
+    mem_limit: 1G
+    restart: unless-stopped
     logging:
       driver: "json-file"
       options:

@@ -3,7 +3,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect } from "react";
 
 import { useChatStore } from "@/routes/-chat-store";
-import { threadQueries } from "@/routes/_protected.chat.$threadId/-hooks/use-thread-chat";
+import {
+  resumeThreadStream,
+  threadQueries,
+} from "@/routes/_protected.chat.$threadId/-hooks/use-thread-chat";
 import { ThreadMessages } from "@/routes/_protected.chat.$threadId/-thread-components/thread-messages";
 import { FilesSync } from "@/routes/_protected.topic.$topicId/-topic-components/files-sync";
 
@@ -25,7 +28,7 @@ function RouteComponent() {
   }, [data.chat, threadId]);
 
   useEffect(() => {
-    void data.chat.resumeStream();
+    void resumeThreadStream(data.chat);
   }, [data.chat]);
 
   return (

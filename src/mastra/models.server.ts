@@ -1,7 +1,9 @@
 import type { ObservationalMemoryOptions } from "@mastra/core/memory";
 import type { RequestContext } from "@mastra/core/request-context";
 import { createOpenRouter, type OpenRouterProviderOptions } from "@openrouter/ai-sdk-provider";
+import { type LanguageModelMiddleware, wrapLanguageModel } from "ai";
 import { Result } from "better-result";
+import type { JSONSchema7 } from "json-schema";
 import * as v from "valibot";
 
 import { dbKit } from "@/lib/db-kit.server";
@@ -17,6 +19,43 @@ const createOpenrouterProvider = (apiKey: string) =>
     appName: "Mnemonic",
   });
 
+/**
+ * Mastra injects a `resumeData` property into every subagent delegation tool, typed as every JSON
+ * type at once because its source schema is `z.any()`. Gemini's function declarations take a
+ * single `type` per property and reject the entire declaration when one property does not parse,
+ * which surfaces as its `required` names being undefined. No tool of ours suspends, so the
+ * property is dropped rather than given a type it does not have.
+ */
+const dropMultiTypeToolProperties: LanguageModelMiddleware = {
+  // oxlint-disable-next-line typescript/require-await
+  transformParams: async ({ params }) => ({
+    ...params,
+    tools: params.tools?.map((tool) => {
+      if (tool.type !== "function") {
+        return tool;
+      }
+
+      const properties: JSONSchema7["properties"] = tool.inputSchema.properties;
+
+      if (properties === undefined) {
+        return tool;
+      }
+
+      return {
+        ...tool,
+        inputSchema: {
+          ...tool.inputSchema,
+          properties: Object.fromEntries(
+            Object.entries(properties).filter(
+              ([, property]) => typeof property === "boolean" || !Array.isArray(property.type),
+            ),
+          ),
+        },
+      };
+    }),
+  }),
+};
+
 type OpenrouterModel = {
   model: string;
   openrouter?: OpenRouterProviderOptions;
@@ -24,13 +63,18 @@ type OpenrouterModel = {
 
 const models: Record<ModelCapability, OpenrouterModel> = {
   standard: {
-    model: "xiaomi/mimo-v2.5",
-  },
-  balanced: {
     model: "openai/gpt-5.6-luna",
     openrouter: {
       reasoning: {
-        effort: "xhigh",
+        effort: "high",
+      },
+    },
+  },
+  balanced: {
+    model: "google/gemini-3.7-flash",
+    openrouter: {
+      reasoning: {
+        effort: "medium",
       },
     },
   },
@@ -40,6 +84,7 @@ const models: Record<ModelCapability, OpenrouterModel> = {
 };
 
 const EMBEDDING_MODEL = "qwen/qwen3-embedding-8b";
+const OBSERVATIONAL_MEMORY_MODEL = "xiaomi/mimo-v2.5";
 const THREAD_TITLE_MODEL = "google/gemma-4-26b-a4b-it";
 
 /**
@@ -98,7 +143,10 @@ const resolveCapabilityModel = async (
 
   const apiKey = result.value.key;
 
-  return createOpenrouterProvider(apiKey)(config.model, config.openrouter);
+  return wrapLanguageModel({
+    middleware: dropMultiTypeToolProperties,
+    model: createOpenrouterProvider(apiKey)(config.model, config.openrouter),
+  });
 };
 
 export const getAgentModel = async (input: ModelResolverInput) => resolveCapabilityModel(input);
@@ -113,7 +161,7 @@ export const getSubagentModel = async (input: ModelResolverInput) =>
   resolveCapabilityModel(input, (capability) => subagentModelCapability[capability]);
 
 export const getObservationalMemoryModel = (apiKey: string) =>
-  createOpenrouterProvider(apiKey)(models.standard.model);
+  createOpenrouterProvider(apiKey)(OBSERVATIONAL_MEMORY_MODEL);
 
 export const getThreadTitleModel = (apiKey: string) =>
   createOpenrouterProvider(apiKey)(THREAD_TITLE_MODEL);

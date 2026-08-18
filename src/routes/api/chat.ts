@@ -185,17 +185,15 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
   const threadId = input.body.threadId;
   const userId = input.userId;
   const runId = createSafeId<"run">();
-  const abortController = new AbortController();
   // Mastra stamps a reply's fragments only when each step ends, so the run's own timing is
   // recorded here: streamed to the client as it happens and stored against the user message
   // once settled. Work starts with the first reasoning or tool call, not the request.
   const timing: RunTiming = { workTimings: [] };
 
-  // The durable loop only writes to memory when it finishes, so a reload mid-run would load
-  // the thread without the message that started it. Save it now; the loop's final flush
-  // upserts the same id.
-  const [unsubscribeCancel] = yield* await Kit.promiseAll([
-    ctx.durableAgents.subscribeCancel({ onCancel: () => abortController.abort(), runId }),
+  // The durable loop first writes to memory when its second step starts, so a reload during
+  // the first would load the thread without the message that started it. Save it now; the
+  // loop's flush upserts the same id.
+  yield* await Kit.promiseAll([
     ctx.durableAgents.connect(),
     ctx.memory.saveMessages({
       messages: new MessageList({ threadId, resourceId: thread.resourceId })
@@ -207,7 +205,6 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
   const result = yield* await Result.tryPromise({
     try: async () =>
       getMnemonicAgent(agentId).stream(messagesToSend, {
-        abortSignal: abortController.signal,
         // Subagents get only the delegation prompt; the parent's history stays out of them.
         delegation: { messageFilter: () => [] },
         maxSteps: 10,
@@ -240,7 +237,6 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
             userId,
             userMessageId,
           });
-          await unsubscribeCancel();
         },
         onError: async () => {
           await endWork(ctx, runId, timing);
@@ -262,7 +258,6 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
             userId,
             userMessageId,
           });
-          await unsubscribeCancel();
         },
       }),
     catch: (cause) =>
@@ -280,12 +275,18 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
     finishedAt: null,
   };
 
-  yield* await ctx.db.run((db) =>
-    db
-      .insert(threadRun)
-      .values({ threadId, userId, ...runRow })
-      .onConflictDoUpdate({ target: threadRun.threadId, set: runRow }),
-  );
+  const [unsubscribeCancel] = yield* await Kit.promiseAll([
+    ctx.durableAgents.subscribeCancel({
+      onCancel: () => result.abort(),
+      runId,
+    }),
+    ctx.db.run((db) =>
+      db
+        .insert(threadRun)
+        .values({ threadId, userId, ...runRow })
+        .onConflictDoUpdate({ target: threadRun.threadId, set: runRow }),
+    ),
+  ]);
 
   const published = await ctx.durableAgents.publishRunEvent({
     runId,
@@ -300,7 +301,10 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
 
   return Result.ok(
     toThreadUIStream({
-      cleanup: result.cleanup,
+      cleanup: () => {
+        result.cleanup();
+        void unsubscribeCancel().then((r) => r.tapError(console.error));
+      },
       lastMessageId,
       originalMessages: input.body.messages,
       output: result.output,

@@ -6,7 +6,7 @@ import * as v from "valibot";
 import { docs } from "@/lib/docs/docs-index";
 import { docsLibraries } from "@/lib/docs/docs-types";
 import { ToolError } from "@/lib/errors/tool-error";
-import { LlmNativeMimeType } from "@/lib/file-validation";
+import { ImageMimeType } from "@/lib/file-validation";
 import type { FetchedFile } from "@/lib/get-file.server";
 import { toFileText } from "@/lib/get-file.server";
 import { mentionKeyShape } from "@/lib/mention-key";
@@ -62,7 +62,7 @@ const inputSchema = v.variant("mode", [
       v.string(),
       v.nonEmpty(),
       v.description(
-        `Mention key of the file, in the shape ${mentionKeyShape(["file", "attachment"])}. Loaded as \`env.file\` with ${sandboxFileShape}; \`contents\` is a data URL for PDFs and images, text otherwise.`,
+        `Mention key of the file, in the shape ${mentionKeyShape(["file", "attachment"])}. Loaded as \`env.file\` with ${sandboxFileShape}; \`contents\` is the extracted text, PDFs included; empty for images.`,
       ),
     ),
   }),
@@ -94,16 +94,7 @@ export type SandboxFile = {
 };
 
 const toSandboxFile = async (file: FetchedFile) => {
-  if (LlmNativeMimeType.is(file.mimeType)) {
-    return Result.ok({
-      contents: `data:${file.mimeType};base64,${Buffer.from(file.bytes).toString("base64")}`,
-      filename: file.displayName,
-      size: file.sizeBytes,
-      mimeType: file.mimeType,
-    });
-  }
-
-  const text = await toFileText(file);
+  const text = ImageMimeType.is(file.mimeType) ? Result.ok("") : await toFileText(file);
 
   if (Result.isError(text)) {
     return Result.err(text.error);
@@ -123,8 +114,9 @@ export const calculateTool = createTool({
   outputSchema: toStandardJsonSchema(outputSchema),
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
   description: [
-    "Computes with JavaScript in a sandbox: arithmetic, statistics, unit conversions and parsing of text, CSV or JSON. No network, no filesystem, and nothing survives between calls.",
-    'Always use mode "file" for operations over a file — `env.file` exists only in that mode.',
+    "Computes with JavaScript in a sandbox: arithmetic, statistics, unit conversions and parsing of text, CSV or JSON.",
+    "Export the result with `export default`; console output is in `logs`.",
+    'Always use mode "file" to work over a file, PDFs included: `env.file.contents` is its text and exists only in that mode. Never inline file contents into `code` or `args`.',
     `Available libraries: ${docsLibraries
       .map((library) => `\`${docs[library].library.importHint}\``)
       .join(" and ")}.`,

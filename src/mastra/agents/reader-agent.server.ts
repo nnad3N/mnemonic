@@ -41,7 +41,7 @@ Sources do not settle task → say so, state closest thing they cover. Never fil
 ${codeMode.instructions}
 `,
   defaultOptions: {
-    maxSteps: 8,
+    maxSteps: 15,
   },
   memory: readerMemory,
   requestContextSchema: mnemonicRequestContextSchema,

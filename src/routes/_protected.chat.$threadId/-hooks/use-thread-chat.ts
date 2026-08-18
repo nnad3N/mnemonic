@@ -87,6 +87,27 @@ export const threadQueries = {
     }),
 };
 
+/**
+ * The reconnect route replays the run from its first chunk, so whatever the client holds of
+ * the reply — fragments loaded with the thread or a stream it stopped — is rebuilt by the
+ * replay and must not be appended to.
+ */
+export const resumeThreadStream = async (chat: Chat<ThreadUIMessage>) => {
+  const hadReply = chat.lastMessage?.role === "assistant";
+
+  if (hadReply) {
+    chat.messages = chat.messages.slice(0, -1);
+  }
+
+  await chat.resumeStream();
+
+  // Nothing to attach to: the run settled or died in between, and the server has the reply.
+  if (hadReply && chat.lastMessage?.role !== "assistant") {
+    const data = await getThread({ data: { threadId: chat.id } });
+    chat.messages = data.messages;
+  }
+};
+
 export const useThreadChat = () => {
   const threadId = Route.useParams({
     select: (params) => params.threadId,

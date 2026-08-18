@@ -1,8 +1,7 @@
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { convertFileListToFileUIParts } from "ai";
-import { Result } from "better-result";
 import { produce } from "immer";
 import type { Descendant } from "platejs";
 import { ElementApi, TextApi } from "platejs";
@@ -14,7 +13,7 @@ import { sidebarQueries } from "@/routes/-sidebar/sidebar.functions";
 
 import { stopThreadRun } from "../-thread-api/thread-run.functions";
 import { getThreadEditorId, plateToMarkdown } from "../-thread-components/composer/plate";
-import type { ThreadMetadataAttachment, ThreadUIMessage, WorkTiming } from "../-thread-types";
+import type { ThreadMetadataAttachment, ThreadUIMessage } from "../-thread-types";
 import type { ThreadInputLocation } from "../../-chat-store";
 import { useChatStore } from "../../-chat-store";
 import { useCreateThreadTitle } from "./use-create-thread-title";
@@ -220,39 +219,21 @@ export const useComposerActions = (location: ThreadInputLocation) => {
     // Optimistic: close the open work and drop the client stream first so the UI settles at
     // once, then cancel the run server-side. The dropped stream would have carried the run's
     // end, so it is closed here with the client's clock; the settled run replaces it on the
-    // next load. If the cancel fails the run is still going, so undo and reattach rather than
-    // leave the user looking at a stopped view of a live run.
-    const updateLastWork = (update: (work: WorkTiming) => void) => {
-      chat.setMessages((messages) =>
-        produce(messages, (draft) => {
-          const last = draft.findLast((message) => message.role === "assistant");
-          const work =
-            last?.metadata?.type === "assistant" ? last.metadata.workTimings?.at(-1) : undefined;
+    // next load.
+    chat.setMessages((messages) =>
+      produce(messages, (draft) => {
+        const last = draft.findLast((message) => message.role === "assistant");
+        const work =
+          last?.metadata?.type === "assistant" ? last.metadata.workTimings?.at(-1) : undefined;
 
-          if (work) {
-            update(work);
-          }
-        }),
-      );
-    };
-    const stoppedAt = Temporal.Now.instant().toString();
-
-    updateLastWork((work) => {
-      work.endedAt ??= stoppedAt;
-    });
-    await chat.stop();
-
-    const stopped = await Result.tryPromise(async () => stopThreadRun({ data: { threadId } }));
-
-    if (Result.isError(stopped)) {
-      await chat.resumeStream();
-      updateLastWork((work) => {
-        if (work.endedAt === stoppedAt) {
-          work.endedAt = undefined;
+        if (work) {
+          work.endedAt ??= Temporal.Now.instant().toString();
         }
-      });
-      return;
-    }
+      }),
+    );
+
+    await chat.stop();
+    void stopThreadRun({ data: { threadId } });
 
     const lastMessage = chat.messages.at(-1);
 
