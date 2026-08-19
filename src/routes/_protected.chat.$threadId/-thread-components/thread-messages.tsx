@@ -3,7 +3,11 @@ import type { ChatStatus } from "ai";
 import { T } from "gt-tanstack-start";
 import { useLayoutEffect, useRef, useState } from "react";
 
-import { MessageScrollerContent, MessageScrollerViewport } from "@/components/ui/message-scroller";
+import {
+  MessageScrollerContent,
+  MessageScrollerViewport,
+  useMessageScroller,
+} from "@/components/ui/message-scroller";
 import { isVisibleToolPart } from "@/lib/ai-sdk/tool-parts";
 import { cn } from "@/lib/utils";
 import { MessageStateContext } from "@/routes/_protected.chat.$threadId/-message-state-context";
@@ -21,6 +25,7 @@ const ASSISTANT_MESSAGE_ESTIMATED_SIZE = 500;
 const USER_MESSAGE_GROUP_GAP = 48;
 const MESSAGE_OVERSCAN = 4;
 const SCROLL_END_EPSILON_PX = 1;
+const SCROLL_EDGE_THRESHOLD_PX = 8;
 const MIN_SCROLL_ALIGN_FRAMES = 16;
 const MAX_SCROLL_ALIGN_FRAMES = 32;
 
@@ -38,6 +43,7 @@ const isPendingTurn = (status: ChatStatus, lastMessage: ThreadUIMessage | undefi
 
 export const ThreadMessages = () => {
   const chat = useThreadChat();
+  const { scrollToEnd } = useMessageScroller();
   const editingMessageId = useChatStore((state) => state.editingState?.messageId);
   const isBusy = chat.status === "submitted" || chat.status === "streaming";
   const isPending = isPendingTurn(chat.status, chat.messages.at(-1));
@@ -111,7 +117,25 @@ export const ThreadMessages = () => {
   }, []);
 
   return (
-    <MessageScrollerViewport ref={viewportRef}>
+    <MessageScrollerViewport
+      onWheel={(event) => {
+        const viewport = viewportRef.current;
+
+        if (!viewport || event.deltaY <= 0) {
+          return;
+        }
+
+        // The scroller leaves follow mode on any wheel, and only re-enters it from a
+        // scroll event, so wheeling further down at the bottom leaves it stuck: the
+        // next composer growth is no longer compensated.
+        const remaining = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+
+        if (remaining <= SCROLL_EDGE_THRESHOLD_PX) {
+          scrollToEnd({ behavior: "auto" });
+        }
+      }}
+      ref={viewportRef}
+    >
       <div className="flex min-h-full flex-col">
         <MessageScrollerContent
           aria-busy={isBusy}
