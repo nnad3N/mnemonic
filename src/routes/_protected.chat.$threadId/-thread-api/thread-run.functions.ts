@@ -1,7 +1,8 @@
-import { queryOptions } from "@tanstack/react-query";
+import { mutationOptions, queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { matchError, Result } from "better-result";
 import { and, eq, ne } from "drizzle-orm";
+import { produce } from "immer";
 
 import { threadRun } from "@/db/schema.server";
 import { dbKit } from "@/lib/db-kit.server";
@@ -10,8 +11,10 @@ import { ServerFnError, toServerFnError } from "@/lib/errors/server-fn-error";
 import * as Kit from "@/lib/kit";
 import { threadAccessMiddleware } from "@/lib/middleware/assert-thread-access.middleware";
 import { authMiddleware } from "@/lib/middleware/auth.middleware";
+import { sidebarQueries } from "@/routes/-sidebar/sidebar.functions";
 
 import { getThreadStatesFn } from "./thread-run.server";
+import { createThreadTitle } from "./thread.functions";
 
 export const threadRunQueries = {
   all: () => ["thread-run"] as const,
@@ -19,6 +22,40 @@ export const threadRunQueries = {
     queryOptions({
       queryFn: async () => getThreadStates(),
       queryKey: [...threadRunQueries.all(), "states"] as const,
+    }),
+};
+
+export type CreateThreadTitleVars = {
+  threadId: string;
+  text: string;
+  topicId?: string;
+};
+
+export const threadMutations = {
+  createTitle: () =>
+    mutationOptions({
+      mutationFn: async (data: CreateThreadTitleVars) => createThreadTitle({ data }),
+      onSuccess: (thread, vars, _onMutateResult, { client }) => {
+        if (!thread) return;
+
+        client.setQueryData(sidebarQueries.threads(vars.topicId).queryKey, (current) =>
+          produce(current, (draft) => {
+            if (!draft) return;
+
+            for (const item of draft) {
+              if (item.id === thread.id) {
+                item.title = thread.title;
+                item.updatedAt = thread.updatedAt;
+              }
+            }
+          }),
+        );
+      },
+    }),
+  stop: () =>
+    mutationOptions({
+      retry: 3,
+      mutationFn: async (threadId: string) => stopThreadRun({ data: { threadId } }),
     }),
 };
 

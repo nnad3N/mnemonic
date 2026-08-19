@@ -1,5 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { convertFileListToFileUIParts } from "ai";
 import { produce } from "immer";
@@ -11,12 +11,11 @@ import { useEditorRef, useEditorSelector } from "platejs/react";
 import { useMessageScroller } from "@/components/ui/message-scroller";
 import { sidebarQueries } from "@/routes/-sidebar/sidebar.functions";
 
-import { stopThreadRun } from "../-thread-api/thread-run.functions";
+import { threadMutations } from "../-thread-api/thread-run.functions";
 import { getThreadEditorId, plateToMarkdown } from "../-thread-components/composer/plate";
 import type { ThreadMetadataAttachment, ThreadUIMessage } from "../-thread-types";
 import type { ThreadInputLocation } from "../../-chat-store";
 import { useChatStore } from "../../-chat-store";
-import { useCreateThreadTitle } from "./use-create-thread-title";
 import { threadQueries, useThreadChat } from "./use-thread-chat";
 
 const Route = getRouteApi("/_protected/chat/$threadId");
@@ -139,7 +138,8 @@ export const useComposerActions = (location: ThreadInputLocation) => {
     ...threadQueries.chat(threadId),
     select: (data) => data.topicId,
   });
-  const createThreadTitleMutation = useCreateThreadTitle();
+  const createThreadTitle = useMutation(threadMutations.createTitle());
+  const stopRun = useMutation(threadMutations.stop());
   const editingState = useChatStore((state) => state.editingState);
   const setEditingState = useChatStore((state) => state.setEditingState);
   const removeAttachment = useChatStore((state) => state.removeAttachment);
@@ -181,7 +181,7 @@ export const useComposerActions = (location: ThreadInputLocation) => {
     editor.tf.focus({ edge: "endEditor" });
 
     if (chat.messages.length < 2) {
-      createThreadTitleMutation.mutate({
+      createThreadTitle.mutate({
         text,
         threadId,
         topicId,
@@ -216,10 +216,6 @@ export const useComposerActions = (location: ThreadInputLocation) => {
   };
 
   const stopStream = async () => {
-    // Optimistic: close the open work and drop the client stream first so the UI settles at
-    // once, then cancel the run server-side. The dropped stream would have carried the run's
-    // end, so it is closed here with the client's clock; the settled run replaces it on the
-    // next load.
     chat.setMessages((messages) =>
       produce(messages, (draft) => {
         const last = draft.findLast((message) => message.role === "assistant");
@@ -233,7 +229,7 @@ export const useComposerActions = (location: ThreadInputLocation) => {
     );
 
     await chat.stop();
-    void stopThreadRun({ data: { threadId } });
+    stopRun.mutate(threadId);
 
     const lastMessage = chat.messages.at(-1);
 
