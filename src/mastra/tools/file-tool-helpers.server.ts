@@ -1,8 +1,11 @@
+import { detectMimeType, extractBytes } from "@kreuzberg/node";
 import type { RequestContext } from "@mastra/core/request-context";
 import { matchError, panic, Result } from "better-result";
+import * as v from "valibot";
 
 import { dbKit } from "@/lib/db-kit.server";
 import { ToolError } from "@/lib/errors/tool-error";
+import { ImageMimeType } from "@/lib/file-validation";
 import { getAttachment, GetAttachmentError } from "@/lib/get-attachment.server";
 import type { FetchedFile } from "@/lib/get-file.server";
 import { getFile, GetFileError } from "@/lib/get-file.server";
@@ -76,4 +79,42 @@ export const loadMentionedFile = async ({
   }
 
   return Result.err(new GetFileError({ message: `"${fileKey}" is not a usable file reference.` }));
+};
+
+export const visualSchema = v.object({
+  data: v.pipe(v.string(), v.nonEmpty(), v.description("Base64.")),
+  mimeType: v.pipe(v.string(), v.nonEmpty()),
+  page: v.optional(v.number()),
+});
+
+type Visual = v.InferOutput<typeof visualSchema>;
+
+export const extractFile = async (bytes: Uint8Array, mimeType: string) => {
+  const extraction = await Result.tryPromise(async () =>
+    extractBytes(Buffer.from(bytes), mimeType, { images: { extractImages: true } }),
+  );
+
+  if (Result.isError(extraction)) {
+    return Result.err(extraction.error);
+  }
+
+  const visuals: Visual[] = [];
+  let skipped = 0;
+
+  for (const image of extraction.value.images ?? []) {
+    const imageMimeType = detectMimeType(Buffer.from(image.data));
+
+    if (!ImageMimeType.is(imageMimeType)) {
+      skipped += 1;
+      continue;
+    }
+
+    visuals.push({
+      data: Buffer.from(image.data).toString("base64"),
+      mimeType: imageMimeType,
+      page: image.pageNumber ?? undefined,
+    });
+  }
+
+  return Result.ok({ text: extraction.value.content, visuals, skipped });
 };

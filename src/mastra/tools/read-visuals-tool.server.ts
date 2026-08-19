@@ -1,15 +1,18 @@
 import type { ToolResultOutput } from "@ai-sdk/provider-utils";
-import { detectMimeType, extractBytes } from "@kreuzberg/node";
 import { createTool } from "@mastra/core/tools";
 import { toStandardJsonSchema } from "@valibot/to-json-schema";
 import { Result } from "better-result";
 import * as v from "valibot";
 
 import { ToolError } from "@/lib/errors/tool-error";
-import { ImageMimeType, LlmNativeMimeType } from "@/lib/file-validation";
+import { ImageMimeType } from "@/lib/file-validation";
 import { mentionKeyShape } from "@/lib/mention-key";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
-import { loadMentionedFile } from "@/mastra/tools/mentioned-file.server";
+import {
+  extractFile,
+  loadMentionedFile,
+  visualSchema,
+} from "@/mastra/tools/file-tool-helpers.server";
 import { toToolInputSchema } from "@/mastra/tools/tool-input-schema.server";
 
 const inputSchema = v.object({
@@ -20,12 +23,6 @@ const inputSchema = v.object({
       `Mention key of the file, in the shape ${mentionKeyShape(["file", "attachment"])}.`,
     ),
   ),
-});
-
-const visualSchema = v.object({
-  data: v.pipe(v.string(), v.nonEmpty(), v.description("Base64.")),
-  mimeType: v.pipe(v.string(), v.nonEmpty()),
-  page: v.optional(v.number()),
 });
 
 const outputSchema = v.variant("type", [
@@ -41,7 +38,6 @@ const outputSchema = v.variant("type", [
   }),
 ]);
 
-type Visual = v.InferOutput<typeof visualSchema>;
 type ReadVisualsOutput = v.InferOutput<typeof outputSchema>;
 
 const toModelOutput = (output: ReadVisualsOutput): ToolResultOutput => {
@@ -80,8 +76,7 @@ export const readVisualsTool = createTool({
   inputSchema: toToolInputSchema(inputSchema),
   outputSchema: toStandardJsonSchema(outputSchema),
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
-  description:
-    "Reads one file for direct viewing: a PDF or image comes back whole, any other file comes back as the images embedded in it.",
+  description: "Reads the images in one file; an image file comes back as itself.",
   execute: async ({ fileKey }, context): Promise<ReadVisualsOutput> => {
     const file = await loadMentionedFile({ fileKey, requestContext: context.requestContext });
 
@@ -91,7 +86,7 @@ export const readVisualsTool = createTool({
 
     const { bytes, displayName, mimeType } = file.value;
 
-    if (LlmNativeMimeType.is(mimeType)) {
+    if (ImageMimeType.is(mimeType)) {
       return {
         type: "visuals",
         displayName,
@@ -100,33 +95,16 @@ export const readVisualsTool = createTool({
       };
     }
 
-    const extraction = await Result.tryPromise(async () =>
-      extractBytes(Buffer.from(bytes), mimeType, { images: { extractImages: true } }),
-    );
+    const extracted = await extractFile(bytes, mimeType);
 
-    if (Result.isError(extraction)) {
-      throw new ToolError({ message: "File could not be loaded.", cause: extraction.error });
-    }
-
-    const visuals: Visual[] = [];
-    let skipped = 0;
-
-    for (const image of extraction.value.images ?? []) {
-      const imageMimeType = detectMimeType(Buffer.from(image.data));
-
-      if (!ImageMimeType.is(imageMimeType)) {
-        skipped += 1;
-        continue;
-      }
-
-      visuals.push({
-        data: Buffer.from(image.data).toString("base64"),
-        mimeType: imageMimeType,
-        page: image.pageNumber ?? undefined,
+    if (Result.isError(extracted)) {
+      throw new ToolError({
+        message: "File contents could not be extracted.",
+        cause: extracted.error,
       });
     }
 
-    return { type: "visuals", displayName, visuals, skipped };
+    return { type: "visuals", displayName, ...extracted.value };
   },
   toModelOutput,
 });

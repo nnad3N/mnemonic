@@ -7,7 +7,7 @@ description: Refactor durable LLM system, developer, instruction, or agent promp
 
 ## House style
 
-Prompt text is **caveman speech**: compressed telegraphic English, same as the live agent instructions. Not broken English. Drop padding — articles, "you should", "please", "in order to", essay clauses. Fragments. Arrows for conditionals. Match neighbors in [`src/mastra/agents/base-instructions.server.ts`](../../src/mastra/agents/base-instructions.server.ts), then the agent `instructions` in `conversation-agent`, `topic-agent`, `worker-agent`, `reader-agent`.
+Prompt text is **caveman speech**: compressed telegraphic English, same as the live agent instructions. Not broken English. Drop padding — articles, "you should", "please", "in order to", essay clauses. Fragments. ASCII arrow `->` for conditionals, never `→`. No em dashes in prompt text: use a comma, a colon, or a new sentence. Match neighbors in [`src/mastra/agents/base-instructions.server.ts`](../../src/mastra/agents/base-instructions.server.ts), then the agent `instructions` in `conversation-agent`, `topic-agent`, `worker-agent`, `reader-agent`.
 
 Do not polish existing caveman into prose when editing nearby lines. New rules copy the rhythm of the section they join.
 
@@ -15,8 +15,8 @@ Do not polish existing caveman into prose when editing nearby lines. New rules c
 
 ```
 # Good
-Conflict → topic files over web, web over recall.
-Never ask back. Ambiguous → research most useful reading, say which in report.
+Conflict -> topic files over web, web over recall.
+Never ask back. Ambiguous -> research most useful reading, say which in report.
 You search and delegate; subagent reads.
 
 # Bad
@@ -25,8 +25,8 @@ If the task is ambiguous, try to research the most useful reading.
 ```
 
 - Label, then rule: `Web: search to discover pages, fetch to read known URL.`
-- Condition → action. Success and stop paths use arrows too.
-- Short sentences. Semicolons and em dashes to chain, not new paragraphs of explanation.
+- Condition -> action. Success and stop paths use the arrow too.
+- Short sentences. Semicolons or commas to chain, not new paragraphs of explanation.
 - "Never X." as its own sentence. Then the allowed exception, if any.
 
 ### Scarce rules
@@ -41,8 +41,8 @@ Shape:
 2. Default: one / smallest form.
 3. Extra only for a specific miss or a distinct sub-question.
 4. Never a streak, loop, or the same content twice.
-5. Success → next action (read, delegate). Not more of the same.
-6. Failure (noisy, empty, already answered) → stop; say what is missing.
+5. Success -> next action (read, delegate). Not more of the same.
+6. Failure (noisy, empty, already answered) -> stop; say what is missing.
 
 ```
 # Bad — forces a loop
@@ -50,8 +50,8 @@ Search until results are relevant, then stop searching.
 Reply with short summary; include a note why each source mattered.
 
 # Good — scarce default, extra only for a miss, stop on noise
-Web search is scarce. One well-chosen query is the default. A further query only for a different sub-question or a specific miss (wrong name, year, entity) — never a streak of similar searches, and never more than a few. Relevant → read them (or delegate); verification is reading, not more search. Noisy, empty, or unreliable → stop: delegate the best candidates or say what is missing.
-Prose is scarce. Smallest form that settles the question is the default — table, list, one sentence — and that form is the whole reply. Extra prose only when the artifact cannot stand alone. Never a table plus the same content rewritten.
+Web search is scarce. One well-chosen query is the default. A further query only for a different sub-question or a specific miss (wrong name, year, entity). Never a streak of similar searches, never more than a few. Relevant -> stop searching and use them; verification is reading, not more search. Noisy, empty, or unreliable -> stop, then delegate the best candidates or say what is missing.
+Prose is scarce. Smallest form that settles the question is the default: table, list, one sentence. That form is the whole reply. Extra prose only when the artifact cannot stand alone. Never a table plus the same content rewritten.
 ```
 
 Find the sentence that **forces more work** and replace it. Do not add a stop clause next to an until-clause and hope the stop wins.

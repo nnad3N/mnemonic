@@ -110,7 +110,7 @@ export const TOOL_WORK_ACTIVITY_KIND = {
   fileVectorSearch: "research",
   fileGraphRag: "research",
   searchFile: "research",
-  readVisuals: "default",
+  readFile: "default",
   compute: "default",
   computeDocs: "default",
   recall: "default",

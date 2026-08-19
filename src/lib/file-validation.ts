@@ -72,12 +72,7 @@ export const SupportedMimeType = Kit.literals.from<MimeType>()([
 
 export type SupportedMimeType = Kit.LiteralMember<typeof SupportedMimeType>;
 
-export const LlmNativeMimeType = Kit.literals.from<MimeType>()([
-  "application/pdf",
-  ...ImageMimeType.values,
-]);
-
-export type LlmNativeMimeType = Kit.LiteralMember<typeof LlmNativeMimeType>;
+export const PDF_MIME_TYPE = "application/pdf" satisfies MimeType;
 
 export const UPLOAD_MAX_BYTES = 50 * 1024 * 1024;
 

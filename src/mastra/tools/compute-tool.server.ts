@@ -12,7 +12,7 @@ import { toFileText } from "@/lib/get-file.server";
 import { mentionKeyShape } from "@/lib/mention-key";
 import { runCode } from "@/lib/sandbox/run-code.server";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
-import { loadMentionedFile } from "@/mastra/tools/mentioned-file.server";
+import { loadMentionedFile } from "@/mastra/tools/file-tool-helpers.server";
 import { toToolInputSchema } from "@/mastra/tools/tool-input-schema.server";
 
 const jsonValueSchema = v.union([
@@ -28,7 +28,7 @@ const codeSchema = v.pipe(
   v.string(),
   v.nonEmpty(),
   v.description(
-    "JavaScript module source. Must end with `export default <value>` with a JSON-serializable value. Logic only — read data from `env`, never write it into the source.",
+    "JavaScript module source. Must end with `export default <value>` with a JSON-serializable value. Logic only. Read data from `env`, never write it into the source.",
   ),
 );
 

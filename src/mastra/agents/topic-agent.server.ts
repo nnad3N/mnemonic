@@ -6,24 +6,20 @@ import { dbKit } from "@/lib/db-kit.server";
 import * as Kit from "@/lib/kit";
 import { resolveProviderKeyById } from "@/lib/middleware/resolve-provider-key.server";
 import { getAgentMemory } from "@/mastra/agent-memory.server";
-import {
-  baseInstructions,
-  sharedDelegationInstructions,
-  sharedSourceInstructions,
-} from "@/mastra/agents/base-instructions.server";
+import { TOPIC_AGENT_ID } from "@/mastra/agent-models.server";
+import { baseInstructions } from "@/mastra/agents/base-instructions.server";
+import { readerAgent } from "@/mastra/agents/reader-agent.server";
 import { workerAgent } from "@/mastra/agents/worker-agent.server";
 import { getAgentModel } from "@/mastra/models.server";
 import { stripFilePartsProcessor } from "@/mastra/processors/strip-file-parts.server";
+import { stripGeminiReasoningProcessor } from "@/mastra/processors/strip-gemini-reasoning.server";
 import type { MnemonicRequestContext } from "@/mastra/request-context.server";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
 import { computeDocsTool } from "@/mastra/tools/compute-docs-tool.server";
 import { computeTool } from "@/mastra/tools/compute-tool.server";
 import { createFileGraphRagTool } from "@/mastra/tools/file-graph-rag-tool.server";
 import { createFileVectorSearchTool } from "@/mastra/tools/file-vector-search-tool.server";
-import { webFetchTool } from "@/mastra/tools/web-fetch-tool.server";
 import { webSearchTool } from "@/mastra/tools/web-search-tool.server";
-
-export const TOPIC_AGENT_ID = "topic-agent";
 
 const providerKeyCtx = Kit.createContext(dbKit);
 
@@ -45,7 +41,6 @@ const getTopicAgentTools = async ({ requestContext }: GetTopicAgentToolsInput) =
     computeDocs: computeDocsTool,
     fileGraphRag: createFileGraphRagTool(apiKey),
     fileVectorSearch: createFileVectorSearchTool(apiKey),
-    webFetch: webFetchTool,
     webSearch: webSearchTool,
   };
 };
@@ -59,19 +54,21 @@ export const topicAgent = new Agent({
   instructions: `
 ${baseInstructions}
 
-${sharedSourceInstructions}
+Conflict -> topic files over web, web over recall.
 
-Conflict → topic files over web, web over recall.
-Files: search by meaning or by connections yourself for pointed questions; no need to run every file tool. Reading files whole → delegation.
-
-${sharedDelegationInstructions}
+## Delegating
+Do yourself: search topic files by meaning or by connections for pointed questions; no need to run every file tool. Every read goes to a subagent. Sources you located -> reader. Question that must find its own sources -> worker.
+Never delegate ambiguous task. Resolve scope with user first.
+Subagent sees only your prompt, not conversation: exact question, output wanted, every URL and file mention key, user constraints.
+Question has separate parts -> split it, one delegation per part, no overlap between them, all in same turn. One part -> one delegation for whole task.
+Report answers its task; never redo its work to check it. Part unanswered -> delegate remainder or tell user what is missing.
 `,
-  agents: { worker: workerAgent },
+  agents: { reader: readerAgent, worker: workerAgent },
   durable: true,
-  inputProcessors: [stripFilePartsProcessor],
+  inputProcessors: [stripFilePartsProcessor, stripGeminiReasoningProcessor],
   memory: getAgentMemory("resource"),
   requestContextSchema: mnemonicRequestContextSchema,
-  model: getAgentModel,
+  model: getAgentModel(TOPIC_AGENT_ID),
   name: "Topic",
   tools: getTopicAgentTools,
 });

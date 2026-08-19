@@ -8,7 +8,7 @@ import { ImageMimeType } from "@/lib/file-validation";
 import { toFileText } from "@/lib/get-file.server";
 import { mentionKeyShape } from "@/lib/mention-key";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
-import { loadMentionedFile } from "@/mastra/tools/mentioned-file.server";
+import { loadMentionedFile } from "@/mastra/tools/file-tool-helpers.server";
 import { toToolInputSchema } from "@/mastra/tools/tool-input-schema.server";
 
 const inputSchema = v.object({

@@ -125,10 +125,10 @@ const TOOL_LABELS = {
     error: "Could not search files",
     pending: "Searching files",
   },
-  readVisuals: {
-    done: "Viewed the file",
-    error: "Could not view the file",
-    pending: "Viewing the file",
+  readFile: {
+    done: "Read the file",
+    error: "Could not read the file",
+    pending: "Reading the file",
   },
   recall: {
     done: "Recalled memories",

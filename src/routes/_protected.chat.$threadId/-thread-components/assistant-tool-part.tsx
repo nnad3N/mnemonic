@@ -35,11 +35,12 @@ const isRecoverableFailure = (part: ToolUIPart<ThreadUITools>): boolean => {
         case "success":
           return false;
       }
-    case "tool-readVisuals":
+    case "tool-readFile":
       switch (part.output.type) {
         case "error":
           return true;
-        case "visuals":
+        case "whole":
+        case "parsed":
           return false;
       }
     case "tool-searchFile":
@@ -122,14 +123,14 @@ const renderToolLabel = (toolName: MnemonicToolName, status: ToolPartStatus): Re
         case "error":
           return <T>Could not search files</T>;
       }
-    case "readVisuals":
+    case "readFile":
       switch (status) {
         case "pending":
-          return <T>Viewing the file</T>;
+          return <T>Reading the file</T>;
         case "done":
-          return <T>Viewed the file</T>;
+          return <T>Read the file</T>;
         case "error":
-          return <T>Could not view the file</T>;
+          return <T>Could not read the file</T>;
       }
     case "recall":
       switch (status) {

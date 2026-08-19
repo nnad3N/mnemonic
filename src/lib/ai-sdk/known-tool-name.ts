@@ -8,7 +8,7 @@ export const KnownToolName = Kit.literals.from<MnemonicToolName>()([
   "computeDocs",
   "fileGraphRag",
   "fileVectorSearch",
-  "readVisuals",
+  "readFile",
   "recall",
   "searchFile",
   "webFetch",
