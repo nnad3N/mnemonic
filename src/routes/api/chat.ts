@@ -7,15 +7,15 @@ import { matchError, Result, TaggedError } from "better-result";
 import { eq, inArray } from "drizzle-orm";
 import * as v from "valibot";
 
-import { threadRun, threadReply } from "@/db/schema.server";
+import { threadReply, threadRun } from "@/db/schema.server";
 import { dbKit, type DbKit } from "@/lib/db-kit.server";
 import {
   durableAgentsKit,
   type DurableAgentsKit,
   type RunTiming,
 } from "@/lib/durable-agents-kit.server";
-import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
+import * as Kit from "@/lib/kit";
 import { memoryKit, type MemoryKit } from "@/lib/memory-kit.server";
 import { authMiddleware } from "@/lib/middleware/auth.middleware";
 import { resolveProviderKey } from "@/lib/middleware/resolve-provider-key.server";
@@ -62,6 +62,22 @@ const WorkStartChunk = Kit.literals.from()([
   "tool-call",
 ] satisfies ChunkType["type"][]);
 
+// Mastra types the finish reason as `string` and its own union omits the `abort` the durable loop
+// returns for a cancelled run, so the reason is parsed: a rename upstream throws here instead of
+// silently settling a cancelled run as finished.
+const finishReasonSchema = v.picklist([
+  "abort",
+  "content-filter",
+  "error",
+  "length",
+  "other",
+  "retry",
+  "stop",
+  "tool-calls",
+  "tripwire",
+  "unknown",
+]);
+
 class ChatStreamError extends TaggedError("ChatStreamError")<{
   cause: unknown;
   message: string;
@@ -87,7 +103,7 @@ const endWork = async (ctx: ChatCtx, runId: SafeId<"run">, timing: RunTiming) =>
 };
 
 type SettleRunInput = {
-  status: "errored" | "finished" | "interrupted";
+  status: "aborted" | "errored" | "finished";
   runId: SafeId<"run">;
   threadId: string;
   timing: RunTiming;
@@ -225,12 +241,14 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
             (await ctx.durableAgents.publishRunTiming({ runId, timing })).tapError(console.error);
           }
         },
-        onFinish: async ({ finishReason }) => {
+        onFinish: async (event) => {
+          const finishReason = v.parse(finishReasonSchema, event.finishReason);
+
           if (finishReason === "error") return;
 
           await endWork(ctx, runId, timing);
           await settleRun(ctx, {
-            status: finishReason === "abort" ? "interrupted" : "finished",
+            status: finishReason === "abort" ? "aborted" : "finished",
             runId,
             threadId,
             timing,
@@ -238,7 +256,9 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
             userMessageId,
           });
         },
-        onError: async () => {
+        onError: async ({ error }) => {
+          console.error(error);
+
           await endWork(ctx, runId, timing);
           // A fatal error throws out of the durable loop before its final step, which is the
           // only place the reply is written; keep the steps that completed and were shown.
@@ -277,7 +297,9 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
 
   const [unsubscribeCancel] = yield* await Kit.promiseAll([
     ctx.durableAgents.subscribeCancel({
-      onCancel: () => result.abort(),
+      onCancel: () => {
+        void result.abort().catch(console.error);
+      },
       runId,
     }),
     ctx.db.run((db) =>

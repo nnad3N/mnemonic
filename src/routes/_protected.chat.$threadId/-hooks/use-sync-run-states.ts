@@ -82,7 +82,7 @@ export const useSyncRunStates = () => {
         params: { threadId: event.threadId },
       });
 
-      if (event.status !== "running" && isOpen) {
+      if (event.status === "aborted" || (event.status !== "running" && isOpen)) {
         dismissRun(event.threadId);
       }
     };

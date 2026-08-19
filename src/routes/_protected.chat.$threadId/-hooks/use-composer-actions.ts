@@ -244,7 +244,7 @@ export const useComposerActions = (location: ThreadInputLocation) => {
       return;
     }
 
-    const message = chat.messages.find((message) => message.role === "user");
+    const message = chat.messages.findLast((message) => message.role === "user");
     if (!message) return;
 
     setEditingState({

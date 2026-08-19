@@ -15,6 +15,12 @@ import type { WorkTiming } from "@/routes/_protected.chat.$threadId/-thread-type
 const CACHE_TTL_SECONDS = 30 * 60;
 const STREAM_IDLE_TTL_MS = 5 * 60 * 1000;
 
+const PUBLISH_RETRY = {
+  times: 3,
+  delayMs: 100,
+  backoff: "exponential" as const,
+};
+
 // node-redis emits `error` on the client itself; without a listener a dropped connection is an
 // unhandled event that takes the process down.
 const cacheClient = createClient({ url: env.REDIS_URL }).on("error", (error: unknown) => {
@@ -122,40 +128,49 @@ export const durableAgentsKit = createDurableAgentsKit({
         new DurableAgentsError({ cause, message: "Failed to connect the run cache" }),
     }),
   publishCancel: async ({ runId }) =>
-    Result.tryPromise({
-      try: async () =>
-        durableAgentsPubsub.publish(getCancelTopic(runId), {
-          type: "cancel",
-          data: { runId },
-          runId,
-        }),
-      catch: (cause) =>
-        new DurableAgentsError({ cause, message: "Failed to publish the cancel event" }),
-    }),
+    Result.tryPromise(
+      {
+        try: async () =>
+          durableAgentsPubsub.publish(getCancelTopic(runId), {
+            type: "cancel",
+            data: { runId },
+            runId,
+          }),
+        catch: (cause) =>
+          new DurableAgentsError({ cause, message: "Failed to publish the cancel event" }),
+      },
+      { retry: PUBLISH_RETRY },
+    ),
   publishRunEvent: async ({ runId, status, threadId, userId }) =>
-    Result.tryPromise({
-      try: async () =>
-        durableAgentsPubsub.publish(getUserThreadsTopic(userId), {
-          type: "thread-run",
-          data: { status, threadId } satisfies ThreadRunEvent,
-          runId,
-        }),
-      catch: (cause) =>
-        new DurableAgentsError({ cause, message: "Failed to publish the thread run event" }),
-    }),
+    Result.tryPromise(
+      {
+        try: async () =>
+          durableAgentsPubsub.publish(getUserThreadsTopic(userId), {
+            type: "thread-run",
+            data: { status, threadId } satisfies ThreadRunEvent,
+            runId,
+          }),
+        catch: (cause) =>
+          new DurableAgentsError({ cause, message: "Failed to publish the thread run event" }),
+      },
+      { retry: PUBLISH_RETRY },
+    ),
   publishRunTiming: async ({ runId, timing }) =>
-    Result.tryPromise({
-      try: async () =>
-        durableAgentsPubsub.publish(getRunTimingTopic(runId), {
-          type: "run-timing",
-          data: {
-            workTimings: timing.workTimings.map((work) => ({ ...work })),
-          } satisfies RunTiming,
-          runId,
-        }),
-      catch: (cause) =>
-        new DurableAgentsError({ cause, message: "Failed to publish the run timing" }),
-    }),
+    Result.tryPromise(
+      {
+        try: async () =>
+          durableAgentsPubsub.publish(getRunTimingTopic(runId), {
+            type: "run-timing",
+            data: {
+              workTimings: timing.workTimings.map((work) => ({ ...work })),
+            } satisfies RunTiming,
+            runId,
+          }),
+        catch: (cause) =>
+          new DurableAgentsError({ cause, message: "Failed to publish the run timing" }),
+      },
+      { retry: PUBLISH_RETRY },
+    ),
   subscribeCancel: async ({ onCancel, runId }) => {
     const topic = getCancelTopic(runId);
     const subscribed = await subscribe(topic, onCancel);

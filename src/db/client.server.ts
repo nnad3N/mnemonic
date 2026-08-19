@@ -10,9 +10,12 @@ import { appRelations } from "./schema.server.ts";
 
 export const schema = { ...appSchema, ...authSchema };
 
+const BUSY_TIMEOUT_MS = 5000;
+
 const client = createClient({
   url: env.DATABASE_URL,
   authToken: env.DATABASE_AUTH_TOKEN,
+  timeout: BUSY_TIMEOUT_MS,
 });
 
 export const drizzleDb = drizzle({

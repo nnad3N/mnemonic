@@ -115,7 +115,7 @@ export const threadSettings = sqliteTable("thread_settings", {
     .default(now),
 });
 
-export type ThreadRunStatus = "running" | "finished" | "errored" | "interrupted";
+export type ThreadRunStatus = "aborted" | "running" | "finished" | "errored" | "interrupted";
 
 export const threadRun = sqliteTable(
   "thread_run",
