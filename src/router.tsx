@@ -4,6 +4,12 @@ import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query
 import { getContext } from "./lib/tanstack-query/root-provider";
 import { routeTree } from "./routeTree.gen";
 
+// Reached by both the client and the server entry, so one guard covers both. Safari has no
+// stable Temporal yet; every other target takes the false branch and never fetches the chunk.
+if (typeof Temporal === "undefined") {
+  await import("temporal-polyfill/global");
+}
+
 export const getRouter = () => {
   const context = getContext();
 
@@ -11,6 +17,7 @@ export const getRouter = () => {
     context,
     defaultPreload: "intent",
     defaultPreloadStaleTime: 0,
+    defaultStructuralSharing: true,
     routeTree,
     scrollRestoration: true,
   });

@@ -13,6 +13,18 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
 
+/*
+ * Streamdown code/mermaid action bars use `position: sticky` so they can float
+ * while a block scrolls. In chat that sticks them to the message scrollport and
+ * throws off vertical alignment with the header. Keep the in-flow -mt-10 overlap
+ * and disable sticky so the buttons stay centered in the header row.
+ */
+[data-streamdown="code-block"] :has(> [data-streamdown="code-block-actions"]),
+[data-streamdown="mermaid-block"] :has(> [data-streamdown="mermaid-block-actions"]) {
+  position: relative;
+  top: auto;
+}
+
 .typeset-chat {
   --typeset-size: 14px;
   --typeset-leading: 1.6;
@@ -287,6 +299,18 @@
 }
 
 /*
+ * Device insets, non-zero only in an installed app (the root viewport meta sets viewport-fit=cover).
+ * The shell is a fixed h-dvh box that never scrolls, so nothing can be nudged clear of the status
+ * bar or home indicator by scrolling — these have to be padding.
+ */
+:root {
+  --safe-top: env(safe-area-inset-top);
+  --safe-right: env(safe-area-inset-right);
+  --safe-bottom: env(safe-area-inset-bottom);
+  --safe-left: env(safe-area-inset-left);
+}
+
+/*
  * Flexoki palette (absolute hex) → f-* utilities + shadcn tokens.
  * Bare accents (f-red, f-blue, …) are 600 in light / 400 in dark.
  * https://stephango.com/flexoki
@@ -534,10 +558,6 @@
     @apply font-sans;
   }
 
-  button:not(:disabled),
-  [role="button"]:not(:disabled) {
-    cursor: pointer;
-  }
   button:not(:disabled),
   [role="button"]:not(:disabled) {
     cursor: pointer;

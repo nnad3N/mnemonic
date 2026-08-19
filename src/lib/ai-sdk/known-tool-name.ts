@@ -1,13 +1,16 @@
 import * as Kit from "@/lib/kit";
-import type { MnemonicToolName } from "@/mastra/mnemonic-tool-types";
+import type { MnemonicToolName } from "@/mastra/mnemonic-tool-types.server";
 
 export const KnownToolName = Kit.literals.from<MnemonicToolName>()([
-  "docs",
-  "executeCode",
+  "agent-reader",
+  "agent-worker",
+  "compute",
+  "computeDocs",
   "fileGraphRag",
   "fileVectorSearch",
-  "getFile",
+  "readFile",
   "recall",
+  "searchFile",
   "webFetch",
   "webSearch",
 ]);

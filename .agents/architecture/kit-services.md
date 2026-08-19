@@ -11,9 +11,16 @@ kit object created with `Kit.createContext(...)`.
   (`dbKit`, `type DbKit`).
 - `Kits<[...]>` is the combined kit context type created by kit tuples.
 - Live contexts and their type aliases use the `*Ctx` suffix, for example
-  `const searchCtx = Kit.createContext(dbKit, memoryKit)` and
-  `type SearchCtx = Kits<[DbKit, MemoryKit]>`.
+  `const byokCtx = Kit.createContext(dbKit)` and
+  `type ByokCtx = Kits<[DbKit]>`.
 - `Kit.createContext(...)` creates the live kit context from one or more modules.
+  **Never export the result.** The context belongs to the module that consumes
+  the action — the server function, workflow step, or tool — as an unexported
+  `const`. Exporting it ships one caller's dependency choice to every other
+  caller, defeats the injection the kit exists for, and pulls the live `dbKit` /
+  `s3Kit` imports into any module that imports it. A `.server.ts` module exports
+  its `Kit.gen` actions and its `Kits<[...]>` type; the consumer supplies the
+  context.
 - `Kit.get(module)` returns the kit value from a kit module for direct use.
 - `Kit.gen(...)` defines result-returning application logic.
 - `Kit.promiseAll(...)` combines parallel Result promises into one typed Result.
@@ -28,12 +35,12 @@ Kit files live under `src/lib/` and define named tuple modules with
 - `db-kit.ts` — `createDbKit(api)` with a closed `DbApi` (`run`, `transaction`)
 - `memory-kit.ts` — `createMemoryKit(api)` with a closed `MemoryApi`
   (`getThreadById`, `saveThread`, `updateThread`, `listThreads`,
-  `listMessages`, and deletion operations). Live Mastra memory-store and agent-memory
-  acquisition is private to this kit.
+  `listMessages`, `saveMessages`, and deletion operations). Live
+  implementation is a shared `Memory` over the store and vector.
 - `s3-kit.ts` — `createS3Kit(api)` with a closed `S3Api` (`deleteObject`,
   `deleteObjects`, `getObject`, …)
 - `vector-kit.ts` — `createVectorKit(api)` with a closed `VectorApi`
-  (`deleteVectors`)
+  (`createIndex`, `deleteVectors`, `upsert`)
 
 After `Kit.createContext(dbKit, memoryKit)`, callers use the context:
 
@@ -44,6 +51,7 @@ After `Kit.createContext(dbKit, memoryKit)`, callers use the context:
 - `ctx.memory.listMessages(input)` → `Promise<Result<StorageListMessagesOutput, MemoryError>>`
 - `ctx.memory.deleteThread(input)` → `Promise<Result<void, MemoryError>>`
 - `ctx.vector.deleteVectors(input)` → `Promise<Result<void, VectorError>>`
+- `ctx.s3.getObject(key)` → `Promise<Result<Uint8Array, S3Error>>`
 
 Each kit exports a mockable `*Api` surface: pass a `satisfies DbApi` /
 `MemoryApi` / `S3Api` / `VectorApi` object to the corresponding `create*Kit`
@@ -61,24 +69,29 @@ Kit tagged errors are the TypeScript analogue of `thiserror` types with
 `message`.
 
 ```ts
-// Good — stable Display, cause preserved for logs/debugging
-const toMemoryError = (cause: unknown): MemoryError =>
-  new MemoryError({
-    cause,
-    message: "Memory operation failed",
-  });
+// Good — stable Display naming the operation, cause preserved for logs/debugging
+Result.tryPromise({
+  try: async () => memory.deleteThread(id),
+  catch: (cause) => new MemoryError({ cause, message: "Failed to delete the thread" }),
+});
 
 // Bad — flattens the source into the wrapper's Display
 new MemoryError({
   cause,
-  message: cause instanceof Error ? cause.message : "Memory operation failed",
+  message: cause instanceof Error ? cause.message : "Failed to delete the thread",
 });
+
+// Bad — one helper, one message for every operation in the kit
+const toMemoryError = (cause: unknown) =>
+  new MemoryError({ cause, message: "Memory operation failed" });
 ```
 
 Rules:
 
-- Wrap catch handlers always use a constant domain string
-  (`"Database operation failed"`, `"S3 operation failed"`, …).
+- Wrap catch handlers use a constant string that names the failed operation,
+  written inline at each call site (`"Failed to delete the thread"`,
+  `"Failed to upsert file embeddings"`, …); no shared `toXError` helper with a
+  generic message.
 - Keep structured metadata from SDKs when useful (`code`, `requestId`,
   `statusCode` on `S3Error`) — that is not the same as copying Display text.
 - Kits should not `throw` the same tagged error their catch maps to. Return
@@ -103,22 +116,23 @@ action would be more boilerplate than it is worth. In that case, call the kit
 value directly:
 
 ```ts
-export const updateFileStatus = createServerFn({ method: "POST" })
-  .validator(updateFileStatusInputSchema)
+export const getFileDownloadUrl = createServerFn({ method: "GET" })
   .middleware([fileAccessMiddleware])
-  .handler(async ({ context, data }) => {
-    const result = await Kit.get(dbKit).run((db) =>
-      db.update(file).set({ status: data.status }).where(eq(file.id, context.file.id)),
-    );
+  .handler(async ({ context }) => {
+    const result = await Kit.get(s3Kit).getPresignedGetUrl({
+      expiresIn: FILE_DOWNLOAD_URL_TTL_SECONDS,
+      key: context.file.s3Key,
+    });
 
-    if (result.isErr()) {
-      throw new ServerFnError({
-        message: "Failed to update file status",
-        status: "server-error",
-      });
+    if (Result.isError(result)) {
+      throw toServerFnError.serverError("Failed to get file download URL");
     }
+
+    return { url: result.value };
   });
 ```
+
+Reference: [`get-file-download-url.ts`](../../src/routes/_protected.topic.$topicId/-files-api/get-file-download-url.ts)
 
 Do not create a kit solely to wrap one SDK call used by one server function.
 Keep that call at its owning boundary with `Result.tryPromise(...)`. Kits are
@@ -133,17 +147,16 @@ fake kits in tests.
 
 ## Kit Call Sites
 
-Inside `Kit.gen`, callers wrap kit promises with `Result.await` for sequential
-ops:
+Inside `Kit.gen`, compose sequential kit promises with `yield* await`:
 
-```text
-const topic = yield* Result.await(
-  ctx.db.run((db) =>
+```ts
+const topic =
+  yield *
+  (await ctx.db.run((db) =>
     db.query.topic.findFirst({
       where: { id: input.topicId },
-    })
-  )
-);
+    }),
+  ));
 ```
 
 For parallel independent ops, use `Kit.promiseAll` on kit calls (each returns
@@ -163,35 +176,40 @@ remain paired with source records or need per-item handling.
 
 ## Server Function File Shape
 
-Follow the ordering used by
-[`src/routes/_protected.search/-search-api.ts`](../../src/routes/_protected.search/-search-api.ts):
+A feature splits across two modules, per the suffix rules in `AGENTS.md`:
+[`-byok.server.ts`](../../src/routes/_protected.settings/-byok.server.ts) holds
+the server-only application logic, and
+[`-byok.functions.ts`](../../src/routes/_protected.settings/-byok.functions.ts)
+holds the `createServerFn` wrappers and the query options the client imports.
 
-1. Imports: external packages first, then app modules. Import kit values and
-   their exported kit types separately, for example `dbKit` plus `type DbKit`.
-2. Constants: limits and other module-local tuning values near the top.
-3. Pure helpers: small local functions used by the kit action, before the
-   exported DTO types when they are implementation details.
-4. Exported result DTO types: response shapes consumed by the route/client.
-5. Internal input and context types: name the action input after the use case,
-   for example `SearchItemsInput`, and define the kit context as
-   `type SearchCtx = Kits<[DbKit, MemoryKit]>`.
-6. Kit action: define the application logic with `Kit.gen(...)`. Destructure
-   input in the parameter list when it improves readability.
-7. Server input schema: put the Valibot `validator` schema after the kit
-   action, close to the `createServerFn` that uses it.
-8. Live kit composition: create the live context with `Kit.createContext(...)`
-   after the schema and before the exported server function. Name it `*Ctx`.
-9. Exported server function: directly return
-   `Kit.run(async () => action(context, input)).throws<ServerFnError>(...)`,
-   mapping every possible kit/domain error to `ServerFnError` after passing the
-   live context plus boundary-normalized input.
-10. Client query helpers: put query input types and `queryOptions(...)`
-    builders after the server function.
+`*.server.ts`, in order:
+
+1. Imports: external packages first, then app modules. Import kit **types**
+   only — `type DbKit`, not `dbKit`. The live kits belong to the consumer.
+2. Constants and pure helpers used by the actions.
+3. The context type: `type ByokCtx = Kits<[DbKit]>`.
+4. Internal input types, named after the use case (`CreateByokInput`).
+5. Exported kit actions defined with `Kit.gen(...)`, each taking `ctx` first.
+   Destructure input in the parameter list when it improves readability.
+
+`*.functions.ts`, in order:
+
+1. Imports, including the live kits and the actions from the `.server.ts`
+   sibling.
+2. The unexported live context: `const byokCtx = Kit.createContext(dbKit)`.
+3. A shared boundary error mapper when several server functions map the same
+   error union.
+4. Exported result DTO types consumed by the route and client.
+5. `createServerFn` definitions: `validator` schema inline, then `middleware`,
+   then a handler that directly returns
+   `Kit.run(async () => action(byokCtx, input)).throws<ServerFnError>(...)`.
+6. The feature's `xQueries` object, next to the read server functions it wraps.
+   Query keys live inside those `queryOptions` — see `AGENTS.md`.
 
 Action input types should contain already-normalized boundary values. For
 example, authenticated users arrive as `SafeId<"user">`, while route/search
 data is trimmed or defaulted at the server boundary before calling the kit
-action. Result DTOs should be plain serializable shapes with strings for dates.
+action. Result DTOs should be plain serializable shapes.
 
 ## Application Logic + Server Boundary
 
@@ -201,14 +219,11 @@ mapper to exhaustively translate tagged kit errors to `ServerFnError`. Keep the
 exhaustive map at the call site; shared helpers such as
 `toServerFnError.serverError(...)` should only construct the mapped error.
 
-Reference: [`src/routes/_protected.search/-search-api.ts`](../../src/routes/_protected.search/-search-api.ts)
-
 ```ts
-type SearchCtx = Kits<[DbKit, MemoryKit]>;
+// search.server.ts — exports the action, never the context
+export type SearchCtx = Kits<[DbKit, MemoryKit]>;
 
-const searchCtx = Kit.createContext(dbKit, memoryKit);
-
-const searchItemsFn = Kit.gen(async function* (
+export const searchItemsFn = Kit.gen(async function* (
   ctx: SearchCtx,
   { query, userId }: SearchItemsInput
 ) {
@@ -219,6 +234,11 @@ const searchItemsFn = Kit.gen(async function* (
 
   return Result.ok({ topics, threads });
 });
+```
+
+```ts
+// search.functions.ts — owns the live context
+const searchCtx = Kit.createContext(dbKit, memoryKit);
 
 export const searchItems = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
@@ -233,16 +253,18 @@ export const searchItems = createServerFn({ method: "GET" })
         DatabaseError: () => toServerFnError.serverError("Database search failed"),
         MemoryError: () => toServerFnError.serverError("Memory search failed"),
       }),
-    )
+    ),
   );
 ```
 
-`ServerFnError` lives in `src/lib/kit`. `.throws<ServerFnError>(mapper)` returns
+`ServerFnError` lives in `src/lib/errors/server-fn-error.ts`, built through the
+`toServerFnError` helpers. `.throws<ServerFnError>(mapper)` returns
 the successful action value or throws the mapped boundary error. The mapper
 receives the complete source error union. If that union already contains
-`ServerFnError`, preserve it with `ServerFnError.is(error)` before calling
-`matchError` for the remaining variants. Never expose kit infrastructure
-messages or call Better Result's `.unwrap()` at the boundary.
+`ServerFnError`, pass it through as another `matchError` key —
+`ServerFnError: (error) => error` — so the mapping stops
+compiling if the action ever stops producing that variant. Never expose kit
+infrastructure messages or call Better Result's `.unwrap()` at the boundary.
 
 `Kit.run` is intentionally narrow. Use it only for a thin server-function,
 workflow, or tool adapter that directly returns the successful value. Do not

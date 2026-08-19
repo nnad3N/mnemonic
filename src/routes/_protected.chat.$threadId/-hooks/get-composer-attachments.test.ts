@@ -1,7 +1,7 @@
 import { convertFileListToFileUIParts } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { ThreadUIMessage } from "../-thread-types";
+import type { ThreadUIMessage, UserMessageMetadata } from "../-thread-types";
 import { useChatStore } from "../../-chat-store";
 import { getComposerAttachments } from "./use-composer-actions";
 
@@ -27,13 +27,13 @@ vi.mock("ai", async (importOriginal) => {
 
 const userMessage = (input: {
   id: string;
-  attachments?: NonNullable<ThreadUIMessage["metadata"]>["attachments"];
+  attachments?: UserMessageMetadata["attachments"];
   files?: Extract<ThreadUIMessage["parts"][number], { type: "file" }>[];
 }): ThreadUIMessage => ({
   id: input.id,
   role: "user",
   parts: [{ type: "text", text: input.id }, ...(input.files ?? [])],
-  metadata: input.attachments === undefined ? undefined : { attachments: input.attachments },
+  metadata: !input.attachments ? undefined : { type: "user", attachments: input.attachments },
 });
 
 describe("getComposerAttachments", () => {

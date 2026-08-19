@@ -50,13 +50,7 @@ const ComposerActions = ({ location }: ComposerFooterProps) => {
     <>
       <UploadButton onSelectFiles={canUpload ? uploadFiles : undefined} />
       {chat.status === "streaming" || chat.status === "submitted" ? (
-        <Button
-          onClick={async () => {
-            await stopStream();
-          }}
-          size="icon-xs"
-          type="button"
-        >
+        <Button onClick={stopStream} size="icon-xs" type="button">
           <SquareIcon />
         </Button>
       ) : (

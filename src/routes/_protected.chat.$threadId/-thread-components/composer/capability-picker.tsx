@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 
 import { useComposer } from "../../-hooks/use-composer";
 import { useUpsertCapability } from "../../-hooks/use-upsert-capability";
-import { threadSettingsQuery } from "../../-thread-api/settings";
+import { threadSettingsQueries } from "../../-thread-api/thread-settings.functions";
 
 const lastCapabilityIndex = modelCapabilityLevels.length - 1;
 
@@ -25,7 +25,7 @@ export const CapabilityPicker = () => {
     from: "/_protected/chat/$threadId",
     select: (params) => params.threadId,
   });
-  const settingsQuery = threadSettingsQuery(threadId);
+  const settingsQuery = threadSettingsQueries.byThread(threadId);
   const { data: capability } = useSuspenseQuery({
     ...settingsQuery,
     select: (data) => data.modelCapability,

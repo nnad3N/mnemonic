@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import { KnownToolName } from "@/lib/ai-sdk/known-tool-name";
 import { getToolPartStatus, type ToolPartStatus } from "@/lib/ai-sdk/tool-parts";
 import { cn } from "@/lib/utils";
-import type { MnemonicToolName } from "@/mastra/mnemonic-tool-types";
+import type { MnemonicToolName } from "@/mastra/mnemonic-tool-types.server";
 import {
   ToolIndicator,
   type ToolIndicatorProps,
@@ -19,7 +19,7 @@ const isRecoverableFailure = (part: ToolUIPart<ThreadUITools>): boolean => {
   }
 
   switch (part.type) {
-    case "tool-docs":
+    case "tool-computeDocs":
       switch (part.output.type) {
         case "error":
           return true;
@@ -28,19 +28,26 @@ const isRecoverableFailure = (part: ToolUIPart<ThreadUITools>): boolean => {
         case "search":
           return false;
       }
-    case "tool-executeCode":
+    case "tool-compute":
       switch (part.output.type) {
         case "error":
           return true;
         case "success":
           return false;
       }
-    case "tool-getFile":
+    case "tool-readFile":
       switch (part.output.type) {
         case "error":
           return true;
-        case "file":
-        case "text":
+        case "whole":
+        case "parsed":
+          return false;
+      }
+    case "tool-searchFile":
+      switch (part.output.type) {
+        case "error":
+          return true;
+        case "matches":
           return false;
       }
     case "tool-webFetch":
@@ -50,6 +57,8 @@ const isRecoverableFailure = (part: ToolUIPart<ThreadUITools>): boolean => {
         case "success":
           return false;
       }
+    case "tool-agent-reader":
+    case "tool-agent-worker":
     case "tool-fileGraphRag":
     case "tool-fileVectorSearch":
     case "tool-recall":
@@ -60,7 +69,34 @@ const isRecoverableFailure = (part: ToolUIPart<ThreadUITools>): boolean => {
 
 const renderToolLabel = (toolName: MnemonicToolName, status: ToolPartStatus): ReactNode => {
   switch (toolName) {
-    case "docs":
+    case "agent-reader":
+      switch (status) {
+        case "pending":
+          return <T>Reading the source</T>;
+        case "done":
+          return <T>Read the source</T>;
+        case "error":
+          return <T>Could not read the source</T>;
+      }
+    case "agent-worker":
+      switch (status) {
+        case "pending":
+          return <T>Researching</T>;
+        case "done":
+          return <T>Researched</T>;
+        case "error":
+          return <T>Could not research</T>;
+      }
+    case "compute":
+      switch (status) {
+        case "pending":
+          return <T>Computing</T>;
+        case "done":
+          return <T>Computed</T>;
+        case "error":
+          return <T>Could not compute</T>;
+      }
+    case "computeDocs":
       switch (status) {
         case "pending":
           return <T>Reading library documentation</T>;
@@ -87,23 +123,14 @@ const renderToolLabel = (toolName: MnemonicToolName, status: ToolPartStatus): Re
         case "error":
           return <T>Could not search files</T>;
       }
-    case "executeCode":
+    case "readFile":
       switch (status) {
         case "pending":
-          return <T>Executing code</T>;
+          return <T>Reading the file</T>;
         case "done":
-          return <T>Executed code</T>;
+          return <T>Read the file</T>;
         case "error":
-          return <T>Could not execute code</T>;
-      }
-    case "getFile":
-      switch (status) {
-        case "pending":
-          return <T>Reading file</T>;
-        case "done":
-          return <T>Read file</T>;
-        case "error":
-          return <T>Could not read file</T>;
+          return <T>Could not read the file</T>;
       }
     case "recall":
       switch (status) {
@@ -113,6 +140,15 @@ const renderToolLabel = (toolName: MnemonicToolName, status: ToolPartStatus): Re
           return <T>Recalled memories</T>;
         case "error":
           return <T>Could not recall memories</T>;
+      }
+    case "searchFile":
+      switch (status) {
+        case "pending":
+          return <T>Searching the file</T>;
+        case "done":
+          return <T>Searched the file</T>;
+        case "error":
+          return <T>Could not search the file</T>;
       }
     case "webFetch":
       switch (status) {

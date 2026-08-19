@@ -89,11 +89,6 @@ describe("isVisibleToolPart", () => {
       false,
     );
   });
-
-  it("rejects work-segment timing markers so they stay out of the planning placeholder", () => {
-    expect(isVisibleToolPart(asPart({ type: "data-work-start" }))).toBe(false);
-    expect(isVisibleToolPart(asPart({ type: "data-work-end" }))).toBe(false);
-  });
 });
 
 describe("isVisibleIntermediatePart", () => {
@@ -101,8 +96,7 @@ describe("isVisibleIntermediatePart", () => {
     expect(isVisibleIntermediatePart(asPart({ type: "reasoning", text: "x", state: "done" }))).toBe(
       true,
     );
-    expect(isVisibleIntermediatePart(asPart({ type: "tool-getFile" }))).toBe(true);
+    expect(isVisibleIntermediatePart(asPart({ type: "tool-compute" }))).toBe(true);
     expect(isVisibleIntermediatePart(asPart({ type: "text", text: "hi" }))).toBe(false);
-    expect(isVisibleIntermediatePart(asPart({ type: "data-work-start" }))).toBe(false);
   });
 });

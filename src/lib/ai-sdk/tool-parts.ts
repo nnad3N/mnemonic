@@ -51,10 +51,6 @@ export const isVisibleOmPart = (part: Pick<ThreadUIMessagePart, "type">): boolea
 };
 
 export const isVisibleToolPart = (part: ThreadUIMessagePart): boolean => {
-  if (part.type === "data-work-start" || part.type === "data-work-end") {
-    return false;
-  }
-
   if (part.type === "reasoning" || part.type === "text") {
     return true;
   }

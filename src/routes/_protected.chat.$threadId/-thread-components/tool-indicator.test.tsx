@@ -3,7 +3,7 @@ import type { ToolUIPart } from "ai";
 import { describe, expect, it } from "vitest";
 
 import { KnownToolName } from "@/lib/ai-sdk/known-tool-name";
-import type { MnemonicToolName } from "@/mastra/mnemonic-tool-types";
+import type { MnemonicToolName } from "@/mastra/mnemonic-tool-types.server";
 import { render } from "@/test/render-message";
 
 import type { ThreadUITools } from "../-thread-types";
@@ -95,15 +95,25 @@ const unknownToolPart = () =>
   }) as unknown as ToolUIPart<ThreadUITools>;
 
 const TOOL_LABELS = {
-  docs: {
+  "agent-reader": {
+    done: "Read the source",
+    error: "Could not read the source",
+    pending: "Reading the source",
+  },
+  "agent-worker": {
+    done: "Researched",
+    error: "Could not research",
+    pending: "Researching",
+  },
+  compute: {
+    done: "Computed",
+    error: "Could not compute",
+    pending: "Computing",
+  },
+  computeDocs: {
     done: "Read library documentation",
     error: "Could not read library documentation",
     pending: "Reading library documentation",
-  },
-  executeCode: {
-    done: "Executed code",
-    error: "Could not execute code",
-    pending: "Executing code",
   },
   fileGraphRag: {
     done: "Searched file connections",
@@ -115,15 +125,20 @@ const TOOL_LABELS = {
     error: "Could not search files",
     pending: "Searching files",
   },
-  getFile: {
-    done: "Read file",
-    error: "Could not read file",
-    pending: "Reading file",
+  readFile: {
+    done: "Read the file",
+    error: "Could not read the file",
+    pending: "Reading the file",
   },
   recall: {
     done: "Recalled memories",
     error: "Could not recall memories",
     pending: "Recalling memories",
+  },
+  searchFile: {
+    done: "Searched the file",
+    error: "Could not search the file",
+    pending: "Searching the file",
   },
   webFetch: {
     done: "Fetched the web page",
@@ -175,7 +190,6 @@ describe("AssistantToolPart", () => {
 
     const label = screen.getByText("Recalling memories");
     expect(label.closest("div")).toHaveClass("shimmer");
-    expect(label.closest("div")?.tagName).toBe("DIV");
   });
 
   it("shows done recall copy without shimmer after output", () => {

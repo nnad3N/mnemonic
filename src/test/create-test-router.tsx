@@ -1,24 +1,24 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
 import { RouterProvider, createMemoryHistory, createRouter } from "@tanstack/react-router";
-import type { Session, User } from "better-auth";
 import type { ReactNode } from "react";
 
+import { sidebarQueries } from "@/routes/-sidebar/sidebar.functions";
 import { RootAppShell } from "@/routes/__root";
-import { authSessionQuery } from "@/routes/_auth/-auth.api";
-import {
-  sidebarConversationsQuery,
-  sidebarTopicsQuery,
-} from "@/routes/_protected.chat.$threadId/-thread-api/sidebar-data";
+import { authQueries } from "@/routes/_auth/-auth.functions";
+import { threadRunQueries } from "@/routes/_protected.chat.$threadId/-thread-api/thread-run.functions";
+import { byokQueries } from "@/routes/_protected.settings/-byok.functions";
+import type { ByokItem } from "@/routes/_protected.settings/-byok.functions";
 import { routeTree } from "@/routeTree.gen";
 
 import { createTestQueryClient } from "./create-test-query-client";
 import { testAuthSession } from "./fixtures/session";
+import type { TestAuthSession } from "./fixtures/session";
 
 type CreateTestRouterOptions = {
   queryClient: QueryClient;
-  session: Session;
-  user: User;
+  session: TestAuthSession["session"];
+  user: TestAuthSession["user"];
 };
 
 type TestDocumentShellProps = {
@@ -42,18 +42,22 @@ const TestDocumentShell = ({ children, queryClient }: TestDocumentShellProps) =>
  * Starts at `/`. Navigate to a chat route when the test needs chat context.
  */
 export const createTestRouter = ({ queryClient, session, user }: CreateTestRouterOptions) => {
-  queryClient.setQueryData(authSessionQuery.queryKey, {
+  queryClient.setQueryData(authQueries.session().queryKey, {
     data: { session, user },
     error: null,
   });
-  queryClient.setQueryData(sidebarConversationsQuery().queryKey, {
-    pageParams: [0],
-    pages: [{ hasMore: false, items: [], nextPage: null }],
-  });
-  queryClient.setQueryData(sidebarTopicsQuery().queryKey, {
-    pageParams: [0],
-    pages: [{ hasMore: false, items: [] }],
-  });
+  queryClient.setQueryData(sidebarQueries.threads(undefined).queryKey, []);
+  queryClient.setQueryData(sidebarQueries.topics().queryKey, []);
+  queryClient.setQueryData(threadRunQueries.states().queryKey, []);
+  queryClient.setQueryData(byokQueries.mine().queryKey, [
+    {
+      activatedAt: new Date("2026-01-01T00:00:00.000Z"),
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      id: "byok_test",
+      keyPreview: "test",
+      name: "OpenRouter",
+    } satisfies ByokItem,
+  ]);
 
   // `update()`'s public type omits Start's `shellComponent`; set it on the live options.
   Object.assign(routeTree.options, {

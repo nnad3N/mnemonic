@@ -11,6 +11,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableEmptyRow,
   TableErrorRow,
   TableHead,
   TableHeader,
@@ -20,9 +21,13 @@ import {
 import { authClient } from "@/lib/better-auth/auth-client";
 import { toAuthError } from "@/lib/errors/auth-error";
 import type { GT } from "@/lib/gt";
-import { authKeys } from "@/routes/_auth/-auth.api";
-import { sessionsQuery } from "@/routes/_protected.settings/-sessions-api";
-import type { SessionItem } from "@/routes/_protected.settings/-sessions-api";
+import { sessionQueries } from "@/routes/_protected.settings/-sessions.functions";
+import type { SessionItem } from "@/routes/_protected.settings/-sessions.functions";
+import {
+  SettingsSection,
+  SettingsSectionHeader,
+  SettingsSectionTitle,
+} from "@/routes/_protected.settings/-settings-section";
 
 const MOBILE_PATTERN = /android|iphone|ipad|ipod|mobile/i;
 
@@ -70,7 +75,7 @@ type SessionsSectionProps = {
 export const SessionsSection = ({ currentSessionId }: SessionsSectionProps) => {
   const gt = useGT();
   const navigate = useNavigate();
-  const sessions = useQuery(sessionsQuery);
+  const sessions = useQuery(sessionQueries.list());
 
   const revokeAllMutation = useMutation({
     mutationFn: async () => {
@@ -94,11 +99,11 @@ export const SessionsSection = ({ currentSessionId }: SessionsSectionProps) => {
   const items = sessions.data ?? [];
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-4">
-        <h2 className="font-medium">
+    <SettingsSection>
+      <SettingsSectionHeader>
+        <SettingsSectionTitle>
           <T>Active sessions</T>
-        </h2>
+        </SettingsSectionTitle>
         <Button
           disabled={revokeAllMutation.isPending}
           onClick={() => {
@@ -108,7 +113,7 @@ export const SessionsSection = ({ currentSessionId }: SessionsSectionProps) => {
         >
           <T>Revoke all</T>
         </Button>
-      </div>
+      </SettingsSectionHeader>
       <Frame className="w-full">
         <Table className="w-full" variant="card">
           <TableHeader>
@@ -129,13 +134,18 @@ export const SessionsSection = ({ currentSessionId }: SessionsSectionProps) => {
                 <T>Could not load sessions</T>
               </TableErrorRow>
             )}
+            {sessions.isSuccess && items.length === 0 && (
+              <TableEmptyRow colSpan={5}>
+                <T>No active sessions</T>
+              </TableEmptyRow>
+            )}
             {items.map((item) => (
               <SessionRow isCurrent={item.id === currentSessionId} key={item.id} session={item} />
             ))}
           </TableBody>
         </Table>
       </Frame>
-    </div>
+    </SettingsSection>
   );
 };
 
@@ -161,7 +171,7 @@ const SessionRow = ({ isCurrent, session }: SessionRowProps) => {
       toast.error(gt("Could not revoke session"));
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: authKeys.sessions() });
+      await queryClient.invalidateQueries({ queryKey: sessionQueries.all() });
     },
   });
 

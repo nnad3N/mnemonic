@@ -1,5 +1,5 @@
 import type { Value } from "platejs";
-import { describe, expect, it } from "vitest";
+import { assert, describe, expect, it } from "vitest";
 
 import { getMentionKey } from "@/lib/mention-key";
 import { createComposerEditor } from "@/test/create-composer-editor";
@@ -9,9 +9,9 @@ import { hasComposerContent } from "../../-hooks/use-composer-actions";
 const paragraphHasContent = (value: Value) => {
   const editor = createComposerEditor(value);
   const root = editor.children.at(0);
+  assert(root, "Expected a root element in the composer value");
 
-  expect(root).toBeDefined();
-  return hasComposerContent(editor, root!);
+  return hasComposerContent(editor, root);
 };
 
 describe("hasComposerContent", () => {

@@ -262,7 +262,7 @@ export const ComposerWrapper = ({ className, render, ...props }: ComposerWrapper
     defaultTagName: "div",
     props: mergeProps<"div">(
       {
-        className: cn("w-full min-w-0 rounded-2xl border p-1.5 text-sm", className),
+        className: cn("w-full min-w-0 rounded-xl border p-1.5 text-sm", className),
       },
       props,
     ),

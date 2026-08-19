@@ -216,6 +216,25 @@ export function TableErrorRow({
   );
 }
 
+export type TableEmptyRowProps = {
+  children: React.ReactNode;
+  colSpan: number;
+};
+
+export function TableEmptyRow({ children, colSpan }: TableEmptyRowProps): React.ReactElement {
+  return (
+    <TableRow>
+      <TableCell colSpan={colSpan}>
+        <Empty>
+          <EmptyHeader>
+            <EmptyTitle>{children}</EmptyTitle>
+          </EmptyHeader>
+        </Empty>
+      </TableCell>
+    </TableRow>
+  );
+}
+
 export function TableCaption({
   className,
   ...props

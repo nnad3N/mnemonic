@@ -1,20 +1,17 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { T, useGT, useLocale, useSetLocale } from "gt-tanstack-start";
+import { T, useLocale, useSetLocale } from "gt-tanstack-start";
 import {
   ChevronsUpDownIcon,
+  DownloadIcon,
   LanguagesIcon,
   LaptopIcon,
   LogOutIcon,
-  MessageSquareTextIcon,
-  MessagesSquareIcon,
   MoonIcon,
-  SearchIcon,
   SettingsIcon,
+  ShieldIcon,
   SunIcon,
 } from "lucide-react";
 import { useTheme } from "next-themes";
-import { toast } from "sonner";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -22,6 +19,7 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
@@ -32,19 +30,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   SidebarFooter,
-  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { useInstallPrompt } from "@/hooks/use-install-prompt";
 import { authClient } from "@/lib/better-auth/auth-client";
-
-import {
-  createConversation,
-  createTopic,
-} from "../_protected.chat.$threadId/-thread-api/create-thread";
-import { threadKeys } from "../_protected.chat.$threadId/-thread-api/query-keys";
 
 const getInitials = (value: string): string => {
   const parts = value
@@ -61,107 +53,19 @@ const getInitials = (value: string): string => {
   return `${firstPart.at(0) ?? ""}${secondPart?.at(0) ?? ""}`.toUpperCase();
 };
 
-export const SidebarHeaderSection = () => {
-  const gt = useGT();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-
-  const createConversationMutation = useMutation({
-    mutationFn: async () => {
-      const thread = await createConversation({
-        data: { title: gt("New conversation") },
-      });
-
-      return thread;
-    },
-    onError: () => {
-      toast.error(gt("Could not create conversation"));
-    },
-    onSuccess: async (thread) => {
-      await navigate({
-        params: { threadId: thread.id },
-        to: "/chat/$threadId",
-      });
-      await queryClient.invalidateQueries({ queryKey: threadKeys.sidebar() });
-    },
-  });
-
-  const createTopicMutation = useMutation({
-    mutationFn: async () => {
-      const thread = await createTopic({
-        data: {
-          conversationTitle: gt("New conversation"),
-          topicTitle: gt("New topic"),
-        },
-      });
-
-      return thread;
-    },
-    onError: () => {
-      toast.error(gt("Could not create topic"));
-    },
-    onSuccess: async (thread) => {
-      await navigate({
-        params: { threadId: thread.id },
-        to: "/chat/$threadId",
-      });
-      await queryClient.invalidateQueries({ queryKey: threadKeys.sidebar() });
-    },
-  });
-
-  return (
-    <SidebarHeader>
-      <SidebarMenu>
-        <SidebarMenuItem>
-          <Link to="/search">
-            {({ isActive }) => (
-              <SidebarMenuButton isActive={isActive}>
-                <SearchIcon />
-                <T>Search</T>
-              </SidebarMenuButton>
-            )}
-          </Link>
-        </SidebarMenuItem>
-        <SidebarMenuItem>
-          <SidebarMenuButton
-            disabled={createConversationMutation.isPending}
-            onClick={() => {
-              createConversationMutation.mutate();
-            }}
-            tooltip={gt("New conversation")}
-          >
-            <MessageSquareTextIcon />
-            <T>New conversation</T>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-        <SidebarMenuItem>
-          <SidebarMenuButton
-            disabled={createTopicMutation.isPending}
-            onClick={() => {
-              createTopicMutation.mutate();
-            }}
-            tooltip={gt("New topic")}
-          >
-            <MessagesSquareIcon />
-            <T>New topic</T>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      </SidebarMenu>
-    </SidebarHeader>
-  );
-};
-
 type SidebarFooterSectionProps = {
   user: {
     email: string;
     image?: string | null;
     name?: string | null;
+    role?: string | null;
   };
 };
 
 export const SidebarFooterSection = ({ user }: SidebarFooterSectionProps) => {
   const locale = useLocale();
   const setLocale = useSetLocale();
+  const { canInstall, needsManualInstall, promptInstall } = useInstallPrompt();
   const { isMobile } = useSidebar();
   const navigate = useNavigate();
   const { setTheme, theme } = useTheme();
@@ -187,7 +91,6 @@ export const SidebarFooterSection = ({ user }: SidebarFooterSectionProps) => {
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{displayName}</span>
-                <span className="truncate text-xs">{user.email}</span>
               </div>
               <ChevronsUpDownIcon />
             </DropdownMenuTrigger>
@@ -202,6 +105,12 @@ export const SidebarFooterSection = ({ user }: SidebarFooterSectionProps) => {
                   <SettingsIcon />
                   <T>Settings</T>
                 </DropdownMenuItem>
+                {user.role === "admin" && (
+                  <DropdownMenuItem render={<Link to="/settings/admin" />}>
+                    <ShieldIcon />
+                    <T>Admin</T>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
                     <SunIcon />
@@ -241,6 +150,21 @@ export const SidebarFooterSection = ({ user }: SidebarFooterSectionProps) => {
                     </DropdownMenuRadioGroup>
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
+                {canInstall && (
+                  <DropdownMenuItem
+                    onClick={async () => {
+                      await promptInstall();
+                    }}
+                  >
+                    <DownloadIcon />
+                    <T>Install app</T>
+                  </DropdownMenuItem>
+                )}
+                {needsManualInstall && (
+                  <DropdownMenuLabel className="font-normal text-muted-foreground">
+                    <T>To install: Share, then Add to Home Screen.</T>
+                  </DropdownMenuLabel>
+                )}
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>

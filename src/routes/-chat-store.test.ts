@@ -1,16 +1,19 @@
 import { describe, expect, it } from "vitest";
 
 import { useChatStore } from "./-chat-store";
-import type { ThreadUIMessage } from "./_protected.chat.$threadId/-thread-types";
+import type {
+  ThreadUIMessage,
+  UserMessageMetadata,
+} from "./_protected.chat.$threadId/-thread-types";
 
 const userMessageWithAttachments = (
   id: string,
-  attachments: NonNullable<ThreadUIMessage["metadata"]>["attachments"],
+  attachments: UserMessageMetadata["attachments"],
 ): ThreadUIMessage => ({
   id,
   role: "user",
   parts: [{ type: "text", text: id }],
-  metadata: { attachments },
+  metadata: { type: "user", attachments },
 });
 
 describe("useChatStore attachments", () => {
@@ -102,25 +105,5 @@ describe("useChatStore attachments", () => {
     const attachments = useChatStore.getState().attachments.get(threadId) ?? [];
     expect(attachments.map((item) => item.sha256).sort()).toEqual(["draft", "kept"]);
     expect(attachments.find((item) => item.sha256 === "old")).toBeUndefined();
-  });
-});
-
-describe("useChatStore thread indicators", () => {
-  it("clears a settled indicator", () => {
-    const threadId = "thread-settled";
-
-    useChatStore.getState().setThreadIndicator(threadId, "ready");
-    useChatStore.getState().clearThreadIndicator(threadId);
-
-    expect(useChatStore.getState().threadIndicators.get(threadId)).toBeUndefined();
-  });
-
-  it("keeps a pending indicator while the stream is still running", () => {
-    const threadId = "thread-pending";
-
-    useChatStore.getState().setThreadIndicator(threadId, "pending");
-    useChatStore.getState().clearThreadIndicator(threadId);
-
-    expect(useChatStore.getState().threadIndicators.get(threadId)).toBe("pending");
   });
 });

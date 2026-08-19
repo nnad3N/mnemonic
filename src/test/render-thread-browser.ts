@@ -2,8 +2,8 @@ import { Chat } from "@ai-sdk/react";
 import { nanoid } from "nanoid";
 import { render } from "vitest-browser-react";
 
-import { threadChatQuery } from "@/routes/_protected.chat.$threadId/-hooks/use-thread-chat";
-import { threadSettingsQuery } from "@/routes/_protected.chat.$threadId/-thread-api/settings";
+import { threadQueries } from "@/routes/_protected.chat.$threadId/-hooks/use-thread-chat";
+import { threadSettingsQueries } from "@/routes/_protected.chat.$threadId/-thread-api/thread-settings.functions";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 import { createTestQueryClient } from "@/test/create-test-query-client";
 import { createProviderTree } from "@/test/create-test-router";
@@ -12,7 +12,7 @@ export const renderThreadBrowser = async (messages: ThreadUIMessage[]) => {
   const threadId = nanoid();
   const queryClient = createTestQueryClient();
 
-  queryClient.setQueryData(threadChatQuery(threadId).queryKey, {
+  queryClient.setQueryData(threadQueries.chat(threadId).queryKey, {
     chat: new Chat({
       id: threadId,
       messages,
@@ -20,7 +20,7 @@ export const renderThreadBrowser = async (messages: ThreadUIMessage[]) => {
     resourceId: "user_test",
     topicId: undefined,
   });
-  queryClient.setQueryData(threadSettingsQuery(threadId).queryKey, {
+  queryClient.setQueryData(threadSettingsQueries.byThread(threadId).queryKey, {
     modelCapability: "standard",
   });
 

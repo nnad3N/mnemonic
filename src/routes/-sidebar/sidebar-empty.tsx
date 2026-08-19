@@ -8,12 +8,5 @@ type SidebarGroupEmptyProps = {
 };
 
 export const SidebarGroupEmpty = ({ children, className }: SidebarGroupEmptyProps) => (
-  <p
-    className={cn(
-      "px-3 text-xs text-sidebar-foreground/50 group-data-[collapsible=icon]:hidden",
-      className,
-    )}
-  >
-    {children}
-  </p>
+  <p className={cn("px-3 text-xs text-sidebar-foreground/50", className)}>{children}</p>
 );

@@ -1,59 +1,171 @@
-import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
+import { Outlet, createFileRoute, redirect, retainSearchParams } from "@tanstack/react-router";
+import { createIsomorphicFn } from "@tanstack/react-start";
+import { getCookie } from "@tanstack/react-start/server";
+import { usePanelRef } from "react-resizable-panels";
+import * as v from "valibot";
 
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import {
+  SIDEBAR_COOKIE_NAME,
   Sidebar,
   SidebarContent,
+  SidebarHeader,
   SidebarInset,
+  SidebarMenu,
   SidebarProvider,
-  SidebarRail,
-  SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
+import { useIsMobile } from "@/hooks/use-media-query";
+import * as Kit from "@/lib/kit";
+import { useSyncRunStates } from "@/routes/_protected.chat.$threadId/-hooks/use-sync-run-states";
+import { byokQueries } from "@/routes/_protected.settings/-byok.functions";
 
-import { SidebarConversations } from "./-sidebar/sidebar-conversation";
-import { SidebarFooterSection, SidebarHeaderSection } from "./-sidebar/sidebar-menu";
-import { SidebarTopics } from "./-sidebar/sidebar-topic";
+import { AppHeader } from "./-app-header";
+import { SidebarFooterSection } from "./-sidebar/sidebar-menu";
+import { SidebarScopeCombobox } from "./-sidebar/sidebar-scope-combobox";
+import { SidebarThreadList } from "./-sidebar/sidebar-thread-list";
+import { SidebarThreadSearch } from "./-sidebar/sidebar-thread-search";
+
+const SIDEBAR_DEFAULT_SIZE = "16rem";
+const SIDEBAR_MIN_SIZE = "13rem";
+const SIDEBAR_MAX_SIZE = "28rem";
+const SIDEBAR_WIDTH_COOKIE_NAME = "sidebar_width";
+const SIDEBAR_WIDTH_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
+
+const sidebarWidthSchema = v.pipe(v.string(), v.regex(/^\d+px$/));
+
+const readCookie = createIsomorphicFn()
+  .server((name: string) => getCookie(name))
+  .client((name: string) => Kit.cookies.get(name).unwrapOr(undefined));
+
+const sidebarSearchSchema = v.object({
+  topic: v.optional(v.pipe(v.string(), v.nanoid())),
+  q: v.optional(v.string(), ""),
+  range: v.optional(
+    v.union([v.picklist(["today", "7d", "30d"]), v.object({ from: v.string(), to: v.string() })]),
+  ),
+});
+
+export type SidebarSearch = v.InferInput<typeof sidebarSearchSchema>;
 
 export const Route = createFileRoute("/_protected")({
-  beforeLoad: ({ context }) => {
-    if (context.user === undefined || context.session === undefined) {
+  search: { middlewares: [retainSearchParams(["topic", "q", "range"])] },
+  validateSearch: sidebarSearchSchema,
+  beforeLoad: async ({ context, location }) => {
+    if (!context.user || !context.session) {
       throw redirect({ to: "/sign-in" });
     }
 
+    const byoks = await context.queryClient.ensureQueryData({
+      ...byokQueries.mine(),
+      revalidateIfStale: true,
+    });
+
+    if (byoks.length === 0 && location.pathname !== "/") {
+      throw redirect({ to: "/" });
+    }
+
     return { session: context.session, user: context.user };
+  },
+  loader: () => {
+    const widthParsed = v.safeParse(sidebarWidthSchema, readCookie(SIDEBAR_WIDTH_COOKIE_NAME));
+
+    return {
+      sidebarOpen: readCookie(SIDEBAR_COOKIE_NAME) !== "false",
+      sidebarWidth: widthParsed.success ? widthParsed.output : SIDEBAR_DEFAULT_SIZE,
+    };
   },
   component: LayoutComponent,
 });
 
 function LayoutComponent() {
-  const user = Route.useRouteContext({ select: (context) => context.user });
+  useSyncRunStates();
+  const { sidebarOpen, sidebarWidth } = Route.useLoaderData();
 
   return (
-    <SidebarProvider className="h-full min-h-0">
-      <Sidebar collapsible="icon">
-        <SidebarHeaderSection />
-        {/*
-          Icon-collapsed: hide list content but keep its flex space so the footer
-          stays at the bottom (`hidden` would drop that space). Delay visibility
-          until the width transition finishes (duration-200 on the sidebar shell).
-          Reset group-label margin — SidebarGroupLabel applies -mt-8 in icon mode,
-          which pulls text into the header and overflows the narrow rail when content
-          still lays out.
-        */}
-        <SidebarContent className="group-data-[collapsible=icon]:invisible group-data-[collapsible=icon]:transition-[visibility] group-data-[collapsible=icon]:delay-200 group-data-[collapsible=icon]:duration-0 group-data-[collapsible=icon]:**:data-[sidebar=group-label]:mt-0">
-          <SidebarConversations />
-          <SidebarTopics />
-        </SidebarContent>
-        <SidebarFooterSection user={user} />
-        <SidebarRail />
-      </Sidebar>
-      <SidebarInset className="min-h-0 overflow-hidden">
-        <header className="flex h-10 shrink-0 items-center gap-2 px-3 md:hidden">
-          <SidebarTrigger />
-        </header>
-        <div className="min-h-0 flex-1 overflow-hidden">
-          <Outlet />
-        </div>
-      </SidebarInset>
+    <SidebarProvider className="h-full min-h-0" defaultOpen={sidebarOpen}>
+      <ProtectedLayout sidebarWidth={sidebarWidth} />
     </SidebarProvider>
   );
 }
+
+type ProtectedLayoutProps = {
+  sidebarWidth: string;
+};
+
+const ProtectedLayout = ({ sidebarWidth }: ProtectedLayoutProps) => {
+  const isMobile = useIsMobile();
+  const { open } = useSidebar();
+  const sidebarPanelRef = usePanelRef();
+
+  return (
+    <>
+      {isMobile && (
+        <Sidebar>
+          <SidebarBody />
+        </Sidebar>
+      )}
+      <ResizablePanelGroup orientation="horizontal">
+        {!isMobile && open && (
+          <>
+            <ResizablePanel
+              // Cookie width for SSR; double-click resets to SIDEBAR_DEFAULT_SIZE via the handle.
+              defaultSize={sidebarWidth}
+              groupResizeBehavior="preserve-pixel-size"
+              id="sidebar"
+              maxSize={SIDEBAR_MAX_SIZE}
+              minSize={SIDEBAR_MIN_SIZE}
+              onResize={(panelSize, _id, prevPanelSize) => {
+                if (!prevPanelSize) return;
+                Kit.cookies.set({
+                  name: SIDEBAR_WIDTH_COOKIE_NAME,
+                  value: `${Math.round(panelSize.inPixels)}px`,
+                  options: { maxAge: SIDEBAR_WIDTH_COOKIE_MAX_AGE },
+                });
+              }}
+              panelRef={sidebarPanelRef}
+              style={{ overflow: "hidden" }}
+            >
+              <Sidebar>
+                <SidebarBody />
+              </Sidebar>
+            </ResizablePanel>
+            <ResizableHandle
+              disableDoubleClick
+              onDoubleClick={() => {
+                sidebarPanelRef.current?.resize(SIDEBAR_DEFAULT_SIZE);
+              }}
+            />
+          </>
+        )}
+        <ResizablePanel minSize="20rem">
+          <SidebarInset className="h-full min-h-0 overflow-hidden">
+            <AppHeader />
+            <div className="h-full min-h-0 overflow-hidden">
+              <Outlet />
+            </div>
+          </SidebarInset>
+        </ResizablePanel>
+      </ResizablePanelGroup>
+    </>
+  );
+};
+
+const SidebarBody = () => {
+  const user = Route.useRouteContext({ select: (context) => context.user });
+
+  return (
+    <>
+      <SidebarHeader className="pb-0">
+        <SidebarMenu className="gap-0.5">
+          <SidebarScopeCombobox />
+          <SidebarThreadSearch />
+        </SidebarMenu>
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarThreadList />
+      </SidebarContent>
+      <SidebarFooterSection user={user} />
+    </>
+  );
+};

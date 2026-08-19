@@ -24,9 +24,9 @@ import { getMentionKey, parseMentionKey } from "@/lib/mention-key";
 import { cn } from "@/lib/utils";
 
 import { useComposer } from "../../-hooks/use-composer";
-import { threadChatQuery } from "../../-hooks/use-thread-chat";
-import { mentionByIdQuery, mentionsQuery } from "../../-thread-api/get-mentions";
-import type { MentionQueryType } from "../../-thread-api/query-keys";
+import { threadQueries } from "../../-hooks/use-thread-chat";
+import { mentionQueries } from "../../-thread-api/mentions.functions";
+import type { MentionQueryType } from "../../-thread-api/mentions.server";
 import type { ThreadAttachment } from "../../../-chat-store";
 import { useChatStore } from "../../../-chat-store";
 import {
@@ -74,7 +74,7 @@ const ThreadDatabaseMentionElement = ({
   ...props
 }: ThreadDatabaseMentionElementProps) => {
   const mention = useQuery(
-    mentionByIdQuery({
+    mentionQueries.byId({
       id: mentionId,
       type: mentionType,
     }),
@@ -249,7 +249,7 @@ export const ThreadMentionInputElement = (props: PlateElementProps<TComboboxInpu
     select: (params) => params.threadId,
   });
   const resourceId = useSuspenseQuery({
-    ...threadChatQuery(threadId),
+    ...threadQueries.chat(threadId),
     select: (data) => data.resourceId,
   }).data;
   const attachments = useChatStore((state) => state.attachments.get(threadId));
@@ -257,7 +257,7 @@ export const ThreadMentionInputElement = (props: PlateElementProps<TComboboxInpu
   const [search, setSearch] = useState("");
   const [debouncedSearch] = useDebounce(search, 100);
   const mentions = useQuery({
-    ...mentionsQuery({ query: debouncedSearch, resourceId }),
+    ...mentionQueries.list({ query: debouncedSearch, resourceId }),
     select: (data) =>
       data
         .filter((mention) => mention.type !== "thread" || mention.id !== threadId)

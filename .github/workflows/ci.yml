@@ -17,25 +17,22 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
-          cache: true
+      - uses: nubjs/setup-nub@v0
 
       - name: Install dependencies
-        run: deno install --frozen
+        run: nub ci
 
       - name: Typecheck
-        run: deno task typecheck
+        run: nub run typecheck
 
       - name: Lint
-        run: deno run -A npm:oxlint
+        run: nub exec oxlint
 
       - name: Format
-        run: deno run -A npm:oxfmt --check
+        run: nub exec oxfmt --check
 
       - name: Install Playwright chromium
-        run: deno run -A npm:playwright install --with-deps chromium
+        run: nub exec playwright install --with-deps chromium
 
       - name: Test
-        run: deno task test
+        run: nub run test

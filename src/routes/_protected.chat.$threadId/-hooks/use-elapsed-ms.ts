@@ -7,7 +7,7 @@ type UseElapsedMsProps =
   | { enabled: true; startedAt: string };
 
 export const useElapsedMs = ({ enabled, startedAt }: UseElapsedMsProps): number | undefined => {
-  const [nowMs, setNowMs] = useState(() => Date.now());
+  const [nowMs, setNowMs] = useState(() => Temporal.Now.instant().epochMilliseconds);
 
   useEffect(() => {
     if (!enabled || startedAt === undefined) {
@@ -15,7 +15,7 @@ export const useElapsedMs = ({ enabled, startedAt }: UseElapsedMsProps): number 
     }
 
     const intervalId = window.setInterval(() => {
-      setNowMs(Date.now());
+      setNowMs(Temporal.Now.instant().epochMilliseconds);
     }, ELAPSED_TICK_MS);
 
     return () => {
@@ -27,5 +27,5 @@ export const useElapsedMs = ({ enabled, startedAt }: UseElapsedMsProps): number 
     return undefined;
   }
 
-  return Math.max(0, nowMs - Date.parse(startedAt));
+  return Math.max(0, nowMs - Temporal.Instant.from(startedAt).epochMilliseconds);
 };

@@ -1,9 +1,16 @@
 import { describe, expect, it } from "vitest";
 
-import type { MnemonicToolName } from "@/mastra/mnemonic-tool-types";
-import type { ThreadUIMessagePart } from "@/routes/_protected.chat.$threadId/-thread-types";
+import type { MnemonicToolName } from "@/mastra/mnemonic-tool-types.server";
+import type {
+  ThreadDataUIPart,
+  ThreadUIMessagePart,
+} from "@/routes/_protected.chat.$threadId/-thread-types";
 
-import { getDominantWorkActivityKind, getWorkRunTiming, groupAssistantParts } from "./work-part";
+import { getDominantWorkActivityKind, groupAssistantParts } from "./work-part";
+
+const omPart = (type: ThreadDataUIPart["type"], cycleId: string): ThreadUIMessagePart =>
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- grouping only reads the cycle id.
+  ({ type, data: { cycleId } }) as ThreadUIMessagePart;
 
 const toolPart = (toolName: MnemonicToolName, toolCallId?: string): ThreadUIMessagePart => ({
   type: `tool-${toolName}`,
@@ -14,61 +21,11 @@ const toolPart = (toolName: MnemonicToolName, toolCallId?: string): ThreadUIMess
   output: {},
 });
 
-describe("getWorkRunTiming", () => {
-  it("reads start and end markers from a run", () => {
-    const parts: ThreadUIMessagePart[] = [
-      {
-        type: "data-work-start",
-        data: { segmentId: "seg-1", startedAt: "2026-01-01T00:00:00Z" },
-      },
-      toolPart("getFile"),
-      {
-        type: "data-work-end",
-        data: { segmentId: "seg-1", completedAt: "2026-01-01T00:01:20Z", durationMs: 80_000 },
-      },
-    ];
-
-    expect(getWorkRunTiming(parts)).toEqual({
-      startedAt: "2026-01-01T00:00:00Z",
-      completedAt: "2026-01-01T00:01:20Z",
-      durationMs: 80_000,
-    });
-  });
-});
-
 describe("groupAssistantParts", () => {
-  it("keeps short runs as a single run block with the visible count", () => {
+  it("groups intermediates before text into one run", () => {
     const parts: ThreadUIMessagePart[] = [
-      toolPart("getFile"),
-      toolPart("webSearch"),
-      { type: "text", text: "done" },
-    ];
-
-    expect(groupAssistantParts(parts)).toEqual([
-      {
-        type: "run",
-        id: "run-0",
-        parts: [parts.at(0), parts.at(1)],
-        visibleCount: 2,
-        startIndex: 0,
-      },
-      {
-        type: "text",
-        id: "text-2",
-        part: parts.at(2),
-        index: 2,
-      },
-    ]);
-  });
-
-  it("groups three or more intermediates before text into one run", () => {
-    const parts: ThreadUIMessagePart[] = [
-      {
-        type: "data-work-start",
-        data: { segmentId: "seg-1", startedAt: "2026-01-01T00:00:00Z" },
-      },
       { type: "reasoning", text: "thinking", state: "done" },
-      toolPart("getFile"),
+      toolPart("compute"),
       {
         type: "data-om-observation-end",
         data: {
@@ -82,10 +39,6 @@ describe("groupAssistantParts", () => {
           threadId: "thread-1",
         },
       },
-      {
-        type: "data-work-end",
-        data: { segmentId: "seg-1", completedAt: "2026-01-01T00:00:10Z", durationMs: 10_000 },
-      },
       { type: "text", text: "answer" },
     ];
 
@@ -95,19 +48,18 @@ describe("groupAssistantParts", () => {
     expect(blocks.at(0)).toMatchObject({
       type: "run",
       id: "run-0",
-      visibleCount: 3,
-      startIndex: 0,
+      parts: parts.slice(0, 3),
     });
     expect(blocks.at(1)).toMatchObject({
       type: "text",
-      id: "text-5",
-      index: 5,
+      id: "text-3",
+      index: 3,
     });
   });
 
   it("splits runs across text boundaries", () => {
     const parts: ThreadUIMessagePart[] = [
-      toolPart("getFile"),
+      toolPart("compute"),
       { type: "text", text: "mid" },
       toolPart("webSearch"),
       toolPart("webFetch"),
@@ -119,8 +71,7 @@ describe("groupAssistantParts", () => {
         type: "run",
         id: "run-0",
         parts: [parts.at(0)],
-        visibleCount: 1,
-        startIndex: 0,
+        timing: undefined,
       },
       {
         type: "text",
@@ -132,8 +83,7 @@ describe("groupAssistantParts", () => {
         type: "run",
         id: "run-2",
         parts: [parts.at(2), parts.at(3)],
-        visibleCount: 2,
-        startIndex: 2,
+        timing: undefined,
       },
       {
         type: "text",
@@ -144,25 +94,52 @@ describe("groupAssistantParts", () => {
     ]);
   });
 
-  it("omits marker-only runs with no visible intermediates", () => {
+  it("hands each work timing to the next run that did work, skipping memory-only runs", () => {
     const parts: ThreadUIMessagePart[] = [
-      {
-        type: "data-work-start",
-        data: { segmentId: "seg-1", startedAt: "2026-01-01T00:00:00Z" },
-      },
-      {
-        type: "data-work-end",
-        data: { segmentId: "seg-1", completedAt: "2026-01-01T00:00:01Z", durationMs: 1000 },
-      },
+      toolPart("compute"),
+      { type: "text", text: "first" },
+      omPart("data-om-activation", "cycle-1"),
+      { type: "text", text: "second" },
+      toolPart("webSearch"),
+      { type: "text", text: "third" },
+      omPart("data-om-buffering-end", "cycle-2"),
+    ];
+    const first = { startedAt: "2026-01-01T00:00:00Z", endedAt: "2026-01-01T00:00:03Z" };
+    const second = { startedAt: "2026-01-01T00:00:05Z" };
+
+    const runs = groupAssistantParts(parts, [first, second]).filter(
+      (block) => block.type === "run",
+    );
+
+    expect(runs.map((run) => run.timing)).toEqual([first, undefined, second, undefined]);
+  });
+
+  it("drops an observation start once its own cycle has ended", () => {
+    const parts: ThreadUIMessagePart[] = [
+      { type: "text", text: "answer" },
+      omPart("data-om-buffering-start", "cycle-1"),
+      omPart("data-om-buffering-end", "cycle-1"),
+      omPart("data-om-observation-start", "cycle-2"),
+    ];
+
+    expect(groupAssistantParts(parts).at(1)).toMatchObject({
+      type: "run",
+      parts: [parts.at(2), parts.at(3)],
+    });
+  });
+
+  it("omits runs with no visible intermediates", () => {
+    const parts: ThreadUIMessagePart[] = [
+      { type: "step-start" },
       { type: "text", text: "only text" },
     ];
 
     expect(groupAssistantParts(parts)).toEqual([
       {
         type: "text",
-        id: "text-2",
-        part: parts.at(2),
-        index: 2,
+        id: "text-1",
+        part: parts.at(1),
+        index: 1,
       },
     ]);
   });
@@ -171,13 +148,7 @@ describe("groupAssistantParts", () => {
 describe("getDominantWorkActivityKind", () => {
   it("returns default when there are no tool parts", () => {
     expect(
-      getDominantWorkActivityKind([
-        { type: "reasoning", text: "thinking", state: "done" },
-        {
-          type: "data-work-start",
-          data: { segmentId: "seg-1", startedAt: "2026-01-01T00:00:00.000Z" },
-        },
-      ]),
+      getDominantWorkActivityKind([{ type: "reasoning", text: "thinking", state: "done" }]),
     ).toBe("default");
   });
 
@@ -186,35 +157,14 @@ describe("getDominantWorkActivityKind", () => {
       getDominantWorkActivityKind([
         toolPart("webSearch", "c1"),
         toolPart("webFetch", "c2"),
-        toolPart("getFile", "c3"),
+        toolPart("compute", "c3"),
       ]),
     ).toBe("research");
   });
 
   it("returns default on a tie", () => {
     expect(
-      getDominantWorkActivityKind([toolPart("webSearch", "c1"), toolPart("getFile", "c2")]),
+      getDominantWorkActivityKind([toolPart("webSearch", "c1"), toolPart("compute", "c2")]),
     ).toBe("default");
-  });
-
-  it("returns default when default tools have a majority", () => {
-    expect(
-      getDominantWorkActivityKind([
-        toolPart("getFile", "c1"),
-        toolPart("getFile", "c2"),
-        toolPart("getFile", "c3"),
-        toolPart("webSearch", "c4"),
-      ]),
-    ).toBe("default");
-  });
-
-  it("treats file search tools as research", () => {
-    expect(
-      getDominantWorkActivityKind([
-        toolPart("fileVectorSearch", "c1"),
-        toolPart("fileGraphRag", "c2"),
-        toolPart("executeCode", "c3"),
-      ]),
-    ).toBe("research");
   });
 });

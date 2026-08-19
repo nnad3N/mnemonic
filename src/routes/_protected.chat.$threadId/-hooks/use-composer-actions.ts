@@ -1,4 +1,5 @@
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { convertFileListToFileUIParts } from "ai";
 import { produce } from "immer";
@@ -6,19 +7,41 @@ import type { Descendant } from "platejs";
 import { ElementApi, TextApi } from "platejs";
 import type { PlateEditor } from "platejs/react";
 import { useEditorRef, useEditorSelector } from "platejs/react";
-import { useStickToBottomContext } from "use-stick-to-bottom";
 
-import { closeWorkSegments } from "@/lib/ai-sdk/close-work-segments";
+import { useMessageScroller } from "@/components/ui/message-scroller";
+import { sidebarQueries } from "@/routes/-sidebar/sidebar.functions";
 
-import { moveSidebarThreadToTop } from "../-thread-api/sidebar-cache";
+import { threadMutations } from "../-thread-api/thread-run.functions";
 import { getThreadEditorId, plateToMarkdown } from "../-thread-components/composer/plate";
 import type { ThreadMetadataAttachment, ThreadUIMessage } from "../-thread-types";
 import type { ThreadInputLocation } from "../../-chat-store";
 import { useChatStore } from "../../-chat-store";
-import { useCreateThreadTitle } from "./use-create-thread-title";
-import { threadChatQuery, useThreadChat } from "./use-thread-chat";
+import { threadQueries, useThreadChat } from "./use-thread-chat";
 
 const Route = getRouteApi("/_protected/chat/$threadId");
+
+type MoveSidebarThreadToTopInput = {
+  threadId: string;
+  topicId: string | undefined;
+};
+
+const moveSidebarThreadToTop = (queryClient: QueryClient, input: MoveSidebarThreadToTopInput) => {
+  const updatedAt = Temporal.Now.instant().toString();
+
+  queryClient.setQueryData(sidebarQueries.threads(input.topicId).queryKey, (current) =>
+    produce(current, (draft) => {
+      if (!draft) return;
+
+      const threadIndex = draft.findIndex((thread) => thread.id === input.threadId);
+
+      if (threadIndex === -1) return;
+
+      const [thread] = draft.splice(threadIndex, 1);
+      thread.updatedAt = updatedAt;
+      draft.unshift(thread);
+    }),
+  );
+};
 
 export const hasComposerContent = (editor: PlateEditor, node: Descendant): boolean => {
   // editor.api.isEmpty() treats whitespace text as content. We need whitespace
@@ -65,8 +88,8 @@ export const getComposerAttachments = async (
   const files = editedMessage?.parts.filter((part) => part.type === "file") ?? [];
   const attachments: ThreadMetadataAttachment[] = [];
 
-  for (const attachment of editedMessage?.metadata?.attachments ?? []) {
-    attachments.push(attachment);
+  if (editedMessage?.metadata?.type === "user" && editedMessage.metadata.attachments) {
+    attachments.push(...editedMessage.metadata.attachments);
   }
 
   const draftFiles: File[] = [];
@@ -110,12 +133,13 @@ export const useComposerActions = (location: ThreadInputLocation) => {
 
   const chat = useThreadChat();
   const queryClient = useQueryClient();
-  const { scrollToBottom } = useStickToBottomContext();
+  const { scrollToEnd } = useMessageScroller();
   const { data: topicId } = useSuspenseQuery({
-    ...threadChatQuery(threadId),
+    ...threadQueries.chat(threadId),
     select: (data) => data.topicId,
   });
-  const createThreadTitleMutation = useCreateThreadTitle();
+  const createThreadTitle = useMutation(threadMutations.createTitle());
+  const stopRun = useMutation(threadMutations.stop());
   const editingState = useChatStore((state) => state.editingState);
   const setEditingState = useChatStore((state) => state.setEditingState);
   const removeAttachment = useChatStore((state) => state.removeAttachment);
@@ -157,14 +181,14 @@ export const useComposerActions = (location: ThreadInputLocation) => {
     editor.tf.focus({ edge: "endEditor" });
 
     if (chat.messages.length < 2) {
-      createThreadTitleMutation.mutate({
+      createThreadTitle.mutate({
         text,
         threadId,
         topicId,
       });
     }
 
-    void scrollToBottom({ animation: "smooth", ignoreEscapes: true });
+    scrollToEnd({ behavior: "smooth" });
 
     moveSidebarThreadToTop(queryClient, { threadId, topicId });
 
@@ -172,6 +196,7 @@ export const useComposerActions = (location: ThreadInputLocation) => {
       text,
       files,
       metadata: {
+        type: "user",
         attachments,
       },
       messageId: location === "edit" ? editingState?.messageId : undefined,
@@ -191,18 +216,20 @@ export const useComposerActions = (location: ThreadInputLocation) => {
   };
 
   const stopStream = async () => {
-    await chat.stop();
     chat.setMessages((messages) =>
       produce(messages, (draft) => {
         const last = draft.findLast((message) => message.role === "assistant");
+        const work =
+          last?.metadata?.type === "assistant" ? last.metadata.workTimings?.at(-1) : undefined;
 
-        if (!last) {
-          return;
+        if (work) {
+          work.endedAt ??= Temporal.Now.instant().toString();
         }
-
-        closeWorkSegments(last.parts, Temporal.Now.instant());
       }),
     );
+
+    await chat.stop();
+    stopRun.mutate(threadId);
 
     const lastMessage = chat.messages.at(-1);
 
@@ -213,7 +240,7 @@ export const useComposerActions = (location: ThreadInputLocation) => {
       return;
     }
 
-    const message = chat.messages.find((message) => message.role === "user");
+    const message = chat.messages.findLast((message) => message.role === "user");
     if (!message) return;
 
     setEditingState({

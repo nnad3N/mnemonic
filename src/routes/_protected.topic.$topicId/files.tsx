@@ -28,15 +28,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getVisiblePageNumbers } from "@/lib/pagination";
-import { filesQuery } from "@/routes/_protected.topic.$topicId/-files-api/list-files";
 import { FileRow } from "@/routes/_protected.topic.$topicId/-files-components/file-row";
 import { FileSearch } from "@/routes/_protected.topic.$topicId/-files-components/file-search";
+import { fileQueries } from "@/routes/_protected.topic.$topicId/-files/files.functions";
 
 const PAGE_SIZE = 20;
 
 const filesSearchSchema = v.object({
+  search: v.optional(v.string(), ""),
   page: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
-  q: v.optional(v.string(), ""),
 });
 
 export const Route = createFileRoute("/_protected/topic/$topicId/files")({
@@ -47,12 +47,14 @@ export const Route = createFileRoute("/_protected/topic/$topicId/files")({
 function RouteComponent() {
   const gt = useGT();
   const topicId = Route.useParams({ select: (params) => params.topicId });
-  const { page, q } = Route.useSearch();
+  const { page, search } = Route.useSearch({
+    select: (search) => ({ page: search.page, search: search.search }),
+  });
   const navigate = Route.useNavigate();
-  const [debouncedQuery] = useDebounce(q, 300);
+  const [debouncedQuery] = useDebounce(search, 300);
 
   const { data, isError, isLoading, isSuccess, refetch } = useQuery(
-    filesQuery({
+    fileQueries.list({
       page,
       pageSize: PAGE_SIZE,
       search: debouncedQuery,
@@ -75,13 +77,13 @@ function RouteComponent() {
             replace: true,
             search: (prev) =>
               produce(prev, (draft) => {
+                draft.search = nextQuery;
                 draft.page = 1;
-                draft.q = nextQuery;
               }),
             to: ".",
           });
         }}
-        value={q}
+        value={search}
       />
 
       <Frame className="w-full">

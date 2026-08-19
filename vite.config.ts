@@ -14,7 +14,7 @@ export default defineConfig({
     viteReact(),
     babel({ presets: [reactCompilerPreset()] }),
     nitro({
-      preset: "deno-server",
+      preset: "node-server",
       traceDeps: ["@kreuzberg/node*", "@stll/fuzzy-search*"],
     }),
   ],

@@ -53,6 +53,28 @@ services:
       retries: 12
       start_period: 10s
 
+  redis:
+    image: valkey/valkey:alpine
+    command: redis-server --bind 0.0.0.0 --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    cpus: 0.25
+    mem_limit: 1G
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
   firecrawl-redis:
     image: valkey/valkey:alpine
     networks:
@@ -136,7 +158,7 @@ services:
   firecrawl-api:
     image: ghcr.io/firecrawl/firecrawl:latest
     ports:
-      - "3002:3002"
+      - "4010:3002"
     networks:
       - firecrawl
     ulimits:
@@ -199,5 +221,6 @@ networks:
 
 volumes:
   rustfs_data:
+  redis_data:
   firecrawl_rabbitmq_data:
   firecrawl_postgres_data:

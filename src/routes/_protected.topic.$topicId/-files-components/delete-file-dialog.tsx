@@ -12,10 +12,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { threadKeys } from "@/routes/_protected.chat.$threadId/-thread-api/query-keys";
-import { deleteFile } from "@/routes/_protected.topic.$topicId/-files-api/delete-file";
-import type { FileItem } from "@/routes/_protected.topic.$topicId/-files-api/list-files";
-import { topicKeys } from "@/routes/_protected.topic.$topicId/-topic-api/query-keys";
+import { mentionQueries } from "@/routes/_protected.chat.$threadId/-thread-api/mentions.functions";
+import { deleteFile } from "@/routes/_protected.topic.$topicId/-files/files.functions";
+import type { FileItem } from "@/routes/_protected.topic.$topicId/-files/files.functions";
+import { fileQueries } from "@/routes/_protected.topic.$topicId/-files/files.functions";
 
 type DeleteFileDialogProps = {
   topicId: string;
@@ -40,10 +40,10 @@ export const DeleteFileDialog = ({ file, onOpenChange, open, topicId }: DeleteFi
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: topicKeys.files(topicId),
+          queryKey: fileQueries.lists(topicId),
         }),
         queryClient.invalidateQueries({
-          queryKey: threadKeys.mentions(topicId),
+          queryKey: mentionQueries.lists(topicId),
         }),
       ]);
       onOpenChange(false);

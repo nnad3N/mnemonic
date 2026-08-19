@@ -4,9 +4,8 @@ import { getRouteApi } from "@tanstack/react-router";
 import type { PrepareSendMessagesRequest, UIMessage } from "ai";
 import { DefaultChatTransport } from "ai";
 
-import { getThread } from "../-thread-api/get-thread";
-import { threadKeys } from "../-thread-api/query-keys";
-import { threadSettingsQuery } from "../-thread-api/settings";
+import { threadSettingsQueries } from "../-thread-api/thread-settings.functions";
+import { getThread } from "../-thread-api/thread.functions";
 import type { ThreadUIMessage } from "../-thread-types";
 import { useChatStore } from "../../-chat-store";
 
@@ -35,64 +34,90 @@ export const getMessagesToSend = <TMessage extends UIMessage>(
   return [lastMessage];
 };
 
-export const threadChatQuery = (threadId: string) =>
-  queryOptions({
-    gcTime: Infinity,
-    staleTime: Infinity,
-    structuralSharing: false,
-    queryKey: threadKeys.chat(threadId),
-    queryFn: async ({ client }) => {
-      const data = await getThread({
-        data: { threadId },
-      });
+export const threadQueries = {
+  all: () => ["thread"] as const,
+  chat: (threadId: string) =>
+    queryOptions({
+      gcTime: Infinity,
+      staleTime: Infinity,
+      structuralSharing: false,
+      queryKey: [...threadQueries.all(), threadId, "chat"] as const,
+      queryFn: async ({ client }) => {
+        const data = await getThread({
+          data: { threadId },
+        });
 
-      const chat = new Chat({
-        id: threadId,
-        messages: data.messages as ThreadUIMessage[],
-        onFinish: ({ isError, messages }) => {
-          useChatStore.getState().hydrateAttachments(threadId, messages);
-          useChatStore.getState().setThreadIndicator(threadId, isError ? "error" : "ready");
-        },
-        onError: (error) => {
-          console.error(error);
-        },
-        transport: new DefaultChatTransport({
-          api: "/api/chat",
-          prepareSendMessagesRequest: async ({ messages: requestMessages, ...body }) => {
-            useChatStore.getState().setThreadIndicator(threadId, "pending");
-            const settings = await client.ensureQueryData(threadSettingsQuery(threadId));
+        const messages = data.messages as ThreadUIMessage[];
 
-            return {
-              body: {
-                ...body,
-                messages: getMessagesToSend(requestMessages, body.trigger),
-                resourceId: data.resourceId,
-                settings: { modelCapability: settings.modelCapability },
-                threadId,
-              },
-            };
+        const chat = new Chat({
+          id: threadId,
+          messages,
+          onFinish: ({ messages }) => {
+            useChatStore.getState().hydrateAttachments(threadId, messages);
           },
-        }),
-      });
+          onError: (error) => {
+            console.error(error);
+          },
+          transport: new DefaultChatTransport({
+            api: "/api/chat",
+            prepareSendMessagesRequest: async ({ messages: requestMessages, ...body }) => {
+              const settings = await client.ensureQueryData(
+                threadSettingsQueries.byThread(threadId),
+              );
 
-      return {
-        chat,
-        resourceId: data.resourceId,
-        topicId: data.topicId,
-      };
-    },
-  });
+              return {
+                body: {
+                  ...body,
+                  messages: getMessagesToSend(requestMessages, body.trigger),
+                  resourceId: data.resourceId,
+                  settings: { modelCapability: settings.modelCapability },
+                  threadId,
+                },
+              };
+            },
+          }),
+        });
+
+        return {
+          chat,
+          resourceId: data.resourceId,
+          topicId: data.topicId,
+        };
+      },
+    }),
+};
+
+/**
+ * The reconnect route replays the run from its first chunk, so whatever the client holds of
+ * the reply — fragments loaded with the thread or a stream it stopped — is rebuilt by the
+ * replay and must not be appended to.
+ */
+export const resumeThreadStream = async (chat: Chat<ThreadUIMessage>) => {
+  const hadReply = chat.lastMessage?.role === "assistant";
+
+  if (hadReply) {
+    chat.messages = chat.messages.slice(0, -1);
+  }
+
+  await chat.resumeStream();
+
+  // Nothing to attach to: the run settled or died in between, and the server has the reply.
+  if (hadReply && chat.lastMessage?.role !== "assistant") {
+    const data = await getThread({ data: { threadId: chat.id } });
+    chat.messages = data.messages;
+  }
+};
 
 export const useThreadChat = () => {
   const threadId = Route.useParams({
     select: (params) => params.threadId,
   });
-  const { data } = useSuspenseQuery(threadChatQuery(threadId));
+  const { data } = useSuspenseQuery(threadQueries.chat(threadId));
 
   return useChat({
     chat: data.chat,
-    // Dense tool-input-delta bursts (e.g. executeCode) otherwise nest
+    // Dense tool-input-delta bursts (e.g. compute) otherwise nest
     // synchronous replaceMessage → useSyncExternalStore re-renders past React's limit.
-    experimental_throttle: 32,
+    throttle: 32,
   });
 };

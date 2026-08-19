@@ -1,15 +1,12 @@
-import { Result } from "better-result";
 import { describe, expect, it } from "vitest";
 
-import { expectErr } from "@/test/result";
+import { expectErr, expectOk } from "@/test/result";
 
 import { UPLOAD_MAX_BYTES, validateUploadFile } from "./file-validation";
 
 describe("validateUploadFile", () => {
   it("accepts a supported mime type under the size limit", () => {
-    expect(Result.isOk(validateUploadFile({ mimeType: "application/pdf", sizeBytes: 1024 }))).toBe(
-      true,
-    );
+    expectOk(validateUploadFile({ mimeType: "application/pdf", sizeBytes: 1024 }));
   });
 
   it("rejects unsupported mime types", () => {

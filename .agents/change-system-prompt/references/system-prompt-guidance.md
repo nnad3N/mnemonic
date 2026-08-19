@@ -30,6 +30,7 @@ Use only official lab documentation or release notes for durable guidance. Do no
 ## Red Flags
 
 - "Never guess" paired with ordinary tasks where reasonable assumptions are expected.
+- "Until" / "keep going until relevant" rules. They force extra tool use when results stay noisy; a scarce default plus an explicit stop beats a goal that never completes.
 - Rules that require using every available source before answering.
 - Duplicate source-selection instructions across multiple prompts with slightly different wording.
 - Tool policy in the system prompt that contradicts tool descriptions.
