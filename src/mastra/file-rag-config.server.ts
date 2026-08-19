@@ -1,6 +1,6 @@
 import { MockEmbeddingModelV3 } from "ai/test";
 
-import { getEmbeddingModel } from "@/mastra/models.server";
+import { getEmbeddingModel } from "@/mastra/config.server";
 
 /** Physical index name; includes embedder id so model changes can reindex into a new index. */
 export const FILE_EMBEDDINGS_INDEX = "file_embeddings_v001";

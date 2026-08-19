@@ -15,7 +15,7 @@ import type { S3Kit } from "@/lib/s3-kit.server";
 import { createSafeId, toSafeId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
 import type { VectorKit } from "@/lib/vector-kit.server";
-import { getThreadTitleModel } from "@/mastra/models.server";
+import { getThreadTitleModel } from "@/mastra/config.server";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 
 type CreateTopicCtx = Kits<[DbKit, MemoryKit]>;

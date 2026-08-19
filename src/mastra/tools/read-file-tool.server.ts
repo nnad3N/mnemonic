@@ -7,7 +7,7 @@ import * as v from "valibot";
 import { ToolError } from "@/lib/errors/tool-error";
 import { ImageMimeType, PDF_MIME_TYPE } from "@/lib/file-validation";
 import { mentionKeyShape } from "@/lib/mention-key";
-import { getAgentModelConfig, modelAcceptsPdf, ModelAgentIds } from "@/mastra/agent-models.server";
+import { getAgentModelConfig, modelAcceptsPdf, ModelAgentIds } from "@/mastra/models.server";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
 import {
   extractFile,

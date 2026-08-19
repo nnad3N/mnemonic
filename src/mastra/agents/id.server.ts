@@ -3,8 +3,8 @@ import type { DurableAgent } from "@mastra/core/agent/durable";
 
 import * as Kit from "@/lib/kit";
 import type { SafeId } from "@/lib/safe-id";
-import { CONVERSATION_AGENT_ID, TOPIC_AGENT_ID } from "@/mastra/agent-models.server";
 import { mastra } from "@/mastra/instance.server";
+import { CONVERSATION_AGENT_ID, TOPIC_AGENT_ID } from "@/mastra/models.server";
 
 export type MnemonicAgentId = typeof TOPIC_AGENT_ID | typeof CONVERSATION_AGENT_ID;
 

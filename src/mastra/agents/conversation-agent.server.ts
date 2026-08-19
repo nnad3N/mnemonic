@@ -1,10 +1,10 @@
 import { Agent } from "@mastra/core/agent";
 
 import { getAgentMemory } from "@/mastra/agent-memory.server";
-import { CONVERSATION_AGENT_ID } from "@/mastra/agent-models.server";
 import { baseInstructions } from "@/mastra/agents/base-instructions.server";
 import { readerAgent } from "@/mastra/agents/reader-agent.server";
-import { getAgentModel } from "@/mastra/models.server";
+import { getAgentModel } from "@/mastra/config.server";
+import { CONVERSATION_AGENT_ID } from "@/mastra/models.server";
 import { hoistToolResultMediaProcessor } from "@/mastra/processors/hoist-tool-result-media.server";
 import { stripFilePartsProcessor } from "@/mastra/processors/strip-file-parts.server";
 import { stripGeminiReasoningProcessor } from "@/mastra/processors/strip-gemini-reasoning.server";

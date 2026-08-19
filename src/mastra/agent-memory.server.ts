@@ -9,7 +9,7 @@ import {
   getEmbeddingModel,
   getObservationalMemoryModel,
   observationalMemoryOptions,
-} from "@/mastra/models.server";
+} from "@/mastra/config.server";
 import type { MnemonicRequestContext } from "@/mastra/request-context.server";
 import { libsqlStore, libsqlVector } from "@/mastra/storage.server";
 

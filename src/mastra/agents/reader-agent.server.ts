@@ -3,8 +3,8 @@ import { createCodeMode } from "@mastra/core/tools";
 import { IsolatedVmCodeModeTransport } from "@mastra/isolated-vm";
 import { Memory } from "@mastra/memory";
 
-import { READER_AGENT_ID } from "@/mastra/agent-models.server";
-import { getStaticModel } from "@/mastra/models.server";
+import { getStaticModel } from "@/mastra/config.server";
+import { READER_AGENT_ID } from "@/mastra/models.server";
 import { hoistToolResultMediaProcessor } from "@/mastra/processors/hoist-tool-result-media.server";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
 import { libsqlStore } from "@/mastra/storage.server";
