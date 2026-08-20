@@ -1,24 +1,27 @@
-# Memories
+# Notes
 
-A memory is a markdown document the user owns. It is where work done in a thread
+A note is a markdown document the user owns. It is where work done in a thread
 becomes something kept: a report the agent wrote, refined by hand or with the
 agent, and exported when done. This plan records the decisions that are settled.
 Implementation details are left to the commits that land them; tick the boxes as
 they do.
 
+"Note" is the name in code and in the UI. "Memory" stays reserved for Mastra's
+agent memory, which the user never sees.
+
 ## Decisions
 
 ### Scope
 
-- A memory belongs to a thread (a conversation or a topic thread) and, through a
-  topic thread, to a topic. Conversations have no topic, so their memories can
+- A note belongs to a thread (a conversation or a topic thread) and, through a
+  topic thread, to a topic. Conversations have no topic, so their notes can
   never be shared.
-- Sharing is a flag only the user can set. A shared memory is visible to every
+- Sharing is a flag only the user can set. A shared note is visible to every
   thread in its topic and is the only kind that gets embedded. The agent has no
-  way to share; the point is that only memories the user cares about spread
+  way to share; the point is that only notes the user cares about spread
   across the topic.
-- Deletion is a hard delete and user-only. Agents cannot delete memories. A
-  separate AI-assisted review screen for outdated memories comes later, outside
+- Deletion is a hard delete and user-only. Agents cannot delete notes. A
+  separate AI-assisted review screen for outdated notes comes later, outside
   chat.
 
 ### Versions and branches
@@ -43,7 +46,7 @@ they do.
 
 ### Agent access
 
-- Three tools: search (vectors over main of shared memories in the topic), read
+- Three tools: search (vectors over main of shared notes in the topic), read
   (draft head, which is main when there is no draft — what the user sees), write
   (old-text/new-text edits, each matching exactly once, committed on draft).
 - Parents get all three, search only where a topic exists. The worker subagent
@@ -63,13 +66,13 @@ they do.
 ### Embedding
 
 - Own index and a cheap embedder, separate from the file index. Chunked by
-  markdown headings. Metadata carries memory, version, topic and user ids.
-- Embedding runs on commit to main of a shared memory, on share, and never on
+  markdown headings. Metadata carries note, version, topic and user ids.
+- Embedding runs on commit to main of a shared note, on share, and never on
   autosave. Unshare and delete remove the vectors.
-- One embed run per memory at a time, claimed before it starts and released only
+- One embed run per note at a time, claimed before it starts and released only
   if main has not moved since it last checked, so overlapping commits can never
   leave stale vectors behind.
-- Not graph RAG. Memories are few, short and already synthesized; plain vector
+- Not graph RAG. Notes are few, short and already synthesized; plain vector
   search over heading chunks is enough. The index shape stays compatible with
   the graph tool so it is a one-line change if that ever changes.
 
@@ -82,8 +85,8 @@ they do.
 
 Kept simple; details decided when built.
 
-- One route for a topic's memories (all of them, shared or not) and one for a
-  thread's memories, like the files route. A tab in the right-side viewer and an
+- One route for a topic's notes (all of them, shared or not) and one for a
+  thread's notes, like the files route. A tab in the right-side viewer and an
   expand icon in its header that opens the route.
 - Plate markdown editor for the working copy, with autosave.
 - Commit button with a branch choice, and a commit list dropdown: click shows a
@@ -94,11 +97,11 @@ Kept simple; details decided when built.
 
 Backend first.
 
-- [ ] Schema: memory and memory version tables, main/draft pointers, working copy
+- [x] Schema: note and note version tables, main/draft pointers, working copy
 - [ ] Server functions: list, read, autosave, commit (branch choice), share,
       delete, version list and diff, revert
 - [ ] Agent tools: search, read, write, wired per agent as above
-- [ ] Embed workflow with per-memory claim
+- [ ] Embed workflow with per-note claim
 - [ ] Export
 - [ ] Frontend: routes and viewer tab
 - [ ] Frontend: editor, commit flow, commit list and diffs
