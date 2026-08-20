@@ -148,8 +148,78 @@ export const threadReply = sqliteTable(
   (table) => [index("thread_reply_thread_id_idx").on(table.threadId)],
 );
 
+export type NoteVersionAuthor = "user" | "agent";
+
+/**
+ * `mainSeq` and `draftSeq` point into `noteVersion`: everything up to `mainSeq` is published,
+ * everything above it is draft. Agents commit on draft only, so a version never has to be
+ * branched or merged, and only main is embedded.
+ */
+export const note = sqliteTable(
+  "note",
+  {
+    id: text("id")
+      .$type<SafeId<"note">>()
+      .primaryKey()
+      .$defaultFn(() => nanoid()),
+    userId: text("user_id")
+      .$type<SafeId<"user">>()
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict" }),
+    /** Null for a conversation note, which therefore can never be shared. */
+    topicId: text("topic_id")
+      .$type<SafeId<"topic">>()
+      .references(() => topic.id, { onDelete: "restrict" }),
+    threadId: text("thread_id").notNull(),
+
+    title: text("title").notNull(),
+
+    mainSeq: integer("main_seq").notNull().default(0),
+    draftSeq: integer("draft_seq").notNull().default(0),
+
+    /** Autosaved user text; not a version until committed, and agents never read it. */
+    workingCopy: text("working_copy"),
+    workingBaseSeq: integer("working_base_seq"),
+
+    /** Set only by the user; a shared note is visible and embedded topic-wide. */
+    sharedAt: integer("shared_at", { mode: "timestamp_ms" }),
+
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$onUpdate(() => new Date())
+      .default(now),
+  },
+  (table) => [
+    index("note_thread_id_idx").on(table.threadId),
+    index("note_topic_id_idx").on(table.topicId),
+  ],
+);
+
+/** Full snapshot per commit; diffs are computed from adjacent versions, never stored. */
+export const noteVersion = sqliteTable(
+  "note_version",
+  {
+    id: text("id")
+      .$type<SafeId<"noteVersion">>()
+      .primaryKey()
+      .$defaultFn(() => nanoid()),
+    noteId: text("note_id")
+      .$type<SafeId<"note">>()
+      .notNull()
+      .references(() => note.id, { onDelete: "cascade" }),
+
+    seq: integer("seq").notNull(),
+    content: text("content").notNull(),
+    author: text("author").$type<NoteVersionAuthor>().notNull(),
+
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+  },
+  (table) => [uniqueIndex("note_version_note_seq_unique").on(table.noteId, table.seq)],
+);
+
 export const appRelations = defineRelationsPart(
-  { file, byok, threadRun, threadSettings, topic, user },
+  { file, byok, note, noteVersion, threadRun, threadSettings, topic, user },
   (r) => ({
     file: {
       topic: r.one.topic({
@@ -163,8 +233,26 @@ export const appRelations = defineRelationsPart(
         to: r.user.id,
       }),
     },
+    note: {
+      topic: r.one.topic({
+        from: r.note.topicId,
+        to: r.topic.id,
+      }),
+      user: r.one.user({
+        from: r.note.userId,
+        to: r.user.id,
+      }),
+      versions: r.many.noteVersion(),
+    },
+    noteVersion: {
+      note: r.one.note({
+        from: r.noteVersion.noteId,
+        to: r.note.id,
+      }),
+    },
     topic: {
       files: r.many.file(),
+      notes: r.many.note(),
       user: r.one.user({
         from: r.topic.userId,
         to: r.user.id,
@@ -172,6 +260,7 @@ export const appRelations = defineRelationsPart(
     },
     user: {
       byoks: r.many.byok(),
+      notes: r.many.note(),
       threadRuns: r.many.threadRun(),
       threadSettings: r.many.threadSettings(),
     },
