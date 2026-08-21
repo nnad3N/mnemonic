@@ -13,95 +13,111 @@ agent memory, which the user never sees.
 
 ### Scope
 
-- A note belongs to a thread (a conversation or a topic thread) and, through a
-  topic thread, to a topic. Conversations have no topic, so their notes can
-  never be shared.
-- Sharing is a flag only the user can set. A shared note is visible to every
-  thread in its topic and is the only kind that gets embedded. The agent has no
-  way to share; the point is that only notes the user cares about spread
-  across the topic.
+- A note is scoped by exactly one of two ids: the thread it was written in, or a
+  topic. A database check keeps at least one of them set, and reads resolve the
+  topic when there is one and the thread otherwise.
+- "Add to topic" is a one-way move done by the user: the note leaves its thread
+  and lives in the topic from then on. There is no toggle back, and an agent
+  cannot move a note.
 - Deletion is a hard delete and user-only. Agents cannot delete notes. A
   separate AI-assisted review screen for outdated notes comes later, outside
   chat.
 
-### Versions and branches
+### Versions
 
-- History is a linear chain of full snapshots, never stored diffs. Diffs shown in
-  the UI are computed from adjacent snapshots with `jsdiff`.
-- Two pointers into the chain: `main` and `draft`, with draft always on top of
-  main (fast-forward only, so no branch column and no merges).
-  - `main` is what the topic sees: searched, embedded when shared, exported by
-    default.
-  - `draft` is where agents commit. Every agent write is a commit on draft; agents
-    never move main.
-- The user's typing is a working copy, autosaved but not a version. It never
-  becomes a commit on its own.
-- The user's commit button targets a chosen branch: commit to draft adds a user
-  commit there; commit to main also fast-forwards main to the result and, when
-  shared, embeds. Promoting main is the one human gate, and it is a UI action,
-  not a tool approval.
-- Each version carries an author (user or agent) and an optional message; the
-  agent supplies a short summary with its write.
-- Revert is a new commit with the old content, not history rewriting.
+- One linear chain of full snapshots, never stored diffs. Each version carries
+  its content, a hash of it, and the author (user or agent).
+- There is no commit and no draft: a save writes a version. A user save
+  overwrites the latest version when the user wrote it too, and appends a new one
+  when the agent wrote last, so an agent's text always survives as its own entry
+  to diff against.
+- A run is the agent's unit, not a tool call: the first note write in a run
+  appends a version and later writes in the same run overwrite it. The run
+  records which notes it has already versioned on `thread_run`, so no version
+  points at a run and deleting run rows breaks nothing.
+- Versions carry `createdAt` and `updatedAt`; an overwritten version keeps the
+  first timestamp and moves the second, which is what the timeline shows.
+- The user's editor autosaves the body on a timer, comparing the hash of the
+  markdown against the stored one, and the title on a debounce. The two are
+  separate writes so renaming never rewrites the body.
+- Reading a version and writing it share a transaction; concurrent saves would
+  otherwise pick the same sequence number.
+- Reverting truncates the chain: the versions above the target are dropped and
+  the note goes back to being that version. Failed attempts do not linger in the
+  timeline.
 
 ### Agent access
 
-- Three tools: search (vectors over main of shared notes in the topic), read
-  (draft head, which is main when there is no draft — what the user sees), write
-  (old-text/new-text edits, each matching exactly once, committed on draft).
-- Parents get all three, search only where a topic exists. The worker subagent
+- Tools: read a note by id, write a note (creating or replacing content, always
+  as a new `agent` version), and search.
+- Parents get all of them, search only where a topic exists. The worker subagent
   gets read and search. The reader subagent gets read only.
-- An agent write applies its edits to the latest text. If a working copy exists
-  it is first folded into a user commit so the agent is always editing the
-  newest version. An edit whose old text no longer matches once is rejected as a
-  normal tool result telling the agent the region changed and to re-read; that is
-  the only conflict, and it only happens when the user saved during the tool
-  call and touched the same span.
-- The other direction — a user autosave whose base is behind draft because the
-  agent committed meanwhile — rebases the user's delta onto draft head with
-  `jsdiff`, and only discards on overlapping hunks. The client syncs often enough
-  that this should be rare; how rare is something to measure before building UI
-  for it.
+- An agent never sees the user's in-flight typing beyond the last autosave, and
+  never moves a note between scopes.
+- When a note tool finishes, the client invalidates that note's query, so an open
+  editor shows what the agent wrote.
 
-### Embedding
+### Retrieval
 
-- Own index and a cheap embedder, separate from the file index. Chunked by
-  markdown headings. Metadata carries note, version, topic and user ids.
-- Embedding runs on commit to main of a shared note, on share, and never on
-  autosave. Unshare and delete remove the vectors.
-- One embed run per note at a time, claimed before it starts and released only
-  if main has not moved since it last checked, so overlapping commits can never
-  leave stale vectors behind.
-- Not graph RAG. Notes are few, short and already synthesized; plain vector
-  search over heading chunks is enough. The index shape stays compatible with
-  the graph tool so it is a one-line change if that ever changes.
+- Nothing is embedded on save. Notes are few and short, and a write path that
+  calls an embedder blocks a keystroke-driven save on a provider round trip.
+- Search is FTS5 over note content, scoped to the topic or thread the agent is
+  working in. No provider key, no index to maintain, and exact terms — file
+  names, identifiers, numbers — match, which is most of what a note holds.
+- Embeddings come back with the notes manager, which owns them lazily for
+  relationship and staleness work rather than for this search.
 
 ### Export
 
-- Download of main (or the working copy when present) as docx/pdf, rendered on
-  request, not stored.
+- Download the current content as docx or pdf, rendered on request, not stored.
+  Plate ships examples for both.
 
 ## Frontend outline
 
-Kept simple; details decided when built.
-
-- One route for a topic's notes (all of them, shared or not) and one for a
-  thread's notes, like the files route. A tab in the right-side viewer and an
-  expand icon in its header that opens the route.
-- Plate markdown editor for the working copy, with autosave.
-- Commit button with a branch choice, and a commit list dropdown: click shows a
-  stacked diff (diffs.com style), right click offers view, revert and similar.
-- Share toggle, export, delete.
+- Two tables, like the files table: notes in a topic and notes in a thread, each
+  behind its own endpoint.
+- The right-hand panel holds the editor: tabs for the open notes, a toolbar, a
+  title and the body. Which notes are open lives in the URL, separately from
+  whether the panel is open.
+- A timeline of the version chain rather than a commit list: versions have no
+  messages, so each entry previews what changed on its own — an author label,
+  the time, and added, replaced and removed word counts behind coloured
+  indicators.
+- The timeline is a toggle in the note's actions menu and opens its own panel on
+  the right, exclusive with the sidebar.
+- Selecting an entry makes it the point of comparison: every other entry's
+  counts are relative to the selected version, so standing at the oldest one
+  shows what has been added since. The counts are computed on the server, and the
+  client keys that query by the selected version id.
+- Consecutive agent versions collapse into one iteration block: writing, judging
+  the result, rolling back and trying again is one piece of work no matter how
+  many runs it took. A collapsed block shows the counts of its newest version
+  and expands to the versions inside, so any of them can be selected or reverted
+  to. User versions are never consecutive, so nothing groups them.
+- Opening an entry shows the diff, and revert lives there.
+- Export, add to topic and delete live in the note's actions menu.
 
 ## Progress
 
-Backend first.
+Done:
 
-- [x] Schema: note and note version tables, main/draft pointers, working copy
-- [ ] Server functions: list, read, autosave, commit (branch choice), share,
-      delete, version list and diff, revert
-- [ ] Agent tools: search, read, write, wired per agent as above
-- [ ] Embed workflow with per-note claim
-- [ ] Export
-- [ ] Frontend: routes and viewer tab
-- [ ] Frontend: editor, commit flow, commit list and diffs
+- [x] Schema: note and note version tables, scope check, content hash
+- [x] Server functions: create, read, autosave body, rename, add to topic, delete
+- [x] Editor panel: tabs, toolbar, title, body, autosave
+
+Backend:
+
+- [ ] Server functions accept an author (user or agent) and optional starting
+      content, so an agent can create and write notes
+- [ ] Agent tools: read, write, search — wired per agent as above
+- [ ] Note search: FTS5 over note content, scoped
+- [ ] List endpoints for a topic's notes and a thread's notes
+
+Frontend:
+
+- [ ] Notes table for a topic and for a thread
+- [ ] Version `updatedAt` and per-run version bookkeeping on `thread_run`
+- [ ] Timeline endpoint: entries with word counts relative to a selected version
+- [ ] Timeline panel with author labels, indicators and collapsed agent blocks
+- [ ] Diff viewer, with revert
+- [ ] Export to docx and pdf
