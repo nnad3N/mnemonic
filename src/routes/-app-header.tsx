@@ -67,15 +67,16 @@ const NotesTrigger = () => {
   const navigate = useNavigate();
   const notesOpen = useSearch({ from: "/_protected", select: (search) => search.notes === true });
 
+  if (notesOpen) return;
+
   return (
     <Button
-      aria-pressed={notesOpen}
       className="ml-auto shrink-0"
       onClick={async () =>
         navigate({
           search: (prev) =>
             produce(prev, (draft) => {
-              draft.notes = notesOpen ? undefined : true;
+              draft.notes = true;
             }),
           to: ".",
         })
@@ -85,7 +86,7 @@ const NotesTrigger = () => {
     >
       <PanelRightIcon />
       <span className="sr-only">
-        <T>Toggle notes</T>
+        <T>Open notes</T>
       </span>
     </Button>
   );

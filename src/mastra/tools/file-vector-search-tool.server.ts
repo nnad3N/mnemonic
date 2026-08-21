@@ -1,6 +1,6 @@
 import { createVectorQueryTool } from "@mastra/rag";
 
-import { FILE_EMBEDDINGS_INDEX, getFileEmbeddingModel } from "@/mastra/file-rag-config.server";
+import { FILE_EMBEDDINGS_INDEX, getRagEmbeddingModel } from "@/mastra/rag-config.server";
 
 import { VECTOR_STORE_NAME } from "../storage.server";
 
@@ -10,6 +10,6 @@ export const createFileVectorSearchTool = (apiKey: string) =>
     enableFilter: true,
     id: "file-vector-search",
     indexName: FILE_EMBEDDINGS_INDEX,
-    model: getFileEmbeddingModel(apiKey),
+    model: getRagEmbeddingModel(apiKey),
     vectorStoreName: VECTOR_STORE_NAME,
   });

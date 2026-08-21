@@ -51,6 +51,8 @@ const readCookie = createIsomorphicFn()
   .client((name: string) => Kit.cookies.get(name).unwrapOr(undefined));
 
 const sidebarSearchSchema = v.object({
+  note: v.optional(v.pipe(v.string(), v.nanoid())),
+  noteTabs: v.optional(v.array(v.pipe(v.string(), v.nanoid())), []),
   notes: v.optional(v.boolean()),
   topic: v.optional(v.pipe(v.string(), v.nanoid())),
   q: v.optional(v.string(), ""),
@@ -62,7 +64,9 @@ const sidebarSearchSchema = v.object({
 export type SidebarSearch = v.InferInput<typeof sidebarSearchSchema>;
 
 export const Route = createFileRoute("/_protected")({
-  search: { middlewares: [retainSearchParams(["notes", "topic", "q", "range"])] },
+  search: {
+    middlewares: [retainSearchParams(["note", "noteTabs", "notes", "topic", "q", "range"])],
+  },
   validateSearch: sidebarSearchSchema,
   beforeLoad: async ({ context, location }) => {
     if (!context.user || !context.session) {

@@ -6,8 +6,8 @@ import * as Kit from "@/lib/kit";
 import { createMemoryKit, type MemoryApi, MemoryError, memoryKit } from "@/lib/memory-kit.server";
 import { createSafeId, toSafeId } from "@/lib/safe-id";
 import { createVectorKit, type VectorApi, VectorError, vectorKit } from "@/lib/vector-kit.server";
-import { FILE_EMBEDDINGS_INDEX } from "@/mastra/file-rag-config.server";
-import { FILE_EMBEDDING_DIMENSION } from "@/mastra/file-rag-config.server";
+import { FILE_EMBEDDINGS_INDEX } from "@/mastra/rag-config.server";
+import { EMBEDDING_DIMENSION } from "@/mastra/rag-config.server";
 import { libsqlVector } from "@/mastra/storage.server";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 import { clearDatabase } from "@/test/clear-database";
@@ -26,14 +26,13 @@ const topicId = createSafeId<"topic">();
 const fakeS3 = createFakeS3();
 
 /** Non-zero unit vector — cosine similarity of the zero vector is undefined and filters out. */
-const unitVector = Array.from({ length: FILE_EMBEDDING_DIMENSION }, (_, index) =>
-  index === 0 ? 1 : 0,
-);
+const unitVector = Array.from({ length: EMBEDDING_DIMENSION }, (_, index) => (index === 0 ? 1 : 0));
 
 const upsertTopicVector = async (vectorTopicId: string, fileId: string) => {
   expectOk(
     await vector.upsert({
       ids: [`${fileId}:0`],
+      indexName: FILE_EMBEDDINGS_INDEX,
       metadata: [{ fileId, topicId: vectorTopicId, text: "chunk" }],
       vectors: [unitVector],
     }),
@@ -129,7 +128,9 @@ describe("deleteTopicFn", () => {
   beforeEach(async () => {
     fakeS3.reset();
     await Promise.all([
-      vector.createIndex({ dimension: FILE_EMBEDDING_DIMENSION }).then(expectOk),
+      vector
+        .createIndex({ dimension: EMBEDDING_DIMENSION, indexName: FILE_EMBEDDINGS_INDEX })
+        .then(expectOk),
       seedUser({ id: userId }),
     ]);
     await seedTopic({ userId, id: topicId });

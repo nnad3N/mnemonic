@@ -7,8 +7,8 @@ import { S3Error } from "@/lib/s3-kit.server";
 import { createSafeId, toSafeId } from "@/lib/safe-id";
 import { createVectorKit, VectorError, vectorKit } from "@/lib/vector-kit.server";
 import type { VectorApi } from "@/lib/vector-kit.server";
-import { FILE_EMBEDDINGS_INDEX } from "@/mastra/file-rag-config.server";
-import { FILE_EMBEDDING_DIMENSION } from "@/mastra/file-rag-config.server";
+import { FILE_EMBEDDINGS_INDEX } from "@/mastra/rag-config.server";
+import { EMBEDDING_DIMENSION } from "@/mastra/rag-config.server";
 import { libsqlVector } from "@/mastra/storage.server";
 import { clearDatabase } from "@/test/clear-database";
 import { createFakeS3 } from "@/test/fake-s3";
@@ -25,9 +25,7 @@ const topicId = createSafeId<"topic">();
 const fakeS3 = createFakeS3();
 
 /** Non-zero unit vector — cosine similarity of the zero vector is undefined and filters out. */
-const unitVector = Array.from({ length: FILE_EMBEDDING_DIMENSION }, (_, index) =>
-  index === 0 ? 1 : 0,
-);
+const unitVector = Array.from({ length: EMBEDDING_DIMENSION }, (_, index) => (index === 0 ? 1 : 0));
 
 const fileExists = async (fileId: string) => {
   const result = await db.run((database) =>
@@ -44,6 +42,7 @@ const upsertFileVector = async (fileId: string) => {
   expectOk(
     await vector.upsert({
       ids: [`${fileId}:0`],
+      indexName: FILE_EMBEDDINGS_INDEX,
       metadata: [{ fileId, text: "chunk" }],
       vectors: [unitVector],
     }),
@@ -82,7 +81,9 @@ const createFailingVectorKit = () => {
 beforeEach(async () => {
   fakeS3.reset();
   await Promise.all([
-    vector.createIndex({ dimension: FILE_EMBEDDING_DIMENSION }).then(expectOk),
+    vector
+      .createIndex({ dimension: EMBEDDING_DIMENSION, indexName: FILE_EMBEDDINGS_INDEX })
+      .then(expectOk),
     seedUser({ id: userId }),
   ]);
   await seedTopic({ userId, id: topicId });
