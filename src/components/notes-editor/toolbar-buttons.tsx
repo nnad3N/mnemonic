@@ -214,6 +214,11 @@ export const NoteListButtons = () => {
         listStyleType={KEYS.ol}
         tooltip={gt("Numbered list")}
       />
+      <NoteListButton
+        icon={<ListTodoIcon />}
+        listStyleType={KEYS.listTodo}
+        tooltip={gt("To-do list")}
+      />
     </>
   );
 };
