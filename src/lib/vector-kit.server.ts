@@ -2,7 +2,6 @@ import { Result, TaggedError } from "better-result";
 import type { Result as ResultType } from "better-result";
 
 import * as Kit from "@/lib/kit";
-import { FILE_EMBEDDINGS_INDEX } from "@/mastra/file-rag-config.server";
 import { libsqlVector } from "@/mastra/storage.server";
 
 export class VectorError extends TaggedError("VectorError")<{
@@ -11,11 +10,12 @@ export class VectorError extends TaggedError("VectorError")<{
 }> {}
 
 type DeleteVectorsParams = Parameters<typeof libsqlVector.deleteVectors>[0];
-type CreateIndexInput = Omit<Parameters<typeof libsqlVector.createIndex>[0], "indexName">;
-type UpsertInput = Omit<Parameters<typeof libsqlVector.upsert>[0], "indexName">;
+type CreateIndexInput = Parameters<typeof libsqlVector.createIndex>[0];
+type UpsertInput = Parameters<typeof libsqlVector.upsert>[0];
 
 type DeleteVectorsInput = {
   filter: NonNullable<DeleteVectorsParams["filter"]>;
+  indexName: string;
 };
 
 export type VectorApi = {
@@ -30,33 +30,24 @@ export const vectorKit = createVectorKit({
   createIndex: async (input) =>
     Result.tryPromise({
       try: async () => {
-        await libsqlVector.createIndex({
-          ...input,
-          indexName: FILE_EMBEDDINGS_INDEX,
-        });
+        await libsqlVector.createIndex(input);
       },
       catch: (cause) =>
-        new VectorError({ cause, message: "Failed to create the file embeddings index" }),
+        new VectorError({ cause, message: "Failed to create the embeddings index" }),
     }),
   deleteVectors: async (input) =>
     Result.tryPromise({
       try: async () => {
-        await libsqlVector.deleteVectors({
-          indexName: FILE_EMBEDDINGS_INDEX,
-          filter: input.filter,
-        });
+        await libsqlVector.deleteVectors(input);
       },
-      catch: (cause) => new VectorError({ cause, message: "Failed to delete file embeddings" }),
+      catch: (cause) => new VectorError({ cause, message: "Failed to delete embeddings" }),
     }),
   upsert: async (input) =>
     Result.tryPromise({
       try: async () => {
-        await libsqlVector.upsert({
-          ...input,
-          indexName: FILE_EMBEDDINGS_INDEX,
-        });
+        await libsqlVector.upsert(input);
       },
-      catch: (cause) => new VectorError({ cause, message: "Failed to upsert file embeddings" }),
+      catch: (cause) => new VectorError({ cause, message: "Failed to upsert embeddings" }),
     }),
 });
 

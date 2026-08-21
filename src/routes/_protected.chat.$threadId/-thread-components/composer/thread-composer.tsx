@@ -16,6 +16,7 @@ import { Suspense, useCallback, useEffect, useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useDragOver } from "@/hooks/use-drag-over";
 import * as Kit from "@/lib/kit";
+import { markdownToPlate } from "@/lib/plate";
 import { cn } from "@/lib/utils";
 
 import { useComposerActions, useIsComposerEmpty } from "../../-hooks/use-composer-actions";
@@ -24,7 +25,7 @@ import type { ThreadInputLocation } from "../../../-chat-store";
 import { useChatStore } from "../../../-chat-store";
 import { ComposerContext, type ComposerContextValue } from "./composer-context";
 import { ComposerFooter } from "./composer-footer";
-import { getThreadEditorId, markdownToPlate, threadEditorPlugins } from "./plate";
+import { getThreadEditorId, threadEditorPlugins } from "./plate";
 import { ThreadComposerFilePlugin } from "./plate-plugins/file";
 import { ThreadComposerKeyboardPlugin } from "./plate-plugins/keyboard";
 import { insertComposerClipboardText } from "./plate-plugins/paste";

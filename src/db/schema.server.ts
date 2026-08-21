@@ -1,5 +1,5 @@
-import { defineRelationsPart, isNotNull } from "drizzle-orm";
-import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { defineRelationsPart, isNotNull, sql } from "drizzle-orm";
+import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { nanoid } from "nanoid";
 
 import { user } from "@/db/auth-schema.server";
@@ -150,11 +150,7 @@ export const threadReply = sqliteTable(
 
 export type NoteVersionAuthor = "user" | "agent";
 
-/**
- * `mainSeq` and `draftSeq` point into `noteVersion`: everything up to `mainSeq` is published,
- * everything above it is draft. Agents commit on draft only, so a version never has to be
- * branched or merged, and only main is embedded.
- */
+/** A note's current content is its highest-`seq` row in `noteVersion`. */
 export const note = sqliteTable(
   "note",
   {
@@ -166,23 +162,13 @@ export const note = sqliteTable(
       .$type<SafeId<"user">>()
       .notNull()
       .references(() => user.id, { onDelete: "restrict" }),
-    /** Null for a conversation note, which therefore can never be shared. */
+    /** A note is scoped by its topic when it has one, and by its thread otherwise. */
     topicId: text("topic_id")
       .$type<SafeId<"topic">>()
       .references(() => topic.id, { onDelete: "restrict" }),
-    threadId: text("thread_id").notNull(),
+    threadId: text("thread_id"),
 
     title: text("title").notNull(),
-
-    mainSeq: integer("main_seq").notNull().default(0),
-    draftSeq: integer("draft_seq").notNull().default(0),
-
-    /** Autosaved user text; not a version until committed, and agents never read it. */
-    workingCopy: text("working_copy"),
-    workingBaseSeq: integer("working_base_seq"),
-
-    /** Set only by the user; a shared note is visible and embedded topic-wide. */
-    sharedAt: integer("shared_at", { mode: "timestamp_ms" }),
 
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" })
@@ -193,10 +179,17 @@ export const note = sqliteTable(
   (table) => [
     index("note_thread_id_idx").on(table.threadId),
     index("note_topic_id_idx").on(table.topicId),
+    check(
+      "note_scope_not_null",
+      sql`${table.threadId} is not null or ${table.topicId} is not null`,
+    ),
   ],
 );
 
-/** Full snapshot per commit; diffs are computed from adjacent versions, never stored. */
+/**
+ * Full snapshot per save. A user save overwrites the latest version when they wrote it too, and
+ * appends a new one when the agent wrote last, so an agent's text stays diffable on its own.
+ */
 export const noteVersion = sqliteTable(
   "note_version",
   {
@@ -211,6 +204,7 @@ export const noteVersion = sqliteTable(
 
     seq: integer("seq").notNull(),
     content: text("content").notNull(),
+    contentHash: text("content_hash").notNull(),
     author: text("author").$type<NoteVersionAuthor>().notNull(),
 
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),

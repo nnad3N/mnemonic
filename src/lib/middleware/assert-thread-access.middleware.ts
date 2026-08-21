@@ -41,6 +41,7 @@ export const threadAccessMiddleware = createMiddleware({ type: "function" })
     return next({
       context: {
         thread: result.value.thread,
+        topicId: result.value.topicId,
       },
     });
   });
@@ -126,6 +127,45 @@ export const fileAccessMiddleware = createMiddleware({ type: "function" })
       context: {
         file: ownedFile,
         topicId: ownedFile.topicId,
+      },
+    });
+  });
+
+const noteAccessInputSchema = v.looseObject({
+  noteId: v.pipe(v.string(), v.nanoid()),
+});
+
+type NoteAccessInputSchema = v.InferOutput<typeof noteAccessInputSchema>;
+
+export const noteAccessMiddleware = createMiddleware({ type: "function" })
+  .middleware([authMiddleware])
+  .validator((data: NoteAccessInputSchema) => data as unknown)
+  .server(async ({ context, data, next }) => {
+    const { noteId } = v.parse(noteAccessInputSchema, data);
+    const noteResult = await Kit.get(dbKit).run((db) =>
+      db.query.note.findFirst({
+        columns: { id: true, topicId: true },
+        where: {
+          // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId check.
+          id: toSafeId<"note">(noteId),
+          userId: context.user.id,
+        },
+      }),
+    );
+
+    if (Result.isError(noteResult)) {
+      throw toServerFnError.serverError("Failed to verify note access");
+    }
+
+    const ownedNote = noteResult.value;
+
+    if (!ownedNote) {
+      throw toServerFnError.notFound();
+    }
+
+    return next({
+      context: {
+        note: ownedNote,
       },
     });
   });

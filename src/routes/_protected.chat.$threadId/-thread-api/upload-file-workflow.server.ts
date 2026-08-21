@@ -19,8 +19,11 @@ import type { S3Kit } from "@/lib/s3-kit.server";
 import { safeId, toSafeId } from "@/lib/safe-id";
 import { vectorKit } from "@/lib/vector-kit.server";
 import type { VectorKit } from "@/lib/vector-kit.server";
-import { getFileEmbeddingModel } from "@/mastra/file-rag-config.server";
-import { FILE_EMBEDDING_DIMENSION } from "@/mastra/file-rag-config.server";
+import {
+  EMBEDDING_DIMENSION,
+  FILE_EMBEDDINGS_INDEX,
+  getRagEmbeddingModel,
+} from "@/mastra/rag-config.server";
 
 const workflowInputSchema = v.object({
   fileId: v.pipe(v.string(), v.nanoid()),
@@ -172,17 +175,19 @@ export const processForRagFn = Kit.gen(async function* (
   const { embeddings } = yield* await Result.tryPromise(async () =>
     embedMany({
       abortSignal: input.abortSignal,
-      model: getFileEmbeddingModel(key.key),
+      model: getRagEmbeddingModel(key.key),
       values: chunks.map((chunk) => chunk.text),
     }),
   );
 
   yield* await ctx.vector.createIndex({
-    dimension: FILE_EMBEDDING_DIMENSION,
+    dimension: EMBEDDING_DIMENSION,
+    indexName: FILE_EMBEDDINGS_INDEX,
   });
 
   yield* await ctx.vector.upsert({
     ids: chunks.map((_, index) => `${input.fileId}:${index}`),
+    indexName: FILE_EMBEDDINGS_INDEX,
     metadata: chunks.map((chunk, index) => ({
       topicId: input.topicId,
       fileId: input.fileId,

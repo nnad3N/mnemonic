@@ -2,16 +2,16 @@ import { MockEmbeddingModelV3 } from "ai/test";
 
 import { getEmbeddingModel } from "@/mastra/config.server";
 
-/** Physical index name; includes embedder id so model changes can reindex into a new index. */
+/** Physical index name; includes the embedder id so model changes reindex into a new index. */
 export const FILE_EMBEDDINGS_INDEX = "file_embeddings_v001";
 
 /** Qwen3 Embedding 8B native output size. */
-export const FILE_EMBEDDING_DIMENSION = 4096;
+export const EMBEDDING_DIMENSION = 4096;
 
-export const getFileEmbeddingModel = (apiKey: string) => {
+export const getRagEmbeddingModel = (apiKey: string) => {
   if (process.env.VITEST === "true") {
     /** Non-zero unit vector — cosine similarity of the zero vector is undefined and filters out. */
-    const unitVector = Array.from({ length: FILE_EMBEDDING_DIMENSION }, (_, index) =>
+    const unitVector = Array.from({ length: EMBEDDING_DIMENSION }, (_, index) =>
       index === 0 ? 1 : 0,
     );
 

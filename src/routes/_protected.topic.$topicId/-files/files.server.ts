@@ -8,6 +8,7 @@ import type { Kits } from "@/lib/kit";
 import type { S3Kit } from "@/lib/s3-kit.server";
 import type { SafeId } from "@/lib/safe-id";
 import type { VectorKit } from "@/lib/vector-kit.server";
+import { FILE_EMBEDDINGS_INDEX } from "@/mastra/rag-config.server";
 
 type DeleteFileCtx = Kits<[DbKit, S3Kit, VectorKit]>;
 
@@ -21,6 +22,7 @@ export const deleteFileFn = Kit.gen(async function* (ctx: DeleteFileCtx, input: 
     ctx.s3.deleteObject(input.s3Key),
     ctx.vector.deleteVectors({
       filter: { fileId: input.fileId },
+      indexName: FILE_EMBEDDINGS_INDEX,
     }),
   ]);
 

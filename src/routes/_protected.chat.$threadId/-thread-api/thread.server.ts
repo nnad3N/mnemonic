@@ -16,6 +16,7 @@ import { createSafeId, toSafeId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
 import type { VectorKit } from "@/lib/vector-kit.server";
 import { getThreadTitleModel } from "@/mastra/config.server";
+import { FILE_EMBEDDINGS_INDEX } from "@/mastra/rag-config.server";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 
 type CreateTopicCtx = Kits<[DbKit, MemoryKit]>;
@@ -83,6 +84,7 @@ export const deleteTopicFn = Kit.gen(async function* (
     }),
     ctx.vector.deleteVectors({
       filter: { topicId: input.topicId },
+      indexName: FILE_EMBEDDINGS_INDEX,
     }),
     ctx.memory.clearResourceObservations({ resourceId: input.topicId }),
     ...threads.map(async (thread) => ctx.memory.deleteThread({ threadId: thread.id })),

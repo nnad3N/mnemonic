@@ -5,8 +5,8 @@ import { dbKit } from "@/lib/db-kit.server";
 import * as Kit from "@/lib/kit";
 import { createSafeId, toSafeId } from "@/lib/safe-id";
 import { vectorKit } from "@/lib/vector-kit.server";
-import { FILE_EMBEDDINGS_INDEX } from "@/mastra/file-rag-config.server";
-import { FILE_EMBEDDING_DIMENSION } from "@/mastra/file-rag-config.server";
+import { FILE_EMBEDDINGS_INDEX } from "@/mastra/rag-config.server";
+import { EMBEDDING_DIMENSION } from "@/mastra/rag-config.server";
 import { libsqlVector } from "@/mastra/storage.server";
 import { clearDatabase } from "@/test/clear-database";
 import { createFakeS3 } from "@/test/fake-s3";
@@ -27,9 +27,7 @@ const XML_MIME = "application/xml";
 const RAG_SAMPLE_PHRASE = "Mnemonic RAG sample paragraph";
 
 /** Non-zero unit vector — cosine similarity of the zero vector is undefined and filters out. */
-const unitVector = Array.from({ length: FILE_EMBEDDING_DIMENSION }, (_, index) =>
-  index === 0 ? 1 : 0,
-);
+const unitVector = Array.from({ length: EMBEDDING_DIMENSION }, (_, index) => (index === 0 ? 1 : 0));
 
 const db = Kit.get(dbKit);
 

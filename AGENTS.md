@@ -135,7 +135,7 @@ export const byokQueries = {
 - Every entry is a **function**, including `all`. A property evaluated eagerly cannot reference `byokQueries` while the object is still being constructed.
 - Leaf entries return `queryOptions(...)`; grouping entries (`all`, and any intermediate level) return a bare key array used only as an invalidation prefix.
 - Reach keys through the object — `useQuery(byokQueries.mine())`, `invalidateQueries({ queryKey: byokQueries.all() })`, `setQueryData(byokQueries.mine().queryKey, …)`. Do not export a separate `xKeys` const.
-- Keep the object next to the server functions it calls, in the feature's `.functions.ts`. Reference implementation: [`-byok.functions.ts`](src/routes/_protected.settings/-byok.functions.ts).
+- Keep the object next to the server functions it calls, in the feature's `.functions.ts`, and put it at the **top of the file**, above the server functions themselves — the same goes for any mutation option objects. A reader opening the module sees what the feature exposes to components before the handler bodies. `queryFn` closures are evaluated on call, so referencing a server function declared further down is fine. Reference implementation: [`-byok.functions.ts`](src/routes/_protected.settings/-byok.functions.ts).
 
 `threadKeys` / `threadMutationKeys` / `topicKeys` / `authKeys` are the old shape and are being migrated; `threadKeys` in particular groups sidebar queries under a thread namespace they don't belong to. Don't add entries to them — write new queries in the shape above.
 
@@ -507,6 +507,7 @@ Use GT with `gt-tanstack-start` throughout the app. Import `useGT`, `useLocale`,
 
 ## Database schema
 
+- **Never name a variable `row` or `rows`.** A query result takes the name of what it holds — `note`, `latestVersion`, `topics`. `row` forces the reader to scroll back to the query to learn what they are looking at, and it reads identically in every function, so nothing in a diff tells you which table is involved. Reach for a `Row` suffix (`noteRow`) **only** when the domain noun is already taken in that scope, such as a function that also writes through the imported `note` table.
 - **Dates over booleans.** Model a state that flips at a point in time as a nullable timestamp (`activatedAt`, `finishedAt`, `verifiedAt`), not a boolean (`active`, `finished`, `verified`). `IS NOT NULL` gives the same predicate and index, and the column also records _when_ it happened, which a boolean throws away.
 
 ## Dates (Temporal)
