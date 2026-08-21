@@ -248,10 +248,10 @@ export const ThreadMentionInputElement = (props: PlateElementProps<TComboboxInpu
     from: "/_protected/chat/$threadId",
     select: (params) => params.threadId,
   });
-  const resourceId = useSuspenseQuery({
+  const { data: resourceId } = useSuspenseQuery({
     ...threadQueries.chat(threadId),
     select: (data) => data.resourceId,
-  }).data;
+  });
   const attachments = useChatStore((state) => state.attachments.get(threadId));
   const { registerPortal } = useComposer();
   const [search, setSearch] = useState("");
@@ -304,7 +304,7 @@ export const ThreadMentionInputElement = (props: PlateElementProps<TComboboxInpu
             {mentions.isLoading ? <T>Loading…</T> : <T>No results</T>}
           </AutocompleteEmpty>
           <AutocompleteList>
-            {(item) => (
+            {(item: MentionValue) => (
               <AutocompleteItem
                 key={item.key}
                 onClick={() => {
