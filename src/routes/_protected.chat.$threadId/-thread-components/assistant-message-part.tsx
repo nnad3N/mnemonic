@@ -1,8 +1,9 @@
 import { createCodePlugin } from "@streamdown/code";
-import { createMathPlugin } from "@streamdown/math";
+import { createMathPlugin, type MathPlugin } from "@streamdown/math";
 import { createMermaidPlugin } from "@streamdown/mermaid";
 import { isToolUIPart } from "ai";
 import { useTheme } from "next-themes";
+import remarkMathExtended from "remark-math-extended";
 import { Streamdown } from "streamdown";
 
 import { useMessageState } from "@/routes/_protected.chat.$threadId/-hooks/use-message-state";
@@ -17,7 +18,13 @@ import type { ThreadUIMessagePart } from "@/routes/_protected.chat.$threadId/-th
 
 const streamdownPlugins = {
   code: createCodePlugin(),
-  math: createMathPlugin(),
+  math: {
+    ...createMathPlugin(),
+    remarkPlugin: [
+      remarkMathExtended,
+      { backslashDelimiters: true, singleDollarTextMath: false },
+    ] as MathPlugin["remarkPlugin"],
+  },
   mermaid: createMermaidPlugin(),
 };
 

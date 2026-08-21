@@ -96,6 +96,7 @@
     "react-resizable-panels": "^4.12.2",
     "redis": "^5.12.1",
     "remark-gfm": "^4.0.1",
+    "remark-math-extended": "^6.1.1",
     "shadcn": "^4.16.2",
     "sonner": "^2.0.8",
     "streamdown": "^2.5.0",

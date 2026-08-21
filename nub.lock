@@ -218,6 +218,9 @@ importers:
       remark-gfm:
         specifier: ^4.0.1
         version: 4.0.1
+      remark-math-extended:
+        specifier: ^6.1.1
+        version: 6.1.1
       shadcn:
         specifier: ^4.16.2
         version: 4.16.2(typescript@7.0.2)
@@ -6655,6 +6658,9 @@ packages:
   micromark-extension-gfm@3.0.0:
     resolution: {integrity: sha512-vsKArQsicm7t0z2GugkCKtZehqUm31oeGBV/KVSorWSy8ZlNAv7ytjFhvaryUiCUJYqs+NoE6AFhpQvBTM6Q4w==}
 
+  micromark-extension-math-extended@3.2.2:
+    resolution: {integrity: sha512-u0Mhvjz2c++9Gd6/rYIYEBrEvZeNa7hIH3roqis+sA9AuP4hKzvuMENMOF0shs44LJkqJv33rXRCCqLzhlBCsQ==}
+
   micromark-extension-math@3.1.0:
     resolution: {integrity: sha512-lvEqd+fHjATVs+2v/8kg9i5Q0AP2k85H0WUOwpIVvUML8BapsMvh1XAogmQjOCsLpoKRCVQqEkQBB3NhVBcsOg==}
 
@@ -7468,6 +7474,9 @@ packages:
 
   remark-gfm@4.0.1:
     resolution: {integrity: sha512-1quofZ2RQ9EWdeN34S79+KExV1764+wCUGop5CPL1WGdD0ocPpu91lzPGbwWMECpEpd42kJGQwzRfyov9j4yNg==}
+
+  remark-math-extended@6.1.1:
+    resolution: {integrity: sha512-nFEmFG2+PFtsAmZ2SjnAXslbn/Y0wazWiV8EzXbyF6WD8s7kxoCUvlb8OHmhDBnbMhCApEXNYRirZbGKSQE9Cg==}
 
   remark-math@6.0.0:
     resolution: {integrity: sha512-MMqgnP74Igy+S3WwnhQ7kqGlEerTETXMvJhrUzDikVZ2/uogJCb+WHUg97hK9/jcfc0dkD73s3LN8zU49cTEtA==}
@@ -14910,6 +14919,16 @@ snapshots:
       micromark-util-combine-extensions: 2.0.1
       micromark-util-types: 2.0.2
 
+  micromark-extension-math-extended@3.2.2:
+    dependencies:
+      '@types/katex': 0.16.8
+      devlop: 1.1.0
+      katex: 0.16.47
+      micromark-factory-space: 2.0.1
+      micromark-util-character: 2.1.1
+      micromark-util-symbol: 2.0.1
+      micromark-util-types: 2.0.2
+
   micromark-extension-math@3.1.0:
     dependencies:
       '@types/katex': 0.16.8
@@ -15907,6 +15926,15 @@ snapshots:
       micromark-extension-gfm: 3.0.0
       remark-parse: 11.0.0
       remark-stringify: 11.0.0
+      unified: 11.0.5
+    transitivePeerDependencies:
+      - supports-color
+
+  remark-math-extended@6.1.1:
+    dependencies:
+      '@types/mdast': 4.0.4
+      mdast-util-math: 3.0.0
+      micromark-extension-math-extended: 3.2.2
       unified: 11.0.5
     transitivePeerDependencies:
       - supports-color
