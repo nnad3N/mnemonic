@@ -1,12 +1,19 @@
-import { Outlet, createFileRoute, redirect, retainSearchParams } from "@tanstack/react-router";
+import {
+  Outlet,
+  createFileRoute,
+  redirect,
+  retainSearchParams,
+  useNavigate,
+} from "@tanstack/react-router";
 import { createIsomorphicFn } from "@tanstack/react-start";
 import { getCookie } from "@tanstack/react-start/server";
+import { produce } from "immer";
 import { usePanelRef } from "react-resizable-panels";
 import * as v from "valibot";
 
+import { NotesPanel } from "@/components/notes-editor/notes-panel";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import {
-  SIDEBAR_COOKIE_NAME,
   Sidebar,
   SidebarContent,
   SidebarHeader,
@@ -17,6 +24,17 @@ import {
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/use-media-query";
 import * as Kit from "@/lib/kit";
+import {
+  MAIN_PANEL_MIN_SIZE,
+  NOTES_PANEL_FALLBACK_SIZE,
+  NOTES_PANEL_WIDTH_COOKIE_NAME,
+  SIDEBAR_COOKIE_NAME,
+  SIDEBAR_DEFAULT_SIZE,
+  SIDEBAR_MAX_SIZE,
+  SIDEBAR_MIN_SIZE,
+  SIDEBAR_WIDTH_COOKIE_MAX_AGE,
+  SIDEBAR_WIDTH_COOKIE_NAME,
+} from "@/lib/layout-consts";
 import { useSyncRunStates } from "@/routes/_protected.chat.$threadId/-hooks/use-sync-run-states";
 import { byokQueries } from "@/routes/_protected.settings/-byok.functions";
 
@@ -26,12 +44,6 @@ import { SidebarScopeCombobox } from "./-sidebar/sidebar-scope-combobox";
 import { SidebarThreadList } from "./-sidebar/sidebar-thread-list";
 import { SidebarThreadSearch } from "./-sidebar/sidebar-thread-search";
 
-const SIDEBAR_DEFAULT_SIZE = "16rem";
-const SIDEBAR_MIN_SIZE = "13rem";
-const SIDEBAR_MAX_SIZE = "28rem";
-const SIDEBAR_WIDTH_COOKIE_NAME = "sidebar_width";
-const SIDEBAR_WIDTH_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
-
 const sidebarWidthSchema = v.pipe(v.string(), v.regex(/^\d+px$/));
 
 const readCookie = createIsomorphicFn()
@@ -39,6 +51,7 @@ const readCookie = createIsomorphicFn()
   .client((name: string) => Kit.cookies.get(name).unwrapOr(undefined));
 
 const sidebarSearchSchema = v.object({
+  notes: v.optional(v.boolean()),
   topic: v.optional(v.pipe(v.string(), v.nanoid())),
   q: v.optional(v.string(), ""),
   range: v.optional(
@@ -49,7 +62,7 @@ const sidebarSearchSchema = v.object({
 export type SidebarSearch = v.InferInput<typeof sidebarSearchSchema>;
 
 export const Route = createFileRoute("/_protected")({
-  search: { middlewares: [retainSearchParams(["topic", "q", "range"])] },
+  search: { middlewares: [retainSearchParams(["notes", "topic", "q", "range"])] },
   validateSearch: sidebarSearchSchema,
   beforeLoad: async ({ context, location }) => {
     if (!context.user || !context.session) {
@@ -69,8 +82,13 @@ export const Route = createFileRoute("/_protected")({
   },
   loader: () => {
     const widthParsed = v.safeParse(sidebarWidthSchema, readCookie(SIDEBAR_WIDTH_COOKIE_NAME));
+    const notesWidthParsed = v.safeParse(
+      sidebarWidthSchema,
+      readCookie(NOTES_PANEL_WIDTH_COOKIE_NAME),
+    );
 
     return {
+      notesWidth: notesWidthParsed.success ? notesWidthParsed.output : undefined,
       sidebarOpen: readCookie(SIDEBAR_COOKIE_NAME) !== "false",
       sidebarWidth: widthParsed.success ? widthParsed.output : SIDEBAR_DEFAULT_SIZE,
     };
@@ -80,23 +98,27 @@ export const Route = createFileRoute("/_protected")({
 
 function LayoutComponent() {
   useSyncRunStates();
-  const { sidebarOpen, sidebarWidth } = Route.useLoaderData();
+  const { notesWidth, sidebarOpen, sidebarWidth } = Route.useLoaderData();
 
   return (
     <SidebarProvider className="h-full min-h-0" defaultOpen={sidebarOpen}>
-      <ProtectedLayout sidebarWidth={sidebarWidth} />
+      <ProtectedLayout notesWidth={notesWidth} sidebarWidth={sidebarWidth} />
     </SidebarProvider>
   );
 }
 
 type ProtectedLayoutProps = {
+  notesWidth: string | undefined;
   sidebarWidth: string;
 };
 
-const ProtectedLayout = ({ sidebarWidth }: ProtectedLayoutProps) => {
+const ProtectedLayout = ({ notesWidth, sidebarWidth }: ProtectedLayoutProps) => {
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
+  const notesOpen = Route.useSearch({ select: (search) => search.notes === true });
   const { open } = useSidebar();
   const sidebarPanelRef = usePanelRef();
+  const mainPanelRef = usePanelRef();
 
   return (
     <>
@@ -138,7 +160,7 @@ const ProtectedLayout = ({ sidebarWidth }: ProtectedLayoutProps) => {
             />
           </>
         )}
-        <ResizablePanel minSize="20rem">
+        <ResizablePanel minSize={MAIN_PANEL_MIN_SIZE} panelRef={mainPanelRef}>
           <SidebarInset className="h-full min-h-0 overflow-hidden">
             <AppHeader />
             <div className="h-full min-h-0 overflow-hidden">
@@ -146,6 +168,22 @@ const ProtectedLayout = ({ sidebarWidth }: ProtectedLayoutProps) => {
             </div>
           </SidebarInset>
         </ResizablePanel>
+        {notesOpen && (
+          <NotesPanel
+            minSize={MAIN_PANEL_MIN_SIZE}
+            onClose={async () =>
+              navigate({
+                search: (prev) =>
+                  produce(prev, (draft) => {
+                    draft.notes = undefined;
+                  }),
+                to: ".",
+              })
+            }
+            threadPanelRef={mainPanelRef}
+            width={notesWidth ?? NOTES_PANEL_FALLBACK_SIZE}
+          />
+        )}
       </ResizablePanelGroup>
     </>
   );

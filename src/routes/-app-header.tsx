@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, useMatch } from "@tanstack/react-router";
+import { Link, useMatch, useNavigate, useSearch } from "@tanstack/react-router";
 import { T } from "gt-tanstack-start";
+import { produce } from "immer";
+import { PanelRightIcon } from "lucide-react";
 import type { PropsWithChildren } from "react";
 
 import {
@@ -11,6 +13,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { sidebarQueries } from "@/routes/-sidebar/sidebar.functions";
@@ -55,7 +58,36 @@ export const AppHeader = () => {
       )}
       {adminUserByok && <AdminByokCrumbs userId={adminUserByok.params.userId} />}
       {topicFiles && <TopicFilesCrumbs topicId={topicFiles.params.topicId} />}
+      <NotesTrigger />
     </header>
+  );
+};
+
+const NotesTrigger = () => {
+  const navigate = useNavigate();
+  const notesOpen = useSearch({ from: "/_protected", select: (search) => search.notes === true });
+
+  return (
+    <Button
+      aria-pressed={notesOpen}
+      className="ml-auto shrink-0"
+      onClick={async () =>
+        navigate({
+          search: (prev) =>
+            produce(prev, (draft) => {
+              draft.notes = notesOpen ? undefined : true;
+            }),
+          to: ".",
+        })
+      }
+      size="icon-sm"
+      variant="ghost"
+    >
+      <PanelRightIcon />
+      <span className="sr-only">
+        <T>Toggle notes</T>
+      </span>
+    </Button>
   );
 };
 
