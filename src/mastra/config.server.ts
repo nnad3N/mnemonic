@@ -102,14 +102,6 @@ export const getObservationalMemoryModel = (apiKey: string) =>
 export const getThreadTitleModel = (apiKey: string) =>
   createOpenrouterProvider(apiKey)(THREAD_TITLE_MODEL);
 
-const observationalMemoryReasoningOff = {
-  openrouter: {
-    reasoning: {
-      effort: "none",
-    },
-  },
-} as const;
-
 type ObservationalMemoryRetrieval = NonNullable<ObservationalMemoryOptions["retrieval"]>;
 
 export const observationalMemoryOptions = (
@@ -121,12 +113,10 @@ export const observationalMemoryOptions = (
   model,
   observation: {
     observeAttachments: false,
-    providerOptions: observationalMemoryReasoningOff,
   },
   reflection: {
     activateAfterIdle: "auto",
     activateOnProviderChange: true,
-    providerOptions: observationalMemoryReasoningOff,
   },
   retrieval,
   scope: "thread",
