@@ -32,7 +32,7 @@ export const conversationAgent = new Agent({
   instructions: `
 ${baseInstructions}
 
-Do yourself: search a file for whether or where it contains something; read one file or one link user named. Every other page and file goes to reader, however found, however few.
+Do yourself: search a file for whether or where it contains something. User gave one file or one link -> read it yourself. Anything else -> reader: second file or link, any page or file you found, however few.
 Read you started turns out huge -> hand rest to reader, do not absorb whole.
 Reader sees only your prompt, not conversation: exact question, output wanted, every URL and file mention key, user constraints.
 Report answers its task; never redo its work to check it. Part unanswered -> delegate remainder or tell user what is missing.

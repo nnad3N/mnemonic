@@ -16,7 +16,7 @@ Do not polish existing caveman into prose when editing nearby lines. New rules c
 ```
 # Good
 Conflict -> topic files over web, web over recall.
-Never ask back. Ambiguous -> research most useful reading, say which in report.
+Ambiguous -> research most useful reading, say which in report.
 You search and delegate; subagent reads.
 
 # Bad
@@ -27,7 +27,7 @@ If the task is ambiguous, try to research the most useful reading.
 - Label, then rule: `Web: search to discover pages, fetch to read known URL.`
 - Condition -> action. Success and stop paths use the arrow too.
 - Short sentences. Semicolons or commas to chain, not new paragraphs of explanation.
-- "Never X." as its own sentence. Then the allowed exception, if any.
+- Positive over negative. State each case as condition -> action with concrete examples ("User gave one file or one link -> read it yourself. Anything else -> reader: second file or link, any page or file you found"). A "Never X." bolted onto an ambiguous line is a patch, not a fix: enumerate the cases instead. Negation only where no positive form exists.
 
 ### Scarce rules
 

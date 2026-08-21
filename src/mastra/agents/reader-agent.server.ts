@@ -10,14 +10,13 @@ import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
 import { libsqlStore } from "@/mastra/storage.server";
 import { readTextTool } from "@/mastra/tools/read-text-tool.server";
 import { readVisualsTool } from "@/mastra/tools/read-visuals-tool.server";
-import { searchFileTool } from "@/mastra/tools/search-file-tool.server";
 import { webFetchTool } from "@/mastra/tools/web-fetch-tool.server";
 
 /** Without its own memory a subagent inherits the parent's, including observational memory. */
 const readerMemory = new Memory({ storage: libsqlStore });
 
 const codeMode = createCodeMode(
-  { tools: { readText: readTextTool, searchFile: searchFileTool, webFetch: webFetchTool } },
+  { tools: { readText: readTextTool, webFetch: webFetchTool } },
   new IsolatedVmCodeModeTransport(),
 );
 
