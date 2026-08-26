@@ -56,7 +56,6 @@ export const createNoteFn = Kit.gen(async function* (ctx: NoteCtx, input: Create
   const id = createSafeId<"note">();
   const contentHash = await hashText("");
 
-  // A note always has a version, so reads never have to model "written but empty" separately.
   yield* await ctx.db.transaction(async (tx) => {
     await tx.insert(note).values({
       id,
@@ -100,10 +99,6 @@ type SaveNoteBodyInput = NoteIdInput & {
   content: string;
 };
 
-/**
- * Overwrites the latest version when the user wrote it, and appends one when the agent did, so
- * the agent's text stays a version of its own to diff against.
- */
 export const saveNoteBodyFn = Kit.gen(async function* (ctx: NoteCtx, input: SaveNoteBodyInput) {
   const contentHash = await hashText(input.content);
 

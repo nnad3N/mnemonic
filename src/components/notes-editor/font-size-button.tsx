@@ -12,7 +12,6 @@ import { NoteToolbarButton } from "./toolbar-buttons";
 
 const DEFAULT_FONT_SIZE = "14";
 
-/** `typeset` heading sizes at the editor's 14px body, so the control reads what the reader sees. */
 const headingFontSizes: Record<string, string> = {
   [KEYS.h1]: "24",
   [KEYS.h2]: "18",

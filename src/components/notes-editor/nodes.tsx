@@ -34,7 +34,6 @@ export const NoteLinkElement = (props: PlateElementProps) => (
   />
 );
 
-/** Lists are indent-based: each list item is its own block, wrapped in an `ol`/`ul` on render. */
 export const NoteBlockList: RenderNodeWrapper = (props) => {
   if (typeof props.element.listStyleType !== "string") return;
 
