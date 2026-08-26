@@ -72,7 +72,7 @@ const UploadButton = ({ onSelectFiles }: UploadButtonProps) => {
   return (
     <Button
       variant="ghost"
-      disabled={typeof onSelectFiles === "undefined"}
+      disabled={onSelectFiles === undefined}
       onClick={() => inputRef.current?.click()}
       size="icon-sm"
       type="button"
@@ -106,7 +106,7 @@ type SendButtonProps = {
 const SendButton = ({ onSend }: SendButtonProps) => {
   return (
     <Button
-      disabled={typeof onSend === "undefined"}
+      disabled={onSend === undefined}
       onClick={async () => {
         await onSend?.();
       }}

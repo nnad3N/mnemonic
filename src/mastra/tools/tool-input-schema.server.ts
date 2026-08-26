@@ -12,6 +12,7 @@ import type * as v from "valibot";
  * a `v.literal` discriminant, and every other provider reads it too.
  */
 const overrideSchema = ({ jsonSchema }: OverrideSchemaContext): JsonSchema | undefined => {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof
   if (typeof jsonSchema.const !== "string") {
     return undefined;
   }

@@ -17,8 +17,9 @@ const PENDING_STATES = [
   "approval-responded",
 ] as const satisfies DynamicToolUIPart["state"][];
 
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type
 const asPart = (part: { type: string } & Record<string, unknown>): ThreadUIMessagePart =>
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- visibility only reads `type`.
+  // oxlint-disable-next-line anti-slop/no-chained-type-assertions, typescript/no-unsafe-type-assertion
   part as unknown as ThreadUIMessagePart;
 
 describe("getToolPartStatus", () => {

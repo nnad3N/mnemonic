@@ -24,6 +24,7 @@ const paragraphChildren = (editor: PlateEditor) => {
 
 const findLink = (nodes: readonly unknown[]): ComposerLinkElement | undefined => {
   for (const node of nodes) {
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof
     if (ElementApi.isElement(node) && node.type === "a" && typeof node.url === "string") {
       // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- narrowed by type/url checks above.
       return node as ComposerLinkElement;
@@ -69,6 +70,7 @@ describe("insertComposerClipboardText", () => {
         return { type: "text", text: node.text };
       }
 
+      // oxlint-disable-next-line anti-slop/no-runtime-typeof
       if (ElementApi.isElement(node) && typeof node.url === "string") {
         return { type: "link", url: node.url };
       }

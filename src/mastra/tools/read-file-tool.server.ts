@@ -6,7 +6,7 @@ import * as v from "valibot";
 
 import { ToolError } from "@/lib/errors/tool-error";
 import { ImageMimeType, PDF_MIME_TYPE } from "@/lib/file-validation";
-import { mentionKeyShape } from "@/lib/mention-key";
+import { mentionKeyFormat } from "@/lib/mention-key";
 import { getAgentModelConfig, modelAcceptsPdf, ModelAgentIds } from "@/mastra/models.server";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
 import {
@@ -21,7 +21,7 @@ const inputSchema = v.object({
     v.string(),
     v.nonEmpty(),
     v.description(
-      `Mention key of the file, in the shape ${mentionKeyShape(["file", "attachment"])}.`,
+      `Mention key of the file, in the shape ${mentionKeyFormat(["file", "attachment"])}.`,
     ),
   ),
 });

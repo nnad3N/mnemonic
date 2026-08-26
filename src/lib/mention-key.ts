@@ -6,7 +6,7 @@ const mentionTypeSchema = v.picklist(["file", "attachment", "selection", "thread
 
 type MentionKeyType = v.InferOutput<typeof mentionTypeSchema>;
 
-export const mentionKeyShape = (types: MentionKeyType[]): string =>
+export const mentionKeyFormat = (types: MentionKeyType[]): string =>
   types.map((type) => `"${type}${MENTION_KEY_TYPE_SEPARATOR}<value>"`).join(" or ");
 
 export type MentionKey = `${MentionKeyType}${typeof MENTION_KEY_TYPE_SEPARATOR}${string}`;
@@ -25,7 +25,9 @@ export type ParseMentionKeyResult = {
   value: string;
 };
 
+// oxlint-disable-next-line anti-slop/no-unknown-parameters
 export const parseMentionKey = (key: unknown): ParseMentionKeyResult => {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof
   if (typeof key !== "string") {
     return { type: "unknown", value: "" };
   }

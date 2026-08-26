@@ -1,3 +1,4 @@
+import { environmentManager } from "@tanstack/react-query";
 import { createEnv } from "@t3-oss/env-core";
 import * as v from "valibot";
 
@@ -56,9 +57,9 @@ export const env = createEnv({
 
   emptyStringAsUndefined: true,
 
-  // Server modules under test run in happy-dom, which defines `window`, so the
-  // default check would read them as the client and refuse every server key.
-  isServer: typeof window === "undefined" || import.meta.env.MODE === "test",
+  // Server modules under test run in happy-dom, which defines `window`, so the default
+  // environmentManager check would read them as the client and refuse every server key.
+  isServer: environmentManager.isServer() || import.meta.env.MODE === "test",
 
   runtimeEnv: { ...import.meta.env, ...process.env },
 

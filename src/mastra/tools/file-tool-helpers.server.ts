@@ -34,13 +34,13 @@ export const loadMentionedFile = async ({
   const mention = parseMentionKey(fileKey);
 
   if (mention.type === "file") {
-    const topicId = requestContext?.get("filter")?.topicId;
+    const filter = requestContext?.get("filter");
 
-    if (!topicId) {
+    if (!filter?.topicId) {
       panic("Missing topicId in request context");
     }
 
-    const result = await getFile(getFileCtx, { fileId: mention.value, topicId });
+    const result = await getFile(getFileCtx, { fileId: mention.value, topicId: filter.topicId });
 
     if (Result.isError(result)) {
       return matchError(result.error, {

@@ -79,9 +79,12 @@ const createExecuteSandboxOptions = (
   transformTypescript: false,
 });
 
+// Sandbox completion values are dynamically typed; stringify round-trip is the JSON boundary.
+// oxlint-disable-next-line anti-slop/no-unknown-parameters
 const serializeJson = (value: unknown): Result<JSONValue, unknown> =>
   Result.try(() => JSON.parse(JSON.stringify(value)));
 
+// oxlint-disable-next-line anti-slop/no-unknown-parameters
 const serializeResult = (value: unknown): JSONValue | undefined => {
   if (value === undefined) {
     return value;

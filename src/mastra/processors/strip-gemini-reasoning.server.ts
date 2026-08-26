@@ -21,34 +21,39 @@ export const stripGeminiReasoningProcessor = {
       return;
     }
 
+    const next: typeof prompt = [];
     let stripped = false;
 
-    const next = prompt.map((message) => {
+    for (const message of prompt) {
       if (message.role !== "assistant") {
-        return message;
+        next.push(message);
+        continue;
       }
 
-      const content = message.content.flatMap((part) => {
+      const content: typeof message.content = [];
+
+      for (const part of message.content) {
         if (part.type === "reasoning") {
           stripped = true;
-          return [];
+          continue;
         }
 
         const openrouterOptions =
           part.type === "tool-call" ? part.providerOptions?.openrouter : undefined;
 
         if (!openrouterOptions || !("reasoning_details" in openrouterOptions)) {
-          return part;
+          content.push(part);
+          continue;
         }
 
         stripped = true;
         const { reasoning_details: _dropped, ...openrouter } = openrouterOptions;
 
-        return { ...part, providerOptions: { ...part.providerOptions, openrouter } };
-      });
+        content.push({ ...part, providerOptions: { ...part.providerOptions, openrouter } });
+      }
 
-      return { ...message, content };
-    });
+      next.push({ ...message, content });
+    }
 
     if (stripped) {
       return { prompt: next };

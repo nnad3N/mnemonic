@@ -57,6 +57,7 @@ export const ThreadMessages = () => {
     ? visibleMessages.findIndex((message) => message.id === editingMessageId)
     : Infinity;
 
+  // oxlint-disable-next-line react/incompatible-library
   const virtualizer = useVirtualizer({
     useFlushSync: false,
     anchorTo: "end",

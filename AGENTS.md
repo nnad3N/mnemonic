@@ -1,6 +1,6 @@
 # Code Standards
 
-This project uses **Oxlint** and **Oxfmt** for linting and formatting.
+This project uses **Oxlint** and **Oxfmt** for linting and formatting. Opinionated [anti-slop](https://github.com/dmmulroy/anti-slop) rules are vendored at `tools/oxlint/anti-slop/` and enabled in [`oxlint.config.ts`](oxlint.config.ts).
 
 ## Quick Reference
 
@@ -33,7 +33,7 @@ Architecture notes for agents live in [`.agents/architecture`](.agents/architect
 
 - Use arrow functions for callbacks and short functions
 - Prefer `for...of` loops over `.forEach()` and indexed `for` loops
-- Use optional chaining (`?.`) and nullish coalescing (`??`) for safer property access
+- Use optional chaining (`?.`) and nullish coalescing (`??`) when the receiver can actually be nullish — not on values TypeScript already knows are defined
 - Prefer `.at(index)` over bracket indexing (`array[index]`) unless you have already verified the index exists (e.g. after a bounds check or when iterating with a known-valid index)
 - Prefer template literals over string concatenation
 - Use destructuring for object and array assignments

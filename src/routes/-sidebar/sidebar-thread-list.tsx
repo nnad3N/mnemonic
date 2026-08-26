@@ -34,6 +34,7 @@ const resolveDateRange = (range: SidebarSearch["range"]) => {
   const timeZone = Temporal.Now.timeZoneId();
   const today = Temporal.Now.plainDateISO(timeZone);
 
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof
   if (typeof range === "string") {
     const startDate = range === "today" ? today : today.subtract({ days: PRESET_DAYS[range] - 1 });
 

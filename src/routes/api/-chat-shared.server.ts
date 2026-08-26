@@ -115,6 +115,7 @@ export const toThreadUIStream = ({
 
       try {
         for await (const part of stream) {
+          // SAFETY: Mastra stream chunks match InferUIMessageChunk<ThreadUIMessage> for this writer.
           // oxlint-disable-next-line typescript/no-unsafe-type-assertion
           writer.write(part as InferUIMessageChunk<ThreadUIMessage>);
 

@@ -30,6 +30,7 @@ export class S3Error extends TaggedError("S3Error")<{
   statusCode?: number;
 }> {}
 
+// oxlint-disable-next-line anti-slop/no-unknown-parameters
 const toS3Error = (error: unknown): S3Error => {
   if (S3Error.is(error)) {
     return error;

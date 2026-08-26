@@ -5,6 +5,7 @@ import type { ThreadUIMessage, UserMessageMetadata } from "../-thread-types";
 import { useChatStore } from "../../-chat-store";
 import { getComposerAttachments } from "./use-composer-actions";
 
+// oxlint-disable-next-line anti-slop/no-module-mocking
 vi.mock("ai", async (importOriginal) => {
   const actual = await importOriginal<typeof import("ai")>();
 

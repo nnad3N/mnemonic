@@ -23,7 +23,7 @@ const PUBLISH_RETRY = {
 
 // node-redis emits `error` on the client itself; without a listener a dropped connection is an
 // unhandled event that takes the process down.
-const cacheClient = createClient({ url: env.REDIS_URL }).on("error", (error: unknown) => {
+const cacheClient = createClient({ url: env.REDIS_URL }).on("error", (error) => {
   console.error("[durable-agents] redis cache client error", error);
 });
 
@@ -32,7 +32,7 @@ export const durableAgentsCache = new RedisServerCache(
     // `RedisClient` is typed against ioredis' lowercase `llen`/`rpush`/`lrange`, which node-redis
     // spells `lLen`/`rPush`/`lRange`. Those three are the only members it is missing, and
     // `nodeRedisPreset` replaces every call site for them, so they are never reached.
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+    // oxlint-disable-next-line anti-slop/no-chained-type-assertions, anti-slop/require-safety-comment-for-type-assertion, typescript/no-unsafe-type-assertion
     client: cacheClient as unknown as RedisClient,
   },
   { ...nodeRedisPreset, ttlSeconds: CACHE_TTL_SECONDS },
@@ -185,6 +185,7 @@ export const durableAgentsKit = createDurableAgentsKit({
   },
   subscribeRunTiming: async ({ onTiming, runId }) =>
     subscribe(getRunTimingTopic(runId), (event) => {
+      // SAFETY: `publishRunTiming` owns this topic and writes RunTiming payloads.
       // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- `publishRunTiming` owns this topic.
       onTiming(event.data as RunTiming);
     }),
@@ -193,6 +194,7 @@ export const durableAgentsKit = createDurableAgentsKit({
 
     return subscribe(getUserThreadsTopic(userId), (event) => {
       if (event.createdAt.getTime() < subscribedAt) return;
+      // SAFETY: `publishRunEvent` owns this topic and writes ThreadRunEvent payloads.
       // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- `publishRunEvent` owns this topic.
       onEvent(event.data as ThreadRunEvent);
     });

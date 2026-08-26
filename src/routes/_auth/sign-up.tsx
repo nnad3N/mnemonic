@@ -65,7 +65,7 @@ function RouteComponent() {
         context: JSON.stringify(context),
       });
 
-      if (registration?.error) {
+      if (registration.error) {
         notifySignUpError(gt, registration.error);
         return;
       }

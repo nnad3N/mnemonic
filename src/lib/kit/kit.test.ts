@@ -112,6 +112,7 @@ describe("kit", () => {
       .throws(() => {
         throw cause;
       })
+      // oxlint-disable-next-line anti-slop/no-unknown-parameters
       .catch((thrown: unknown) => thrown);
 
     expect(Panic.is(thrown)).toBeTruthy();

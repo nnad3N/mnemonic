@@ -85,7 +85,7 @@ const toolPart = (toolName: MnemonicToolName, state: ToolUIPart["state"]) =>
   }) as ToolUIPart<ThreadUITools>;
 
 const unknownToolPart = () =>
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- a tool name the UI has no label for.
+  // oxlint-disable-next-line anti-slop/no-chained-type-assertions, typescript/no-unsafe-type-assertion
   ({
     type: "tool-somethingNew",
     toolCallId: "call-1",

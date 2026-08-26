@@ -47,12 +47,15 @@ type Entries<TBase, TValues extends readonly TBase[]> =
  */
 type Literals<TValues extends readonly unknown[]> = {
   readonly values: TValues;
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters
   is: (value: unknown) => value is TValues[number];
 };
 
 const create = <const TValues extends readonly unknown[]>(values: TValues): Literals<TValues> => ({
   values,
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters
   is: (value: unknown): value is TValues[number] =>
+    // SAFETY: widening the tuple is what lets `includes` accept an unchecked value.
     // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- widening the tuple is what lets `includes` accept an unchecked value.
     (values as readonly unknown[]).includes(value),
 });

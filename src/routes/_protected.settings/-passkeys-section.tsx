@@ -65,7 +65,7 @@ export const PasskeysSection = () => {
     mutationFn: async () => {
       const result = await authClient.passkey.addPasskey();
 
-      if (result?.error) {
+      if (result.error) {
         throw toAuthError(result.error);
       }
     },

@@ -6,6 +6,7 @@ import { routeTree } from "./routeTree.gen";
 
 // Reached by both the client and the server entry, so one guard covers both. Safari has no
 // stable Temporal yet; every other target takes the false branch and never fetches the chunk.
+// oxlint-disable-next-line anti-slop/no-runtime-typeof
 if (typeof Temporal === "undefined") {
   await import("temporal-polyfill/global");
 }

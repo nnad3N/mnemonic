@@ -20,6 +20,7 @@ const streamdownPlugins = {
   code: createCodePlugin(),
   math: {
     ...createMathPlugin(),
+    // SAFETY: remark-math-extended + options match MathPlugin's remarkPlugin tuple shape.
     remarkPlugin: [
       remarkMathExtended,
       { backslashDelimiters: true, singleDollarTextMath: false },

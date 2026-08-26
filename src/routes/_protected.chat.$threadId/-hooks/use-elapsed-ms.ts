@@ -10,7 +10,7 @@ export const useElapsedMs = ({ enabled, startedAt }: UseElapsedMsProps): number 
   const [nowMs, setNowMs] = useState(() => Temporal.Now.instant().epochMilliseconds);
 
   useEffect(() => {
-    if (!enabled || startedAt === undefined) {
+    if (!enabled) {
       return;
     }
 
@@ -21,10 +21,10 @@ export const useElapsedMs = ({ enabled, startedAt }: UseElapsedMsProps): number 
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [enabled, startedAt]);
+  }, [enabled]);
 
   if (!enabled) {
-    return undefined;
+    return;
   }
 
   return Math.max(0, nowMs - Temporal.Instant.from(startedAt).epochMilliseconds);

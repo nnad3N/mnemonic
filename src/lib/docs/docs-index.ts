@@ -6,6 +6,7 @@ import mathjsGenerated from "@/lib/docs/generated/mathjs.json" with { type: "jso
 import papaparseGenerated from "@/lib/docs/generated/papaparse.json" with { type: "json" };
 import { buildSearchIndex, searchIndex } from "@/lib/docs/search";
 
+// oxlint-disable-next-line anti-slop/no-unknown-parameters
 const load = (generated: unknown) => {
   const library = v.parse(docsLibrarySchema, generated);
 

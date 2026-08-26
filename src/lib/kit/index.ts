@@ -22,19 +22,21 @@ export const define = <const TName extends string, TValue>(
   name: TName,
   value: TValue,
 ): KitModule<TName, TValue> => {
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+  // oxlint-disable-next-line anti-slop/no-chained-type-assertions, anti-slop/require-safety-comment-for-type-assertion, typescript/no-unsafe-type-assertion
   return [name, value] as unknown as KitModule<TName, TValue>;
 };
 
 export const createContext = <TKits extends readonly KitModule[]>(
   ...kits: TKits & UniqueKitNames<TKits>
 ): Kits<TKits> => {
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type
   const context: Record<string, unknown> = {};
 
   for (const [name, value] of kits) {
     context[name] = value;
   }
 
+  // SAFETY: every kit was inserted under its declared name; Kits is that map branded by TKits.
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion
   return context as Kits<TKits>;
 };
@@ -129,6 +131,7 @@ export const promiseAll = async <
     return Result.ok(values);
   });
 
+  // SAFETY: Promise.all and the loop preserve input order; each yielded value occupies its corresponding tuple index.
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Promise.all and the loop preserve input order; each yielded value occupies its corresponding tuple index.
   return combined as ResultType<
     PromiseAllValues<TPromises>,

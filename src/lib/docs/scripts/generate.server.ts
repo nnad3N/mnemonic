@@ -18,6 +18,7 @@ const project = new Project({
 const readVersion = async (path: string): Promise<string> => {
   const manifest: unknown = JSON.parse(await readFile(path, "utf8"));
 
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof
   if (typeof manifest === "object" && manifest !== null && "version" in manifest) {
     return String(manifest.version);
   }
@@ -166,7 +167,7 @@ const toMathjsMembers = (file: SourceFile): DocsMember[] => {
   const members = groupOverloads(raw);
   const math = create(all, {});
   const help = (name: string): EmbeddedDoc =>
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- upstream signature is wrong, see HelpByName.
+    // oxlint-disable-next-line anti-slop/no-chained-type-assertions, anti-slop/require-safety-comment-for-type-assertion, typescript/no-unsafe-type-assertion
     (math.help as unknown as HelpByName)(name).toJSON();
   const byName = new Map(members.map((member) => [member.name, member]));
 
@@ -193,9 +194,13 @@ const toMathjsMembers = (file: SourceFile): DocsMember[] => {
       continue;
     }
 
+    // oxlint-disable-next-line anti-slop/require-safety-comment-for-type-assertion, typescript/no-unsafe-type-assertion
+    const mathValue = math[name as keyof typeof math];
+
     byName.set(name, {
       name,
-      kind: typeof Reflect.get(math, name) === "function" ? "function" : "constant",
+      // oxlint-disable-next-line anti-slop/no-runtime-typeof
+      kind: typeof mathValue === "function" ? "function" : "constant",
       summary: doc.description ?? "",
       signatures: doc.syntax ?? [],
       description: doc.description ?? "",

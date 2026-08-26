@@ -39,7 +39,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       revalidateIfStale: true,
     });
 
-    return { session: session?.data?.session, user: session?.data?.user };
+    return { session: session.data?.session, user: session.data?.user };
   },
   errorComponent: ErrorComponent,
   head: () => ({

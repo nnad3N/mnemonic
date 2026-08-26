@@ -32,6 +32,7 @@ const sharedPlugins = [
           serialize: (node) => ({
             type: "link",
             children: [{ type: "text", value: node.value }],
+            // oxlint-disable-next-line anti-slop/no-runtime-typeof
             url: `mention:${typeof node.key === "string" ? node.key : node.value}`,
           }),
         },
