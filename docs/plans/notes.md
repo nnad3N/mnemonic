@@ -69,8 +69,9 @@ agent memory, which the user never sees.
 
 ### Export
 
-- Download the current content as docx or pdf, rendered on request, not stored.
-  Plate ships examples for both.
+- Download the current content as markdown or docx, rendered on request, not
+  stored. PDF goes through the browser's print dialog on the rendered note, so
+  the text stays selectable instead of being an image of the editor.
 
 ## Frontend outline
 
@@ -120,4 +121,4 @@ Frontend:
 - [ ] Timeline endpoint: entries with word counts relative to a selected version
 - [ ] Timeline panel with author labels, indicators and collapsed agent blocks
 - [ ] Diff viewer, with revert
-- [ ] Export to docx and pdf
+- [x] Export to markdown and docx, print to pdf

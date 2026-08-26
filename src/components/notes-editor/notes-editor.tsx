@@ -16,12 +16,26 @@ import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-q
 import { useMatch, useSearch } from "@tanstack/react-router";
 import { T, useGT } from "gt-tanstack-start";
 import { produce } from "immer";
+import { ALargeSmallIcon, BoldIcon, IndentIcon, ListIcon } from "lucide-react";
 import { KEYS, TrailingBlockPlugin } from "platejs";
-import { Plate, PlateContent, useEditorContainerRef, usePlateEditor } from "platejs/react";
-import { Suspense, useEffect } from "react";
+import {
+  Plate,
+  PlateContent,
+  PlateController,
+  useEditorContainerRef,
+  usePlateEditor,
+} from "platejs/react";
+import type { PropsWithChildren } from "react";
+import { Suspense, useEffect, useId } from "react";
 import remarkGfm from "remark-gfm";
 import { useDebouncedCallback } from "use-debounce";
 
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SidebarInset } from "@/components/ui/sidebar";
 import { hashText } from "@/lib/hash";
@@ -54,7 +68,6 @@ import {
   NoteTurnIntoButton,
 } from "./toolbar-buttons";
 
-/** Blocks a list item can be turned into, and blocks indentation applies to. */
 const indentTargets = [...KEYS.heading, KEYS.p, KEYS.blockquote, KEYS.codeBlock];
 
 const notesEditorPlugins = [
@@ -102,12 +115,15 @@ export const NotesEditor = ({ onClose }: NotesEditorProps) => {
 
   return (
     <SidebarInset className="h-full min-h-0 overflow-hidden">
-      <NotesTabs onClose={onClose} threadId={threadMatch?.params.threadId} />
-      {activeNoteId && (
-        <Suspense>
-          <NoteEditor key={activeNoteId} noteId={activeNoteId} />
-        </Suspense>
-      )}
+      {/* Export lives in the tab bar, outside the note's own `Plate`, and reaches it from here. */}
+      <PlateController>
+        <NotesTabs onClose={onClose} threadId={threadMatch?.params.threadId} />
+        {activeNoteId && (
+          <Suspense>
+            <NoteEditor key={activeNoteId} noteId={activeNoteId} />
+          </Suspense>
+        )}
+      </PlateController>
     </SidebarInset>
   );
 };
@@ -159,6 +175,7 @@ const NoteEditor = ({ noteId }: NoteEditorProps) => {
 
     return () => {
       clearInterval(interval);
+      runSave();
     };
   }, [runSave]);
 
@@ -178,6 +195,7 @@ type NoteTitleInputProps = {
 
 const NoteTitleInput = ({ noteId, title }: NoteTitleInputProps) => {
   const gt = useGT();
+  const inputId = useId();
   const queryClient = useQueryClient();
   const saveTitle = useMutation({
     mutationFn: async (nextTitle: string) => saveNoteTitle({ data: { noteId, title: nextTitle } }),
@@ -186,25 +204,40 @@ const NoteTitleInput = ({ noteId, title }: NoteTitleInputProps) => {
     saveTitle.mutate(nextTitle);
   }, TITLE_SAVE_DEBOUNCE_MS);
 
+  const setTitle = (nextTitle: string) => {
+    queryClient.setQueryData(noteQueries.byId(noteId).queryKey, (previous) =>
+      produce(previous, (draft) => {
+        if (!draft) return;
+
+        draft.title = nextTitle;
+      }),
+    );
+  };
+
+  useEffect(() => saveTitleDebounced.flush, [saveTitleDebounced]);
+
   return (
     <div className="shrink-0 px-6 pt-4">
-      <label className="sr-only" htmlFor="note-title">
+      <label className="sr-only" htmlFor={inputId}>
         <T>Note title</T>
       </label>
       <input
         className="w-full bg-transparent text-base font-medium outline-none placeholder:text-muted-foreground"
-        id="note-title"
+        id={inputId}
+        onBlur={() => {
+          if (title.trim().length > 0) return;
+
+          setTitle(gt("Untitled"));
+          saveTitleDebounced(gt("Untitled"));
+        }}
         onChange={(event) => {
           const nextTitle = event.target.value;
 
-          queryClient.setQueryData(noteQueries.byId(noteId).queryKey, (previous) =>
-            produce(previous, (draft) => {
-              if (!draft) return;
+          setTitle(nextTitle);
 
-              draft.title = nextTitle;
-            }),
-          );
-          saveTitleDebounced(nextTitle);
+          if (nextTitle.trim().length > 0) {
+            saveTitleDebounced(nextTitle);
+          }
         }}
         placeholder={gt("Untitled")}
         value={title}
@@ -214,25 +247,141 @@ const NoteTitleInput = ({ noteId, title }: NoteTitleInputProps) => {
 };
 
 const NotesEditorToolbar = () => (
-  <ScrollArea className="shrink-0 border-b border-foreground/3 dark:border-white/5">
-    <div className="flex w-max items-center gap-0.5 px-2 py-1">
-      <NoteHistoryButtons />
-      <NoteToolbarSeparator />
-      <NoteTurnIntoButton />
-      <NoteToolbarSeparator />
-      <NoteFontSizeButton />
-      <NoteToolbarSeparator />
-      <NoteMarkButtons />
-      <NoteLinkButton />
-      <NoteToolbarSeparator />
-      <NoteListButtons />
-      <NoteIndentButtons />
-      <NoteClearFormattingButton />
-    </div>
-  </ScrollArea>
+  <div className="@container/toolbar shrink-0 border-b border-foreground/3 dark:border-white/5">
+    <ScrollArea>
+      <div className="flex min-w-max items-center gap-0.5 px-2 py-1">
+        <NoteHistoryButtons />
+        <NoteToolbarSeparator />
+        <NoteTurnIntoButton />
+        <NoteToolbarSeparator />
+        <NoteFontSizeGroup />
+        <NoteToolbarSeparator />
+        <NoteMarkGroup />
+        <NoteToolbarSeparator />
+        <NoteListGroup />
+        <NoteToolbarSeparator />
+        <NoteIndentGroup />
+      </div>
+    </ScrollArea>
+  </div>
 );
 
-/** The scrolling viewport is the editor container, so Plate positions against what the reader sees. */
+const NoteMarkGroupButtons = () => (
+  <>
+    <NoteMarkButtons />
+    <NoteLinkButton />
+  </>
+);
+
+const NoteIndentGroupButtons = () => (
+  <>
+    <NoteIndentButtons />
+    <NoteClearFormattingButton />
+  </>
+);
+
+const NoteFontSizeGroup = () => {
+  const gt = useGT();
+
+  return (
+    <>
+      <div className="hidden @xl/toolbar:flex">
+        <NoteFontSizeButton />
+      </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          className="@xl/toolbar:hidden"
+          render={<Button size="icon-sm" variant="ghost" />}
+        >
+          <ALargeSmallIcon />
+          <span className="sr-only">{gt("Font size")}</span>
+        </DropdownMenuTrigger>
+        <NoteGroupMenuContent>
+          <NoteFontSizeButton />
+        </NoteGroupMenuContent>
+      </DropdownMenu>
+    </>
+  );
+};
+
+const NoteMarkGroup = () => {
+  const gt = useGT();
+
+  return (
+    <>
+      <div className="hidden items-center gap-0.5 @2xl/toolbar:flex">
+        <NoteMarkGroupButtons />
+      </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          className="@2xl/toolbar:hidden"
+          render={<Button size="icon-sm" variant="ghost" />}
+        >
+          <BoldIcon />
+          <span className="sr-only">{gt("Text formatting")}</span>
+        </DropdownMenuTrigger>
+        <NoteGroupMenuContent>
+          <NoteMarkGroupButtons />
+        </NoteGroupMenuContent>
+      </DropdownMenu>
+    </>
+  );
+};
+
+const NoteListGroup = () => {
+  const gt = useGT();
+
+  return (
+    <>
+      <div className="hidden items-center gap-0.5 @3xl/toolbar:flex">
+        <NoteListButtons />
+      </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          className="@3xl/toolbar:hidden"
+          render={<Button size="icon-sm" variant="ghost" />}
+        >
+          <ListIcon />
+          <span className="sr-only">{gt("Lists")}</span>
+        </DropdownMenuTrigger>
+        <NoteGroupMenuContent>
+          <NoteListButtons />
+        </NoteGroupMenuContent>
+      </DropdownMenu>
+    </>
+  );
+};
+
+const NoteIndentGroup = () => {
+  const gt = useGT();
+
+  return (
+    <>
+      <div className="hidden items-center gap-0.5 @min-[50rem]/toolbar:flex">
+        <NoteIndentGroupButtons />
+      </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          className="@min-[50rem]/toolbar:hidden"
+          render={<Button size="icon-sm" variant="ghost" />}
+        >
+          <IndentIcon />
+          <span className="sr-only">{gt("Indentation")}</span>
+        </DropdownMenuTrigger>
+        <NoteGroupMenuContent>
+          <NoteIndentGroupButtons />
+        </NoteGroupMenuContent>
+      </DropdownMenu>
+    </>
+  );
+};
+
+const NoteGroupMenuContent = ({ children }: PropsWithChildren) => (
+  <DropdownMenuContent className="w-auto min-w-0" finalFocus={false}>
+    {children}
+  </DropdownMenuContent>
+);
+
 const NotesEditorBody = () => {
   const gt = useGT();
   const containerRef = useEditorContainerRef();

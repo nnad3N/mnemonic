@@ -36,7 +36,10 @@ export const NotesPanel = ({ minSize, onClose, threadPanelRef, width }: NotesPan
   if (isMobile) {
     return (
       <Sheet onOpenChange={onClose} open>
-        <SheetContent className="w-80 p-0 sm:max-w-none [&>button]:hidden" side="right">
+        <SheetContent
+          className="p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-none [&>button]:hidden"
+          side="right"
+        >
           <SheetHeader className="sr-only">
             <SheetTitle>{gt("Notes")}</SheetTitle>
             <SheetDescription>{gt("Displays the note editor.")}</SheetDescription>

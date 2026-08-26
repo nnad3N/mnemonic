@@ -4,7 +4,7 @@ import { T, useGT } from "gt-tanstack-start";
 import { MinusIcon, PlusIcon } from "lucide-react";
 import { KEYS } from "platejs";
 import { useEditorPlugin, useEditorSelector } from "platejs/react";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
@@ -24,6 +24,7 @@ const fontSizes = ["10", "12", "14", "16", "18", "20", "24", "28", "32", "48"];
 export const NoteFontSizeButton = () => {
   const gt = useGT();
   const { editor, tf } = useEditorPlugin(FontSizePlugin);
+  const inputId = useId();
   const [draft, setDraft] = useState<string | null>(null);
   const selectionFontSize = useEditorSelector((editor) => {
     const mark = editor.api.marks()?.[KEYS.fontSize];
@@ -57,7 +58,7 @@ export const NoteFontSizeButton = () => {
       >
         <MinusIcon />
       </NoteToolbarButton>
-      <label className="sr-only" htmlFor="note-font-size">
+      <label className="sr-only" htmlFor={inputId}>
         <T>Font size</T>
       </label>
       <Popover open={draft !== null}>
@@ -67,7 +68,7 @@ export const NoteFontSizeButton = () => {
             <input
               className="h-7 w-10 rounded-lg bg-transparent text-center text-sm outline-none hover:bg-muted"
               data-plate-focus="true"
-              id="note-font-size"
+              id={inputId}
               onBlur={() => {
                 if (draft === null) return;
 
