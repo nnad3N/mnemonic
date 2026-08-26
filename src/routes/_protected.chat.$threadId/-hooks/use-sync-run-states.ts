@@ -58,7 +58,7 @@ export const useSyncRunStates = () => {
     };
 
     source.onmessage = (message: MessageEvent<string>) => {
-      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- `/api/run-events` writes this shape.
+      // oxlint-disable-next-line anti-slop/require-safety-comment-for-type-assertion, typescript/no-unsafe-type-assertion
       const event = JSON.parse(message.data) as ThreadRunEvent;
 
       queryClient.setQueryData(
@@ -82,6 +82,7 @@ export const useSyncRunStates = () => {
         params: { threadId: event.threadId },
       });
 
+      // oxlint-disable-next-line typescript/no-unnecessary-condition
       if (event.status === "aborted" || (event.status !== "running" && isOpen)) {
         dismissRun(event.threadId);
       }

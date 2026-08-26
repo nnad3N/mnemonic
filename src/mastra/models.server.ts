@@ -40,6 +40,7 @@ type AgentModel = {
   openrouter?: OpenRouterChatSettings;
 };
 
+// oxlint-disable-next-line anti-slop/no-known-value-widening
 const models: Record<ModelCapability, AgentModel> = {
   standard: {
     model: "openai/gpt-5.6-luna",
@@ -65,12 +66,11 @@ const models: Record<ModelCapability, AgentModel> = {
   },
 };
 
-/** Subagents run a tier below their parent. */
-const agentCapability: Record<ModelAgentId, Record<ModelCapability, ModelCapability>> = {
+const agentCapability = {
   [CONVERSATION_AGENT_ID]: { standard: "standard", balanced: "balanced", max: "max" },
   [TOPIC_AGENT_ID]: { standard: "standard", balanced: "balanced", max: "max" },
   [WORKER_AGENT_ID]: { standard: "standard", balanced: "standard", max: "balanced" },
-};
+} satisfies Record<ModelAgentId, Record<ModelCapability, ModelCapability>>;
 
 export const getAgentModelConfig = (agentId: ModelAgentId, capability: ModelCapability) =>
   models[agentCapability[agentId][capability]];

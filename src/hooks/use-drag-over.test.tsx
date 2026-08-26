@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { useDragOver } from "./use-drag-over";
 
 const createDragEvent = (): DragEvent =>
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- test stub only needs preventDefault.
+  // oxlint-disable-next-line anti-slop/no-chained-type-assertions, typescript/no-unsafe-type-assertion
   ({
     preventDefault: vi.fn<() => void>(),
   }) as unknown as DragEvent;

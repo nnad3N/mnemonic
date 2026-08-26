@@ -13,6 +13,7 @@ export type SafeId<Tag extends SafeIdTag> = string & {
 export const rawId = <Tag extends SafeIdTag>(value: SafeId<Tag>): string => value;
 
 export const toSafeId = <Tag extends SafeIdTag>(value: string): SafeId<Tag> =>
+  // SAFETY: there is no safety.
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion
   value as SafeId<Tag>;
 

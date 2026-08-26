@@ -20,6 +20,7 @@ type GetAttachmentInput = {
 
 type GetAttachmentCtx = Kits<[MemoryKit]>;
 
+// oxlint-disable-next-line anti-slop/no-unknown-parameters
 const getMessageAttachments = (metadata: unknown) => {
   const parsed = v.safeParse(userMessageMetadataSchema, metadata);
 

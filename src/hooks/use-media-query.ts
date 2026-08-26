@@ -1,3 +1,4 @@
+import { environmentManager } from "@tanstack/react-query";
 import { useCallback, useSyncExternalStore } from "react";
 
 const BREAKPOINTS = {
@@ -15,11 +16,13 @@ type Breakpoint = keyof typeof BREAKPOINTS;
 export type BreakpointQuery = Breakpoint | `max-${Breakpoint}` | `${Breakpoint}:max-${Breakpoint}`;
 
 const resolveMin = (value: Breakpoint | number): string => {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof
   const px = typeof value === "number" ? value : BREAKPOINTS[value];
   return `(min-width: ${px}px)`;
 };
 
 const resolveMax = (value: Breakpoint | number): string => {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof
   const px = typeof value === "number" ? value : BREAKPOINTS[value];
   return `(max-width: ${px - 1}px)`;
 };
@@ -27,6 +30,7 @@ const resolveMax = (value: Breakpoint | number): string => {
 const isBreakpointKey = (key: string): key is Breakpoint => key in BREAKPOINTS;
 
 export const parseQuery = (query: BreakpointQuery | MediaQueryInput | (string & {})): string => {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof
   if (typeof query !== "string") {
     const parts: string[] = [];
     if (query.min !== undefined) {
@@ -84,7 +88,7 @@ export const useMediaQuery = (
 
   const subscribe = useCallback(
     (onStoreChange: () => void) => {
-      if (typeof window === "undefined") {
+      if (environmentManager.isServer()) {
         return () => {
           /* empty */
         };
@@ -99,7 +103,7 @@ export const useMediaQuery = (
   );
 
   const getSnapshot = useCallback(() => {
-    if (typeof window === "undefined") {
+    if (environmentManager.isServer()) {
       return false;
     }
     return window.matchMedia(mediaQuery).matches;

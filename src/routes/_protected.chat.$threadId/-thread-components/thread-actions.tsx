@@ -265,6 +265,7 @@ export const ThreadContextMenu = ({
   return (
     <>
       <ContextMenu>
+        {/* oxlint-disable anti-slop/no-runtime-typeof */}
         {typeof render === "function" ? (
           <Link params={{ threadId }} to="/chat/$threadId">
             {({ isActive }) => (

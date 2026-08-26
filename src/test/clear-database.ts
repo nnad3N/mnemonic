@@ -25,10 +25,12 @@ export const clearDatabase = async () => {
 
     for (const row of tables.rows) {
       const name = row.name;
+      // oxlint-disable-next-line anti-slop/no-runtime-typeof
       if (typeof name !== "string") {
         continue;
       }
 
+      // oxlint-disable-next-line anti-slop/no-runtime-typeof
       const sql = typeof row.sql === "string" ? row.sql : "";
 
       if (isVectorTable(name, sql)) {

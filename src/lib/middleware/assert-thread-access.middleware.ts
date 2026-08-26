@@ -25,6 +25,7 @@ const threadAccessCtx = Kit.createContext(dbKit, memoryKit);
 
 export const threadAccessMiddleware = createMiddleware({ type: "function" })
   .middleware([authMiddleware])
+  // oxlint-disable-next-line anti-slop/require-safety-comment-for-type-assertion
   .validator((data: ThreadAccessInputSchema) => data as unknown)
   .server(async ({ context, data, next }) => {
     const { threadId } = v.parse(threadAccessInputSchema, data);
@@ -53,6 +54,7 @@ type TopicAccessInputSchema = v.InferOutput<typeof topicAccessInputSchema>;
 
 export const topicAccessMiddleware = createMiddleware({ type: "function" })
   .middleware([authMiddleware])
+  // oxlint-disable-next-line anti-slop/require-safety-comment-for-type-assertion
   .validator((data: TopicAccessInputSchema) => data as unknown)
   .server(async ({ context, data, next }) => {
     const { topicId } = v.parse(topicAccessInputSchema, data);
@@ -92,6 +94,7 @@ type FileAccessInputSchema = v.InferOutput<typeof fileAccessInputSchema>;
 
 export const fileAccessMiddleware = createMiddleware({ type: "function" })
   .middleware([authMiddleware])
+  // oxlint-disable-next-line anti-slop/require-safety-comment-for-type-assertion
   .validator((data: FileAccessInputSchema) => data as unknown)
   .server(async ({ context, data, next }) => {
     const { fileId } = v.parse(fileAccessInputSchema, data);

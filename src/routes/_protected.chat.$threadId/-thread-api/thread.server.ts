@@ -196,7 +196,7 @@ export const getThreadFn = Kit.gen(async function* (ctx: GetThreadCtx, input: Ge
     ),
   ]);
 
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+  // oxlint-disable-next-line anti-slop/require-safety-comment-for-type-assertion, typescript/no-unsafe-type-assertion
   const uiMessages = toAISdkMessages(messages, {
     version: "v6",
   }) as (ThreadUIMessage & TsrSerializable)[];
@@ -254,6 +254,7 @@ type CreateThreadTitleCtx = Kits<[MemoryKit]>;
 
 type CreateThreadTitleInput = {
   apiKey: string;
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type
   metadata: Record<string, unknown>;
   text: string;
   threadId: string;

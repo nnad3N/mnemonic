@@ -5,8 +5,10 @@ import { testAuthSession } from "./fixtures/session";
 
 // Auto-mock Zustand so `__mocks__/zustand.ts` resets stores after each test.
 // See https://zustand.docs.pmnd.rs/learn/guides/testing
+// oxlint-disable-next-line anti-slop/no-module-mocking
 vi.mock("zustand");
 
+// oxlint-disable-next-line anti-slop/no-module-mocking
 vi.mock("@/lib/better-auth/auth-client", () => ({
   authClient: {
     getSession: vi.fn<() => Promise<{ data: typeof testAuthSession; error: null }>>(async () =>

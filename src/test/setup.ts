@@ -23,6 +23,7 @@ Object.defineProperty(document, "compatMode", {
 
 // happy-dom has no Web Animations API. Base UI ScrollArea calls
 // `viewport.getAnimations({ subtree: true })` on a 0ms timeout after mount.
+// oxlint-disable-next-line anti-slop/no-runtime-typeof
 if (typeof Element.prototype.getAnimations !== "function") {
   Element.prototype.getAnimations = () => [];
 }

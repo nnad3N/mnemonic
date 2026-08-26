@@ -52,6 +52,6 @@ describe("searchDocs", () => {
   it("resolves search hits back to the members they came from", () => {
     const [first] = searchDocs({ name: "mathjs", query: "standard deviation", limit: 3 });
 
-    expect(first?.name).toBe("std");
+    expect(first.name).toBe("std");
   });
 });

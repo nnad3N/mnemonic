@@ -156,7 +156,7 @@ services:
         max-file: "3"
 
   firecrawl-api:
-    image: ghcr.io/firecrawl/firecrawl:latest
+    image: ghcr.io/firecrawl/firecrawl:2.11.234
     ports:
       - "4010:3002"
     networks:

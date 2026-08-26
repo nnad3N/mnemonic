@@ -48,9 +48,7 @@ const getInitials = (value: string): string => {
     return "?";
   }
 
-  const [firstPart, secondPart] = parts;
-
-  return `${firstPart.at(0) ?? ""}${secondPart?.at(0) ?? ""}`.toUpperCase();
+  return `${parts.at(0)?.at(0) ?? ""}${parts.at(1)?.at(0) ?? ""}`.toUpperCase();
 };
 
 type SidebarFooterSectionProps = {

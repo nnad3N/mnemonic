@@ -7,6 +7,7 @@ export type RouterContext = {
   user: User | undefined;
 };
 
+// oxlint-disable-next-line anti-slop/no-unknown-parameters
 const logCacheError = (error: unknown) => {
   console.error(error);
 };

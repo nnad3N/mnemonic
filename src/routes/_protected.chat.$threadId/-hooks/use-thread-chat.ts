@@ -47,6 +47,7 @@ export const threadQueries = {
           data: { threadId },
         });
 
+        // oxlint-disable-next-line anti-slop/require-safety-comment-for-type-assertion, typescript/no-unsafe-type-assertion
         const messages = data.messages as ThreadUIMessage[];
 
         const chat = new Chat({
@@ -102,7 +103,7 @@ export const resumeThreadStream = async (chat: Chat<ThreadUIMessage>) => {
   await chat.resumeStream();
 
   // Nothing to attach to: the run settled or died in between, and the server has the reply.
-  if (hadReply && chat.lastMessage?.role !== "assistant") {
+  if (hadReply && chat.lastMessage.role !== "assistant") {
     const data = await getThread({ data: { threadId: chat.id } });
     chat.messages = data.messages;
   }

@@ -9,7 +9,7 @@ import { ToolError } from "@/lib/errors/tool-error";
 import { ImageMimeType } from "@/lib/file-validation";
 import type { FetchedFile } from "@/lib/get-file.server";
 import { toFileText } from "@/lib/get-file.server";
-import { mentionKeyShape } from "@/lib/mention-key";
+import { mentionKeyFormat } from "@/lib/mention-key";
 import { runCode } from "@/lib/sandbox/run-code.server";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
 import { loadMentionedFile } from "@/mastra/tools/file-tool-helpers.server";
@@ -36,7 +36,7 @@ const argsSchema = v.optional(
   v.pipe(jsonValueSchema, v.description("Available to the code as `env.args`.")),
 );
 
-const sandboxFileShape = Object.keys({
+const sandboxFileFields = Object.keys({
   contents: true,
   filename: true,
   size: true,
@@ -62,7 +62,7 @@ const inputSchema = v.variant("mode", [
       v.string(),
       v.nonEmpty(),
       v.description(
-        `Mention key of the file, in the shape ${mentionKeyShape(["file", "attachment"])}. Loaded as \`env.file\` with ${sandboxFileShape}; \`contents\` is the extracted text, PDFs included; empty for images.`,
+        `Mention key of the file, in the shape ${mentionKeyFormat(["file", "attachment"])}. Loaded as \`env.file\` with ${sandboxFileFields}; \`contents\` is the extracted text, PDFs included; empty for images.`,
       ),
     ),
   }),

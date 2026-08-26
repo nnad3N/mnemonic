@@ -22,8 +22,9 @@ const createUncurried = <T>(stateCreator: ZustandExportedTypes.StateCreator<T>) 
 };
 
 // Support both `create(stateCreator)` and curried `create<T>()(stateCreator)`.
-// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- mirrors Zustand's published Vitest mock for create overloads
+// oxlint-disable-next-line anti-slop/require-safety-comment-for-type-assertion, typescript/no-unsafe-type-assertion
 export const create = (<T>(stateCreator: ZustandExportedTypes.StateCreator<T>) =>
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof
   typeof stateCreator === "function"
     ? createUncurried(stateCreator)
     : createUncurried) as typeof ZustandExportedTypes.create;
@@ -39,8 +40,9 @@ const createStoreUncurried = <T>(stateCreator: ZustandExportedTypes.StateCreator
   return store;
 };
 
-// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- mirrors Zustand's published Vitest mock for createStore overloads
+// oxlint-disable-next-line anti-slop/require-safety-comment-for-type-assertion, typescript/no-unsafe-type-assertion
 export const createStore = (<T>(stateCreator: ZustandExportedTypes.StateCreator<T>) =>
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof
   typeof stateCreator === "function"
     ? createStoreUncurried(stateCreator)
     : createStoreUncurried) as typeof ZustandExportedTypes.createStore;

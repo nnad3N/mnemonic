@@ -40,7 +40,9 @@ export const SidebarThreadSearch = () => {
       to: ".",
     });
 
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof
   const customRange = typeof range === "object" ? range : undefined;
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof
   const rangeValue = typeof range === "string" ? range : customRange ? "custom" : "all";
 
   const toggleRange = async (preset: RangePreset, checked: boolean) => {

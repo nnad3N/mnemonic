@@ -65,6 +65,12 @@ export const hasComposerContent = (editor: PlateEditor, node: Descendant): boole
 export const useIsComposerEmpty = (editorId?: string): boolean =>
   useEditorSelector(
     (plate) => {
+      // useEditorSelector types `editor` as always defined, but under
+      // PlateController with no mounted Plate for this id, the fallback store
+      // has no editor set. useEditorRef coalesces with createPlateFallbackEditor();
+      // useEditorSelector does not — it passes the raw store value, which can be
+      // undefined until a real editor mounts.
+      // oxlint-disable-next-line typescript/no-unnecessary-condition
       if (plate === undefined || plate.meta.isFallback) {
         return true;
       }
@@ -95,7 +101,7 @@ export const getComposerAttachments = async (
   const draftFiles: File[] = [];
 
   for (const attachment of storedAttachments.get(threadId) ?? []) {
-    if (attachment.location === location && attachment.status === "draft") {
+    if (attachment.status === "draft" && attachment.location === location) {
       draftFiles.push(attachment.file);
       attachments.push({
         filename: attachment.filename,

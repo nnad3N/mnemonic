@@ -1,3 +1,4 @@
+import { environmentManager } from "@tanstack/react-query";
 import { panic, Result } from "better-result";
 import type { Result as ResultType } from "better-result";
 
@@ -9,7 +10,7 @@ type SetOptions = {
 };
 
 const assertBrowser = () => {
-  if (typeof document === "undefined") {
+  if (environmentManager.isServer()) {
     panic("Cookies are only available in the browser");
   }
 };

@@ -14,24 +14,27 @@ const THREAD_ID = "thread-attachment-test";
 const createUserMessage = (input: {
   attachments?: Array<{ filename: string; mediaType: string; sha256: string }>;
   parts: MastraDBMessage["content"]["parts"];
-}): MastraDBMessage => ({
-  id: "message-1",
-  role: "user",
-  createdAt: new Date("2026-01-01T00:00:00.000Z"),
-  threadId: THREAD_ID,
-  content: {
+}): MastraDBMessage => {
+  const content: MastraDBMessage["content"] = {
     format: 2,
     parts: input.parts,
-    ...(input.attachments === undefined
-      ? {}
-      : {
-          metadata: {
-            type: "user",
-            attachments: input.attachments,
-          },
-        }),
-  },
-});
+  };
+
+  if (input.attachments !== undefined) {
+    content.metadata = {
+      type: "user",
+      attachments: input.attachments,
+    };
+  }
+
+  return {
+    id: "message-1",
+    role: "user",
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    threadId: THREAD_ID,
+    content,
+  };
+};
 
 const createMemoryCtx = (messages: MastraDBMessage[]) =>
   Kit.createContext(

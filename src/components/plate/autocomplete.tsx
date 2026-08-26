@@ -17,7 +17,7 @@ type AutocompleteContextValue = {
 };
 
 const AutocompleteContext = React.createContext<AutocompleteContextValue>(
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+  // oxlint-disable-next-line anti-slop/no-chained-type-assertions, anti-slop/require-safety-comment-for-type-assertion, typescript/no-unsafe-type-assertion
   null as unknown as AutocompleteContextValue,
 );
 
@@ -147,7 +147,7 @@ const AutocompleteInput = ({
 
       <span className="relative min-h-lh">
         <span className="invisible overflow-hidden text-nowrap" aria-hidden="true">
-          {value ?? "\u200B"}
+          {value}
         </span>
 
         <AutocompletePrimitive.Input
@@ -159,7 +159,7 @@ const AutocompleteInput = ({
           {...props}
           onKeyDown={(e) => {
             onKeyDown?.(e);
-            inputProps.onKeyDown?.(e);
+            inputProps.onKeyDown(e);
 
             if (
               e.defaultPrevented ||

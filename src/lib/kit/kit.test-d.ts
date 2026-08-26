@@ -94,6 +94,7 @@ test("Kit.literals narrows an unknown to the literal union", () => {
 
   expectTypeOf(status.values).toEqualTypeOf<readonly ["pending", "done"]>();
 
+  // oxlint-disable-next-line anti-slop/no-known-value-widening
   const value: unknown = "done";
 
   if (status.is(value)) {

@@ -15,7 +15,7 @@ export const Route = createFileRoute("/api/run-events")({
       GET: ({ context }) => {
         const encoder = new TextEncoder();
         let heartbeat: NodeJS.Timeout | undefined;
-        let unsubscribe: (() => Promise<unknown>) | undefined;
+        let unsubscribe: (() => Promise<void>) | undefined;
 
         const stream = new ReadableStream({
           start: async (controller) => {
@@ -32,7 +32,9 @@ export const Route = createFileRoute("/api/run-events")({
               return;
             }
 
-            unsubscribe = subscribed.value;
+            unsubscribe = async () => {
+              await subscribed.value();
+            };
             heartbeat = setInterval(() => {
               controller.enqueue(encoder.encode(": ping\n\n"));
             }, HEARTBEAT_MS);

@@ -1,3 +1,4 @@
+import { environmentManager } from "@tanstack/react-query";
 import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { useMediaQuery } from "@/hooks/use-media-query";
@@ -26,7 +27,7 @@ const emit = (): void => {
 
 // Chrome fires this once per page load and only while the app is not installed; capturing it at
 // module scope rather than on subscribe means an early fire is not lost before the menu mounts.
-if (typeof window !== "undefined") {
+if (!environmentManager.isServer()) {
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
     deferredPrompt = event;
@@ -77,6 +78,7 @@ export const useInstallPrompt = (): UseInstallPrompt => {
   useEffect(() => {
     // Safari never fires beforeinstallprompt. Its non-standard `navigator.standalone` marks the
     // platforms where installing is a manual Share-sheet step instead.
+    // oxlint-disable-next-line react/set-state-in-effect -- sync once from non-reactive navigator.standalone.
     setIsManualInstallPlatform("standalone" in navigator);
   }, []);
 
