@@ -80,7 +80,7 @@
     "clsx": "^2.1.1",
     "drizzle-kit": "1.0.0-rc.4-5d5b77c",
     "drizzle-orm": "1.0.0-rc.4-5d5b77c",
-    "firecrawl": "^4.32.0",
+    "firecrawl": "^4.35.0",
     "gt-react": "^11.1.5",
     "gt-tanstack-start": "^11.1.5",
     "immer": "^11.1.16",

@@ -8,18 +8,10 @@ import { ToolError } from "@/lib/errors/tool-error";
 import { firecrawl } from "@/mastra/tools/firecrawl-client.server";
 import { toToolInputSchema } from "@/mastra/tools/tool-input-schema.server";
 
-const DEFAULT_SEARCH_LIMIT = 10;
+const SEARCH_LIMIT = 5;
 
 const inputSchema = v.object({
   query: v.pipe(v.string(), v.nonEmpty()),
-  limit: v.optional(
-    v.pipe(
-      v.number(),
-      v.minValue(1),
-      v.maxValue(25),
-      v.description(`Defaults to ${DEFAULT_SEARCH_LIMIT}.`),
-    ),
-  ),
 });
 
 const searchResultSchema = v.object({
@@ -54,8 +46,10 @@ export const webSearchTool = createTool({
   inputSchema: toToolInputSchema(inputSchema),
   outputSchema: toStandardJsonSchema(outputSchema),
   description: "Searches the live web; results include the search engine's description snippet.",
-  execute: async ({ query, limit = DEFAULT_SEARCH_LIMIT }) => {
-    const searchResult = await Result.tryPromise(async () => firecrawl.search(query, { limit }));
+  execute: async ({ query }) => {
+    const searchResult = await Result.tryPromise(async () =>
+      firecrawl.search(query, { limit: SEARCH_LIMIT }),
+    );
 
     if (Result.isError(searchResult)) {
       throw new ToolError({
