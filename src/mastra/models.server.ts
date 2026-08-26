@@ -40,7 +40,8 @@ type AgentModel = {
   openrouter?: OpenRouterChatSettings;
 };
 
-const models = {
+// oxlint-disable-next-line anti-slop/no-known-value-widening
+const models: Record<ModelCapability, AgentModel> = {
   standard: {
     model: "openai/gpt-5.6-luna",
     openrouter: {
@@ -63,7 +64,7 @@ const models = {
   max: {
     model: "moonshotai/kimi-k3",
   },
-} satisfies Record<ModelCapability, AgentModel>;
+};
 
 const agentCapability = {
   [CONVERSATION_AGENT_ID]: { standard: "standard", balanced: "balanced", max: "max" },

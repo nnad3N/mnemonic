@@ -103,7 +103,7 @@ const useAuthSessionQuery = (): void => {
   useSuspenseQuery(authQueries.session());
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { data, error, isPending, isRefetching } = authClient.useSession();
+  const { data, isPending, isRefetching } = authClient.useSession();
 
   useEffect(() => {
     if (isPending || isRefetching) return;
@@ -120,7 +120,7 @@ const useAuthSessionQuery = (): void => {
 
     queryClient.setQueryData(authQueries.session().queryKey, { data, error: null });
     void router.invalidate();
-  }, [data, error, isPending, isRefetching, queryClient, router]);
+  }, [data, isPending, isRefetching, queryClient, router]);
 };
 
 const OFFLINE_CACHE = "mnemonic-offline";
