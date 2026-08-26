@@ -1,17 +1,29 @@
 import { isOrderedList, toggleList, toggleListByPathUnSet } from "@platejs/list";
-import type { Descendant } from "platejs";
+import type { Descendant, TElement } from "platejs";
 import { ElementApi, KEYS } from "platejs";
 import type { PlateEditor } from "platejs/react";
+import * as v from "valibot";
 
 const listStyleTypes: string[] = [KEYS.ul, KEYS.ol, KEYS.listTodo];
 
+const listPropsSchema = v.object({
+  listStart: v.fallback(v.optional(v.number()), undefined),
+  listStyleType: v.fallback(v.optional(v.string()), undefined),
+});
+
+export const getListProps = (element: TElement) => v.parse(listPropsSchema, element);
+
 export const getBlockType = (block: Descendant) => {
-  if (!ElementApi.isElement(block)) return KEYS.p;
+  if (!ElementApi.isElement(block)) {
+    return KEYS.p;
+  }
 
-  const listStyleType = block.listStyleType;
+  const { listStyleType } = getListProps(block);
 
-  if (typeof listStyleType === "string") {
-    if (listStyleType === KEYS.listTodo) return KEYS.listTodo;
+  if (listStyleType) {
+    if (listStyleType === KEYS.listTodo) {
+      return KEYS.listTodo;
+    }
 
     return isOrderedList(block) ? KEYS.ol : KEYS.ul;
   }
@@ -27,7 +39,7 @@ export const setBlockType = (editor: PlateEditor, type: string) => {
     }
 
     for (const entry of editor.api.blocks({ mode: "lowest" })) {
-      if (typeof entry[0].listStyleType === "string") {
+      if (getListProps(entry[0]).listStyleType) {
         toggleListByPathUnSet(editor, entry);
       }
 

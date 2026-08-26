@@ -1,4 +1,4 @@
-import { queryOptions } from "@tanstack/react-query";
+import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { matchError } from "better-result";
 import * as v from "valibot";
@@ -12,11 +12,13 @@ import {
   noteAccessMiddleware,
   threadAccessMiddleware,
 } from "@/lib/middleware/assert-thread-access.middleware";
+import { authMiddleware } from "@/lib/middleware/auth.middleware";
 
 import {
   createNoteFn,
   deleteNoteFn,
   getNoteFn,
+  listNotesFn,
   saveNoteBodyFn,
   saveNoteTitleFn,
   addNoteToTopicFn,
@@ -24,6 +26,14 @@ import {
 
 export const noteQueries = {
   all: () => ["notes"] as const,
+  list: ({ page, pageSize, scope, search }: ListNotesParams) =>
+    queryOptions({
+      placeholderData: keepPreviousData,
+      queryFn: async () => listNotes({ data: { page, pageSize, scope, search } }),
+      queryKey: [...noteQueries.byScope(scope), { page, pageSize, search }] as const,
+    }),
+  byScope: (scope: ListNotesParams["scope"]) =>
+    [...noteQueries.all(), "list", scope.type, scope.id] as const,
   byId: (noteId: string) =>
     queryOptions({
       queryFn: async () => getNote({ data: { noteId } }),
@@ -33,10 +43,43 @@ export const noteQueries = {
 
 const noteCtx = Kit.createContext(dbKit);
 const addNoteToTopicCtx = Kit.createContext(dbKit, memoryKit);
+const listNotesCtx = Kit.createContext(dbKit, memoryKit);
 
 const noteInputSchema = v.object({
   noteId: v.pipe(v.string(), v.nanoid()),
 });
+
+const listNotesInputSchema = v.object({
+  page: v.pipe(v.number(), v.integer(), v.minValue(1)),
+  pageSize: v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100)),
+  scope: v.variant("type", [
+    v.object({ id: v.pipe(v.string(), v.nanoid()), type: v.literal("thread") }),
+    v.object({ id: v.pipe(v.string(), v.nanoid()), type: v.literal("topic") }),
+  ]),
+  search: v.optional(v.string(), ""),
+});
+
+export type ListNotesParams = v.InferOutput<typeof listNotesInputSchema>;
+
+export const listNotes = createServerFn({ method: "GET" })
+  .validator(listNotesInputSchema)
+  .middleware([authMiddleware])
+  .handler(async ({ context, data }) =>
+    Kit.run(async () =>
+      listNotesFn(listNotesCtx, {
+        page: data.page,
+        pageSize: data.pageSize,
+        scope: data.scope,
+        search: data.search,
+        userId: context.user.id,
+      }),
+    ).throws<ServerFnError>((error) =>
+      matchError(error, {
+        DatabaseError: () => toServerFnError.serverError("Failed to list notes"),
+        MemoryError: () => toServerFnError.serverError("Failed to list notes"),
+      }),
+    ),
+  );
 
 export const getNote = createServerFn({ method: "GET" })
   .validator(noteInputSchema)

@@ -7,6 +7,8 @@ import { PlateElement, useReadOnly } from "platejs/react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
+import { getListProps } from "./block-type";
+
 export const NoteBlockquoteElement = (props: PlateElementProps) => (
   <PlateElement as="blockquote" {...props} />
 );
@@ -35,22 +37,18 @@ export const NoteLinkElement = (props: PlateElementProps) => (
 );
 
 export const NoteBlockList: RenderNodeWrapper = (props) => {
-  if (typeof props.element.listStyleType !== "string") return;
+  if (!getListProps(props.element).listStyleType) return;
 
   return (listProps) => <NoteList {...listProps} />;
 };
 
 const NoteList = (props: PlateElementProps) => {
-  const { listStart, listStyleType } = props.element;
+  const { listStart, listStyleType } = getListProps(props.element);
   const List = isOrderedList(props.element) ? "ol" : "ul";
   const isTodo = listStyleType === KEYS.listTodo;
 
   return (
-    <List
-      className="relative m-0 p-0"
-      start={typeof listStart === "number" ? listStart : undefined}
-      style={{ listStyleType: typeof listStyleType === "string" ? listStyleType : undefined }}
-    >
+    <List className="relative m-0 p-0" start={listStart} style={{ listStyleType }}>
       {isTodo ? (
         <>
           <NoteTodoMarker {...props} />

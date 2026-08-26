@@ -75,8 +75,9 @@ agent memory, which the user never sees.
 
 ## Frontend outline
 
-- Two tables, like the files table: notes in a topic and notes in a thread, each
-  behind its own endpoint.
+- Two tables, like the files table: notes in a topic and notes in a thread, both
+  reading one `listNotes` that takes the scope as a union. Rows carry the title,
+  who wrote last and when, with view, add to topic and delete in a row menu.
 - The right-hand panel holds the editor: tabs for the open notes, a toolbar, a
   title and the body. Which notes are open lives in the URL, separately from
   whether the panel is open.
@@ -112,11 +113,11 @@ Backend:
       content, so an agent can create and write notes
 - [ ] Agent tools: read, write, search — wired per agent as above
 - [ ] Note search: FTS5 over note content, scoped
-- [ ] List endpoints for a topic's notes and a thread's notes
+- [x] `listNotes` over a thread or topic scope, with search and pagination
 
 Frontend:
 
-- [ ] Notes table for a topic and for a thread
+- [x] Notes table for a topic and for a thread
 - [ ] Version `updatedAt` and per-run version bookkeeping on `thread_run`
 - [ ] Timeline endpoint: entries with word counts relative to a selected version
 - [ ] Timeline panel with author labels, indicators and collapsed agent blocks

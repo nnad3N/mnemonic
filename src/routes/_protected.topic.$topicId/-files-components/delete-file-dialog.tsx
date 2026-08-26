@@ -40,10 +40,10 @@ export const DeleteFileDialog = ({ file, onOpenChange, open, topicId }: DeleteFi
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: fileQueries.lists(topicId),
+          queryKey: fileQueries.byTopic(topicId),
         }),
         queryClient.invalidateQueries({
-          queryKey: mentionQueries.lists(topicId),
+          queryKey: mentionQueries.byResource(topicId),
         }),
       ]);
       onOpenChange(false);

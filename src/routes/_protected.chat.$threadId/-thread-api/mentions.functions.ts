@@ -55,10 +55,10 @@ type GetMentionByIdParams = {
 
 export const mentionQueries = {
   all: () => ["mention"] as const,
-  lists: (resourceId: string) => [...mentionQueries.all(), "list", resourceId] as const,
+  byResource: (resourceId: string) => [...mentionQueries.all(), "list", resourceId] as const,
   list: ({ resourceId, query = "" }: MentionsQueryParams) =>
     queryOptions({
-      queryKey: [...mentionQueries.lists(resourceId), { query }] as const,
+      queryKey: [...mentionQueries.byResource(resourceId), { query }] as const,
       queryFn: async () =>
         getMentions({
           data: { query, resourceId },

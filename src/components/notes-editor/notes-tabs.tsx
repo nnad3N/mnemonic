@@ -87,10 +87,10 @@ export const NotesTabs = ({ onClose, threadId }: NotesTabsProps) => {
     onSuccess: async (created) => openNote(created.id),
   });
 
-  const addToTopic = useMutation({
+  const moveToTopic = useMutation({
     mutationFn: async (noteId: string) => addNoteToTopic({ data: { noteId } }),
     onError: () => {
-      toast.error(gt("Failed to add the note to the topic"));
+      toast.error(gt("Failed to move the note to the topic"));
     },
     onSuccess: async (added) =>
       queryClient.invalidateQueries({ queryKey: noteQueries.byId(added.id).queryKey }),
@@ -152,15 +152,15 @@ export const NotesTabs = ({ onClose, threadId }: NotesTabsProps) => {
           {!isInTopic && (
             <DropdownMenuItem
               className="whitespace-nowrap"
-              disabled={!activeNoteId || !topicId || addToTopic.isPending}
+              disabled={!activeNoteId || !topicId || moveToTopic.isPending}
               onClick={() => {
                 if (!activeNoteId) return;
 
-                addToTopic.mutate(activeNoteId);
+                moveToTopic.mutate(activeNoteId);
               }}
             >
               <FolderPlusIcon />
-              <T>Add to topic</T>
+              <T>Move to topic</T>
             </DropdownMenuItem>
           )}
           <DropdownMenuItem

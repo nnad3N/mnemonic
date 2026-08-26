@@ -1,18 +1,22 @@
-import { Result } from "better-result";
-import { and, eq, isNotNull } from "drizzle-orm";
+import { matchError, Result } from "better-result";
+import type { Result as ResultType } from "better-result";
+import { and, eq, isNotNull, sql } from "drizzle-orm";
 
 import { note, noteVersion } from "@/db/schema.server";
-import type { DbKit } from "@/lib/db-kit.server";
+import type { NoteVersionAuthor } from "@/db/schema.server";
+import { ilike } from "@/db/sql.server";
+import type { DatabaseError, DbKit } from "@/lib/db-kit.server";
 import { toServerFnError } from "@/lib/errors/server-fn-error";
 import { hashText } from "@/lib/hash";
 import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
-import type { MemoryKit } from "@/lib/memory-kit.server";
+import type { MemoryError, MemoryKit } from "@/lib/memory-kit.server";
 import { resolveThread } from "@/lib/middleware/resolve-thread.server";
-import { createSafeId } from "@/lib/safe-id";
+import { createSafeId, toSafeId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
 
 type NoteCtx = Kits<[DbKit]>;
+type ListNotesCtx = Kits<[DbKit, MemoryKit]>;
 type AddNoteToTopicCtx = Kits<[DbKit, MemoryKit]>;
 
 type NoteIdInput = {
@@ -74,6 +78,102 @@ export const createNoteFn = Kit.gen(async function* (ctx: NoteCtx, input: Create
   });
 
   return Result.ok({ id });
+});
+
+type ListNotesInput = {
+  page: number;
+  pageSize: number;
+  scope: NoteScope;
+  search: string;
+  userId: SafeId<"user">;
+};
+
+export type NoteScope = { id: string; type: "thread" } | { id: string; type: "topic" };
+
+export type NoteListItem = {
+  id: SafeId<"note">;
+  lastAuthor: NoteVersionAuthor;
+  title: string;
+  updatedAt: Date;
+};
+
+export const listNotesFn = Kit.gen(async function* (ctx: ListNotesCtx, input: ListNotesInput) {
+  const trimmedSearch = input.search.trim();
+
+  const scopedToUser = (table: typeof note) => {
+    const conditions = [
+      eq(table.userId, input.userId),
+      input.scope.type === "thread"
+        ? eq(table.threadId, input.scope.id)
+        : // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with the userId filter.
+          eq(table.topicId, toSafeId<"topic">(input.scope.id)),
+    ];
+
+    if (trimmedSearch.length > 0) {
+      conditions.push(ilike(table.title, trimmedSearch));
+    }
+
+    return sql.join(conditions, sql` and `);
+  };
+
+  const checkCanMoveToTopic = async (): Promise<
+    ResultType<boolean, DatabaseError | MemoryError>
+  > => {
+    if (input.scope.type === "topic") {
+      return Result.ok(false);
+    }
+
+    const thread = await resolveThread(ctx, {
+      threadId: input.scope.id,
+      userId: input.userId,
+    });
+
+    if (Result.isError(thread)) {
+      return matchError(thread.error, {
+        DatabaseError: (failure) => Result.err(failure),
+        MemoryError: (failure) => Result.err(failure),
+        ThreadNotFoundError: () => Result.ok(false),
+      });
+    }
+
+    return Result.ok(thread.value.topicId !== undefined);
+  };
+
+  const [{ notes, totalCount }, canMoveToTopic] = yield* await Kit.promiseAll([
+    ctx.db.run(async (db) => {
+      const [rows, total] = await Promise.all([
+        db.query.note.findMany({
+          columns: { id: true, title: true, updatedAt: true },
+          limit: input.pageSize,
+          offset: (input.page - 1) * input.pageSize,
+          orderBy: { updatedAt: "desc" },
+          where: { RAW: (table) => scopedToUser(table) },
+          with: {
+            versions: {
+              columns: { author: true },
+              limit: 1,
+              orderBy: { seq: "desc" },
+            },
+          },
+        }),
+        db.$count(note, scopedToUser(note)),
+      ]);
+
+      return { notes: rows, totalCount: total };
+    }),
+    checkCanMoveToTopic(),
+  ]);
+
+  return Result.ok({
+    items: notes.map((listed) => ({
+      id: listed.id,
+      lastAuthor: listed.versions.at(0)?.author ?? "user",
+      title: listed.title,
+      updatedAt: listed.updatedAt,
+    })),
+    canMoveToTopic,
+    totalCount,
+  });
 });
 
 export const getNoteFn = Kit.gen(async function* (ctx: NoteCtx, input: NoteIdInput) {

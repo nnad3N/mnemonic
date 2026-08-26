@@ -3,7 +3,7 @@ import { Link, useMatch, useNavigate, useSearch } from "@tanstack/react-router";
 import { T } from "gt-tanstack-start";
 import { produce } from "immer";
 import { PanelRightIcon } from "lucide-react";
-import type { PropsWithChildren } from "react";
+import type { PropsWithChildren, ReactNode } from "react";
 
 import {
   Breadcrumb,
@@ -24,6 +24,8 @@ export const AppHeader = () => {
   const chat = useMatch({ from: "/_protected/chat/$threadId", shouldThrow: false });
   const settings = useMatch({ from: "/_protected/settings", shouldThrow: false });
   const topicFiles = useMatch({ from: "/_protected/topic/$topicId/files", shouldThrow: false });
+  const topicNotes = useMatch({ from: "/_protected/topic/$topicId/notes", shouldThrow: false });
+  const threadNotes = useMatch({ from: "/_protected/chat/$threadId_/notes", shouldThrow: false });
   const admin = useMatch({ from: "/_protected/settings_/admin/", shouldThrow: false });
   const adminUserByok = useMatch({
     from: "/_protected/settings_/admin/$userId/byok",
@@ -57,7 +59,9 @@ export const AppHeader = () => {
         </Crumbs>
       )}
       {adminUserByok && <AdminByokCrumbs userId={adminUserByok.params.userId} />}
-      {topicFiles && <TopicFilesCrumbs topicId={topicFiles.params.topicId} />}
+      {topicFiles && <TopicCrumbs page={<T>Files</T>} topicId={topicFiles.params.topicId} />}
+      {topicNotes && <TopicCrumbs page={<T>Notes</T>} topicId={topicNotes.params.topicId} />}
+      {threadNotes && <ThreadHeader page={<T>Notes</T>} threadId={threadNotes.params.threadId} />}
       <NotesTrigger />
     </header>
   );
@@ -92,11 +96,12 @@ const NotesTrigger = () => {
   );
 };
 
-type TopicFilesCrumbsProps = {
+type TopicCrumbsProps = {
+  page: ReactNode;
   topicId: string;
 };
 
-const TopicFilesCrumbs = ({ topicId }: TopicFilesCrumbsProps) => {
+const TopicCrumbs = ({ page, topicId }: TopicCrumbsProps) => {
   const topic = useQuery({
     ...sidebarQueries.topics(),
     select: (listed) => listed.find((topic) => topic.id === topicId),
@@ -118,9 +123,7 @@ const TopicFilesCrumbs = ({ topicId }: TopicFilesCrumbsProps) => {
           </>
         )}
         <BreadcrumbItem className="min-w-0">
-          <BreadcrumbPage className="px-1.5 max-md:truncate">
-            <T>Files</T>
-          </BreadcrumbPage>
+          <BreadcrumbPage className="px-1.5 max-md:truncate">{page}</BreadcrumbPage>
         </BreadcrumbItem>
       </BreadcrumbList>
     </Breadcrumb>

@@ -30,7 +30,7 @@ export const useUploadFile = (threadId: string) => {
           queryKey: mentionQueries.byId({ type: "file", id: fileId }).queryKey,
         }),
         queryClient.invalidateQueries({
-          queryKey: mentionQueries.lists(topicId),
+          queryKey: mentionQueries.byResource(topicId),
         }),
       ]);
     },

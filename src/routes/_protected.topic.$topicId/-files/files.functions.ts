@@ -185,14 +185,14 @@ export type FilesQueryParams = {
 
 export const fileQueries = {
   all: () => ["file"] as const,
-  lists: (topicId: string) => [...fileQueries.all(), "list", topicId] as const,
+  byTopic: (topicId: string) => [...fileQueries.all(), "list", topicId] as const,
   list: ({ page, pageSize, search, topicId }: FilesQueryParams) =>
     queryOptions({
       queryFn: async () =>
         listFiles({
           data: { page, pageSize, search, topicId },
         }),
-      queryKey: [...fileQueries.lists(topicId), { page, pageSize, search }] as const,
+      queryKey: [...fileQueries.byTopic(topicId), { page, pageSize, search }] as const,
       placeholderData: keepPreviousData,
     }),
   pending: (topicId: string) =>

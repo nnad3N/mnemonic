@@ -175,7 +175,7 @@ const RenameFileField = ({ file, stopRenaming, topicId }: RenameFileFieldProps) 
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: fileQueries.lists(topicId),
+        queryKey: fileQueries.byTopic(topicId),
       });
       stopRenaming();
     },

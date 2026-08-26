@@ -12,10 +12,21 @@ import { NoteToolbarButton } from "./toolbar-buttons";
 
 const DEFAULT_FONT_SIZE = "14";
 
-const headingFontSizes: Record<string, string> = {
-  [KEYS.h1]: "24",
-  [KEYS.h2]: "18",
-  [KEYS.h3]: "16",
+const headingFontSize = (blockType: string) => {
+  switch (blockType) {
+    case KEYS.h1: {
+      return "24";
+    }
+    case KEYS.h2: {
+      return "18";
+    }
+    case KEYS.h3: {
+      return "16";
+    }
+    default: {
+      return DEFAULT_FONT_SIZE;
+    }
+  }
 };
 
 const fontSizes = ["10", "12", "14", "16", "18", "20", "24", "28", "32", "48"];
@@ -28,13 +39,16 @@ export const NoteFontSizeButton = () => {
   const selectionFontSize = useEditorSelector((editor) => {
     const mark = editor.api.marks()?.[KEYS.fontSize];
 
-    if (typeof mark === "string") return toUnitLess(mark);
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof
+    if (typeof mark === "string") {
+      return toUnitLess(mark);
+    }
 
     const block = editor.api.block();
 
     if (!block) return DEFAULT_FONT_SIZE;
 
-    return headingFontSizes[block[0].type] ?? DEFAULT_FONT_SIZE;
+    return headingFontSize(block[0].type);
   }, []);
   const value = draft ?? selectionFontSize;
 

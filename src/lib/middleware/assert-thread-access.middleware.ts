@@ -142,6 +142,7 @@ type NoteAccessInputSchema = v.InferOutput<typeof noteAccessInputSchema>;
 
 export const noteAccessMiddleware = createMiddleware({ type: "function" })
   .middleware([authMiddleware])
+  // oxlint-disable-next-line anti-slop/require-safety-comment-for-type-assertion
   .validator((data: NoteAccessInputSchema) => data as unknown)
   .server(async ({ context, data, next }) => {
     const { noteId } = v.parse(noteAccessInputSchema, data);

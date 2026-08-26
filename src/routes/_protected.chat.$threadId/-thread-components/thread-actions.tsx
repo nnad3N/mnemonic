@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { T, useGT } from "gt-tanstack-start";
 import { produce } from "immer";
-import { PencilIcon, Trash2Icon } from "lucide-react";
+import { FileIcon, PencilIcon, Trash2Icon } from "lucide-react";
 import { useState } from "react";
 import type { ReactElement, ReactNode } from "react";
 import { toast } from "sonner";
@@ -287,6 +287,10 @@ export const ThreadContextMenu = ({
           >
             <PencilIcon />
             <T>Rename</T>
+          </ContextMenuItem>
+          <ContextMenuItem render={<Link params={{ threadId }} to="/chat/$threadId/notes" />}>
+            <FileIcon />
+            <T>Notes</T>
           </ContextMenuItem>
           <ContextMenuItem
             onClick={() => {

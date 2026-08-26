@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useSearch } from "@tanstack/react-router";
 import { panic } from "better-result";
 import { T } from "gt-tanstack-start";
-import { FileIcon, PencilIcon, Trash2Icon } from "lucide-react";
+import { FileIcon, FileTextIcon, PencilIcon, Trash2Icon } from "lucide-react";
+import type { ReactNode } from "react";
 import { useState } from "react";
 
 import {
@@ -10,6 +11,7 @@ import {
   BreadcrumbItem,
   BreadcrumbLink,
   BreadcrumbList,
+  BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import {
@@ -24,10 +26,11 @@ import { sidebarQueries } from "@/routes/-sidebar/sidebar.functions";
 import { DeleteTopicDialog, RenameTopicField, ThreadContextMenu } from "./thread-actions";
 
 type ThreadHeaderProps = {
+  page?: ReactNode;
   threadId: string;
 };
 
-export const ThreadHeader = ({ threadId }: ThreadHeaderProps) => {
+export const ThreadHeader = ({ page, threadId }: ThreadHeaderProps) => {
   const topicId = useSearch({
     from: "/_protected",
     select: (search) => search.topic,
@@ -62,6 +65,14 @@ export const ThreadHeader = ({ threadId }: ThreadHeaderProps) => {
           <BreadcrumbItem className="min-w-0 shrink">
             <ThreadCrumb threadId={threadId} title={thread.data} />
           </BreadcrumbItem>
+        )}
+        {page !== undefined && (
+          <>
+            <BreadcrumbSeparator className="shrink-0" />
+            <BreadcrumbItem className="min-w-0">
+              <BreadcrumbPage className="px-1.5 max-md:truncate">{page}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </>
         )}
       </BreadcrumbList>
     </Breadcrumb>
@@ -115,6 +126,10 @@ const TopicCrumb = ({ title, topicId }: TopicCrumbProps) => {
             <FileIcon />
             <T>Files</T>
           </ContextMenuItem>
+          <ContextMenuItem render={<Link params={{ topicId }} to="/topic/$topicId/notes" />}>
+            <FileTextIcon />
+            <T>Notes</T>
+          </ContextMenuItem>
           <ContextMenuItem
             onClick={() => {
               setDeleteOpen(true);
@@ -140,10 +155,9 @@ type ThreadCrumbProps = {
 const ThreadCrumb = ({ threadId, title }: ThreadCrumbProps) => (
   <ThreadContextMenu
     render={
-      <button
-        aria-current="page"
-        className="rounded-md px-1.5 py-1.5 font-normal text-foreground transition-colors hover:bg-accent hover:text-accent-foreground max-md:truncate"
-        type="button"
+      <BreadcrumbLink
+        className="rounded-md px-1.5 py-1.5 hover:bg-accent hover:text-accent-foreground max-md:truncate"
+        render={<Link params={{ threadId }} to="/chat/$threadId" />}
       />
     }
     threadId={threadId}
