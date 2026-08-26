@@ -84,7 +84,7 @@ type ListNotesInput = {
   page: number;
   pageSize: number;
   scope: NoteScope;
-  search: string;
+  search: string | undefined;
   userId: SafeId<"user">;
 };
 
@@ -98,8 +98,6 @@ export type NoteListItem = {
 };
 
 export const listNotesFn = Kit.gen(async function* (ctx: ListNotesCtx, input: ListNotesInput) {
-  const trimmedSearch = input.search.trim();
-
   const scopedToUser = (table: typeof note) => {
     const conditions = [
       eq(table.userId, input.userId),
@@ -109,8 +107,8 @@ export const listNotesFn = Kit.gen(async function* (ctx: ListNotesCtx, input: Li
           eq(table.topicId, toSafeId<"topic">(input.scope.id)),
     ];
 
-    if (trimmedSearch.length > 0) {
-      conditions.push(ilike(table.title, trimmedSearch));
+    if (input.search !== undefined) {
+      conditions.push(ilike(table.title, input.search));
     }
 
     return sql.join(conditions, sql` and `);

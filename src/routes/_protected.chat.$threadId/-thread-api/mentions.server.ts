@@ -21,20 +21,18 @@ type MentionItem = {
   type: MentionQueryType;
 };
 
-const buildFileMentionsWhereClause = (topicId: SafeId<"topic">, query: string) => {
-  const trimmedQuery = query.trim();
-
-  if (trimmedQuery.length === 0) {
+const buildFileMentionsWhereClause = (topicId: SafeId<"topic">, query: string | undefined) => {
+  if (query === undefined) {
     return eq(file.topicId, topicId);
   }
 
-  return and(eq(file.topicId, topicId), ilike(file.displayName, trimmedQuery));
+  return and(eq(file.topicId, topicId), ilike(file.displayName, query));
 };
 
 type MentionsCtx = Kits<[DbKit, MemoryKit]>;
 
 type GetMentionsInput = {
-  query: string;
+  query: string | undefined;
   resourceId: string;
   userId: SafeId<"user">;
 };

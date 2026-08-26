@@ -117,17 +117,21 @@ export const getPendingFiles = createServerFn({ method: "GET" })
 const listFilesInputSchema = v.object({
   page: v.pipe(v.number(), v.integer(), v.minValue(1)),
   pageSize: v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100)),
-  search: v.optional(v.string(), ""),
+  search: v.optional(
+    v.pipe(
+      v.string(),
+      v.trim(),
+      v.transform((value) => (value.length > 0 ? value : undefined)),
+    ),
+  ),
 });
 
-const buildWhereClause = (topicId: SafeId<"topic">, search: string) => {
-  const trimmedSearch = search.trim();
-
-  if (trimmedSearch.length === 0) {
+const buildWhereClause = (topicId: SafeId<"topic">, search: string | undefined) => {
+  if (search === undefined) {
     return eq(file.topicId, topicId);
   }
 
-  return and(eq(file.topicId, topicId), ilike(file.displayName, trimmedSearch));
+  return and(eq(file.topicId, topicId), ilike(file.displayName, search));
 };
 
 export const listFiles = createServerFn({ method: "GET" })

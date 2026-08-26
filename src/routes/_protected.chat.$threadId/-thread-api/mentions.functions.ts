@@ -15,7 +15,13 @@ import type { MentionQueryType } from "./mentions.server";
 
 const getMentionsInputSchema = v.object({
   resourceId: v.pipe(v.string(), v.nonEmpty()),
-  query: v.optional(v.string(), ""),
+  query: v.optional(
+    v.pipe(
+      v.string(),
+      v.trim(),
+      v.transform((value) => (value.length > 0 ? value : undefined)),
+    ),
+  ),
 });
 
 const getMentionByIdInputSchema = v.object({
@@ -56,7 +62,7 @@ type GetMentionByIdParams = {
 export const mentionQueries = {
   all: () => ["mention"] as const,
   byResource: (resourceId: string) => [...mentionQueries.all(), "list", resourceId] as const,
-  list: ({ resourceId, query = "" }: MentionsQueryParams) =>
+  list: ({ resourceId, query }: MentionsQueryParams) =>
     queryOptions({
       queryKey: [...mentionQueries.byResource(resourceId), { query }] as const,
       queryFn: async () =>

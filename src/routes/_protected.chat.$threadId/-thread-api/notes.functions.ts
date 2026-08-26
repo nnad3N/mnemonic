@@ -56,7 +56,13 @@ const listNotesInputSchema = v.object({
     v.object({ id: v.pipe(v.string(), v.nanoid()), type: v.literal("thread") }),
     v.object({ id: v.pipe(v.string(), v.nanoid()), type: v.literal("topic") }),
   ]),
-  search: v.optional(v.string(), ""),
+  search: v.optional(
+    v.pipe(
+      v.string(),
+      v.trim(),
+      v.transform((value) => (value.length > 0 ? value : undefined)),
+    ),
+  ),
 });
 
 export type ListNotesParams = v.InferOutput<typeof listNotesInputSchema>;
