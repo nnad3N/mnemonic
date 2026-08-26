@@ -1,6 +1,6 @@
 services:
   rustfs:
-    image: rustfs/rustfs:latest
+    image: rustfs/rustfs:1.0.0-rc.3
     command: ["/data"]
     environment:
       RUSTFS_ACCESS_KEY: "${S3_ACCESS_KEY_ID:-rustfsadmin}"
@@ -12,8 +12,6 @@ services:
     ports:
       - "9000:9000"
       - "9001:9001"
-    networks:
-      - default
     volumes:
       - rustfs_data:/data
 
@@ -25,8 +23,7 @@ services:
       S3_BUCKET: "${S3_BUCKET:-mnemonic-files}"
       S3_SECRET_ACCESS_KEY: "${S3_SECRET_ACCESS_KEY:-rustfsadmin}"
     depends_on:
-      rustfs:
-        condition: service_started
+      - rustfs
     entrypoint: >
       /bin/sh -c "
       until mc alias set local http://rustfs:9000 \"$${S3_ACCESS_KEY_ID}\" \"$${S3_SECRET_ACCESS_KEY}\"; do
@@ -36,7 +33,7 @@ services:
       "
 
   searxng:
-    image: searxng/searxng:latest
+    image: searxng/searxng:2026.8.22-9fea41204
     ports:
       - "8080:8080"
     volumes:
@@ -45,16 +42,16 @@ services:
       SEARXNG_BASE_URL: http://searxng:8080/
     networks:
       - firecrawl
-    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/healthz || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 12
-      start_period: 10s
+      start_period: 30s
+      start_interval: 1s
 
   redis:
-    image: valkey/valkey:alpine
+    image: valkey/valkey:9.1-alpine
     command: redis-server --bind 0.0.0.0 --appendonly yes
     ports:
       - "6379:6379"
@@ -66,30 +63,15 @@ services:
       timeout: 3s
       retries: 10
       start_period: 5s
-    cpus: 0.25
-    mem_limit: 1G
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "5m"
-        max-file: "2"
 
   firecrawl-redis:
-    image: valkey/valkey:alpine
+    image: valkey/valkey:9.1-alpine
     networks:
       - firecrawl
     command: redis-server --bind 0.0.0.0
-    cpus: 0.25
-    mem_limit: 256M
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "5m"
-        max-file: "2"
 
   firecrawl-rabbitmq:
-    image: rabbitmq:3-management
+    image: rabbitmq:3.13-alpine
     networks:
       - firecrawl
     volumes:
@@ -97,19 +79,13 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: firecrawl
       RABBITMQ_DEFAULT_PASS: firecrawl
-    cpus: 0.5
-    mem_limit: 512M
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
       interval: 5s
       timeout: 10s
       retries: 10
       start_period: 30s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "5m"
-        max-file: "2"
+      start_interval: 1s
 
   firecrawl-nuq-postgres:
     image: ghcr.io/firecrawl/nuq-postgres:latest
@@ -122,19 +98,13 @@ services:
       - firecrawl
     volumes:
       - firecrawl_postgres_data:/var/lib/postgresql/data
-    cpus: 0.5
-    mem_limit: 512M
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U firecrawl -d firecrawl"]
       interval: 5s
       timeout: 5s
       retries: 10
       start_period: 30s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+      start_interval: 1s
 
   firecrawl-playwright:
     image: ghcr.io/firecrawl/playwright-service:latest
@@ -145,15 +115,6 @@ services:
       MAX_CONCURRENT_PAGES: 5
     networks:
       - firecrawl
-    cpus: 1.0
-    mem_limit: 2G
-    tmpfs:
-      - /tmp/.cache:noexec,nosuid,size=512m
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
   firecrawl-api:
     image: ghcr.io/firecrawl/firecrawl:2.11.234
@@ -201,19 +162,12 @@ services:
       searxng:
         condition: service_healthy
     command: ["node", "dist/src/harness.js", "--start-docker"]
-    cpus: 2.0
-    mem_limit: 2G
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3002/v0/health/liveness || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 18
       start_period: 60s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
 networks:
   firecrawl:
