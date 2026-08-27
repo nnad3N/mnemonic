@@ -231,7 +231,7 @@ const NoteTitleInput = ({ noteId, title }: NoteTitleInputProps) => {
   useEffect(() => saveTitleDebounced.flush, [saveTitleDebounced]);
 
   return (
-    <div className="shrink-0 px-3 pt-3">
+    <div className="shrink-0 px-4 pt-4">
       <label className="sr-only" htmlFor={inputId}>
         <T>Note title</T>
       </label>
@@ -403,7 +403,7 @@ const NotesEditorBody = () => {
   return (
     <ScrollArea className="min-h-0 flex-1 cursor-text" viewportRef={containerRef}>
       <PlateContent
-        className="typeset px-3 py-2 text-sm outline-none **:data-slate-placeholder:text-muted-foreground"
+        className="typeset px-4 py-2 text-sm outline-none **:data-slate-placeholder:text-muted-foreground"
         placeholder={gt("Write something…")}
       />
     </ScrollArea>
