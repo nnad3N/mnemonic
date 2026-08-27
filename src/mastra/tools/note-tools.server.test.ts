@@ -8,7 +8,7 @@ import { createSafeId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
 import { NoteToolError } from "@/mastra/tools/note-tool-helpers.server";
 import { readAgentNoteFn } from "@/mastra/tools/read-note-tool.server";
-import { updateAgentNoteFn } from "@/mastra/tools/update-note-tool.server";
+import { replaceNoteText, updateAgentNoteFn } from "@/mastra/tools/update-note-tool.server";
 import { createAgentNoteFn } from "@/mastra/tools/write-note-tool.server";
 import {
   createNoteFn,
@@ -173,6 +173,65 @@ describe("agent note versioning", () => {
     expect(NoteToolError.is(missing)).toBe(true);
     expect(NoteToolError.is(ambiguous)).toBe(true);
     expect(await listVersions(id)).toHaveLength(1);
+  });
+
+  it("falls back to fuzzy matching when oldText drifts on Unicode punctuation", async () => {
+    const threadId = await seedThread({ resourceId: userId });
+    await seedRun(threadId);
+    const { id } = expectOk(
+      await createAgentNoteFn(ctx, {
+        content: "intro\nplan — “draft” stage\noutro",
+        threadId,
+        title: "Plan",
+        userId,
+      }),
+    );
+
+    expectOk(
+      await updateAgentNoteFn(ctx, {
+        newText: 'plan - "final" stage',
+        oldText: 'plan - "draft" stage',
+        noteId: id,
+        threadId,
+        userId,
+      }),
+    );
+
+    const versions = await listVersions(id);
+    expect(versions.at(-1)?.content).toBe('intro\nplan - "final" stage\noutro');
+  });
+
+  describe("replaceNoteText fuzzy fallback", () => {
+    it("keeps the exact bytes of every line outside the matched span", () => {
+      const result = replaceNoteText(
+        "keep  these  spaces  \nfoo’s bar\nalso — untouched",
+        "foo's bar",
+        "swapped",
+      );
+
+      expect(result).toEqual({
+        type: "replaced",
+        content: "keep  these  spaces  \nswapped\nalso — untouched",
+      });
+    });
+
+    it("matches across stripped trailing whitespace on multi-line spans", () => {
+      const result = replaceNoteText("alpha  \nbeta\ngamma", "alpha\nbeta", "one\ntwo");
+
+      expect(result).toEqual({ type: "replaced", content: "one\ntwo\ngamma" });
+    });
+
+    it("prefers the exact occurrence over a fuzzy one", () => {
+      const result = replaceNoteText("a – b\na - b", "a - b", "x");
+
+      expect(result).toEqual({ type: "replaced", content: "a – b\nx" });
+    });
+
+    it("reports ambiguity when only fuzzy matches exist and there are several", () => {
+      const result = replaceNoteText("a – b\na — b", "a - b", "x");
+
+      expect(result).toEqual({ type: "ambiguous", occurrences: 2 });
+    });
   });
 
   it("reads notes of sibling topic threads and hides notes outside the scope", async () => {
