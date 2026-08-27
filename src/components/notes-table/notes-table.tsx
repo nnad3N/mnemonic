@@ -163,7 +163,7 @@ export const NotesTable = ({
             {notes.isSuccess &&
               notes.data.items.map((item) => (
                 <NoteRow
-                  canMoveToTopic={notes.data.canMoveToTopic}
+                  canMoveToTopic={notes.data.threadTopicId !== null}
                   key={item.id}
                   note={item}
                   scope={scope}

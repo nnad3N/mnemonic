@@ -41,9 +41,7 @@ export const noteQueries = {
     }),
 };
 
-const noteCtx = Kit.createContext(dbKit);
-const addNoteToTopicCtx = Kit.createContext(dbKit, memoryKit);
-const listNotesCtx = Kit.createContext(dbKit, memoryKit);
+const noteCtx = Kit.createContext(dbKit, memoryKit);
 
 const noteInputSchema = v.object({
   noteId: v.pipe(v.string(), v.nanoid()),
@@ -72,7 +70,7 @@ export const listNotes = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .handler(async ({ context, data }) =>
     Kit.run(async () =>
-      listNotesFn(listNotesCtx, {
+      listNotesFn(noteCtx, {
         page: data.page,
         pageSize: data.pageSize,
         scope: data.scope,
@@ -91,13 +89,14 @@ export const getNote = createServerFn({ method: "GET" })
   .validator(noteInputSchema)
   .middleware([noteAccessMiddleware])
   .handler(async ({ context }) =>
-    Kit.run(async () => getNoteFn(noteCtx, { noteId: context.note.id })).throws<ServerFnError>(
-      (error) =>
-        matchError(error, {
-          DatabaseError: () => toServerFnError.serverError("Failed to load the note"),
-          ServerFnError: (error) => error,
-          UnhandledException: () => toServerFnError.serverError("Failed to load the note"),
-        }),
+    Kit.run(async () =>
+      getNoteFn(noteCtx, { noteId: context.note.id, userId: context.user.id }),
+    ).throws<ServerFnError>((error) =>
+      matchError(error, {
+        DatabaseError: () => toServerFnError.serverError("Failed to load the note"),
+        MemoryError: () => toServerFnError.serverError("Failed to load the note"),
+        ServerFnError: (error) => error,
+      }),
     ),
   );
 
@@ -152,7 +151,7 @@ export const addNoteToTopic = createServerFn({ method: "POST" })
   .middleware([noteAccessMiddleware])
   .handler(async ({ context }) =>
     Kit.run(async () =>
-      addNoteToTopicFn(addNoteToTopicCtx, {
+      addNoteToTopicFn(noteCtx, {
         noteId: context.note.id,
         userId: context.user.id,
       }),

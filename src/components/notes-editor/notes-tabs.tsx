@@ -4,8 +4,10 @@ import { T, useGT } from "gt-tanstack-start";
 import { produce } from "immer";
 import {
   FileIcon,
+  FileQuestionMarkIcon,
   FileTextIcon,
   FolderPlusIcon,
+  MessageSquareTextIcon,
   MoreHorizontalIcon,
   PanelRightIcon,
   PlusIcon,
@@ -16,6 +18,7 @@ import { Suspense } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from "@/components/ui/context-menu";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,6 +28,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { sidebarQueries } from "@/routes/-sidebar/sidebar.functions";
 import {
   addNoteToTopic,
   createNote,
@@ -44,7 +48,6 @@ export const NotesTabs = ({ onClose, threadId }: NotesTabsProps) => {
   const gt = useGT();
   const navigate = useNavigate();
   const openNote = useOpenNote();
-  const queryClient = useQueryClient();
   const { activeNoteId, openNoteIds, topicId } = useSearch({
     from: "/_protected",
     select: (search) => ({
@@ -53,13 +56,6 @@ export const NotesTabs = ({ onClose, threadId }: NotesTabsProps) => {
       topicId: search.topic,
     }),
   });
-  const activeNote = useQuery({
-    ...noteQueries.byId(activeNoteId ?? ""),
-    enabled: activeNoteId !== undefined,
-  });
-
-  const isInTopic = activeNote.data?.isInTopic === true;
-
   const closeNote = async (noteId: string) => {
     const remaining = openNoteIds.filter((id) => id !== noteId);
 
@@ -79,26 +75,6 @@ export const NotesTabs = ({ onClose, threadId }: NotesTabsProps) => {
     onSuccess: async (created) => openNote(created.id),
   });
 
-  const moveToTopic = useMutation({
-    mutationFn: async (noteId: string) => addNoteToTopic({ data: { noteId } }),
-    onError: () => {
-      toast.error(gt("Failed to move the note to the topic"));
-    },
-    onSuccess: async (added) =>
-      queryClient.invalidateQueries({ queryKey: noteQueries.byId(added.id).queryKey }),
-  });
-
-  const remove = useMutation({
-    mutationFn: async (noteId: string) => deleteNote({ data: { noteId } }),
-    onError: () => {
-      toast.error(gt("Failed to delete the note"));
-    },
-    onSuccess: async (deleted) => {
-      await closeNote(deleted.id);
-      queryClient.removeQueries({ queryKey: noteQueries.byId(deleted.id).queryKey });
-    },
-  });
-
   return (
     <div className="flex h-12 shrink-0 items-center gap-1 border-b border-foreground/3 pr-2 md:h-10 dark:border-white/5">
       <ScrollArea className="min-w-0 flex-1">
@@ -110,6 +86,8 @@ export const NotesTabs = ({ onClose, threadId }: NotesTabsProps) => {
               noteId={noteId}
               onClose={async () => closeNote(noteId)}
               onOpen={async () => openNote(noteId)}
+              threadId={threadId}
+              topicId={topicId}
             />
           ))}
         </div>
@@ -140,34 +118,9 @@ export const NotesTabs = ({ onClose, threadId }: NotesTabsProps) => {
           </span>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-auto">
-          {activeNote.data && <NoteExportSubmenu title={activeNote.data.title} />}
-          {!isInTopic && (
-            <DropdownMenuItem
-              className="whitespace-nowrap"
-              disabled={!activeNoteId || !topicId || moveToTopic.isPending}
-              onClick={() => {
-                if (!activeNoteId) return;
-
-                moveToTopic.mutate(activeNoteId);
-              }}
-            >
-              <FolderPlusIcon />
-              <T>Move to topic</T>
-            </DropdownMenuItem>
+          {activeNoteId && (
+            <NoteMenuItems noteId={activeNoteId} onCloseTab={async () => closeNote(activeNoteId)} />
           )}
-          <DropdownMenuItem
-            disabled={!activeNoteId || remove.isPending}
-            className="whitespace-nowrap"
-            onClick={() => {
-              if (!activeNoteId) return;
-
-              remove.mutate(activeNoteId);
-            }}
-            variant="destructive"
-          >
-            <Trash2Icon />
-            <T>Delete note</T>
-          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
       <Button onClick={onClose} size="icon-sm" variant="ghost">
@@ -180,36 +133,151 @@ export const NotesTabs = ({ onClose, threadId }: NotesTabsProps) => {
   );
 };
 
+type NoteMenuItemsProps = {
+  noteId: string;
+  onCloseTab: () => Promise<void>;
+};
+
+const NoteMenuItems = ({ noteId, onCloseTab }: NoteMenuItemsProps) => {
+  const gt = useGT();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const activeNoteId = useSearch({ from: "/_protected", select: (search) => search.note });
+  const note = useQuery(noteQueries.byId(noteId));
+
+  const moveToTopic = useMutation({
+    mutationFn: async () => addNoteToTopic({ data: { noteId } }),
+    onError: () => {
+      toast.error(gt("Failed to move the note to the topic"));
+    },
+    onSuccess: async (added) =>
+      queryClient.invalidateQueries({ queryKey: noteQueries.byId(added.id).queryKey }),
+  });
+
+  const remove = useMutation({
+    mutationFn: async () => deleteNote({ data: { noteId } }),
+    onError: () => {
+      toast.error(gt("Failed to delete the note"));
+    },
+    onSuccess: async () => {
+      await onCloseTab();
+      queryClient.removeQueries({ queryKey: noteQueries.byId(noteId).queryKey });
+    },
+  });
+
+  const goToThread = async () => {
+    if (!note.isSuccess) return;
+
+    if (note.data.scope.type === "thread") {
+      await navigate({
+        params: { threadId: note.data.scope.id },
+        search: (prev) =>
+          produce(prev, (draft) => {
+            draft.note = noteId;
+            draft.topic = note.data.threadTopicId ?? undefined;
+          }),
+        to: "/chat/$threadId",
+      });
+
+      return;
+    }
+
+    const noteTopicId = note.data.scope.id;
+    const threads = await queryClient.ensureQueryData(sidebarQueries.threads(noteTopicId));
+    const latest = threads.at(0);
+
+    if (!latest) return;
+
+    await navigate({
+      params: { threadId: latest.id },
+      search: (prev) =>
+        produce(prev, (draft) => {
+          draft.note = noteId;
+          draft.topic = noteTopicId;
+        }),
+      to: "/chat/$threadId",
+    });
+  };
+
+  return (
+    <>
+      <DropdownMenuItem
+        className="whitespace-nowrap"
+        disabled={!note.isSuccess}
+        onClick={goToThread}
+      >
+        <MessageSquareTextIcon />
+        <T>Go to thread</T>
+      </DropdownMenuItem>
+      {note.isSuccess && noteId === activeNoteId && <NoteExportSubmenu title={note.data.title} />}
+      {note.isSuccess && note.data.threadTopicId && (
+        <DropdownMenuItem
+          className="whitespace-nowrap"
+          disabled={moveToTopic.isPending}
+          onClick={() => {
+            moveToTopic.mutate();
+          }}
+        >
+          <FolderPlusIcon />
+          <T>Move to topic</T>
+        </DropdownMenuItem>
+      )}
+      <DropdownMenuItem
+        className="whitespace-nowrap"
+        disabled={remove.isPending}
+        onClick={() => {
+          remove.mutate();
+        }}
+        variant="destructive"
+      >
+        <Trash2Icon />
+        <T>Delete note</T>
+      </DropdownMenuItem>
+    </>
+  );
+};
+
 type NoteTabProps = {
   isActive: boolean;
   noteId: string;
   onClose: () => Promise<void>;
   onOpen: () => Promise<void>;
+  threadId: string | undefined;
+  topicId: string | undefined;
 };
 
-const NoteTab = ({ isActive, noteId, onClose, onOpen }: NoteTabProps) => (
+const NoteTab = ({ isActive, noteId, onClose, onOpen, threadId, topicId }: NoteTabProps) => (
   <div className="relative">
-    <button
-      className={cn(
-        "peer/note-tab flex h-12 items-center gap-1.5 border-r border-foreground/3 pr-8 pl-3 text-sm text-muted-foreground md:h-10 dark:border-white/5",
-        isActive && "bg-muted/40 text-foreground",
-      )}
-      onClick={onOpen}
-      type="button"
-    >
-      <CatchBoundary errorComponent={NoteTabTitleError} getResetKey={() => noteId}>
-        <Suspense
-          fallback={
-            <>
-              <FileIcon className="size-3.5 shrink-0" />
-              <Skeleton className="h-3.5 w-24" />
-            </>
-          }
-        >
-          <NoteTabTitle noteId={noteId} />
-        </Suspense>
-      </CatchBoundary>
-    </button>
+    <ContextMenu>
+      <ContextMenuTrigger
+        render={
+          <button
+            className={cn(
+              "peer/note-tab flex h-12 items-center gap-1.5 border-r border-foreground/3 pr-8 pl-3 text-sm text-muted-foreground md:h-10 dark:border-white/5",
+              isActive && "bg-muted/40 text-foreground",
+            )}
+            onClick={onOpen}
+            type="button"
+          />
+        }
+      >
+        <CatchBoundary errorComponent={NoteTabTitleError} getResetKey={() => noteId}>
+          <Suspense
+            fallback={
+              <>
+                <FileIcon className="size-3.5 shrink-0" />
+                <Skeleton className="h-3.5 w-24" />
+              </>
+            }
+          >
+            <NoteTabTitle noteId={noteId} threadId={threadId} topicId={topicId} />
+          </Suspense>
+        </CatchBoundary>
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        <NoteMenuItems noteId={noteId} onCloseTab={onClose} />
+      </ContextMenuContent>
+    </ContextMenu>
     <Button
       className={cn(
         "absolute inset-y-0 right-0 my-auto opacity-0 transition-opacity peer-hover/note-tab:opacity-100 hover:opacity-100",
@@ -229,17 +297,23 @@ const NoteTab = ({ isActive, noteId, onClose, onOpen }: NoteTabProps) => (
 
 type NoteTabTitleProps = {
   noteId: string;
+  threadId: string | undefined;
+  topicId: string | undefined;
 };
 
-const NoteTabTitle = ({ noteId }: NoteTabTitleProps) => {
+const NoteTabTitle = ({ noteId, threadId, topicId }: NoteTabTitleProps) => {
   const { data: note } = useSuspenseQuery({
     ...noteQueries.byId(noteId),
-    select: (data) => ({ isInTopic: data.isInTopic, title: data.title }),
+    select: (data) => ({ scope: data.scope, title: data.title }),
   });
+  const isInTopic = note.scope.type === "topic";
+  const isLocal = note.scope.id === (isInTopic ? topicId : threadId);
 
   return (
     <>
-      {note.isInTopic ? (
+      {!isLocal ? (
+        <FileQuestionMarkIcon className="size-3.5 shrink-0" />
+      ) : isInTopic ? (
         <FileTextIcon className="size-3.5 shrink-0" />
       ) : (
         <FileIcon className="size-3.5 shrink-0" />

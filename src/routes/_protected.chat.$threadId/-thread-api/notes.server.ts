@@ -1,4 +1,4 @@
-import { matchError, Result } from "better-result";
+import { matchError, panic, Result } from "better-result";
 import type { Result as ResultType } from "better-result";
 import { and, eq, isNotNull, sql } from "drizzle-orm";
 
@@ -23,6 +23,21 @@ type NoteIdInput = {
   noteId: SafeId<"note">;
 };
 
+const toNoteScope = (row: {
+  threadId: string | null;
+  topicId: SafeId<"topic"> | null;
+}): NoteScope => {
+  if (row.topicId) {
+    return { id: row.topicId, type: "topic" };
+  }
+
+  if (row.threadId) {
+    return { id: row.threadId, type: "thread" };
+  }
+
+  return panic("Note has neither a thread nor a topic");
+};
+
 const readNote = Kit.gen(async function* (ctx: NoteCtx, input: NoteIdInput) {
   const note = yield* await ctx.db.run((db) =>
     db.query.note.findFirst({
@@ -35,7 +50,7 @@ const readNote = Kit.gen(async function* (ctx: NoteCtx, input: NoteIdInput) {
     return Result.err(toServerFnError.notFound("Note not found"));
   }
 
-  return Result.ok(note);
+  return Result.ok({ id: note.id, scope: toNoteScope(note), title: note.title });
 });
 
 const readLatestVersion = Kit.gen(async function* (ctx: NoteCtx, input: NoteIdInput) {
@@ -97,6 +112,27 @@ export type NoteListItem = {
   updatedAt: Date;
 };
 
+const getThreadTopicId = async (
+  ctx: Kits<[DbKit, MemoryKit]>,
+  input: { threadId: string | null; userId: SafeId<"user"> },
+): Promise<ResultType<SafeId<"topic"> | null, DatabaseError | MemoryError>> => {
+  if (input.threadId === null) {
+    return Result.ok(null);
+  }
+
+  const thread = await resolveThread(ctx, { threadId: input.threadId, userId: input.userId });
+
+  if (Result.isError(thread)) {
+    return matchError(thread.error, {
+      DatabaseError: (failure) => Result.err(failure),
+      MemoryError: (failure) => Result.err(failure),
+      ThreadNotFoundError: () => Result.ok(null),
+    });
+  }
+
+  return Result.ok(thread.value.topicId ?? null);
+};
+
 export const listNotesFn = Kit.gen(async function* (ctx: ListNotesCtx, input: ListNotesInput) {
   const scopedToUser = (table: typeof note) => {
     const conditions = [
@@ -114,30 +150,7 @@ export const listNotesFn = Kit.gen(async function* (ctx: ListNotesCtx, input: Li
     return sql.join(conditions, sql` and `);
   };
 
-  const checkCanMoveToTopic = async (): Promise<
-    ResultType<boolean, DatabaseError | MemoryError>
-  > => {
-    if (input.scope.type === "topic") {
-      return Result.ok(false);
-    }
-
-    const thread = await resolveThread(ctx, {
-      threadId: input.scope.id,
-      userId: input.userId,
-    });
-
-    if (Result.isError(thread)) {
-      return matchError(thread.error, {
-        DatabaseError: (failure) => Result.err(failure),
-        MemoryError: (failure) => Result.err(failure),
-        ThreadNotFoundError: () => Result.ok(false),
-      });
-    }
-
-    return Result.ok(thread.value.topicId !== undefined);
-  };
-
-  const [{ notes, totalCount }, canMoveToTopic] = yield* await Kit.promiseAll([
+  const [{ notes, totalCount }, threadTopicId] = yield* await Kit.promiseAll([
     ctx.db.run(async (db) => {
       const [rows, total] = await Promise.all([
         db.query.note.findMany({
@@ -159,7 +172,10 @@ export const listNotesFn = Kit.gen(async function* (ctx: ListNotesCtx, input: Li
 
       return { notes: rows, totalCount: total };
     }),
-    checkCanMoveToTopic(),
+    getThreadTopicId(ctx, {
+      threadId: input.scope.type === "thread" ? input.scope.id : null,
+      userId: input.userId,
+    }),
   ]);
 
   return Result.ok({
@@ -169,15 +185,26 @@ export const listNotesFn = Kit.gen(async function* (ctx: ListNotesCtx, input: Li
       title: listed.title,
       updatedAt: listed.updatedAt,
     })),
-    canMoveToTopic,
+    threadTopicId,
     totalCount,
   });
 });
 
-export const getNoteFn = Kit.gen(async function* (ctx: NoteCtx, input: NoteIdInput) {
-  const [note, latest] = yield* await Kit.promiseAll([
-    readNote(ctx, input),
+type GetNoteInput = NoteIdInput & {
+  userId: SafeId<"user">;
+};
+
+export const getNoteFn = Kit.gen(async function* (
+  ctx: Kits<[DbKit, MemoryKit]>,
+  input: GetNoteInput,
+) {
+  const note = yield* await readNote(ctx, input);
+  const [latest, threadTopicId] = yield* await Kit.promiseAll([
     readLatestVersion(ctx, input),
+    getThreadTopicId(ctx, {
+      threadId: note.scope.type === "thread" ? note.scope.id : null,
+      userId: input.userId,
+    }),
   ]);
 
   if (!latest) {
@@ -188,7 +215,8 @@ export const getNoteFn = Kit.gen(async function* (ctx: NoteCtx, input: NoteIdInp
     content: latest.content,
     contentHash: latest.contentHash,
     id: note.id,
-    isInTopic: note.topicId !== null,
+    scope: note.scope,
+    threadTopicId,
     title: note.title,
   });
 });
@@ -250,12 +278,12 @@ export const addNoteToTopicFn = Kit.gen(async function* (
 ) {
   const noteRow = yield* await readNote(ctx, input);
 
-  if (!noteRow.threadId) {
+  if (noteRow.scope.type === "topic") {
     return Result.err(toServerFnError.badRequest("This note already lives in a topic"));
   }
 
   const thread = yield* await resolveThread(ctx, {
-    threadId: noteRow.threadId,
+    threadId: noteRow.scope.id,
     userId: input.userId,
   });
 
