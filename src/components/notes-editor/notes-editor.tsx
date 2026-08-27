@@ -231,12 +231,12 @@ const NoteTitleInput = ({ noteId, title }: NoteTitleInputProps) => {
   useEffect(() => saveTitleDebounced.flush, [saveTitleDebounced]);
 
   return (
-    <div className="shrink-0 px-6 pt-4">
+    <div className="shrink-0 px-3 pt-3">
       <label className="sr-only" htmlFor={inputId}>
         <T>Note title</T>
       </label>
       <input
-        className="w-full bg-transparent text-base font-medium outline-none placeholder:text-muted-foreground"
+        className="w-full bg-transparent text-xl font-medium outline-none placeholder:text-muted-foreground"
         id={inputId}
         onBlur={() => {
           if (title.trim().length > 0) return;
@@ -403,7 +403,7 @@ const NotesEditorBody = () => {
   return (
     <ScrollArea className="min-h-0 flex-1 cursor-text" viewportRef={containerRef}>
       <PlateContent
-        className="typeset px-6 py-4 text-sm outline-none **:data-slate-placeholder:text-muted-foreground"
+        className="typeset px-3 py-2 text-sm outline-none **:data-slate-placeholder:text-muted-foreground"
         placeholder={gt("Write something…")}
       />
     </ScrollArea>
