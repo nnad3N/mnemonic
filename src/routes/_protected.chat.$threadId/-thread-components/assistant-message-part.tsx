@@ -56,7 +56,7 @@ type ResponseNoteMentionProps = {
 };
 
 const ResponseNoteMention = ({ children, noteid }: ResponseNoteMentionProps) => {
-  if (noteid === undefined) {
+  if (!noteid) {
     return <>{children}</>;
   }
 

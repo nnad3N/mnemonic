@@ -127,7 +127,7 @@ const listFilesInputSchema = v.object({
 });
 
 const buildWhereClause = (topicId: SafeId<"topic">, search: string | undefined) => {
-  if (search === undefined) {
+  if (!search) {
     return eq(file.topicId, topicId);
   }
 

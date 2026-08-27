@@ -48,14 +48,19 @@ agent memory, which the user never sees.
 
 ### Agent access
 
-- Tools: read a note by id, write a note (creating or replacing content, always
-  as a new `agent` version), and search.
-- Parents get all of them, search only where a topic exists. The worker subagent
-  gets read and search. The reader subagent gets read only.
-- An agent never sees the user's in-flight typing beyond the last autosave, and
-  never moves a note between scopes.
+- Three tools: read a note, write a new note, update an existing one. Search
+  comes later; until then the model only learns of notes through mentions.
+- Only the parent has them. It also reads notes directly instead of delegating:
+  a note is the user's curated document, high-quality context worth the parent's
+  own attention.
+- Scope mirrors the mention menu: the thread's notes, plus the topic's and its
+  threads' notes when the thread is in a topic. A new note is always created in
+  the current thread; update works on any note within that scope. An agent never
+  moves a note between scopes.
+- An agent never sees the user's in-flight typing beyond the last autosave.
 - When a note tool finishes, the client invalidates that note's query, so an open
-  editor shows what the agent wrote.
+  editor shows what the agent wrote. For now that is last write wins over the
+  editor's unsaved changes; merging non-overlapping edits instead is future work.
 
 ### Retrieval
 
@@ -109,21 +114,24 @@ Done:
 
 Backend:
 
-- [ ] Server functions accept an author (user or agent) and optional starting
-      content, so an agent can create and write notes
-- [ ] Agent tools: read, write, search — wired per agent as above
-- [ ] Note search: FTS5 over note content, scoped
+- [x] Parent agent tools: read note, write note (creates in the current thread),
+      update note (exact once-only text replacement) — every write an `agent`
+      version, with the run-scoped overwrite recorded on `thread_run`
+- [x] `note_version.updatedAt`, moved by the run-scoped overwrite
+- [ ] Note search tool: FTS5 over note content, scoped
 - [x] `listNotes` over a thread or topic scope, with search and pagination
 
 Frontend:
 
 - [x] Notes table for a topic and for a thread
+- [ ] Conflict handling when an agent writes a note that is open in the editor —
+      today the editor refetches and the agent's write beats unsaved local
+      changes; merge non-overlapping edits instead
 - [x] Notes in the mention menu: the mentions query is keyed by the thread and the
       server resolves its topic; a topic thread lists the topic's files, notes,
       the topic's threads and their notes, a standalone thread only its own notes.
       Adding or clicking a note mention opens it in the panel, and a response link
       with a `mention:note::…` href renders as a mention chip
-- [ ] Version `updatedAt` and per-run version bookkeeping on `thread_run`
 - [ ] Timeline endpoint: entries with word counts relative to a selected version
 - [ ] Timeline panel with author labels, indicators and collapsed agent blocks
 - [ ] Diff viewer, with revert

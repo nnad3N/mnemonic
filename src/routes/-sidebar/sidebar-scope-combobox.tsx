@@ -45,8 +45,9 @@ export const SidebarScopeCombobox = () => {
   ];
   const selectedScope =
     scopes.find((scope) => scope.id === (selectedTopicId ?? null)) ?? conversationsScope;
-  const selectedTopic =
-    selectedScope.id === null ? undefined : { id: selectedScope.id, title: selectedScope.title };
+  const selectedTopic = selectedScope.id
+    ? { id: selectedScope.id, title: selectedScope.title }
+    : undefined;
 
   const [isOpen, setIsOpen] = useState(false);
   const [typedTitle, setTypedTitle] = useState("");

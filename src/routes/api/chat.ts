@@ -288,6 +288,7 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
     runId,
     agentId,
     status: "running" as const,
+    versionedNoteIds: [],
     startedAt: new Date(),
     finishedAt: null,
   };

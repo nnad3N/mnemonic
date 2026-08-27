@@ -4,6 +4,10 @@ import { getRouteApi } from "@tanstack/react-router";
 import type { PrepareSendMessagesRequest, UIMessage } from "ai";
 import { DefaultChatTransport } from "ai";
 
+import { setNoteSearchOpen } from "@/components/notes-editor/use-open-note";
+import { getClientRouter } from "@/router";
+
+import { noteQueries } from "../-thread-api/notes.functions";
 import { threadSettingsQueries } from "../-thread-api/thread-settings.functions";
 import { getThread } from "../-thread-api/thread.functions";
 import type { ThreadUIMessage } from "../-thread-types";
@@ -50,11 +54,26 @@ export const threadQueries = {
         // oxlint-disable-next-line anti-slop/require-safety-comment-for-type-assertion, typescript/no-unsafe-type-assertion
         const messages = data.messages as ThreadUIMessage[];
 
-        const chat = new Chat({
+        const chat = new Chat<ThreadUIMessage>({
           id: threadId,
           messages,
           onFinish: ({ messages }) => {
             useChatStore.getState().hydrateAttachments(threadId, messages);
+          },
+          onData: (dataPart) => {
+            if (dataPart.type === "data-note-created") {
+              void client.invalidateQueries({ queryKey: noteQueries.scopeBase() });
+              void getClientRouter().navigate({
+                search: setNoteSearchOpen(dataPart.data.noteId),
+                to: ".",
+              });
+            }
+
+            if (dataPart.type === "data-note-updated") {
+              void client.invalidateQueries({
+                queryKey: noteQueries.byId(dataPart.data.noteId).queryKey,
+              });
+            }
           },
           onError: (error) => {
             console.error(error);

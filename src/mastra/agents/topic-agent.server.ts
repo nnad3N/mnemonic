@@ -19,7 +19,10 @@ import { computeDocsTool } from "@/mastra/tools/compute-docs-tool.server";
 import { computeTool } from "@/mastra/tools/compute-tool.server";
 import { createFileGraphRagTool } from "@/mastra/tools/file-graph-rag-tool.server";
 import { createFileVectorSearchTool } from "@/mastra/tools/file-vector-search-tool.server";
+import { readNoteTool } from "@/mastra/tools/read-note-tool.server";
+import { updateNoteTool } from "@/mastra/tools/update-note-tool.server";
 import { webSearchTool } from "@/mastra/tools/web-search-tool.server";
+import { writeNoteTool } from "@/mastra/tools/write-note-tool.server";
 
 const providerKeyCtx = Kit.createContext(dbKit);
 
@@ -41,7 +44,10 @@ const getTopicAgentTools = async ({ requestContext }: GetTopicAgentToolsInput) =
     computeDocs: computeDocsTool,
     fileGraphRag: createFileGraphRagTool(apiKey),
     fileVectorSearch: createFileVectorSearchTool(apiKey),
+    readNote: readNoteTool,
+    updateNote: updateNoteTool,
     webSearch: webSearchTool,
+    writeNote: writeNoteTool,
   };
 };
 

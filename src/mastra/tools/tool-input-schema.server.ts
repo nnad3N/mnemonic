@@ -14,7 +14,7 @@ import type * as v from "valibot";
 const overrideSchema = ({ jsonSchema }: OverrideSchemaContext): JsonSchema | undefined => {
   // oxlint-disable-next-line anti-slop/no-runtime-typeof
   if (typeof jsonSchema.const !== "string") {
-    return undefined;
+    return;
   }
 
   const { const: literal, ...rest } = jsonSchema;

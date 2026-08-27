@@ -160,7 +160,7 @@ const AdminByokRow = ({ item, itemCount, userId }: AdminByokRowProps) => {
   const locale = useLocale();
   const queryClient = useQueryClient();
   const [isRenaming, setIsRenaming] = useState(false);
-  const canDelete = item.activatedAt === null || itemCount === 1;
+  const canDelete = !item.activatedAt || itemCount === 1;
 
   const activateKey = useMutation({
     mutationFn: async () => activateUserByok({ data: { id: item.id, userId } }),
@@ -219,7 +219,7 @@ const AdminByokRow = ({ item, itemCount, userId }: AdminByokRowProps) => {
               {item.name}
             </span>
           )}
-          {item.activatedAt !== null && (
+          {item.activatedAt && (
             <Badge variant="outline">
               <T>Active</T>
             </Badge>
@@ -252,7 +252,7 @@ const AdminByokRow = ({ item, itemCount, userId }: AdminByokRowProps) => {
               <PencilIcon />
               <T>Rename</T>
             </DropdownMenuItem>
-            {item.activatedAt === null && (
+            {!item.activatedAt && (
               <DropdownMenuItem
                 disabled={activateKey.isPending}
                 onClick={() => {

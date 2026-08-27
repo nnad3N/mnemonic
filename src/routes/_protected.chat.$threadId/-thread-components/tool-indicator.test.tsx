@@ -125,6 +125,21 @@ const TOOL_LABELS = {
     error: "Could not search files",
     pending: "Searching files",
   },
+  readNote: {
+    done: "Read the note",
+    error: "Could not read the note",
+    pending: "Reading the note",
+  },
+  updateNote: {
+    done: "Updated the note",
+    error: "Could not update the note",
+    pending: "Updating the note",
+  },
+  writeNote: {
+    done: "Wrote a note",
+    error: "Could not write the note",
+    pending: "Writing a note",
+  },
   readFile: {
     done: "Read the file",
     error: "Could not read the file",

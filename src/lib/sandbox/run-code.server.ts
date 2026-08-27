@@ -96,7 +96,7 @@ const serializeResult = (value: unknown): JSONValue | undefined => {
     return serialized.value;
   }
 
-  return undefined;
+  return;
 };
 
 type RunCodeResult = Result<

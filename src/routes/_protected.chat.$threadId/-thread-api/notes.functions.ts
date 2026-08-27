@@ -32,8 +32,9 @@ export const noteQueries = {
       queryFn: async () => listNotes({ data: { page, pageSize, scope, search } }),
       queryKey: [...noteQueries.byScope(scope), { page, pageSize, search }] as const,
     }),
+  scopeBase: () => [...noteQueries.all(), "scope"] as const,
   byScope: (scope: ListNotesParams["scope"]) =>
-    [...noteQueries.all(), "list", scope.type, scope.id] as const,
+    [...noteQueries.scopeBase(), scope.type, scope.id] as const,
   byId: (noteId: string) =>
     queryOptions({
       queryFn: async () => getNote({ data: { noteId } }),
@@ -111,6 +112,8 @@ export const createNote = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) =>
     Kit.run(async () =>
       createNoteFn(noteCtx, {
+        author: "user",
+        content: "",
         threadId: context.thread.id,
         title: data.title,
         userId: context.user.id,

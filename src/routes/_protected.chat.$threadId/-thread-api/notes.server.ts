@@ -23,7 +23,7 @@ type NoteIdInput = {
   noteId: SafeId<"note">;
 };
 
-const toNoteScope = (row: {
+export const toNoteScope = (row: {
   threadId: string | null;
   topicId: SafeId<"topic"> | null;
 }): NoteScope => {
@@ -38,10 +38,15 @@ const toNoteScope = (row: {
   return panic("Note has neither a thread nor a topic");
 };
 
-const readNote = Kit.gen(async function* (ctx: NoteCtx, input: NoteIdInput) {
+type ReadNoteInput = {
+  noteId: SafeId<"note">;
+  userId: SafeId<"user">;
+};
+
+const readNote = Kit.gen(async function* (ctx: NoteCtx, input: ReadNoteInput) {
   const note = yield* await ctx.db.run((db) =>
     db.query.note.findFirst({
-      where: { id: input.noteId },
+      where: { id: input.noteId, userId: input.userId },
       columns: { id: true, threadId: true, title: true, topicId: true },
     }),
   );
@@ -53,7 +58,7 @@ const readNote = Kit.gen(async function* (ctx: NoteCtx, input: NoteIdInput) {
   return Result.ok({ id: note.id, scope: toNoteScope(note), title: note.title });
 });
 
-const readLatestVersion = Kit.gen(async function* (ctx: NoteCtx, input: NoteIdInput) {
+export const readLatestVersion = Kit.gen(async function* (ctx: NoteCtx, input: NoteIdInput) {
   const latestVersion = yield* await ctx.db.run((db) =>
     db.query.noteVersion.findFirst({
       where: { noteId: input.noteId },
@@ -66,6 +71,8 @@ const readLatestVersion = Kit.gen(async function* (ctx: NoteCtx, input: NoteIdIn
 });
 
 type CreateNoteInput = {
+  author: NoteVersionAuthor;
+  content: string;
   threadId: string;
   title: string;
   userId: SafeId<"user">;
@@ -73,7 +80,7 @@ type CreateNoteInput = {
 
 export const createNoteFn = Kit.gen(async function* (ctx: NoteCtx, input: CreateNoteInput) {
   const id = createSafeId<"note">();
-  const contentHash = await hashText("");
+  const contentHash = await hashText(input.content);
 
   yield* await ctx.db.transaction(async (tx) => {
     await tx.insert(note).values({
@@ -84,8 +91,8 @@ export const createNoteFn = Kit.gen(async function* (ctx: NoteCtx, input: Create
     });
 
     await tx.insert(noteVersion).values({
-      author: "user",
-      content: "",
+      author: input.author,
+      content: input.content,
       contentHash,
       noteId: id,
       seq: 1,
@@ -112,11 +119,11 @@ export type NoteListItem = {
   updatedAt: Date;
 };
 
-const getThreadTopicId = async (
+export const getThreadTopicId = async (
   ctx: Kits<[DbKit, MemoryKit]>,
   input: { threadId: string | null; userId: SafeId<"user"> },
 ): Promise<ResultType<SafeId<"topic"> | null, DatabaseError | MemoryError>> => {
-  if (input.threadId === null) {
+  if (!input.threadId) {
     return Result.ok(null);
   }
 
@@ -143,7 +150,7 @@ export const listNotesFn = Kit.gen(async function* (ctx: ListNotesCtx, input: Li
           eq(table.topicId, toSafeId<"topic">(input.scope.id)),
     ];
 
-    if (input.search !== undefined) {
+    if (input.search) {
       conditions.push(ilike(table.title, input.search));
     }
 
@@ -244,13 +251,16 @@ export const saveNoteBodyFn = Kit.gen(async function* (ctx: NoteCtx, input: Save
       return;
     }
 
-    await tx.insert(noteVersion).values({
-      author: "user",
-      content: input.content,
-      contentHash,
-      noteId: input.noteId,
-      seq: (latestVersion?.seq ?? 0) + 1,
-    });
+    await Promise.all([
+      tx.insert(noteVersion).values({
+        author: "user",
+        content: input.content,
+        contentHash,
+        noteId: input.noteId,
+        seq: (latestVersion?.seq ?? 0) + 1,
+      }),
+      tx.update(note).set({ updatedAt: new Date() }).where(eq(note.id, input.noteId)),
+    ]);
   });
 
   return Result.ok({ contentHash });

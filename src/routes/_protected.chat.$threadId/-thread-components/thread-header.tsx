@@ -43,7 +43,7 @@ export const ThreadHeader = ({ page, threadId }: ThreadHeaderProps) => {
   });
   const topic = useQuery({
     ...sidebarQueries.topics(),
-    enabled: topicId !== undefined,
+    enabled: !!topicId,
     select: (listed) => listed.find((topic) => topic.id === topicId),
   });
   const isReady = thread.isSuccess && (!topic.isEnabled || topic.isSuccess);

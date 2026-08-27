@@ -131,7 +131,7 @@ const ThreadLocalMentionElement = ({
     }
 
     if (mentionType !== "attachment" || !attachment) {
-      return undefined;
+      return;
     }
 
     return "ready";

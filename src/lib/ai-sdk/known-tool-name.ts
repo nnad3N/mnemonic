@@ -9,8 +9,11 @@ export const KnownToolName = Kit.literals.from<MnemonicToolName>()([
   "fileGraphRag",
   "fileVectorSearch",
   "readFile",
+  "readNote",
   "recall",
   "searchFile",
+  "updateNote",
   "webFetch",
   "webSearch",
+  "writeNote",
 ]);

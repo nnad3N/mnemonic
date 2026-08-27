@@ -131,6 +131,11 @@ export const threadRun = sqliteTable(
 
     status: text("status").$type<ThreadRunStatus>().notNull().default("running"),
 
+    versionedNoteIds: text("versioned_note_ids", { mode: "json" })
+      .$type<SafeId<"note">[]>()
+      .notNull()
+      .default(sql`'[]'`),
+
     startedAt: integer("started_at", { mode: "timestamp_ms" }).notNull().default(now),
     finishedAt: integer("finished_at", { mode: "timestamp_ms" }),
   },
@@ -208,6 +213,12 @@ export const noteVersion = sqliteTable(
     author: text("author").$type<NoteVersionAuthor>().notNull(),
 
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+    // SQLite ADD COLUMN only takes constant defaults, so the runtime default carries inserts.
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date())
+      .default(sql`0`),
   },
   (table) => [uniqueIndex("note_version_note_seq_unique").on(table.noteId, table.seq)],
 );

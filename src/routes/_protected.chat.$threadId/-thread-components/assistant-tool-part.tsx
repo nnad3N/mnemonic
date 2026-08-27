@@ -43,6 +43,20 @@ const isRecoverableFailure = (part: ToolUIPart<ThreadUITools>): boolean => {
         case "parsed":
           return false;
       }
+    case "tool-readNote":
+      switch (part.output.type) {
+        case "error":
+          return true;
+        case "note":
+          return false;
+      }
+    case "tool-updateNote":
+      switch (part.output.type) {
+        case "error":
+          return true;
+        case "updated":
+          return false;
+      }
     case "tool-searchFile":
       switch (part.output.type) {
         case "error":
@@ -63,6 +77,7 @@ const isRecoverableFailure = (part: ToolUIPart<ThreadUITools>): boolean => {
     case "tool-fileVectorSearch":
     case "tool-recall":
     case "tool-webSearch":
+    case "tool-writeNote":
       return false;
   }
 };
@@ -132,6 +147,15 @@ const renderToolLabel = (toolName: MnemonicToolName, status: ToolPartStatus): Re
         case "error":
           return <T>Could not read the file</T>;
       }
+    case "readNote":
+      switch (status) {
+        case "pending":
+          return <T>Reading the note</T>;
+        case "done":
+          return <T>Read the note</T>;
+        case "error":
+          return <T>Could not read the note</T>;
+      }
     case "recall":
       switch (status) {
         case "pending":
@@ -167,6 +191,24 @@ const renderToolLabel = (toolName: MnemonicToolName, status: ToolPartStatus): Re
           return <T>Searched the web</T>;
         case "error":
           return <T>Could not search the web</T>;
+      }
+    case "writeNote":
+      switch (status) {
+        case "pending":
+          return <T>Writing a note</T>;
+        case "done":
+          return <T>Wrote a note</T>;
+        case "error":
+          return <T>Could not write the note</T>;
+      }
+    case "updateNote":
+      switch (status) {
+        case "pending":
+          return <T>Updating the note</T>;
+        case "done":
+          return <T>Updated the note</T>;
+        case "error":
+          return <T>Could not update the note</T>;
       }
   }
 };

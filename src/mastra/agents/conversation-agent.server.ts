@@ -12,17 +12,23 @@ import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
 import { computeDocsTool } from "@/mastra/tools/compute-docs-tool.server";
 import { computeTool } from "@/mastra/tools/compute-tool.server";
 import { readFileTool } from "@/mastra/tools/read-file-tool.server";
+import { readNoteTool } from "@/mastra/tools/read-note-tool.server";
 import { searchFileTool } from "@/mastra/tools/search-file-tool.server";
+import { updateNoteTool } from "@/mastra/tools/update-note-tool.server";
 import { webFetchTool } from "@/mastra/tools/web-fetch-tool.server";
 import { webSearchTool } from "@/mastra/tools/web-search-tool.server";
+import { writeNoteTool } from "@/mastra/tools/write-note-tool.server";
 
 const conversationAgentTools = {
   compute: computeTool,
   computeDocs: computeDocsTool,
   readFile: readFileTool,
+  readNote: readNoteTool,
   searchFile: searchFileTool,
+  updateNote: updateNoteTool,
   webFetch: webFetchTool,
   webSearch: webSearchTool,
+  writeNote: writeNoteTool,
 } as const;
 
 export type ConversationAgentTools = typeof conversationAgentTools;
