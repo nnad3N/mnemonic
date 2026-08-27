@@ -26,7 +26,7 @@ import {
   usePlateEditor,
 } from "platejs/react";
 import type { PropsWithChildren } from "react";
-import { Suspense, useEffect, useId } from "react";
+import { Suspense, useEffect, useId, useRef } from "react";
 import remarkGfm from "remark-gfm";
 import { useDebouncedCallback } from "use-debounce";
 
@@ -141,6 +141,10 @@ const NoteEditor = ({ noteId }: NoteEditorProps) => {
     value: (plate) => markdownToPlate(plate, note.content),
   });
   const saveMutationKey = [...noteQuery.queryKey, "body"] as const;
+  // Hash of the content the editor is based on: what it was seeded with, last saved, or last
+  // adopted from a remote write. The editor drifting from it means local edits; the cache
+  // drifting from it means an agent wrote while this editor was open.
+  const baselineHash = useRef(note.contentHash);
   const save = useMutation({
     mutationKey: saveMutationKey,
     mutationFn: async () => {
@@ -150,7 +154,16 @@ const NoteEditor = ({ noteId }: NoteEditorProps) => {
       const content = plateToMarkdown(editor);
       const contentHash = await hashText(content);
 
-      if (contentHash === queryClient.getQueryData(noteQuery.queryKey)?.contentHash) return;
+      if (contentHash === baselineHash.current) {
+        const cached = queryClient.getQueryData(noteQuery.queryKey);
+
+        if (cached && cached.contentHash !== baselineHash.current) {
+          editor.tf.setValue(markdownToPlate(editor, cached.content));
+          baselineHash.current = cached.contentHash;
+        }
+
+        return;
+      }
 
       const saved = await saveNoteBody({ data: { content, noteId } });
 
@@ -162,6 +175,7 @@ const NoteEditor = ({ noteId }: NoteEditorProps) => {
           draft.contentHash = saved.contentHash;
         }),
       );
+      baselineHash.current = saved.contentHash;
 
       return { content, contentHash: saved.contentHash };
     },

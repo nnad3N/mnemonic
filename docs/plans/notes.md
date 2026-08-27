@@ -58,9 +58,35 @@ agent memory, which the user never sees.
   the current thread; update works on any note within that scope. An agent never
   moves a note between scopes.
 - An agent never sees the user's in-flight typing beyond the last autosave.
-- When a note tool finishes, the client invalidates that note's query, so an open
-  editor shows what the agent wrote. For now that is last write wins over the
-  editor's unsaved changes; merging non-overlapping edits instead is future work.
+- When a note tool finishes, the client invalidates that note's query, and an
+  open editor with no local edits adopts what the agent wrote at its next
+  autosave tick. The editor tracks the hash of the content it is based on, so a
+  cache that moved off that baseline reseeds the editor instead of being treated
+  as local edits — without this the autosave pushed its stale bytes back and
+  silently reverted the agent's update. When the user did type in the same
+  window, the user's editor wins and the next autosave overwrites the agent's
+  update; it survives as its own version in the chain. This race goes away with
+  the diff-based sync below.
+
+### Diff-based sync (direction, not yet settled)
+
+Ideas for making agent edits robust once version diffing lands; recorded so
+they are not lost, details to be worked out then.
+
+- The note data event carries the agent's change as a diff the client applies
+  to the editor directly. The user sees the change the moment the tool
+  finishes, instead of after the invalidation round trip; invalidation stays as
+  reconciliation, not as the way changes arrive.
+- The editor shows the agent's change as a diff against the version the user
+  was looking at, so what the agent did is visible at a glance rather than the
+  content just being different.
+- Sync becomes an invariant instead of a race: the agent's version is always
+  the base. An agent edit is a replacement anchored in a known version, so it
+  is always safe to build on; the user's uncommitted edits are what get rebased
+  onto it, non-overlapping ones preserved, overlapping ones rejected. This
+  inverts the v0 rule, where the user's editor wins — under it an out-of-sync
+  editor cannot exist, because local edits never overwrite an agent version,
+  they are re-applied on top of it.
 
 ### Retrieval
 
@@ -124,9 +150,10 @@ Backend:
 Frontend:
 
 - [x] Notes table for a topic and for a thread
-- [ ] Conflict handling when an agent writes a note that is open in the editor —
-      today the editor refetches and the agent's write beats unsaved local
-      changes; merge non-overlapping edits instead
+- [ ] Diff-based sync when an agent writes a note that is open in the editor —
+      today a clean editor adopts the agent's write, but concurrent local edits
+      win and the next autosave overwrites the agent's update; see the
+      diff-based sync section for the intended model
 - [x] Notes in the mention menu: the mentions query is keyed by the thread and the
       server resolves its topic; a topic thread lists the topic's files, notes,
       the topic's threads and their notes, a standalone thread only its own notes.
