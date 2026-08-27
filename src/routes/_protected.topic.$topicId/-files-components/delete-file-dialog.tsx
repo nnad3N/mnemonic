@@ -43,7 +43,7 @@ export const DeleteFileDialog = ({ file, onOpenChange, open, topicId }: DeleteFi
           queryKey: fileQueries.byTopic(topicId),
         }),
         queryClient.invalidateQueries({
-          queryKey: mentionQueries.byResource(topicId),
+          queryKey: mentionQueries.listBase(),
         }),
       ]);
       onOpenChange(false);

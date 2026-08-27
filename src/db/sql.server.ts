@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import type { SQLWrapper } from "drizzle-orm";
+import type { SQL, SQLWrapper } from "drizzle-orm";
 
 /**
  * `%` and `_` are LIKE wildcards, and SQLite applies no escape character unless the query
@@ -8,9 +8,16 @@ import type { SQLWrapper } from "drizzle-orm";
 const escapeLikePattern = (value: string) =>
   value.replaceAll(/[\\%_]/g, (character) => `\\${character}`);
 
-/** Case-insensitive match on rows containing `value`, taken literally. */
-export const ilike = (column: SQLWrapper, value: string) =>
-  sql`lower(${column}) LIKE ${`%${escapeLikePattern(value.toLowerCase())}%`} ESCAPE '\\'`;
+/** Case-insensitive match on rows containing `value`, taken literally; no `value`, no filter. */
+export function ilike(column: SQLWrapper, value: string): SQL;
+export function ilike(column: SQLWrapper, value: string | undefined): SQL | undefined;
+export function ilike(column: SQLWrapper, value: string | undefined): SQL | undefined {
+  if (value === undefined) {
+    return;
+  }
+
+  return sql`lower(${column}) LIKE ${`%${escapeLikePattern(value.toLowerCase())}%`} ESCAPE '\\'`;
+}
 
 /** Match rows whose column starts with `prefix`, taken literally. */
 export const startsWith = (column: SQLWrapper, prefix: string) =>

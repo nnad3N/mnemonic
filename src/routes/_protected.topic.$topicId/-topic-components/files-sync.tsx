@@ -46,7 +46,7 @@ export const FilesSync = ({ topicId }: FilesSyncProps) => {
 
     if (removedFileIds.length > 0) {
       void queryClient.invalidateQueries({
-        queryKey: mentionQueries.byResource(topicId),
+        queryKey: mentionQueries.listBase(),
       });
 
       void queryClient.invalidateQueries({

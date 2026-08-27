@@ -17,7 +17,6 @@ export const renderThreadBrowser = async (messages: ThreadUIMessage[]) => {
       id: threadId,
       messages,
     }),
-    resourceId: "user_test",
     topicId: undefined,
   });
   queryClient.setQueryData(threadSettingsQueries.byThread(threadId).queryKey, {

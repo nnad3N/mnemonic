@@ -15,6 +15,7 @@ import {
 } from "@/lib/middleware/assert-thread-access.middleware";
 import { authMiddleware } from "@/lib/middleware/auth.middleware";
 import { providerKeyMiddleware } from "@/lib/middleware/provider-key.middleware";
+import { getResourceId } from "@/lib/middleware/resolve-thread.server";
 import { s3Kit } from "@/lib/s3-kit.server";
 import { vectorKit } from "@/lib/vector-kit.server";
 
@@ -45,7 +46,7 @@ export const createConversation = createServerFn({ method: "POST" })
     const result = await Kit.get(memoryKit).saveThread({
       thread: {
         id: data.id ?? nanoid(),
-        resourceId: context.user.id,
+        resourceId: getResourceId({ topicId: undefined, userId: context.user.id }),
         title: data.title,
         createdAt: now,
         updatedAt: now,
@@ -97,7 +98,7 @@ export const createTopicThread = createServerFn({ method: "POST" })
     const result = await Kit.get(memoryKit).saveThread({
       thread: {
         id: data.id ?? nanoid(),
-        resourceId: context.topic.id,
+        resourceId: getResourceId({ topicId: context.topic.id, userId: context.user.id }),
         title: data.title,
         createdAt: now,
         updatedAt: now,
@@ -136,6 +137,7 @@ export const deleteTopic = createServerFn({ method: "POST" })
     Kit.run(async () =>
       deleteTopicFn(deleteThreadCtx, {
         topicId: context.topic.id,
+        userId: context.user.id,
       }),
     ).throws<ServerFnError>(() => toServerFnError.serverError("Failed to delete topic")),
   );
@@ -187,9 +189,8 @@ export const getThread = createServerFn({ method: "GET" })
   .handler(async ({ context }) =>
     Kit.run(async () =>
       getThreadFn(getThreadCtx, {
-        resourceId: context.thread.resourceId,
         threadId: context.thread.id,
-        userId: context.user.id,
+        topicId: context.topicId,
       }),
     ).throws<ServerFnError>((error) =>
       matchError(error, {

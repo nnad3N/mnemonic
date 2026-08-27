@@ -118,6 +118,11 @@ Backend:
 Frontend:
 
 - [x] Notes table for a topic and for a thread
+- [x] Notes in the mention menu: the mentions query is keyed by the thread and the
+      server resolves its topic; a topic thread lists the topic's files, notes,
+      the topic's threads and their notes, a standalone thread only its own notes.
+      Adding or clicking a note mention opens it in the panel, and a response link
+      with a `mention:note::…` href renders as a mention chip
 - [ ] Version `updatedAt` and per-run version bookkeeping on `thread_run`
 - [ ] Timeline endpoint: entries with word counts relative to a selected version
 - [ ] Timeline panel with author labels, indicators and collapsed agent blocks

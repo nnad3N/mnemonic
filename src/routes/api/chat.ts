@@ -46,7 +46,6 @@ const chatRequestSchema = v.object({
   id: v.optional(v.pipe(v.string(), v.nanoid())),
   messageId: v.optional(v.pipe(v.string(), v.nanoid())),
   metadata: v.optional(v.unknown()),
-  resourceId: v.optional(v.pipe(v.string(), v.nanoid())),
 });
 
 type ChatRequest = v.InferOutput<typeof chatRequestSchema>;
@@ -147,7 +146,7 @@ const settleRun = async (
 };
 
 const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
-  const [{ agentId, thread, topicId }, providerKey] = yield* await Kit.promiseAll([
+  const [{ agentId, resourceId, topicId }, providerKey] = yield* await Kit.promiseAll([
     resolveThread(ctx, { threadId: input.body.threadId, userId: input.userId }),
     resolveProviderKey(ctx, input.userId),
   ]);
@@ -212,9 +211,7 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
   yield* await Kit.promiseAll([
     ctx.durableAgents.connect(),
     ctx.memory.saveMessages({
-      messages: new MessageList({ threadId, resourceId: thread.resourceId })
-        .add(messagesToSend, "user")
-        .get.all.db(),
+      messages: new MessageList({ threadId, resourceId }).add(messagesToSend, "user").get.all.db(),
     }),
   ]);
 
@@ -225,7 +222,7 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
         delegation: { messageFilter: () => [] },
         maxSteps: 10,
         memory: {
-          resource: thread.resourceId,
+          resource: resourceId,
           thread: threadId,
         },
         requestContext,

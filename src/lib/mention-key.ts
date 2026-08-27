@@ -2,7 +2,14 @@ import * as v from "valibot";
 
 const MENTION_KEY_TYPE_SEPARATOR = "::";
 
-const mentionTypeSchema = v.picklist(["file", "attachment", "selection", "thread", "topic"]);
+const mentionTypeSchema = v.picklist([
+  "file",
+  "attachment",
+  "note",
+  "selection",
+  "thread",
+  "topic",
+]);
 
 type MentionKeyType = v.InferOutput<typeof mentionTypeSchema>;
 

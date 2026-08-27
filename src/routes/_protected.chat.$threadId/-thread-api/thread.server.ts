@@ -11,8 +11,9 @@ import { toServerFnError } from "@/lib/errors/server-fn-error";
 import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
 import type { MemoryKit } from "@/lib/memory-kit.server";
+import { getResourceId } from "@/lib/middleware/resolve-thread.server";
 import type { S3Kit } from "@/lib/s3-kit.server";
-import { createSafeId, toSafeId } from "@/lib/safe-id";
+import { createSafeId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
 import type { VectorKit } from "@/lib/vector-kit.server";
 import { getThreadTitleModel } from "@/mastra/config.server";
@@ -45,7 +46,7 @@ export const createTopicFn = Kit.gen(async function* (
   const thread = yield* await ctx.memory.saveThread({
     thread: {
       id: nanoid(),
-      resourceId: topicId,
+      resourceId: getResourceId({ topicId, userId: input.userId }),
       title: input.conversationTitle,
       createdAt: now,
       updatedAt: now,
@@ -59,6 +60,7 @@ type DeleteThreadCtx = Kits<[DbKit, S3Kit, MemoryKit, VectorKit]>;
 
 type DeleteTopicInput = {
   topicId: SafeId<"topic">;
+  userId: SafeId<"user">;
 };
 
 export const deleteTopicFn = Kit.gen(async function* (
@@ -73,7 +75,7 @@ export const deleteTopicFn = Kit.gen(async function* (
       }),
     ),
     ctx.memory.listThreads({
-      filter: { resourceId: input.topicId },
+      filter: { resourceId: getResourceId({ topicId: input.topicId, userId: input.userId }) },
       page: 0,
       perPage: false,
     }),
@@ -86,7 +88,9 @@ export const deleteTopicFn = Kit.gen(async function* (
       filter: { topicId: input.topicId },
       indexName: FILE_EMBEDDINGS_INDEX,
     }),
-    ctx.memory.clearResourceObservations({ resourceId: input.topicId }),
+    ctx.memory.clearResourceObservations({
+      resourceId: getResourceId({ topicId: input.topicId, userId: input.userId }),
+    }),
     ...threads.map(async (thread) => ctx.memory.deleteThread({ threadId: thread.id })),
   ]);
   // Keep durable rows until external deletes succeed so a failed S3/vector/memory
@@ -147,9 +151,8 @@ export const deleteConversationFn = Kit.gen(async function* (
 type GetThreadCtx = Kits<[DbKit, MemoryKit]>;
 
 type GetThreadInput = {
-  resourceId: string;
   threadId: string;
-  userId: SafeId<"user">;
+  topicId: SafeId<"topic"> | undefined;
 };
 
 // Collapse Mastra's split assistants so the UI always sees user → assistant → user.
@@ -174,22 +177,12 @@ export const mergeConsecutiveAssistantMessages = <TMessage extends ThreadUIMessa
 };
 
 export const getThreadFn = Kit.gen(async function* (ctx: GetThreadCtx, input: GetThreadInput) {
-  const [{ messages }, topic, replies] = yield* await Kit.promiseAll([
+  const [{ messages }, replies] = yield* await Kit.promiseAll([
     ctx.memory.listMessages({
       threadId: input.threadId,
       page: 0,
       perPage: false,
     }),
-    ctx.db.run((db) =>
-      db.query.topic.findFirst({
-        columns: { id: true },
-        where: {
-          // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId check.
-          id: toSafeId<"topic">(input.resourceId),
-          userId: input.userId,
-        },
-      }),
-    ),
     ctx.db.run((db) =>
       db
         .select({ userMessageId: threadReply.userMessageId, workTimings: threadReply.workTimings })
@@ -218,8 +211,7 @@ export const getThreadFn = Kit.gen(async function* (ctx: GetThreadCtx, input: Ge
 
   return Result.ok({
     messages: merged,
-    resourceId: input.resourceId,
-    topicId: topic?.id,
+    topicId: input.topicId,
   });
 });
 

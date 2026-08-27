@@ -70,7 +70,6 @@ export const threadQueries = {
                 body: {
                   ...body,
                   messages: getMessagesToSend(requestMessages, body.trigger),
-                  resourceId: data.resourceId,
                   settings: { modelCapability: settings.modelCapability },
                   threadId,
                 },
@@ -81,7 +80,6 @@ export const threadQueries = {
 
         return {
           chat,
-          resourceId: data.resourceId,
           topicId: data.topicId,
         };
       },

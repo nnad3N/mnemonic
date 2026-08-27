@@ -157,7 +157,7 @@ describe("deleteTopicFn", () => {
     fakeS3.put(second.s3Key, new TextEncoder().encode("two"));
     const ctx = Kit.createContext(dbKit, fakeS3.kit, memoryKit, vectorKit);
 
-    expect(expectOk(await deleteTopicFn(ctx, { topicId }))).toEqual({
+    expect(expectOk(await deleteTopicFn(ctx, { topicId, userId }))).toEqual({
       id: topicId,
     });
 
@@ -175,7 +175,7 @@ describe("deleteTopicFn", () => {
     ]);
     const ctx = Kit.createContext(dbKit, fakeS3.kit, memoryKit, vectorKit);
 
-    expectOk(await deleteTopicFn(ctx, { topicId }));
+    expectOk(await deleteTopicFn(ctx, { topicId, userId }));
 
     expect(fakeS3.calls).toEqual([
       { method: "deleteObjects", keys: expect.arrayContaining([first.s3Key, second.s3Key]) },
@@ -194,7 +194,7 @@ describe("deleteTopicFn", () => {
 
     const ctx = Kit.createContext(dbKit, fakeS3.kit, memoryKit, vectorKit);
 
-    expectOk(await deleteTopicFn(ctx, { topicId }));
+    expectOk(await deleteTopicFn(ctx, { topicId, userId }));
 
     expect(await topicExists(siblingTopicId)).toBe(true);
     expect(await fileIdsForTopic(siblingTopicId)).toEqual([sibling.fileId]);
@@ -208,7 +208,7 @@ describe("deleteTopicFn", () => {
     fakeS3.put(s3Key, new TextEncoder().encode("kept"));
     const ctx = Kit.createContext(dbKit, fakeS3.kit, memoryKit, vectorKit);
 
-    expectErr(await deleteTopicFn(ctx, { topicId }));
+    expectErr(await deleteTopicFn(ctx, { topicId, userId }));
 
     expect(await topicExists(topicId)).toBe(true);
     expect(await fileIdsForTopic(topicId)).toEqual([fileId]);
@@ -220,7 +220,7 @@ describe("deleteTopicFn", () => {
     fakeS3.put(s3Key, new TextEncoder().encode("kept"));
     const ctx = Kit.createContext(dbKit, fakeS3.kit, memoryKit, createFailingVectorKit());
 
-    expectErr(await deleteTopicFn(ctx, { topicId }));
+    expectErr(await deleteTopicFn(ctx, { topicId, userId }));
 
     expect(await topicExists(topicId)).toBe(true);
     expect(await fileIdsForTopic(topicId)).toEqual([fileId]);
@@ -236,7 +236,7 @@ describe("deleteTopicFn", () => {
     fakeS3.put(s3Key, new TextEncoder().encode("kept"));
     const ctx = Kit.createContext(dbKit, fakeS3.kit, createFailingMemoryKit(), vectorKit);
 
-    expectErr(await deleteTopicFn(ctx, { topicId }));
+    expectErr(await deleteTopicFn(ctx, { topicId, userId }));
 
     expect(await topicExists(topicId)).toBe(true);
     expect(await fileIdsForTopic(topicId)).toEqual([fileId]);

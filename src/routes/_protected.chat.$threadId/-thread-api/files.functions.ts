@@ -11,7 +11,6 @@ import { ServerFnError, toServerFnError } from "@/lib/errors/server-fn-error";
 import * as Kit from "@/lib/kit";
 import {
   fileAccessMiddleware,
-  threadAccessMiddleware,
   topicAccessMiddleware,
 } from "@/lib/middleware/assert-thread-access.middleware";
 import { s3Kit } from "@/lib/s3-kit.server";
@@ -31,14 +30,14 @@ const uploadFileCtx = Kit.createContext(dbKit, s3Kit);
 
 export const getPresignedUrl = createServerFn({ method: "POST" })
   .validator(getPresignedUrlInputSchema)
-  .middleware([threadAccessMiddleware])
+  .middleware([topicAccessMiddleware])
   .handler(async ({ context, data }) =>
     Kit.run(async () =>
       getPresignedUrlFn(uploadFileCtx, {
         displayName: data.displayName,
         fileId: data.fileId,
         mimeType: data.mimeType,
-        resourceId: context.thread.resourceId,
+        topicId: context.topic.id,
         sha256: data.sha256,
         sizeBytes: data.sizeBytes,
         userId: context.user.id,
@@ -48,7 +47,6 @@ export const getPresignedUrl = createServerFn({ method: "POST" })
         DatabaseError: () => toServerFnError.serverError("Failed to prepare file upload"),
         FileUploadError: (fileUploadError) => toServerFnError.serverError(fileUploadError.message),
         S3Error: () => toServerFnError.serverError("Failed to prepare file upload"),
-        ServerFnError: (error) => error,
       }),
     ),
   );
@@ -144,7 +142,7 @@ export const fileMutations = {
     mutationOptions({
       retry: 3,
       mutationKey: [...fileMutations.all(), "upload", threadId] as const,
-      mutationFn: async ({ file, fileId, sha256 }: UploadFileVars) => {
+      mutationFn: async ({ file, fileId, sha256, topicId }: UploadFileVars) => {
         const presigned = await getPresignedUrl({
           data: {
             displayName: file.name,
@@ -152,7 +150,7 @@ export const fileMutations = {
             mimeType: file.type,
             sha256,
             sizeBytes: file.size,
-            threadId,
+            topicId,
           },
         });
 

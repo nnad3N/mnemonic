@@ -33,6 +33,7 @@ import {
 } from "@/routes/_protected.chat.$threadId/-thread-api/notes.functions";
 
 import { NoteExportSubmenu } from "./export-submenu";
+import { useOpenNote } from "./use-open-note";
 
 type NotesTabsProps = {
   onClose: () => void;
@@ -42,6 +43,7 @@ type NotesTabsProps = {
 export const NotesTabs = ({ onClose, threadId }: NotesTabsProps) => {
   const gt = useGT();
   const navigate = useNavigate();
+  const openNote = useOpenNote();
   const queryClient = useQueryClient();
   const { activeNoteId, openNoteIds, topicId } = useSearch({
     from: "/_protected",
@@ -57,16 +59,6 @@ export const NotesTabs = ({ onClose, threadId }: NotesTabsProps) => {
   });
 
   const isInTopic = activeNote.data?.isInTopic === true;
-
-  const openNote = async (noteId: string) =>
-    navigate({
-      search: (prev) =>
-        produce(prev, (draft) => {
-          draft.note = noteId;
-          draft.noteTabs = openNoteIds.includes(noteId) ? openNoteIds : [...openNoteIds, noteId];
-        }),
-      to: ".",
-    });
 
   const closeNote = async (noteId: string) => {
     const remaining = openNoteIds.filter((id) => id !== noteId);

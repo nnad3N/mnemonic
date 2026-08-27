@@ -1,6 +1,7 @@
 import { useRender } from "@base-ui/react/use-render";
 import {
   FileIcon,
+  FileTextIcon,
   LinkIcon,
   Loader2Icon,
   MessageSquareTextIcon,
@@ -60,6 +61,7 @@ export const MentionContent = ({ render, className, children }: MentionContentPr
 const mentionIconMap = {
   file: FileIcon,
   attachment: FileIcon,
+  note: FileTextIcon,
   selection: TextIcon,
   thread: MessageSquareTextIcon,
   topic: MessagesSquareIcon,

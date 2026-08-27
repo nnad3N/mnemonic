@@ -1,11 +1,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
 import { T, useGT, useLocale } from "gt-tanstack-start";
-import { produce } from "immer";
 import { EllipsisVerticalIcon, EyeIcon, FolderPlusIcon, Trash2Icon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { useOpenNote } from "@/components/notes-editor/use-open-note";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,7 +42,7 @@ type NoteRowProps = {
 export const NoteRow = ({ canMoveToTopic, note, scope }: NoteRowProps) => {
   const gt = useGT();
   const locale = useLocale();
-  const navigate = useNavigate();
+  const openNote = useOpenNote();
   const queryClient = useQueryClient();
   const [deleteOpen, setDeleteOpen] = useState(false);
 
@@ -66,19 +65,6 @@ export const NoteRow = ({ canMoveToTopic, note, scope }: NoteRowProps) => {
     onSuccess: invalidateList,
   });
 
-  const openNote = async () =>
-    navigate({
-      search: (prev) =>
-        produce(prev, (draft) => {
-          draft.note = note.id;
-          draft.notes = true;
-          draft.noteTabs = draft.noteTabs?.includes(note.id)
-            ? draft.noteTabs
-            : [...(draft.noteTabs ?? []), note.id];
-        }),
-      to: ".",
-    });
-
   return (
     <TableRow>
       <TableCell className="font-medium">{note.title}</TableCell>
@@ -99,7 +85,7 @@ export const NoteRow = ({ canMoveToTopic, note, scope }: NoteRowProps) => {
             </span>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-auto">
-            <DropdownMenuItem onClick={openNote}>
+            <DropdownMenuItem onClick={async () => openNote(note.id)}>
               <EyeIcon />
               <T>View</T>
             </DropdownMenuItem>
