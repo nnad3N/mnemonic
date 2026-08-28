@@ -12,6 +12,7 @@ import { replaceNoteText, updateAgentNoteFn } from "@/mastra/tools/update-note-t
 import { createAgentNoteFn } from "@/mastra/tools/write-note-tool.server";
 import {
   createNoteFn,
+  getNoteFn,
   saveNoteBodyFn,
 } from "@/routes/_protected.chat.$threadId/-thread-api/notes.server";
 import { clearDatabase } from "@/test/clear-database";
@@ -130,12 +131,79 @@ describe("agent note versioning", () => {
     const { id } = expectOk(
       await createAgentNoteFn(ctx, { content: "agent text", threadId, title: "Plan", userId }),
     );
+    const { versionId } = expectOk(await getNoteFn(ctx, { noteId: id, userId }));
 
-    expectOk(await saveNoteBodyFn(ctx, { content: "user text", noteId: id }));
+    const saved = expectOk(
+      await saveNoteBodyFn(ctx, { baseVersionId: versionId, content: "user text", noteId: id }),
+    );
 
+    expect(saved.status).toBe("latest");
     expect(await listVersions(id)).toEqual([
       { author: "agent", content: "agent text", seq: 1 },
       { author: "user", content: "user text", seq: 2 },
+    ]);
+  });
+
+  it("lands a stale user save in its base version below the agent's latest", async () => {
+    const threadId = await seedThread({ resourceId: userId });
+    await seedRun(threadId);
+    const { id } = expectOk(
+      await createNoteFn(ctx, { author: "user", content: "draft", threadId, title: "Plan", userId }),
+    );
+    const { versionId: baseVersionId } = expectOk(await getNoteFn(ctx, { noteId: id, userId }));
+
+    expectOk(
+      await updateAgentNoteFn(ctx, {
+        newText: "agent text",
+        oldText: "draft",
+        noteId: id,
+        threadId,
+        userId,
+      }),
+    );
+
+    const saved = expectOk(
+      await saveNoteBodyFn(ctx, { baseVersionId, content: "late user text", noteId: id }),
+    );
+
+    expect(saved.status).toBe("behind");
+    expect(await listVersions(id)).toEqual([
+      { author: "user", content: "late user text", seq: 1 },
+      { author: "agent", content: "agent text", seq: 2 },
+    ]);
+  });
+
+  it("drops a user save whose agent base was replaced by a newer agent version", async () => {
+    const threadId = await seedThread({ resourceId: userId });
+    await seedRun(threadId);
+    const { id } = expectOk(
+      await createAgentNoteFn(ctx, { content: "from run one", threadId, title: "Plan", userId }),
+    );
+    const { versionId: baseVersionId } = expectOk(await getNoteFn(ctx, { noteId: id, userId }));
+
+    expectOk(
+      await ctx.db.run((db) =>
+        db.update(threadRun).set({ runId: createSafeId<"run">(), versionedNoteIds: [] }),
+      ),
+    );
+    expectOk(
+      await updateAgentNoteFn(ctx, {
+        newText: "from run two",
+        oldText: "from run one",
+        noteId: id,
+        threadId,
+        userId,
+      }),
+    );
+
+    const saved = expectOk(
+      await saveNoteBodyFn(ctx, { baseVersionId, content: "user edits", noteId: id }),
+    );
+
+    expect(saved.status).toBe("stale");
+    expect(await listVersions(id)).toEqual([
+      { author: "agent", content: "from run one", seq: 1 },
+      { author: "agent", content: "from run two", seq: 2 },
     ]);
   });
 

@@ -122,6 +122,7 @@ export const createNote = createServerFn({ method: "POST" })
   );
 
 const saveNoteBodyInputSchema = v.object({
+  baseVersionId: v.pipe(v.string(), v.nanoid()),
   content: v.string(),
   noteId: v.pipe(v.string(), v.nanoid()),
 });
@@ -131,7 +132,11 @@ export const saveNoteBody = createServerFn({ method: "POST" })
   .middleware([noteAccessMiddleware])
   .handler(async ({ context, data }) =>
     Kit.run(async () =>
-      saveNoteBodyFn(noteCtx, { content: data.content, noteId: context.note.id }),
+      saveNoteBodyFn(noteCtx, {
+        baseVersionId: data.baseVersionId,
+        content: data.content,
+        noteId: context.note.id,
+      }),
     ).throws<ServerFnError>(() => toServerFnError.serverError("Failed to save the note")),
   );
 

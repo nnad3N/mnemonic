@@ -132,6 +132,12 @@ type NoteEditorProps = {
   noteId: string;
 };
 
+type SaveBaseline = {
+  contentHash: string;
+  mode: "behind" | "detached" | "tracking";
+  versionId: string;
+};
+
 const NoteEditor = ({ noteId }: NoteEditorProps) => {
   const queryClient = useQueryClient();
   const noteQuery = noteQueries.byId(noteId);
@@ -141,43 +147,74 @@ const NoteEditor = ({ noteId }: NoteEditorProps) => {
     value: (plate) => markdownToPlate(plate, note.content),
   });
   const saveMutationKey = [...noteQuery.queryKey, "body"] as const;
-  // Hash of the content the editor is based on: what it was seeded with, last saved, or last
-  // adopted from a remote write. The editor drifting from it means local edits; the cache
-  // drifting from it means an agent wrote while this editor was open.
-  const baselineHash = useRef(note.contentHash);
+  // The version the editor's content is based on. "behind": the agent's latest moved past
+  // the base, saves land in the base version. "detached": the base is an agent version that
+  // was replaced, saves stop.
+  const baseline = useRef<SaveBaseline>({
+    contentHash: note.contentHash,
+    mode: "tracking",
+    versionId: note.versionId,
+  });
   const save = useMutation({
     mutationKey: saveMutationKey,
     mutationFn: async () => {
       // The count includes this call, so above one means an earlier save is still in flight.
       if (queryClient.isMutating({ mutationKey: saveMutationKey }) > 1) return;
+      if (baseline.current.mode === "detached") return;
 
       const content = plateToMarkdown(editor);
       const contentHash = await hashText(content);
 
-      if (contentHash === baselineHash.current) {
+      if (contentHash === baseline.current.contentHash) {
+        if (baseline.current.mode !== "tracking") return;
+
         const cached = queryClient.getQueryData(noteQuery.queryKey);
 
-        if (cached && cached.contentHash !== baselineHash.current) {
-          editor.tf.setValue(markdownToPlate(editor, cached.content));
-          baselineHash.current = cached.contentHash;
-        }
+        if (!cached) return;
+
+        // An agent run overwrites its own version in place, so a matching id can carry new content.
+        const sameVersion = cached.versionId === baseline.current.versionId;
+        const sameContent = cached.contentHash === baseline.current.contentHash;
+
+        if (sameVersion && sameContent) return;
+
+        editor.tf.setValue(markdownToPlate(editor, cached.content));
+        baseline.current = {
+          contentHash: cached.contentHash,
+          mode: "tracking",
+          versionId: cached.versionId,
+        };
 
         return;
       }
 
-      const saved = await saveNoteBody({ data: { content, noteId } });
+      const saved = await saveNoteBody({
+        data: { baseVersionId: baseline.current.versionId, content, noteId },
+      });
 
-      queryClient.setQueryData(noteQuery.queryKey, (previous) =>
-        produce(previous, (draft) => {
-          if (!draft) return;
+      if (saved.status === "stale") {
+        baseline.current.mode = "detached";
 
-          draft.content = content;
-          draft.contentHash = saved.contentHash;
-        }),
-      );
-      baselineHash.current = saved.contentHash;
+        return;
+      }
 
-      return { content, contentHash: saved.contentHash };
+      baseline.current = {
+        contentHash: saved.contentHash,
+        mode: saved.status === "latest" ? "tracking" : "behind",
+        versionId: saved.versionId,
+      };
+
+      if (saved.status === "latest") {
+        queryClient.setQueryData(noteQuery.queryKey, (previous) =>
+          produce(previous, (draft) => {
+            if (!draft) return;
+
+            draft.content = content;
+            draft.contentHash = saved.contentHash;
+            draft.versionId = saved.versionId;
+          }),
+        );
+      }
     },
   });
   const runSave = save.mutate;

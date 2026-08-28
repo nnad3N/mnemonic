@@ -225,45 +225,77 @@ export const getNoteFn = Kit.gen(async function* (
     scope: note.scope,
     threadTopicId,
     title: note.title,
+    versionId: latest.id,
   });
 });
 
 type SaveNoteBodyInput = NoteIdInput & {
+  baseVersionId: string;
   content: string;
 };
 
 export const saveNoteBodyFn = Kit.gen(async function* (ctx: NoteCtx, input: SaveNoteBodyInput) {
   const contentHash = await hashText(input.content);
 
-  yield* await ctx.db.transaction(async (tx) => {
+  const saved = yield* await ctx.db.transaction(async (tx) => {
     const latestVersion = await tx.query.noteVersion.findFirst({
       where: { noteId: input.noteId },
       columns: { author: true, id: true, seq: true },
       orderBy: { seq: "desc" },
     });
 
-    if (latestVersion?.author === "user") {
-      await tx
-        .update(noteVersion)
-        .set({ content: input.content, contentHash })
-        .where(eq(noteVersion.id, latestVersion.id));
+    if (latestVersion?.id === input.baseVersionId) {
+      if (latestVersion.author === "user") {
+        await tx
+          .update(noteVersion)
+          .set({ content: input.content, contentHash })
+          .where(eq(noteVersion.id, latestVersion.id));
 
-      return;
+        return { status: "latest" as const, versionId: latestVersion.id };
+      }
+
+      const versionId = createSafeId<"noteVersion">();
+
+      await Promise.all([
+        tx.insert(noteVersion).values({
+          author: "user",
+          content: input.content,
+          contentHash,
+          id: versionId,
+          noteId: input.noteId,
+          seq: latestVersion.seq + 1,
+        }),
+        tx.update(note).set({ updatedAt: new Date() }).where(eq(note.id, input.noteId)),
+      ]);
+
+      return { status: "latest" as const, versionId };
     }
 
-    await Promise.all([
-      tx.insert(noteVersion).values({
-        author: "user",
-        content: input.content,
-        contentHash,
-        noteId: input.noteId,
-        seq: (latestVersion?.seq ?? 0) + 1,
-      }),
-      tx.update(note).set({ updatedAt: new Date() }).where(eq(note.id, input.noteId)),
-    ]);
+    // Latest moved past the base: the save goes into the user's base version. Agent versions
+    // are never overwritten.
+    const baseVersion = await tx.query.noteVersion.findFirst({
+      // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with the noteId filter.
+      where: { id: toSafeId<"noteVersion">(input.baseVersionId), noteId: input.noteId },
+      columns: { author: true, id: true },
+    });
+
+    if (baseVersion?.author !== "user") {
+      return { status: "stale" as const };
+    }
+
+    await tx
+      .update(noteVersion)
+      .set({ content: input.content, contentHash })
+      .where(eq(noteVersion.id, baseVersion.id));
+
+    return { status: "behind" as const, versionId: baseVersion.id };
   });
 
-  return Result.ok({ contentHash });
+  if (saved.status === "stale") {
+    return Result.ok({ status: saved.status });
+  }
+
+  return Result.ok({ contentHash, status: saved.status, versionId: saved.versionId });
 });
 
 type SaveNoteTitleInput = NoteIdInput & {

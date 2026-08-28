@@ -27,10 +27,12 @@ agent memory, which the user never sees.
 
 - One linear chain of full snapshots, never stored diffs. Each version carries
   its content, a hash of it, and the author (user or agent).
-- There is no commit and no draft: a save writes a version. A user save
-  overwrites the latest version when the user wrote it too, and appends a new one
-  when the agent wrote last, so an agent's text always survives as its own entry
-  to diff against.
+- There is no commit and no draft: a save writes a version, carrying the id of
+  the version the editor is based on. A user save overwrites that base version
+  when the user wrote it — even when the agent has appended past it, so a late
+  autosave lands in the user's own entry mid-chain instead of burying the
+  agent's — and appends a new version when the base is the agent's latest, so an
+  agent's text always survives as its own entry to diff against.
 - A run is the agent's unit, not a tool call: the first note write in a run
   appends a version and later writes in the same run overwrite it. The run
   records which notes it has already versioned on `thread_run`, so no version
@@ -60,13 +62,14 @@ agent memory, which the user never sees.
 - An agent never sees the user's in-flight typing beyond the last autosave.
 - When a note tool finishes, the client invalidates that note's query, and an
   open editor with no local edits adopts what the agent wrote at its next
-  autosave tick. The editor tracks the hash of the content it is based on, so a
-  cache that moved off that baseline reseeds the editor instead of being treated
-  as local edits — without this the autosave pushed its stale bytes back and
-  silently reverted the agent's update. When the user did type in the same
-  window, the user's editor wins and the next autosave overwrites the agent's
-  update; it survives as its own version in the chain. This race goes away with
-  the diff-based sync below.
+  autosave tick. The editor tracks the version it is based on (id and content
+  hash), so a cache that moved off that baseline reseeds the editor instead of
+  being treated as local edits — without this the autosave pushed its stale
+  bytes back and silently reverted the agent's update. When the user did type
+  in the same window, their saves land in that base version and the agent's
+  version stays the latest; the editor keeps showing the user's text, with
+  nothing on screen pointing at the agent's newer version until the diff-based
+  sync below lands.
 
 ### Diff-based sync (direction, not yet settled)
 
@@ -83,10 +86,10 @@ they are not lost, details to be worked out then.
 - Sync becomes an invariant instead of a race: the agent's version is always
   the base. An agent edit is a replacement anchored in a known version, so it
   is always safe to build on; the user's uncommitted edits are what get rebased
-  onto it, non-overlapping ones preserved, overlapping ones rejected. This
-  inverts the v0 rule, where the user's editor wins — under it an out-of-sync
-  editor cannot exist, because local edits never overwrite an agent version,
-  they are re-applied on top of it.
+  onto it, non-overlapping ones preserved, overlapping ones rejected. The
+  base-version save already gives half of this invariant — local edits can no
+  longer overwrite an agent version; the rebase of user edits onto it is what
+  remains.
 
 ### Retrieval
 
@@ -146,14 +149,21 @@ Backend:
 - [x] `note_version.updatedAt`, moved by the run-scoped overwrite
 - [ ] Note search tool: FTS5 over note content, scoped
 - [x] `listNotes` over a thread or topic scope, with search and pagination
+- [x] Base-version saves: a user save carries the version id it is based on and
+      the server routes it — overwrite the base, append after the agent's
+      latest, or land mid-chain when the agent moved past it
+- [ ] A save whose base is an agent version the agent has since replaced is
+      dropped: the editor detaches and those edits live only until the note
+      closes. Needs a real home — rebasing them onto the agent's latest — when
+      diff-based sync lands
 
 Frontend:
 
 - [x] Notes table for a topic and for a thread
 - [ ] Diff-based sync when an agent writes a note that is open in the editor —
-      today a clean editor adopts the agent's write, but concurrent local edits
-      win and the next autosave overwrites the agent's update; see the
-      diff-based sync section for the intended model
+      today a clean editor adopts the agent's write, and concurrent local edits
+      land in the user's base version below the agent's latest, invisibly until
+      the note reopens; see the diff-based sync section for the intended model
 - [x] Notes in the mention menu: the mentions query is keyed by the thread and the
       server resolves its topic; a topic thread lists the topic's files, notes,
       the topic's threads and their notes, a standalone thread only its own notes.
