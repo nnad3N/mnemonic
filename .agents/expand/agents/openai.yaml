@@ -1,0 +1,5 @@
+interface:
+  display_name: "Expand"
+  short_description: "Grow a seed into context for CDD"
+policy:
+  allow_implicit_invocation: false

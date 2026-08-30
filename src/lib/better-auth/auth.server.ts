@@ -9,6 +9,7 @@ import * as v from "valibot";
 import * as authSchema from "@/db/auth-schema.server";
 import { drizzleDb } from "@/db/client.server";
 import { isEmailAllowed } from "@/lib/better-auth/allowed-emails";
+import { devSession } from "@/lib/better-auth/dev-session.server";
 import type { AuthErrorCode } from "@/lib/errors/auth-error";
 
 const signUpContextSchema = v.pipe(
@@ -86,6 +87,7 @@ export const auth = betterAuth({
       rpName: "Mnemonic",
     }),
     admin(),
+    ...(import.meta.env.DEV ? [devSession()] : []),
     tanstackStartCookies(),
   ],
 });

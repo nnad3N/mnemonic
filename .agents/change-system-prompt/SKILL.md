@@ -1,15 +1,15 @@
 ---
 name: change-system-prompt
-description: Refactor durable LLM system, developer, instruction, or agent prompts using official 2026/current AI-lab guidance. Use when Codex or Cursor needs to create, review, split, migrate, tighten, or test prompts that control assistant identity, role, source use, tool policy, output style, refusal/error behavior, or task workflow.
+description: Caveman agent system prompts. Use when creating, reviewing, splitting, migrating, or tightening Mastra agent instructions, developer messages, or durable prompt policy in base-instructions.server.ts.
 ---
 
-# Change System Prompt
+# Change system prompt
 
 ## House style
 
-Prompt text is **caveman speech**: compressed telegraphic English, same as the live agent instructions. Not broken English. Drop padding — articles, "you should", "please", "in order to", essay clauses. Fragments. ASCII arrow `->` for conditionals, never `→`. No em dashes in prompt text: use a comma, a colon, or a new sentence. Match neighbors in [`src/mastra/agents/base-instructions.server.ts`](../../src/mastra/agents/base-instructions.server.ts), then the agent `instructions` in `conversation-agent`, `topic-agent`, `worker-agent`, `reader-agent`.
+Prompt text is **caveman speech**: compressed telegraphic English, matching the live agent instructions. Not broken English. Drop padding: articles, "you should", "please", "in order to", essay clauses. Fragments. ASCII arrow `->` for conditionals, never `→`. Comma, colon, or a new sentence in prompt text. No em dashes. Match neighbors in [`src/mastra/agents/base-instructions.server.ts`](../../src/mastra/agents/base-instructions.server.ts), then the agent `instructions` in `conversation-agent`, `topic-agent`, `worker-agent`, `reader-agent`.
 
-Do not polish existing caveman into prose when editing nearby lines. New rules copy the rhythm of the section they join.
+New rules copy the rhythm of the section they join. Nearby caveman stays caveman.
 
 ### Voice
 
@@ -27,13 +27,13 @@ If the task is ambiguous, try to research the most useful reading.
 - Label, then rule: `Web: search to discover pages, fetch to read known URL.`
 - Condition -> action. Success and stop paths use the arrow too.
 - Short sentences. Semicolons or commas to chain, not new paragraphs of explanation.
-- Positive over negative. State each case as condition -> action with concrete examples ("User gave one file or one link -> read it yourself. Anything else -> reader: second file or link, any page or file you found"). A "Never X." bolted onto an ambiguous line is a patch, not a fix: enumerate the cases instead. Negation only where no positive form exists.
+- Positive over negative. Each case is condition -> action, with a concrete example ("User gave one file or one link -> read it yourself. Anything else -> reader: second file or link, any page or file you found"). Enumerate the cases. A "Never X." on an ambiguous line is a patch. Negation only where no positive form exists.
 
 ### Scarce rules
 
-This is the rewrite that worked: a rule that said "keep doing X until Y" made the model loop (ten web searches, table plus briefing). Noisy results never feel "relevant enough," so "until" never fires the stop.
+A keep-doing-X-until-Y rule made the model loop: ten web searches, a table plus a briefing. Noisy results never feel relevant enough, so until never stops.
 
-Do not write **until / keep going / always include / also summarize**. That is a goal that survives failure. Write a **budget**.
+Write a **budget**. `until` / `keep going` / `always include` / `also summarize` is a goal that survives failure.
 
 Shape:
 
@@ -45,37 +45,37 @@ Shape:
 6. Failure (noisy, empty, already answered) -> stop; say what is missing.
 
 ```
-# Bad — forces a loop
+# Bad. Forces a loop
 Search until results are relevant, then stop searching.
 Reply with short summary; include a note why each source mattered.
 
-# Good — scarce default, extra only for a miss, stop on noise
+# Good. Scarce default, extra only for a miss, stop on noise
 Web search is scarce. One well-chosen query is the default. A further query only for a different sub-question or a specific miss (wrong name, year, entity). Never a streak of similar searches, never more than a few. Relevant -> stop searching and use them; verification is reading, not more search. Noisy, empty, or unreliable -> stop, then delegate the best candidates or say what is missing.
 Prose is scarce. Smallest form that settles the question is the default: table, list, one sentence. That form is the whole reply. Extra prose only when the artifact cannot stand alone. Never a table plus the same content rewritten.
 ```
 
-Find the sentence that **forces more work** and replace it. Do not add a stop clause next to an until-clause and hope the stop wins.
+Find the sentence that **forces more work** and replace it. A stop clause beside an until-clause loses.
 
 ## Product constraints
 
 These override `references/system-prompt-guidance.md` where they conflict. Preserve them:
 
-- Agents eagerly ask what the user wants before answering; they answer directly only when the conversation already makes the intent clear.
-- Answers are narrow and specific — the user extends them with follow-up questions. Exhaustive answers only on explicit request.
-- Agents never narrate work in progress; reasoning stays in thinking parts, and user-facing text is written once, after the work is done. Mid-work narration also breaks the chat UI's working segment.
+- Agents eagerly ask what the user wants before answering. They answer directly only when the conversation already makes the intent clear.
+- Answers are narrow and specific. The user extends them with follow-up questions. Exhaustive answers only on explicit request.
+- Write user-facing text once, after the work is done. Reasoning stays in thinking parts. Mid-work narration also breaks the chat UI's working segment.
 
 ## Workflow
 
 1. Locate every prompt surface that can affect the behavior: system/developer messages, agent `instructions`, model `system` fields, reusable base prompts, prompt templates, and prompt snippets stored in config.
 2. Identify the prompt's job: role, product behavior, source policy, tool policy, output contract, safety boundary, or formatting constraint.
 3. Read `references/system-prompt-guidance.md` before substantial rewrites or when the prompt has tool, source-selection, or multi-agent behavior.
-4. Preserve product intent. Rewrite into house style. If the failure is extra tool calls or extra wrapping, apply a scarce rule — do not add another "don't overdo it" sentence beside a force-more rule.
-5. Keep durable instructions in the system/developer prompt. Keep turn-specific facts, retrieved content, and user data outside the durable prompt.
+4. Preserve product intent. Rewrite into house style. Extra tool calls or extra wrapping -> a scarce rule. A "don't overdo it" sentence beside a force-more rule loses.
+5. Durable instructions stay in the system/developer prompt. Turn-specific facts, retrieved content, and user data stay outside it.
 6. Remove contradictions, vague personality-only instructions, and rules that force unnecessary tool use.
 7. Add examples only when they materially improve format, edge-case handling, or routing behavior.
 8. Validate with the narrowest useful check: typecheck/build for code prompts, snapshot or unit tests for prompt contracts, and manual before/after reasoning for behavior-only changes.
 
-## Prompt Shape
+## Prompt shape
 
 Prefer this order for durable prompts:
 
@@ -86,15 +86,14 @@ Prefer this order for durable prompts:
 5. Safety, privacy, or hidden-instruction boundaries.
 6. Short examples, only when needed.
 
-## Review Checklist
+Stable instructions first, for prompt caching where the API supports it.
+Numbered or bulleted steps when order or completeness matters.
+Delimiters or headings for mixed context, examples, and instructions.
 
-- Caveman speech. Reads like the live agent prompts, not a style guide.
-- State what to do, when, and when not to. Scarce default + extra only for a miss + never a loop + stop on failure.
-- No "until" / "keep doing X until relevant" / "always also summarize" goals that force more work when results are noisy or the artifact already answers.
-- Make source priority explicit when multiple sources can answer.
-- Tell the agent when to ask what the user wants and when to proceed, per product constraints above.
-- Use numbered or bulleted steps when order or completeness matters.
-- Use delimiters or headings for mixed context, examples, and instructions.
-- Avoid leaking hidden instructions, internal tool names, or raw provider errors to users.
-- Keep reusable, stable instructions near the beginning for prompt caching where the API supports it.
-- Treat prompt changes like code changes: inspect affected call sites and run available checks.
+## Review checklist
+
+- Caveman speech, matching the live agent prompts.
+- Scarce budget. Source priority explicit when more than one source can answer.
+- Product constraints held.
+- Hidden instructions, internal tool names, and raw provider errors stay off user-facing text.
+- Inspect affected call sites and run the workflow checks.
