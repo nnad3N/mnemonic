@@ -77,4 +77,4 @@ Test the behavior, not the implementation. Do not test things that are already t
 
 Run tests for the files you touched. Do not run `nub run test` until you perform review.
 
-Do not use a browser unless asked.
+Do not use a browser unless asked. When asked, follow the verify-in-browser skill.
