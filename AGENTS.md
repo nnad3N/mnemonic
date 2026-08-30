@@ -50,7 +50,7 @@ Utilize constraint-driven design. First decide what the code may do and what it 
 
 Fight for the smallest model that makes the correct behavior obvious without compromising the readability of the code.
 
-Honor the intent of the change. Drop complexity that is not earning its keep. Skip machinery that only looks impressive.
+Write like a lazy engineer. Import a trusted abstraction from a package this repo already uses before inventing a local copy. Reuse a function that already lives here when it fits. Every new function is maintenance and review load. Before adding code, name why adding it is a bad idea.
 
 Comments describe how a thing is used, workarounds, and move when the code moves. To be used mostly to describe functions, not to annotate every line of behavior.
 

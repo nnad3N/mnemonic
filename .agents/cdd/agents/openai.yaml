@@ -1,0 +1,5 @@
+interface:
+  display_name: "CDD"
+  short_description: "Outline and hard constraints from context"
+policy:
+  allow_implicit_invocation: false
