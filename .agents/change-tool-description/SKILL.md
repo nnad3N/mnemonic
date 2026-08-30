@@ -1,6 +1,6 @@
 ---
 name: change-tool-description
-description: Create, audit, or refactor LLM tool descriptions, names, parameter schemas, input examples, and tool-result contracts. Use when function calling is unreliable, tool docs drift from schemas or runtime behavior, or descriptions need tightening.
+description: Mastra tool input copy and Valibot v.description. Use when creating, auditing, or refactoring LLM tool descriptions, names, parameter schemas, input examples, or tool-result contracts.
 ---
 
 # Change Tool Description

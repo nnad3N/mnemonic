@@ -12,7 +12,7 @@ It is not trying to be groundbreaking. It is trying to be useful.
 
 Mnemonic is built for individuals. It runs on libSQL, so you can host it wherever you want.
 
-Things like teams, shared workspaces or BYOK are all possible later if there is a reason to build them, but none of that is a priority right now.
+You bring your own API keys. Teams and shared workspaces are possible later if there is a reason to build them, but they are not a priority right now.
 
 ## Why I am building it
 
