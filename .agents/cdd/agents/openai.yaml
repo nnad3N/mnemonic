@@ -1,5 +1,5 @@
 interface:
   display_name: "CDD"
-  short_description: "Outline and hard constraints from context"
+  short_description: "Feature constraints, types, and contracts"
 policy:
   allow_implicit_invocation: false

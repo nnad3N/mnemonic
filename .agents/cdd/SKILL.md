@@ -1,12 +1,12 @@
 ---
 name: cdd
-description: Constraint-driven design. Outline and hard constraints from expand context.
+description: Constraint-driven design. Feature constraints, a type-driven outline, and design by contract, from expand context.
 disable-model-invocation: true
 ---
 
 # Constraint-driven design
 
-Turn `docs/<slug>/context.md` into a rough **outline** and the **hard constraints**. Types, callstack, data flow. How each piece gets built stays off the page so a pivot is cheap.
+**Constraints** on what the feature may and may not do, a **type-driven** outline, and **design by contract** on each layer. How each piece gets built stays off the page so a pivot is cheap. **Slices** only when the outline is too big for one review.
 
 Read the files the context names and the callstack you are walking.
 
@@ -20,7 +20,7 @@ Read it. That file is the want. Done when you can state the want in one sentence
 
 ### 2. Walk the callstack
 
-Short summary first: today's callstack, the one you want, and the delta.
+This is the type-driven half. Short summary first: today's callstack, the one you want, and the delta.
 
 Then every **layer** of both stacks: input type, output type, side effects, errors. Which types get added, changed, or removed.
 
@@ -32,11 +32,27 @@ Write `docs/<slug>/outline.md` once both stacks exist. Update it as layers settl
 
 ### 3. Constraints
 
-Discuss what each layer **may** do and **may not**. Those are the hard constraints. Put them on the layer they bind.
+What the **feature** may do and may not. Not a per-function contract. Feature-level rules that collapse the design: cases real callers cannot produce leave the types and the callstack. They are absent, not handled.
 
-Done when every layer has its may / may not, and the user has not rejected them.
+A constraint that settles one case often settles another. Write those implied constraints down too.
 
-### 4. Slices
+If a constraint appears while walking, capture it here and cut the paths it forbids. Revisit the callstack and the types until they only cover what the constraints still allow.
+
+Done when every constraint is a feature-level may or may not, the implied ones are written, and no layer still handles a forbidden case.
+
+### 4. Contract
+
+This is the design-by-contract half, on the layers that remain. Each layer is a contract between caller and callee:
+
+- **Precondition**: what the caller owes. The layer may assume it.
+- **Postcondition**: what the layer owes if the precondition held. Out, effects, and the errors it owns.
+- **Invariant**: what stays true across calls.
+
+The feature constraints are the rules every layer follows. The contract is how that layer states them.
+
+Done when every remaining layer has precondition, postcondition, and invariant, and the user has not rejected them.
+
+### 5. Slices
 
 If the whole outline fits in one review, stop. No list.
 
@@ -50,6 +66,11 @@ This skill ends when `outline.md` matches the walkthrough. A later message that 
 
 ```md
 # <want, one line>
+
+## Constraints
+
+May:
+May not:
 
 ## Callstack
 
@@ -70,10 +91,11 @@ In:
 Out:
 Effects:
 Errors:
-May:
-May not:
+Precondition:
+Postcondition:
+Invariant:
 
 ## Slices
 ```
 
-`## Slices` only when step 4 earned a list.
+`## Slices` only when step 5 earned a list.
