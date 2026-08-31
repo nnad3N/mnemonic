@@ -21,7 +21,9 @@ export const getMnemonicAgentId = ({ topicId }: GetMnemonicAgentIdInput): Mnemon
   topicId ? TOPIC_AGENT_ID : CONVERSATION_AGENT_ID;
 
 export const getMnemonicAgent = (agentId: MnemonicAgentId): DurableAgent => {
-  const agent = mastra.getAgentById(agentId);
+  // Widen before the guard: intersecting the concrete agent union with `DurableAgent`
+  // blows past TS2590's union size limit.
+  const agent: object = mastra.getAgentById(agentId);
 
   if (!isDurableAgent(agent)) {
     throw new Error(`Agent ${agentId} is not registered as durable`);
