@@ -6,9 +6,9 @@ import * as Kit from "@/lib/kit";
 import { createMemoryKit, type MemoryApi, MemoryError, memoryKit } from "@/lib/memory-kit.server";
 import { createSafeId, toSafeId } from "@/lib/safe-id";
 import { createVectorKit, type VectorApi, VectorError, vectorKit } from "@/lib/vector-kit.server";
-import { FILE_EMBEDDINGS_INDEX } from "@/mastra/rag-config.server";
 import { EMBEDDING_DIMENSION } from "@/mastra/rag-config.server";
-import { libsqlVector } from "@/mastra/storage.server";
+import { FILE_EMBEDDINGS_INDEX } from "@/mastra/rag-config.server";
+import { mastraVector } from "@/mastra/storage.server";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 import { clearDatabase } from "@/test/clear-database";
 import { createFakeS3 } from "@/test/fake-s3";
@@ -40,7 +40,7 @@ const upsertTopicVector = async (vectorTopicId: string, fileId: string) => {
 };
 
 const vectorIdsForTopic = async (vectorTopicId: string) => {
-  const results = await libsqlVector.query({
+  const results = await mastraVector.query({
     indexName: FILE_EMBEDDINGS_INDEX,
     queryVector: unitVector,
     topK: 100,
@@ -129,7 +129,11 @@ describe("deleteTopicFn", () => {
     fakeS3.reset();
     await Promise.all([
       vector
-        .createIndex({ dimension: EMBEDDING_DIMENSION, indexName: FILE_EMBEDDINGS_INDEX })
+        .createIndex({
+          dimension: EMBEDDING_DIMENSION,
+          indexConfig: { type: "flat" },
+          indexName: FILE_EMBEDDINGS_INDEX,
+        })
         .then(expectOk),
       seedUser({ id: userId }),
     ]);

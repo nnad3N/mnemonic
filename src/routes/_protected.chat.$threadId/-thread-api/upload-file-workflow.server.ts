@@ -180,8 +180,11 @@ export const processForRagFn = Kit.gen(async function* (
     }),
   );
 
+  // flat = exact scan: pgvector caps ANN indexes (ivfflat/hnsw) at 2000 dimensions,
+  // below the embedder's 4096. Fine for one user's files, and recall is perfect.
   yield* await ctx.vector.createIndex({
     dimension: EMBEDDING_DIMENSION,
+    indexConfig: { type: "flat" },
     indexName: FILE_EMBEDDINGS_INDEX,
   });
 

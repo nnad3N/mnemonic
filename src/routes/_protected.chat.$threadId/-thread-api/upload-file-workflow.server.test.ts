@@ -5,9 +5,9 @@ import { dbKit } from "@/lib/db-kit.server";
 import * as Kit from "@/lib/kit";
 import { createSafeId, toSafeId } from "@/lib/safe-id";
 import { vectorKit } from "@/lib/vector-kit.server";
-import { FILE_EMBEDDINGS_INDEX } from "@/mastra/rag-config.server";
 import { EMBEDDING_DIMENSION } from "@/mastra/rag-config.server";
-import { libsqlVector } from "@/mastra/storage.server";
+import { FILE_EMBEDDINGS_INDEX } from "@/mastra/rag-config.server";
+import { mastraVector } from "@/mastra/storage.server";
 import { clearDatabase } from "@/test/clear-database";
 import { createFakeS3 } from "@/test/fake-s3";
 import ragSampleXml from "@/test/fixtures/rag-sample.xml?raw";
@@ -48,7 +48,7 @@ const getFileStatus = async (fileId: string) => {
 };
 
 const vectorsForFile = async (fileId: string) => {
-  const results = await libsqlVector.query({
+  const results = await mastraVector.query({
     indexName: FILE_EMBEDDINGS_INDEX,
     queryVector: unitVector,
     topK: 100,

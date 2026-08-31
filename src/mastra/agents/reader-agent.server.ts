@@ -7,13 +7,13 @@ import { getStaticModel } from "@/mastra/config.server";
 import { READER_AGENT_ID } from "@/mastra/models.server";
 import { hoistToolResultMediaProcessor } from "@/mastra/processors/hoist-tool-result-media.server";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
-import { libsqlStore } from "@/mastra/storage.server";
+import { mastraStore } from "@/mastra/storage.server";
 import { readTextTool } from "@/mastra/tools/read-text-tool.server";
 import { readVisualsTool } from "@/mastra/tools/read-visuals-tool.server";
 import { webFetchTool } from "@/mastra/tools/web-fetch-tool.server";
 
 /** Without its own memory a subagent inherits the parent's, including observational memory. */
-const readerMemory = new Memory({ storage: libsqlStore });
+const readerMemory = new Memory({ storage: mastraStore });
 
 const codeMode = createCodeMode(
   { tools: { readText: readTextTool, webFetch: webFetchTool } },

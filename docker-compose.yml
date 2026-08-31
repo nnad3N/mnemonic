@@ -1,4 +1,22 @@
 services:
+  postgres:
+    image: pgvector/pgvector:pg18
+    environment:
+      POSTGRES_DB: mnemonic
+      POSTGRES_USER: mnemonic
+      POSTGRES_PASSWORD: mnemonic
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mnemonic -d mnemonic"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+      start_interval: 1s
+
   rustfs:
     image: rustfs/rustfs:1.0.0-rc.3
     command: ["/data"]
@@ -174,6 +192,7 @@ networks:
     driver: bridge
 
 volumes:
+  postgres_data:
   rustfs_data:
   redis_data:
   firecrawl_rabbitmq_data:

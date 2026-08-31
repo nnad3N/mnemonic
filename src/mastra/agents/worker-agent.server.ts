@@ -14,7 +14,7 @@ import { hoistToolResultMediaProcessor } from "@/mastra/processors/hoist-tool-re
 import { stripGeminiReasoningProcessor } from "@/mastra/processors/strip-gemini-reasoning.server";
 import type { MnemonicRequestContext } from "@/mastra/request-context.server";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
-import { libsqlStore } from "@/mastra/storage.server";
+import { mastraStore } from "@/mastra/storage.server";
 import { createFileGraphRagTool } from "@/mastra/tools/file-graph-rag-tool.server";
 import { createFileVectorSearchTool } from "@/mastra/tools/file-vector-search-tool.server";
 import { readTextTool } from "@/mastra/tools/read-text-tool.server";
@@ -23,7 +23,7 @@ import { webFetchTool } from "@/mastra/tools/web-fetch-tool.server";
 import { webSearchTool } from "@/mastra/tools/web-search-tool.server";
 
 /** Without its own memory a subagent inherits the parent's, including observational memory. */
-const workerMemory = new Memory({ storage: libsqlStore });
+const workerMemory = new Memory({ storage: mastraStore });
 
 const codeModeTransport = new IsolatedVmCodeModeTransport();
 

@@ -15,7 +15,7 @@ import { drizzleDb } from "@/db/client.server";
 import { mastraThread } from "@/db/mastra-schema.server";
 import { startsWith } from "@/db/sql.server";
 import * as Kit from "@/lib/kit";
-import { libsqlStore, libsqlVector } from "@/mastra/storage.server";
+import { mastraStore, mastraVector } from "@/mastra/storage.server";
 
 type GetThreadInput = Parameters<MemoryStorage["getThreadById"]>[0];
 type GetThreadOutput = Awaited<ReturnType<MemoryStorage["getThreadById"]>>;
@@ -60,10 +60,10 @@ export const createMemoryKit = (api: MemoryApi) => Kit.define("memory", api);
  * Prefer this over the raw store: only `Memory` cascades a delete into observational memory
  * and thread vectors, and only its save runs messages through `MessageList` normalization.
  */
-const memory = new Memory({ storage: libsqlStore, vector: libsqlVector });
+const memory = new Memory({ storage: mastraStore, vector: mastraVector });
 
 const getMemoryStore = async (): Promise<MemoryStorage> => {
-  const memoryStore = await libsqlStore.getStore("memory");
+  const memoryStore = await mastraStore.getStore("memory");
 
   if (!memoryStore) {
     panic("Mastra memory storage is not configured");
@@ -81,12 +81,12 @@ const getMemoryStore = async (): Promise<MemoryStorage> => {
 const deleteObservationVectors = async (
   filter: { resource_id: string } | { thread_id: string },
 ) => {
-  const indexNames = await libsqlVector.listIndexes();
+  const indexNames = await mastraVector.listIndexes();
 
   await Promise.all(
     indexNames
       .filter((name) => name.startsWith("memory_observations"))
-      .map(async (indexName) => libsqlVector.deleteVectors({ filter, indexName })),
+      .map(async (indexName) => mastraVector.deleteVectors({ filter, indexName })),
   );
 };
 

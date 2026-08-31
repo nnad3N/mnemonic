@@ -7,9 +7,9 @@ import { S3Error } from "@/lib/s3-kit.server";
 import { createSafeId, toSafeId } from "@/lib/safe-id";
 import { createVectorKit, VectorError, vectorKit } from "@/lib/vector-kit.server";
 import type { VectorApi } from "@/lib/vector-kit.server";
-import { FILE_EMBEDDINGS_INDEX } from "@/mastra/rag-config.server";
 import { EMBEDDING_DIMENSION } from "@/mastra/rag-config.server";
-import { libsqlVector } from "@/mastra/storage.server";
+import { FILE_EMBEDDINGS_INDEX } from "@/mastra/rag-config.server";
+import { mastraVector } from "@/mastra/storage.server";
 import { clearDatabase } from "@/test/clear-database";
 import { createFakeS3 } from "@/test/fake-s3";
 import { expectErr, expectOk } from "@/test/result";
@@ -50,7 +50,7 @@ const upsertFileVector = async (fileId: string) => {
 };
 
 const vectorIdsForFile = async (fileId: string) => {
-  const results = await libsqlVector.query({
+  const results = await mastraVector.query({
     indexName: FILE_EMBEDDINGS_INDEX,
     queryVector: unitVector,
     topK: 100,
@@ -82,7 +82,11 @@ beforeEach(async () => {
   fakeS3.reset();
   await Promise.all([
     vector
-      .createIndex({ dimension: EMBEDDING_DIMENSION, indexName: FILE_EMBEDDINGS_INDEX })
+      .createIndex({
+        dimension: EMBEDDING_DIMENSION,
+        indexConfig: { type: "flat" },
+        indexName: FILE_EMBEDDINGS_INDEX,
+      })
       .then(expectOk),
     seedUser({ id: userId }),
   ]);

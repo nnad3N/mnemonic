@@ -2,16 +2,16 @@ import { Result, TaggedError } from "better-result";
 import type { Result as ResultType } from "better-result";
 
 import * as Kit from "@/lib/kit";
-import { libsqlVector } from "@/mastra/storage.server";
+import { mastraVector } from "@/mastra/storage.server";
 
 export class VectorError extends TaggedError("VectorError")<{
   cause: unknown;
   message: string;
 }> {}
 
-type DeleteVectorsParams = Parameters<typeof libsqlVector.deleteVectors>[0];
-type CreateIndexInput = Parameters<typeof libsqlVector.createIndex>[0];
-type UpsertInput = Parameters<typeof libsqlVector.upsert>[0];
+type DeleteVectorsParams = Parameters<typeof mastraVector.deleteVectors>[0];
+type CreateIndexInput = Parameters<typeof mastraVector.createIndex>[0];
+type UpsertInput = Parameters<typeof mastraVector.upsert>[0];
 
 type DeleteVectorsInput = {
   filter: NonNullable<DeleteVectorsParams["filter"]>;
@@ -30,7 +30,7 @@ export const vectorKit = createVectorKit({
   createIndex: async (input) =>
     Result.tryPromise({
       try: async () => {
-        await libsqlVector.createIndex(input);
+        await mastraVector.createIndex(input);
       },
       catch: (cause) =>
         new VectorError({ cause, message: "Failed to create the embeddings index" }),
@@ -38,14 +38,14 @@ export const vectorKit = createVectorKit({
   deleteVectors: async (input) =>
     Result.tryPromise({
       try: async () => {
-        await libsqlVector.deleteVectors(input);
+        await mastraVector.deleteVectors(input);
       },
       catch: (cause) => new VectorError({ cause, message: "Failed to delete embeddings" }),
     }),
   upsert: async (input) =>
     Result.tryPromise({
       try: async () => {
-        await libsqlVector.upsert(input);
+        await mastraVector.upsert(input);
       },
       catch: (cause) => new VectorError({ cause, message: "Failed to upsert embeddings" }),
     }),

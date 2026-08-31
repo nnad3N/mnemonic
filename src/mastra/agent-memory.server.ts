@@ -6,12 +6,12 @@ import { dbKit } from "@/lib/db-kit.server";
 import * as Kit from "@/lib/kit";
 import { resolveProviderKeyById } from "@/lib/middleware/resolve-provider-key.server";
 import {
-  getEmbeddingModel,
+  getMemoryEmbeddingModel,
   getObservationalMemoryModel,
   observationalMemoryOptions,
 } from "@/mastra/config.server";
 import type { MnemonicRequestContext } from "@/mastra/request-context.server";
-import { libsqlStore, libsqlVector } from "@/mastra/storage.server";
+import { mastraStore, mastraVector } from "@/mastra/storage.server";
 
 type ObservationalMemoryScope = "thread" | "resource";
 
@@ -36,14 +36,14 @@ export const getAgentMemory =
     const apiKey = result.value.key;
 
     return new Memory({
-      embedder: getEmbeddingModel(apiKey),
+      embedder: getMemoryEmbeddingModel(apiKey),
       options: {
         observationalMemory: observationalMemoryOptions(
           { scope, vector: true },
           getObservationalMemoryModel(apiKey),
         ),
       },
-      storage: libsqlStore,
-      vector: libsqlVector,
+      storage: mastraStore,
+      vector: mastraVector,
     });
   };

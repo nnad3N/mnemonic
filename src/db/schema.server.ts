@@ -1,9 +1,17 @@
 import { defineRelationsPart, isNotNull, sql } from "drizzle-orm";
-import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import {
+  check,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 import { nanoid } from "nanoid";
 
 import { user } from "@/db/auth-schema.server";
-import { now } from "@/db/sql.server";
 import type { ModelCapability } from "@/lib/model-capability";
 import { DEFAULT_MODEL_CAPABILITY } from "@/lib/model-capability";
 import type { SafeId } from "@/lib/safe-id";
@@ -12,7 +20,7 @@ import type { WorkTiming } from "@/routes/_protected.chat.$threadId/-thread-type
 
 export type FileStatus = "uploading" | "processing" | "ready" | "failed";
 
-export const topic = sqliteTable("topic", {
+export const topic = pgTable("topic", {
   id: text("id")
     .$type<SafeId<"topic">>()
     .primaryKey()
@@ -24,14 +32,14 @@ export const topic = sqliteTable("topic", {
 
   title: text("title").notNull(),
 
-  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
-  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .$onUpdate(() => new Date())
-    .default(now),
+    .defaultNow(),
 });
 
-export const file = sqliteTable(
+export const file = pgTable(
   "file",
   {
     id: text("id")
@@ -56,16 +64,16 @@ export const file = sqliteTable(
 
     status: text("status").$type<FileStatus>().notNull().default("uploading"),
 
-    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
-    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .$onUpdate(() => new Date())
-      .default(now),
+      .defaultNow(),
   },
   (table) => [uniqueIndex("file_topic_sha256_unique").on(table.topicId, table.sha256)],
 );
 
-export const byok = sqliteTable(
+export const byok = pgTable(
   "byok",
   {
     id: text("id")
@@ -81,13 +89,13 @@ export const byok = sqliteTable(
 
     value: text("value").notNull(),
     keyPreview: text("key_preview").notNull(),
-    activatedAt: integer("activated_at", { mode: "timestamp_ms" }),
+    activatedAt: timestamp("activated_at", { withTimezone: true }),
 
-    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
-    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .$onUpdate(() => new Date())
-      .default(now),
+      .defaultNow(),
   },
   (table) => [
     index("byok_userId_idx").on(table.userId),
@@ -95,7 +103,7 @@ export const byok = sqliteTable(
   ],
 );
 
-export const threadSettings = sqliteTable("thread_settings", {
+export const threadSettings = pgTable("thread_settings", {
   threadId: text("thread_id").primaryKey(),
   userId: text("user_id")
     .$type<SafeId<"user">>()
@@ -107,16 +115,16 @@ export const threadSettings = sqliteTable("thread_settings", {
     .notNull()
     .default(DEFAULT_MODEL_CAPABILITY),
 
-  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
-  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .$onUpdate(() => new Date())
-    .default(now),
+    .defaultNow(),
 });
 
 export type ThreadRunStatus = "aborted" | "running" | "finished" | "errored" | "interrupted";
 
-export const threadRun = sqliteTable(
+export const threadRun = pgTable(
   "thread_run",
   {
     threadId: text("thread_id").primaryKey(),
@@ -130,30 +138,27 @@ export const threadRun = sqliteTable(
 
     status: text("status").$type<ThreadRunStatus>().notNull().default("running"),
 
-    versionedNoteIds: text("versioned_note_ids", { mode: "json" })
-      .$type<SafeId<"note">[]>()
-      .notNull()
-      .default(sql`'[]'`),
+    versionedNoteIds: jsonb("versioned_note_ids").$type<SafeId<"note">[]>().notNull().default([]),
 
-    startedAt: integer("started_at", { mode: "timestamp_ms" }).notNull().default(now),
-    finishedAt: integer("finished_at", { mode: "timestamp_ms" }),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
   },
   (table) => [index("thread_run_user_id_idx").on(table.userId)],
 );
 
-export const threadReply = sqliteTable(
+export const threadReply = pgTable(
   "thread_reply",
   {
     userMessageId: text("user_message_id").primaryKey(),
     threadId: text("thread_id").notNull(),
-    workTimings: text("work_timings", { mode: "json" }).$type<WorkTiming[]>().notNull(),
+    workTimings: jsonb("work_timings").$type<WorkTiming[]>().notNull(),
   },
   (table) => [index("thread_reply_thread_id_idx").on(table.threadId)],
 );
 
 export type NoteVersionAuthor = "user" | "agent";
 
-export const note = sqliteTable(
+export const note = pgTable(
   "note",
   {
     id: text("id")
@@ -171,11 +176,11 @@ export const note = sqliteTable(
 
     title: text("title").notNull(),
 
-    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
-    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .$onUpdate(() => new Date())
-      .default(now),
+      .defaultNow(),
   },
   (table) => [
     index("note_thread_id_idx").on(table.threadId),
@@ -187,7 +192,7 @@ export const note = sqliteTable(
   ],
 );
 
-export const noteVersion = sqliteTable(
+export const noteVersion = pgTable(
   "note_version",
   {
     id: text("id")
@@ -203,15 +208,13 @@ export const noteVersion = sqliteTable(
     content: text("content").notNull(),
     contentHash: text("content_hash").notNull(),
     author: text("author").$type<NoteVersionAuthor>().notNull(),
-    reviewedAt: integer("reviewed_at", { mode: "timestamp_ms" }),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
 
-    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
-    // SQLite ADD COLUMN only takes constant defaults, so the runtime default carries inserts.
-    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
-      .$defaultFn(() => new Date())
       .$onUpdate(() => new Date())
-      .default(sql`0`),
+      .defaultNow(),
   },
   (table) => [uniqueIndex("note_version_note_seq_unique").on(table.noteId, table.seq)],
 );

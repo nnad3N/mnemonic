@@ -19,6 +19,13 @@ const createOpenrouterProvider = (apiKey: string) =>
   });
 
 const EMBEDDING_MODEL = "qwen/qwen3-embedding-8b";
+
+/**
+ * Requested from the model via Matryoshka truncation for Mastra's memory indexes only:
+ * Mastra creates them with the ivfflat default, and pgvector caps ANN indexes at 2000
+ * dimensions. Our own file index is flat (exact scan) and takes the native 4096.
+ */
+const MEMORY_EMBEDDING_DIMENSION = 1536;
 const OBSERVATIONAL_MEMORY_MODEL: ChatModel = "xiaomi/mimo-v2.5";
 const THREAD_TITLE_MODEL: ChatModel = "google/gemma-4-26b-a4b-it";
 
@@ -27,8 +34,11 @@ const THREAD_TITLE_MODEL: ChatModel = "google/gemma-4-26b-a4b-it";
  * provider emits `v4`. The interfaces are otherwise identical except for the `deprecated`
  * warning variant, which `v3` cannot represent. Drop this once Mastra supports v4 embedders.
  */
-export const getEmbeddingModel = (apiKey: string) => {
-  const openrouterEmbedding = createOpenrouterProvider(apiKey).textEmbeddingModel(EMBEDDING_MODEL);
+const createEmbeddingModel = (apiKey: string, dimensions?: number) => {
+  const openrouterEmbedding = createOpenrouterProvider(apiKey).textEmbeddingModel(
+    EMBEDDING_MODEL,
+    dimensions === undefined ? {} : { extraBody: { dimensions } },
+  );
 
   return {
     doEmbed: async (options: Parameters<typeof openrouterEmbedding.doEmbed>[0]) => {
@@ -46,6 +56,11 @@ export const getEmbeddingModel = (apiKey: string) => {
     supportsParallelCalls: openrouterEmbedding.supportsParallelCalls,
   };
 };
+
+export const getEmbeddingModel = (apiKey: string) => createEmbeddingModel(apiKey);
+
+export const getMemoryEmbeddingModel = (apiKey: string) =>
+  createEmbeddingModel(apiKey, MEMORY_EMBEDDING_DIMENSION);
 
 const providerKeyCtx = Kit.createContext(dbKit);
 

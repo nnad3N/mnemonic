@@ -17,7 +17,12 @@ const MINUTE_MS = 60 * 1000;
 const userId = createSafeId<"user">();
 const topicId = createSafeId<"topic">();
 
-const seedNote = async (input: { threadId?: string; title: string; topicId?: string }) =>
+const seedNote = async (input: {
+  threadId?: string;
+  title: string;
+  topicId?: string;
+  updatedAt?: Date;
+}) =>
   expectOk(
     await ctx.db.run((db) =>
       db.insert(note).values({
@@ -26,6 +31,7 @@ const seedNote = async (input: { threadId?: string; title: string; topicId?: str
         title: input.title,
         // oxlint-disable-next-line eslint-js/no-restricted-syntax -- test seeder brands known inserted ids.
         topicId: input.topicId === undefined ? null : toSafeId<"topic">(input.topicId),
+        updatedAt: input.updatedAt,
         userId,
       }),
     ),
@@ -45,8 +51,12 @@ describe("getMentionsFn", () => {
     const threadId = await seedThread({ resourceId: topicId, title: "Kickoff call" });
     await Promise.all([
       seedFile({ userId, topicId, displayName: "budget.pdf" }),
-      seedNote({ title: "Topic note", topicId }),
-      seedNote({ title: "Thread note", threadId }),
+      seedNote({ title: "Topic note", topicId, updatedAt: new Date(Date.now() - MINUTE_MS) }),
+      seedNote({
+        title: "Thread note",
+        threadId,
+        updatedAt: new Date(Date.now() - 10 * MINUTE_MS),
+      }),
     ]);
 
     const mentions = expectOk(await getMentionsFn(ctx, { query: undefined, threadId, userId }));
