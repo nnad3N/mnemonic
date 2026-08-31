@@ -36,6 +36,7 @@ import {
   SIDEBAR_WIDTH_COOKIE_NAME,
 } from "@/lib/layout-consts";
 import { useSyncRunStates } from "@/routes/_protected.chat.$threadId/-hooks/use-sync-run-states";
+import { noteQueries } from "@/routes/_protected.chat.$threadId/-thread-api/notes.functions";
 import { byokQueries } from "@/routes/_protected.settings/-byok.functions";
 
 import { AppHeader } from "./-app-header";
@@ -90,7 +91,12 @@ export const Route = createFileRoute("/_protected")({
 
     return { session: context.session, user: context.user };
   },
-  loader: () => {
+  loaderDeps: ({ search }) => ({ diffId: search.note?.diff, noteId: search.note?.id }),
+  loader: ({ context, deps }) => {
+    if (deps.diffId && deps.noteId) {
+      void context.queryClient.prefetchQuery(noteQueries.version(deps.noteId, deps.diffId));
+    }
+
     const widthParsed = v.safeParse(sidebarWidthSchema, readCookie(SIDEBAR_WIDTH_COOKIE_NAME));
     const notesWidthParsed = v.safeParse(
       sidebarWidthSchema,

@@ -50,6 +50,7 @@ export const noteQueries = {
     queryOptions({
       queryFn: async () => getNoteVersion({ data: { noteId, versionId } }),
       queryKey: [...noteQueries.versionDetails(noteId), versionId] as const,
+      staleTime: Infinity,
     }),
   versionLists: (noteId: string) => [...noteQueries.byId(noteId).queryKey, "versions"] as const,
   versions: (noteId: string) =>

@@ -1,7 +1,7 @@
 import { computeDiff, withGetFragmentExcludeDiff } from "@platejs/diff";
 import type { DiffOperation } from "@platejs/diff";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { Result, panic } from "better-result";
 import { T, useGT } from "gt-tanstack-start";
 import { produce } from "immer";
@@ -215,8 +215,33 @@ type NoteDiffBarProps = PropsWithChildren<{
   selectedVersionId: string;
 }>;
 
+type NoteVersionNavButtonProps = PropsWithChildren<{
+  opensLatest?: boolean;
+  versionId: string | undefined;
+}>;
+
+const NoteVersionNavButton = ({ children, opensLatest, versionId }: NoteVersionNavButtonProps) => {
+  if (!versionId) {
+    return (
+      <Button disabled size="icon-sm" variant="ghost">
+        {children}
+      </Button>
+    );
+  }
+
+  return (
+    <Button
+      nativeButton={false}
+      render={<Link search={opensLatest ? clearNoteDiff : setNoteDiffOpen(versionId)} to="." />}
+      size="icon-sm"
+      variant="ghost"
+    >
+      {children}
+    </Button>
+  );
+};
+
 const NoteDiffBar = ({ children, counts, noteId, selectedVersionId }: NoteDiffBarProps) => {
-  const navigate = useNavigate();
   const {
     data: { newerVersionId, newestVersionId, olderVersionId },
   } = useSuspenseQuery({
@@ -234,40 +259,21 @@ const NoteDiffBar = ({ children, counts, noteId, selectedVersionId }: NoteDiffBa
 
   return (
     <NoteFloatingBar>
-      <Button
-        disabled={!olderVersionId}
-        onClick={async () => {
-          if (!olderVersionId) return;
-
-          await navigate({ search: setNoteDiffOpen(olderVersionId), to: "." });
-        }}
-        size="icon-sm"
-        variant="ghost"
-      >
+      <NoteVersionNavButton versionId={olderVersionId}>
         <ChevronLeftIcon />
         <span className="sr-only">
           <T>Older version</T>
         </span>
-      </Button>
-      <Button
-        disabled={!newerVersionId}
-        onClick={async () => {
-          if (!newerVersionId) return;
-
-          await navigate({
-            search:
-              newerVersionId === newestVersionId ? clearNoteDiff : setNoteDiffOpen(newerVersionId),
-            to: ".",
-          });
-        }}
-        size="icon-sm"
-        variant="ghost"
+      </NoteVersionNavButton>
+      <NoteVersionNavButton
+        opensLatest={newerVersionId === newestVersionId}
+        versionId={newerVersionId}
       >
         <ChevronRightIcon />
         <span className="sr-only">
           <T>Newer version</T>
         </span>
-      </Button>
+      </NoteVersionNavButton>
       <NoteDiffStats counts={counts} noteId={noteId} />
       {children}
     </NoteFloatingBar>
