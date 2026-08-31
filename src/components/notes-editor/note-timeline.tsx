@@ -6,7 +6,6 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
 import { noteQueries } from "@/routes/_protected.chat.$threadId/-thread-api/notes.functions";
 import type { NoteTimelineEntry } from "@/routes/_protected.chat.$threadId/-thread-api/notes.server";
 
@@ -139,16 +138,14 @@ const TimelineRow = ({ entry, newestVersionId, selectedDiffId }: TimelineRowProp
 
   return (
     <Link
-      className={cn(
-        "flex items-center justify-between gap-2 rounded-md px-2 py-2 text-xs hover:bg-muted/40",
-        isSelected && "bg-muted/40",
-      )}
+      className="flex items-center justify-between gap-2 rounded-md px-2 py-2 text-xs hover:bg-muted/40"
       search={isNewest ? clearNoteDiff : setNoteDiffOpen(entry.id)}
       to="."
     >
       <span className="flex items-center gap-1.5 font-medium">
         {entry.author === "agent" ? <T>Assistant</T> : <T>You</T>}
         {isNewest && <span className="size-1.5 rounded-full bg-f-blue" />}
+        {isSelected && <span className="size-1.5 rounded-full bg-f-orange" />}
       </span>
       <span className="text-muted-foreground">
         {new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "short" }).format(
