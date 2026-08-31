@@ -90,7 +90,7 @@ export const NoteTimeline = ({ noteId }: NoteTimelineProps) => {
       </div>
       <ScrollArea className="min-h-0 flex-1">
         <div className="relative flex flex-col">
-          <span className="absolute inset-y-5.5 left-4 w-px -translate-x-1/2 bg-f-base-500 dark:bg-f-base-600" />
+          <span className="absolute inset-y-5.5 left-4 z-10 w-px -translate-x-1/2 bg-f-base-500 dark:bg-f-base-600" />
           {data.blocks.map((block) => (
             <TimelineBlock
               block={block}
@@ -186,7 +186,7 @@ const TimelineRow = ({
       >
         <span
           className={cn(
-            "absolute top-1/2 left-4 size-2.5 shrink-0 -translate-x-1/2 -translate-y-1/2 rounded-full bg-muted-foreground ring-3 ring-background",
+            "absolute top-1/2 left-4 z-20 size-2.5 shrink-0 -translate-x-1/2 -translate-y-1/2 rounded-full bg-muted-foreground ring-3 ring-background",
             isIteration && "bg-f-base-500 dark:bg-f-base-600",
             isNewest && "bg-f-blue!",
             isSelected && "bg-f-orange!",
