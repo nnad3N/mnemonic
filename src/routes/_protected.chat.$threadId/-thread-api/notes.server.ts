@@ -1,6 +1,6 @@
 import { matchError, panic, Result, TaggedError } from "better-result";
 import type { Result as ResultType } from "better-result";
-import { and, eq, gt, isNotNull, sql } from "drizzle-orm";
+import { and, eq, gt, isNotNull, lt, sql } from "drizzle-orm";
 
 import { note, noteVersion } from "@/db/schema.server";
 import type { NoteVersionAuthor } from "@/db/schema.server";
@@ -254,6 +254,8 @@ export const getNoteFn = Kit.gen(async function* (
   });
 });
 
+const NOTE_VERSION_LIMIT = 100;
+
 type SaveNoteBodyInput = {
   noteId: SafeId<"note">;
   content: string;
@@ -311,6 +313,29 @@ export const saveNoteBodyFn = Kit.gen(async function* (ctx: NoteCtx, input: Save
       }),
       tx.update(note).set({ updatedAt: new Date() }).where(eq(note.id, input.noteId)),
     ]);
+
+    const limitVersion = await tx.query.noteVersion.findFirst({
+      where: { noteId: input.noteId },
+      columns: { seq: true },
+      orderBy: { seq: "desc" },
+      offset: NOTE_VERSION_LIMIT - 1,
+    });
+
+    // The cut always lands on a user version, so a run of more than NOTE_VERSION_LIMIT agent
+    // versions with no user version between them stays above the limit. Known and left uncovered.
+    if (limitVersion) {
+      const cutoff = await tx.query.noteVersion.findFirst({
+        where: { author: "user", noteId: input.noteId, seq: { lte: limitVersion.seq } },
+        columns: { seq: true },
+        orderBy: { seq: "desc" },
+      });
+
+      if (cutoff) {
+        await tx
+          .delete(noteVersion)
+          .where(and(eq(noteVersion.noteId, input.noteId), lt(noteVersion.seq, cutoff.seq)));
+      }
+    }
 
     return { isLatest: true, versionId };
   });
