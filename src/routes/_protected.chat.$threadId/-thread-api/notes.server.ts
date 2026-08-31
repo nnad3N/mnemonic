@@ -1,6 +1,6 @@
 import { matchError, panic, Result, TaggedError } from "better-result";
 import type { Result as ResultType } from "better-result";
-import { and, eq, isNotNull, sql } from "drizzle-orm";
+import { and, eq, gt, isNotNull, sql } from "drizzle-orm";
 
 import { note, noteVersion } from "@/db/schema.server";
 import type { NoteVersionAuthor } from "@/db/schema.server";
@@ -214,11 +214,14 @@ export const getNoteFn = Kit.gen(async function* (
   input: GetNoteInput,
 ) {
   const note = yield* await readNote(ctx, input);
-  const [latest, latestUserVersion, threadTopicId] = yield* await Kit.promiseAll([
+  const [latest, latestSettledVersion, threadTopicId] = yield* await Kit.promiseAll([
     readLatestVersion(ctx, input),
     ctx.db.run((db) =>
       db.query.noteVersion.findFirst({
-        where: { author: "user", noteId: input.noteId },
+        where: {
+          noteId: input.noteId,
+          OR: [{ author: "user" }, { reviewedAt: { isNotNull: true } }],
+        },
         columns: { content: true, id: true },
         orderBy: { seq: "desc" },
       }),
@@ -235,7 +238,7 @@ export const getNoteFn = Kit.gen(async function* (
 
   const reviewPending = latest.author === "agent" && !latest.reviewedAt;
   const pendingReviewBaseVersionId =
-    reviewPending && latestUserVersion?.content ? latestUserVersion.id : null;
+    reviewPending && latestSettledVersion?.content ? latestSettledVersion.id : null;
 
   return Result.ok({
     content: latest.content,
@@ -378,6 +381,64 @@ export const saveAgentVersionFn = Kit.gen(async function* (
   }
 
   return Result.ok({ contentHash, updatedAt: saved.updatedAt });
+});
+
+type DeclineAgentVersionsInput = {
+  noteId: SafeId<"note">;
+};
+
+export const declineAgentVersionsFn = Kit.gen(async function* (
+  ctx: NoteCtx,
+  input: DeclineAgentVersionsInput,
+) {
+  const restored = yield* await ctx.db.transaction(async (tx) => {
+    const latestSettledVersion = await tx.query.noteVersion.findFirst({
+      where: {
+        noteId: input.noteId,
+        OR: [{ author: "user" }, { reviewedAt: { isNotNull: true } }],
+      },
+      columns: {
+        author: true,
+        content: true,
+        contentHash: true,
+        id: true,
+        seq: true,
+        updatedAt: true,
+      },
+      orderBy: { seq: "desc" },
+    });
+
+    if (!latestSettledVersion) {
+      return new StaleNoteVersionError({
+        message: "The note has no reviewed version to fall back to",
+      });
+    }
+
+    const updatedAt = new Date();
+
+    await Promise.all([
+      tx
+        .delete(noteVersion)
+        .where(
+          and(eq(noteVersion.noteId, input.noteId), gt(noteVersion.seq, latestSettledVersion.seq)),
+        ),
+      tx.update(note).set({ updatedAt }).where(eq(note.id, input.noteId)),
+    ]);
+
+    return {
+      author: latestSettledVersion.author,
+      content: latestSettledVersion.content,
+      contentHash: latestSettledVersion.contentHash,
+      updatedAt: latestSettledVersion.updatedAt,
+      versionId: latestSettledVersion.id,
+    };
+  });
+
+  if (StaleNoteVersionError.is(restored)) {
+    return Result.err(restored);
+  }
+
+  return Result.ok(restored);
 });
 
 type GetNoteVersionInput = {

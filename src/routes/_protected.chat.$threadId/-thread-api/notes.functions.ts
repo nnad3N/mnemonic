@@ -16,6 +16,7 @@ import { authMiddleware } from "@/lib/middleware/auth.middleware";
 
 import {
   createNoteFn,
+  declineAgentVersionsFn,
   deleteNoteFn,
   getNoteFn,
   getNoteVersionFn,
@@ -195,6 +196,21 @@ export const saveAgentVersion = createServerFn({ method: "POST" })
             STALE_NOTE_VERSION_STATUS,
             "The note version moved past this edit",
           ),
+      }),
+    ),
+  );
+
+export const declineAgentVersions = createServerFn({ method: "POST" })
+  .validator(noteInputSchema)
+  .middleware([noteAccessMiddleware])
+  .handler(async ({ context }) =>
+    Kit.run(async () =>
+      declineAgentVersionsFn(noteCtx, { noteId: context.note.id }),
+    ).throws<ServerFnError>((error) =>
+      matchError(error, {
+        DatabaseError: () => toServerFnError.serverError("Failed to decline the note changes"),
+        StaleNoteVersionError: () =>
+          toServerFnError.custom(STALE_NOTE_VERSION_STATUS, "The note moved past this review"),
       }),
     ),
   );

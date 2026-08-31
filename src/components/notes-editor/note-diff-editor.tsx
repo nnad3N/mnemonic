@@ -26,6 +26,7 @@ import { diffWordCounts } from "@/lib/word-diff";
 import type { WordDiffCounts } from "@/lib/word-diff";
 import {
   STALE_NOTE_VERSION_STATUS,
+  declineAgentVersions,
   noteQueries,
   saveAgentVersion,
   saveNoteBody,
@@ -211,7 +212,6 @@ export const NoteDiffStats = ({ counts, noteId }: NoteDiffStatsProps) => {
 type NoteDiffBarProps = PropsWithChildren<{
   counts: WordDiffCounts;
   noteId: string;
-  /** The version the timeline marks as selected: the newest one while reviewing. */
   selectedVersionId: string;
 }>;
 
@@ -254,7 +254,6 @@ const NoteDiffBar = ({ children, counts, noteId, selectedVersionId }: NoteDiffBa
         onClick={async () => {
           if (!newerVersionId) return;
 
-          // The newest version is the note itself, which the editor and the review already show.
           await navigate({
             search:
               newerVersionId === newestVersionId ? clearNoteDiff : setNoteDiffOpen(newerVersionId),
@@ -385,22 +384,24 @@ export const NoteReviewEditor = ({ baseVersionId, noteId }: NoteReviewEditorProp
 
   const reject = useMutation({
     mutationFn: async () => {
-      const saved = await saveNoteBody({
-        data: { content: base.content, intent: "append", noteId },
-      });
+      const restored = await declineAgentVersions({ data: { noteId } });
 
       queryClient.setQueryData(noteQuery.queryKey, (previous) =>
         produce(previous, (draft) => {
           if (!draft) return;
 
-          draft.content = base.content;
-          draft.contentHash = saved.contentHash;
-          draft.lastAuthor = "user";
+          draft.content = restored.content;
+          draft.contentHash = restored.contentHash;
+          draft.lastAuthor = restored.author;
           draft.pendingReviewBaseVersionId = null;
-          draft.versionId = saved.versionId;
+          draft.versionId = restored.versionId;
+          draft.versionUpdatedAt = restored.updatedAt;
         }),
       );
-      seedBaseline({ baseVersionId: saved.versionId, contentHash: saved.contentHash });
+      seedBaseline({
+        baseVersionId: restored.author === "user" ? restored.versionId : null,
+        contentHash: restored.contentHash,
+      });
       void queryClient.invalidateQueries({ queryKey: noteQueries.versionLists(noteId) });
     },
     onError: () => {
