@@ -1,11 +1,11 @@
 import { computeDiff, withGetFragmentExcludeDiff } from "@platejs/diff";
 import type { DiffOperation } from "@platejs/diff";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Result } from "better-result";
 import { T, useGT } from "gt-tanstack-start";
 import { produce } from "immer";
-import { ChevronLeftIcon, ChevronRightIcon, XIcon } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { ElementApi, createSlatePlugin } from "platejs";
 import type { Descendant, Value } from "platejs";
 import {
@@ -40,7 +40,7 @@ import {
 } from "@/routes/_protected.chat.$threadId/-thread-api/notes.functions";
 
 import { notesEditorPlugins } from "./plugins";
-import { clearNoteDiff } from "./use-open-note";
+import { clearNoteDiff, setNoteDiffOpen } from "./use-open-note";
 
 const diffOperationClasses = {
   delete: cn(
@@ -412,9 +412,22 @@ type NoteHistoryDiffProps = {
 export const NoteHistoryDiff = ({ baseVersionId, noteId }: NoteHistoryDiffProps) => {
   const gt = useGT();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const noteQuery = noteQueries.byId(noteId);
   const { data: note } = useSuspenseQuery(noteQuery);
   const { data: base } = useSuspenseQuery(noteQueries.version(noteId, baseVersionId));
+  const {
+    data: { newerVersionId, olderVersionId },
+  } = useSuspenseQuery({
+    ...noteQueries.versions(noteId),
+    select: (data) => {
+      const index = data.entries.findIndex((entry) => entry.id === baseVersionId);
+      const newerVersionId = index > 1 ? data.entries.at(index - 1)?.id : undefined;
+      const olderVersionId = index >= 0 ? data.entries.at(index + 1)?.id : undefined;
+
+      return { newerVersionId, olderVersionId };
+    },
+  });
   const [diffValue] = useState(() => computeNoteDiffValue(base.content, note.content));
   const editor = usePlateEditor({ plugins: diffPlugins, value: diffValue });
   // Editing through the history lens writes the current user version; while the agent's
@@ -466,7 +479,6 @@ export const NoteHistoryDiff = ({ baseVersionId, noteId }: NoteHistoryDiffProps)
     () => diffWordCounts(markdownToText(base.content), markdownToText(note.content)),
     [base.content, note.content],
   );
-  const { containerRef, jumpToChange } = useDiffChangeNav();
 
   return (
     <Plate
@@ -479,23 +491,44 @@ export const NoteHistoryDiff = ({ baseVersionId, noteId }: NoteHistoryDiffProps)
       primary={false}
       readOnly={!editable}
     >
-      <div className="relative flex min-h-0 flex-1 flex-col" ref={containerRef}>
+      <div className="relative flex min-h-0 flex-1 flex-col">
         <ScrollArea className="min-h-0 flex-1">
           <PlateContent className="typeset px-4 py-2 pb-16 text-sm outline-none" />
         </ScrollArea>
         <NoteFloatingBar>
-          <NoteDiffNavButtons jumpToChange={jumpToChange} />
-          <NoteDiffStats counts={counts} />
           <Button
-            nativeButton={false}
-            render={<Link search={clearNoteDiff} to="." />}
+            disabled={!olderVersionId}
+            onClick={async () => {
+              if (!olderVersionId) return;
+
+              await navigate({ search: setNoteDiffOpen(olderVersionId), to: "." });
+            }}
             size="icon-sm"
             variant="ghost"
           >
-            <XIcon />
+            <ChevronLeftIcon />
             <span className="sr-only">
-              <T>Close diff</T>
+              <T>Older version</T>
             </span>
+          </Button>
+          <Button
+            disabled={!newerVersionId}
+            onClick={async () => {
+              if (!newerVersionId) return;
+
+              await navigate({ search: setNoteDiffOpen(newerVersionId), to: "." });
+            }}
+            size="icon-sm"
+            variant="ghost"
+          >
+            <ChevronRightIcon />
+            <span className="sr-only">
+              <T>Newer version</T>
+            </span>
+          </Button>
+          <NoteDiffStats counts={counts} />
+          <Button nativeButton={false} render={<Link search={clearNoteDiff} to="." />} size="xs">
+            <T>Close</T>
           </Button>
         </NoteFloatingBar>
       </div>
