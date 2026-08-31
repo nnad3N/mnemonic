@@ -33,7 +33,7 @@ import { NoteTimeline } from "./note-timeline";
 import {
   createNoteBaselineStore,
   resolveNoteView,
-  shouldAdoptAgentWrite,
+  shouldAdoptRemoteWrite,
   useNoteBaselineStore,
 } from "./notes-store";
 import { NotesTabs } from "./notes-tabs";
@@ -103,9 +103,9 @@ const NoteView = ({ noteId }: NoteViewProps) => {
   const [session, setSession] = useState(() => createNoteSession(note, 0));
   const baseline = useStore(session.store);
 
-  // Render-time state adjustment: the fresh session remounts the editor, which reads the
-  // agent's content at mount.
-  if (shouldAdoptAgentWrite(note, baseline)) {
+  // Render-time state adjustment: the fresh session remounts the editor, which reads the new
+  // content at mount.
+  if (shouldAdoptRemoteWrite(note, baseline)) {
     setSession(createNoteSession(note, session.seq + 1));
 
     return null;

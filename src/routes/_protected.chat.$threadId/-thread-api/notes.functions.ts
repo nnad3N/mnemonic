@@ -22,6 +22,7 @@ import {
   getNoteVersionFn,
   listNoteVersionsFn,
   listNotesFn,
+  resetNoteToVersionFn,
   saveAgentVersionFn,
   saveNoteBodyFn,
   saveNoteTitleFn,
@@ -153,6 +154,20 @@ export const getNoteVersion = createServerFn({ method: "GET" })
     ).throws<ServerFnError>((error) =>
       matchError(error, {
         DatabaseError: () => toServerFnError.serverError("Failed to load the note version"),
+        ServerFnError: (error) => error,
+      }),
+    ),
+  );
+
+export const resetNoteToVersion = createServerFn({ method: "POST" })
+  .validator(noteVersionInputSchema)
+  .middleware([noteAccessMiddleware])
+  .handler(async ({ context, data }) =>
+    Kit.run(async () =>
+      resetNoteToVersionFn(noteCtx, { noteId: context.note.id, versionId: data.versionId }),
+    ).throws<ServerFnError>((error) =>
+      matchError(error, {
+        DatabaseError: () => toServerFnError.serverError("Failed to reset the note"),
         ServerFnError: (error) => error,
       }),
     ),

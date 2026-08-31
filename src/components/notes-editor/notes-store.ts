@@ -86,15 +86,11 @@ export const resolveNoteView = (
   return { baseVersionId: note.pendingReviewBaseVersionId, kind: "review" };
 };
 
-export const shouldAdoptAgentWrite = (
-  note: {
-    contentHash: string;
-    lastAuthor: "agent" | "user";
-    pendingReviewBaseVersionId: string | null;
-  },
+export const shouldAdoptRemoteWrite = (
+  note: { contentHash: string; pendingReviewBaseVersionId: string | null },
   baseline: NoteEditorBaseline,
 ): boolean => {
-  if (note.lastAuthor !== "agent" || note.pendingReviewBaseVersionId || baseline.dirty) {
+  if (note.pendingReviewBaseVersionId || baseline.dirty) {
     return false;
   }
 

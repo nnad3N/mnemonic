@@ -1,13 +1,34 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { Link, useSearch } from "@tanstack/react-router";
-import { T, useLocale } from "gt-tanstack-start";
-import { XIcon } from "lucide-react";
+import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
+import { T, useGT, useLocale } from "gt-tanstack-start";
+import { RotateCcwIcon, XIcon } from "lucide-react";
+import { useState } from "react";
 import type { PropsWithChildren } from "react";
+import { toast } from "sonner";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { noteQueries } from "@/routes/_protected.chat.$threadId/-thread-api/notes.functions";
+import {
+  noteQueries,
+  resetNoteToVersion,
+} from "@/routes/_protected.chat.$threadId/-thread-api/notes.functions";
 import type { NoteTimelineEntry } from "@/routes/_protected.chat.$threadId/-thread-api/notes.server";
 
 import { clearNoteDiff, closeNoteTimeline, setNoteDiffOpen } from "./use-open-note";
@@ -75,6 +96,7 @@ export const NoteTimeline = ({ noteId }: NoteTimelineProps) => {
               block={block}
               key={block.at(0)?.id}
               newestVersionId={data.newestVersionId}
+              noteId={noteId}
               selectedDiffId={selectedDiffId}
             />
           ))}
@@ -87,10 +109,11 @@ export const NoteTimeline = ({ noteId }: NoteTimelineProps) => {
 type TimelineBlockProps = {
   block: NoteTimelineEntry[];
   newestVersionId: string | undefined;
+  noteId: string;
   selectedDiffId: string | undefined;
 };
 
-const TimelineBlock = ({ block, newestVersionId, selectedDiffId }: TimelineBlockProps) => {
+const TimelineBlock = ({ block, newestVersionId, noteId, selectedDiffId }: TimelineBlockProps) => {
   const newest = block.at(0);
   const iterations = block.slice(1);
 
@@ -98,7 +121,12 @@ const TimelineBlock = ({ block, newestVersionId, selectedDiffId }: TimelineBlock
 
   return (
     <div className="flex flex-col">
-      <TimelineRow entry={newest} newestVersionId={newestVersionId} selectedDiffId={selectedDiffId}>
+      <TimelineRow
+        entry={newest}
+        newestVersionId={newestVersionId}
+        noteId={noteId}
+        selectedDiffId={selectedDiffId}
+      >
         <span className="flex items-center gap-1.5 font-medium">
           {newest.author === "agent" ? <T>Assistant</T> : <T>You</T>}
           {iterations.length > 0 && (
@@ -115,6 +143,7 @@ const TimelineBlock = ({ block, newestVersionId, selectedDiffId }: TimelineBlock
           isIteration
           key={entry.id}
           newestVersionId={newestVersionId}
+          noteId={noteId}
           selectedDiffId={selectedDiffId}
         >
           <TimelineTimeStamp entry={entry} />
@@ -128,6 +157,7 @@ type TimelineRowProps = PropsWithChildren<{
   entry: NoteTimelineEntry;
   isIteration?: boolean;
   newestVersionId: string | undefined;
+  noteId: string;
   selectedDiffId: string | undefined;
 }>;
 
@@ -136,27 +166,116 @@ const TimelineRow = ({
   entry,
   isIteration,
   newestVersionId,
+  noteId,
   selectedDiffId,
 }: TimelineRowProps) => {
+  const [resetOpen, setResetOpen] = useState(false);
   const isNewest = entry.id === newestVersionId;
   const isSelected = entry.id === selectedDiffId;
 
   return (
-    <Link
-      className="relative flex h-7 items-center gap-3 pr-3 pl-8 text-xs transition-colors hover:bg-muted/40"
-      search={isNewest ? clearNoteDiff : setNoteDiffOpen(entry.id)}
-      to="."
-    >
-      <span
-        className={cn(
-          "absolute top-1/2 left-4 size-2.5 shrink-0 -translate-x-1/2 -translate-y-1/2 rounded-full bg-muted-foreground ring-3 ring-background",
-          isIteration && "bg-f-base-500 dark:bg-f-base-600",
-          isNewest && "bg-f-blue!",
-          isSelected && "bg-f-orange!",
-        )}
+    <ContextMenu>
+      <ContextMenuTrigger
+        render={
+          <Link
+            className="relative flex h-7 items-center gap-3 pr-3 pl-8 text-xs transition-colors hover:bg-muted/40"
+            search={isNewest ? clearNoteDiff : setNoteDiffOpen(entry.id)}
+            to="."
+          />
+        }
+      >
+        <span
+          className={cn(
+            "absolute top-1/2 left-4 size-2.5 shrink-0 -translate-x-1/2 -translate-y-1/2 rounded-full bg-muted-foreground ring-3 ring-background",
+            isIteration && "bg-f-base-500 dark:bg-f-base-600",
+            isNewest && "bg-f-blue!",
+            isSelected && "bg-f-orange!",
+          )}
+        />
+        {children}
+      </ContextMenuTrigger>
+      <ContextMenuContent className="w-auto">
+        <ContextMenuItem
+          disabled={isNewest}
+          onClick={() => {
+            setResetOpen(true);
+          }}
+          variant="destructive"
+        >
+          <RotateCcwIcon />
+          <T>Reset to this version</T>
+        </ContextMenuItem>
+      </ContextMenuContent>
+      <TimelineResetDialog
+        noteId={noteId}
+        onOpenChange={setResetOpen}
+        open={resetOpen}
+        versionId={entry.id}
       />
-      {children}
-    </Link>
+    </ContextMenu>
+  );
+};
+
+type TimelineResetDialogProps = {
+  noteId: string;
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
+  versionId: string;
+};
+
+const TimelineResetDialog = ({
+  noteId,
+  onOpenChange,
+  open,
+  versionId,
+}: TimelineResetDialogProps) => {
+  const gt = useGT();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const reset = useMutation({
+    mutationFn: async () => {
+      await resetNoteToVersion({ data: { noteId, versionId } });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: noteQueries.byId(noteId).queryKey }),
+        queryClient.invalidateQueries({ queryKey: noteQueries.versionLists(noteId) }),
+      ]);
+      await navigate({ search: clearNoteDiff, to: "." });
+    },
+    onError: () => {
+      toast.error(gt("Failed to reset the note"));
+    },
+    onSuccess: () => {
+      onOpenChange(false);
+    },
+  });
+
+  return (
+    <AlertDialog onOpenChange={onOpenChange} open={open}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            <T>Reset the note to this version?</T>
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            <T>Every version after it will be deleted. This cannot be undone.</T>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>
+            <T>Cancel</T>
+          </AlertDialogCancel>
+          <AlertDialogAction
+            disabled={reset.isPending}
+            onClick={() => {
+              reset.mutate();
+            }}
+          >
+            <T>Reset</T>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 };
 

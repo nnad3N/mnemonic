@@ -466,6 +466,43 @@ export const declineAgentVersionsFn = Kit.gen(async function* (
   return Result.ok(restored);
 });
 
+type ResetNoteToVersionInput = {
+  noteId: SafeId<"note">;
+  versionId: string;
+};
+
+export const resetNoteToVersionFn = Kit.gen(async function* (
+  ctx: NoteCtx,
+  input: ResetNoteToVersionInput,
+) {
+  const target = yield* await ctx.db.transaction(async (tx) => {
+    const target = await tx.query.noteVersion.findFirst({
+      // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with the noteId filter.
+      where: { id: toSafeId<"noteVersion">(input.versionId), noteId: input.noteId },
+      columns: { id: true, seq: true },
+    });
+
+    if (!target) {
+      return null;
+    }
+
+    await Promise.all([
+      tx
+        .delete(noteVersion)
+        .where(and(eq(noteVersion.noteId, input.noteId), gt(noteVersion.seq, target.seq))),
+      tx.update(note).set({ updatedAt: new Date() }).where(eq(note.id, input.noteId)),
+    ]);
+
+    return target;
+  });
+
+  if (!target) {
+    return Result.err(toServerFnError.notFound("Note version not found"));
+  }
+
+  return Result.ok({ versionId: target.id });
+});
+
 type GetNoteVersionInput = {
   noteId: SafeId<"note">;
   versionId: string;
