@@ -7,7 +7,6 @@ import { dbKit, type DbKit } from "@/lib/db-kit.server";
 import { ToolError } from "@/lib/errors/tool-error";
 import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
-import { memoryKit, type MemoryKit } from "@/lib/memory-kit.server";
 import { mentionKeyFormat, parseMentionKey } from "@/lib/mention-key";
 import { toSafeId, type SafeId } from "@/lib/safe-id";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
@@ -15,11 +14,12 @@ import { NoteToolError, readNoteInScope } from "@/mastra/tools/note-tool-helpers
 import { toToolInputSchema } from "@/mastra/tools/tool-input-schema.server";
 import { readLatestVersion } from "@/routes/_protected.chat.$threadId/-thread-api/notes.server";
 
-type ReadNoteCtx = Kits<[DbKit, MemoryKit]>;
+type ReadNoteCtx = Kits<[DbKit]>;
 
 type ReadNoteInput = {
   noteId: SafeId<"note">;
   threadId: string;
+  topicId: SafeId<"topic"> | undefined;
   userId: SafeId<"user">;
 };
 
@@ -58,7 +58,7 @@ const outputSchema = v.variant("type", [
 
 type ReadNoteOutput = v.InferOutput<typeof outputSchema>;
 
-const noteToolCtx = Kit.createContext(dbKit, memoryKit);
+const noteToolCtx = Kit.createContext(dbKit);
 
 export const readNoteTool = createTool({
   id: "read-note",
@@ -66,7 +66,7 @@ export const readNoteTool = createTool({
   inputSchema: toToolInputSchema(inputSchema),
   outputSchema: toStandardJsonSchema(outputSchema),
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
-  execute: async ({ noteKey }, context): Promise<ReadNoteOutput> => {
+  execute: async ({ noteKey }, { requestContext }): Promise<ReadNoteOutput> => {
     const mention = parseMentionKey(noteKey);
 
     if (mention.type !== "note") {
@@ -76,20 +76,15 @@ export const readNoteTool = createTool({
     const result = await readAgentNoteFn(noteToolCtx, {
       // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with the userId filter.
       noteId: toSafeId<"note">(mention.value),
-      threadId: context.requestContext.get("threadId"),
-      userId: context.requestContext.get("userId"),
+      threadId: requestContext.get("threadId"),
+      topicId: requestContext.get("filter")?.topicId,
+      userId: requestContext.get("userId"),
     });
 
     if (Result.isError(result)) {
       return matchError(result.error, {
         NoteToolError: (error) => ({ type: "error" as const, message: error.message }),
         DatabaseError: (cause) => {
-          throw new ToolError({ message: "Note could not be read.", cause });
-        },
-        MemoryError: (cause) => {
-          throw new ToolError({ message: "Note could not be read.", cause });
-        },
-        ThreadNotFoundError: (cause) => {
           throw new ToolError({ message: "Note could not be read.", cause });
         },
       });

@@ -52,15 +52,15 @@ agent memory, which the user never sees.
 
 ### Agent access
 
-- Three tools: read a note, write a new note, update an existing one. Search
-  comes later; until then the model only learns of notes through mentions.
+- Four tools: search notes, read one, write a new one, update an existing one.
 - Only the parent has them. It also reads notes directly instead of delegating:
   a note is the user's curated document, high-quality context worth the parent's
   own attention.
-- Scope mirrors the mention menu: the thread's notes, plus the topic's and its
-  threads' notes when the thread is in a topic. A new note is always created in
-  the current thread; update works on any note within that scope. An agent never
-  moves a note between scopes.
+- Scope mirrors the mention menu: the thread's own notes, plus the topic's
+  shared notes when the thread is in a topic. A note written in a sibling thread
+  stays private to that conversation until the user adds it to the topic. A new
+  note is always created in the current thread; update works on any note within
+  that scope. An agent never moves a note between scopes.
 - An agent never sees the user's in-flight typing beyond the last autosave.
 - When a note tool finishes, the client invalidates that note's query, and an
   open editor with no local edits adopts what the agent wrote at its next
@@ -99,9 +99,18 @@ merges first. Still open:
 
 - Nothing is embedded on save. Notes are few and short, and a write path that
   calls an embedder blocks a keystroke-driven save on a provider round trip.
-- Search is FTS5 over note content, scoped to the topic or thread the agent is
-  working in. No provider key, no index to maintain, and exact terms — file
-  names, identifiers, numbers — match, which is most of what a note holds.
+- Search is Postgres full text search over the note title and the latest
+  version's content, covering the current thread's notes and, when the thread is
+  in a topic, the topic's shared notes. A sibling thread's notes stay out: they
+  belong to that conversation until the user adds them to the topic. No provider
+  key, and exact terms — file names, identifiers, numbers — match, which is most
+  of what a note holds.
+- The version row carries two generated `tsvector` columns, one stemmed as
+  English and one unstemmed, so no write path has to maintain either. The agent
+  says which of the two to search: English stems, everything else matches
+  literal word forms, since a note in French or Polish would otherwise lose
+  words to the English stemmer and stop list. Notes may mix languages, which the
+  unstemmed vector handles on its own.
 - Embeddings come back with the notes manager, which owns them lazily for
   relationship and staleness work rather than for this search.
 
@@ -151,7 +160,10 @@ Backend:
       update note (exact once-only text replacement) — every write an `agent`
       version, with the run-scoped overwrite recorded on `thread_run`
 - [x] `note_version.updatedAt`, moved by the run-scoped overwrite
-- [ ] Note search tool: FTS5 over note content, scoped
+- [x] Note search tool: Postgres full text search over the title and the latest
+      version's content, ranked, with `ts_headline` snippets, over this thread's
+      notes and the topic's, against the English or the unstemmed vector as the
+      agent asks
 - [x] `listNotes` over a thread or topic scope, with search and pagination
 - [x] Anchored saves: a user save declares its intent as a variant — overwrite,
       carrying the latest user version's id (valid even mid-chain below an
@@ -179,8 +191,9 @@ Frontend:
       against the current document, editable when the user's version is the
       latest, with edits saving into it; a Close button exits
 - [x] Notes in the mention menu: the mentions query is keyed by the thread and the
-      server resolves its topic; a topic thread lists the topic's files, notes,
-      the topic's threads and their notes, a standalone thread only its own notes.
+      server resolves its topic; a topic thread lists the topic's files, its
+      shared notes, this thread's own notes and the topic's threads, a
+      standalone thread only its own notes.
       Adding or clicking a note mention opens it in the panel, and a response link
       with a `mention:note::…` href renders as a mention chip
 - [x] Timeline endpoint: entries with word counts relative to a selected version
@@ -188,5 +201,5 @@ Frontend:
       as a column inside the notes panel; the selected comparison version and
       the panel toggle live in URL search params
 - [x] Diff viewer (revert still pending)
-- [ ] Revert from the timeline
+- [x] Revert from the timeline
 - [x] Export to markdown and docx, print to pdf

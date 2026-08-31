@@ -116,6 +116,23 @@ describe("getMentionsFn", () => {
     expect(mentions).toEqual([expect.objectContaining({ displayName: "Solo note", type: "note" })]);
   });
 
+  it("offers the topic's shared notes but not a sibling thread's own notes", async () => {
+    const [threadId, siblingThreadId] = await Promise.all([
+      seedThread({ resourceId: topicId, title: "Kickoff call" }),
+      seedThread({ resourceId: topicId, title: "Side chat" }),
+    ]);
+    await Promise.all([
+      seedNote({ title: "Shared note", topicId }),
+      seedNote({ title: "Sibling note", threadId: siblingThreadId }),
+    ]);
+
+    const mentions = expectOk(await getMentionsFn(ctx, { query: "note", threadId, userId }));
+
+    expect(mentions).toEqual([
+      expect.objectContaining({ displayName: "Shared note", type: "note" }),
+    ]);
+  });
+
   it("drops matching conversations once the topic has a full page of files", async () => {
     // Files are fetched with .limit(MENTIONS_QUERY_LIMIT) and the merged list is cut at that
     // same limit, so a topic with a full page of files can never surface a conversation mention.

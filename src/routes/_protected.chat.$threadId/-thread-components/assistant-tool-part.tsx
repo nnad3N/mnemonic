@@ -76,6 +76,7 @@ const isRecoverableFailure = (part: ToolUIPart<ThreadUITools>): boolean => {
     case "tool-fileGraphRag":
     case "tool-fileVectorSearch":
     case "tool-recall":
+    case "tool-searchNotes":
     case "tool-webSearch":
     case "tool-writeNote":
       return false;
@@ -173,6 +174,15 @@ const renderToolLabel = (toolName: MnemonicToolName, status: ToolPartStatus): Re
           return <T>Searched the file</T>;
         case "error":
           return <T>Could not search the file</T>;
+      }
+    case "searchNotes":
+      switch (status) {
+        case "pending":
+          return <T>Searching notes</T>;
+        case "done":
+          return <T>Searched notes</T>;
+        case "error":
+          return <T>Could not search notes</T>;
       }
     case "webFetch":
       switch (status) {

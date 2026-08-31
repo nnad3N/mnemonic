@@ -14,6 +14,7 @@ import { computeTool } from "@/mastra/tools/compute-tool.server";
 import { readFileTool } from "@/mastra/tools/read-file-tool.server";
 import { readNoteTool } from "@/mastra/tools/read-note-tool.server";
 import { searchFileTool } from "@/mastra/tools/search-file-tool.server";
+import { searchNotesTool } from "@/mastra/tools/search-notes-tool.server";
 import { updateNoteTool } from "@/mastra/tools/update-note-tool.server";
 import { webFetchTool } from "@/mastra/tools/web-fetch-tool.server";
 import { webSearchTool } from "@/mastra/tools/web-search-tool.server";
@@ -25,6 +26,7 @@ const conversationAgentTools = {
   readFile: readFileTool,
   readNote: readNoteTool,
   searchFile: searchFileTool,
+  searchNotes: searchNotesTool,
   updateNote: updateNoteTool,
   webFetch: webFetchTool,
   webSearch: webSearchTool,

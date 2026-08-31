@@ -1,5 +1,5 @@
 import { Result } from "better-result";
-import { and, desc, eq, inArray, or } from "drizzle-orm";
+import { and, desc, eq, or } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 
 import { file, note } from "@/db/schema.server";
@@ -65,7 +65,7 @@ export const getMentionsFn = Kit.gen(async function* (ctx: MentionsCtx, input: G
     );
   }
 
-  const [files, listedThreads] = yield* await Kit.promiseAll([
+  const [files, listedThreads, notes] = yield* await Kit.promiseAll([
     ctx.db.run((db) =>
       db
         .select({
@@ -83,18 +83,10 @@ export const getMentionsFn = Kit.gen(async function* (ctx: MentionsCtx, input: G
       page: 0,
       perPage: false,
     }),
+    listNotes(or(eq(note.threadId, input.threadId), eq(note.topicId, topicId))),
   ]);
 
   const threads = listedThreads.threads;
-  const notes = yield* await listNotes(
-    or(
-      eq(note.topicId, topicId),
-      inArray(
-        note.threadId,
-        threads.map((thread) => thread.id),
-      ),
-    ),
-  );
 
   const mentions: MentionItem[] = [
     ...files.map((listed) => ({

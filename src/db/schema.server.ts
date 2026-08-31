@@ -1,6 +1,8 @@
 import { defineRelationsPart, isNotNull, sql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import {
   check,
+  customType,
   index,
   integer,
   jsonb,
@@ -192,6 +194,8 @@ export const note = pgTable(
   ],
 );
 
+const tsvector = customType<{ data: string }>({ dataType: () => "tsvector" });
+
 export const noteVersion = pgTable(
   "note_version",
   {
@@ -207,6 +211,14 @@ export const noteVersion = pgTable(
     seq: integer("seq").notNull(),
     content: text("content").notNull(),
     contentHash: text("content_hash").notNull(),
+    // Every version carries both although search only ever reads the latest; a stored generated
+    // column costs no upkeep on the write paths, and each of them writes a version.
+    searchVectorEnglish: tsvector("search_vector_english").generatedAlwaysAs(
+      (): SQL => sql`to_tsvector('english', ${noteVersion.content})`,
+    ),
+    searchVectorSimple: tsvector("search_vector_simple").generatedAlwaysAs(
+      (): SQL => sql`to_tsvector('simple', ${noteVersion.content})`,
+    ),
     author: text("author").$type<NoteVersionAuthor>().notNull(),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
 
@@ -216,7 +228,11 @@ export const noteVersion = pgTable(
       .$onUpdate(() => new Date())
       .defaultNow(),
   },
-  (table) => [uniqueIndex("note_version_note_seq_unique").on(table.noteId, table.seq)],
+  (table) => [
+    uniqueIndex("note_version_note_seq_unique").on(table.noteId, table.seq),
+    index("note_version_search_english_idx").using("gin", table.searchVectorEnglish),
+    index("note_version_search_simple_idx").using("gin", table.searchVectorSimple),
+  ],
 );
 
 export const appRelations = defineRelationsPart(

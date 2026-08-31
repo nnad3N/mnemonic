@@ -155,6 +155,11 @@ const TOOL_LABELS = {
     error: "Could not search the file",
     pending: "Searching the file",
   },
+  searchNotes: {
+    done: "Searched notes",
+    error: "Could not search notes",
+    pending: "Searching notes",
+  },
   webFetch: {
     done: "Fetched the web page",
     error: "Could not fetch the web page",

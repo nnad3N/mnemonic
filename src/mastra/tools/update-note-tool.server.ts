@@ -8,8 +8,6 @@ import type { DbKit } from "@/lib/db-kit.server";
 import { ToolError } from "@/lib/errors/tool-error";
 import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
-import { memoryKit } from "@/lib/memory-kit.server";
-import type { MemoryKit } from "@/lib/memory-kit.server";
 import { mentionKeyFormat, parseMentionKey } from "@/lib/mention-key";
 import { toSafeId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
@@ -22,11 +20,12 @@ import {
 import { toToolInputSchema } from "@/mastra/tools/tool-input-schema.server";
 import { readLatestVersion } from "@/routes/_protected.chat.$threadId/-thread-api/notes.server";
 
-type UpdateNoteCtx = Kits<[DbKit, MemoryKit]>;
+type UpdateNoteCtx = Kits<[DbKit]>;
 
 type UpdateNoteInput = {
   noteId: SafeId<"note">;
   threadId: string;
+  topicId: SafeId<"topic"> | undefined;
   userId: SafeId<"user">;
   newText: string;
   oldText: string;
@@ -168,7 +167,7 @@ export const updateNoteOutputSchema = v.variant("type", [
 
 type UpdateNoteOutput = v.InferOutput<typeof updateNoteOutputSchema>;
 
-const noteToolCtx = Kit.createContext(dbKit, memoryKit);
+const noteToolCtx = Kit.createContext(dbKit);
 
 export const updateNoteTool = createTool({
   id: "update-note",
@@ -176,7 +175,7 @@ export const updateNoteTool = createTool({
   inputSchema: toToolInputSchema(updateNoteInputSchema),
   outputSchema: toStandardJsonSchema(updateNoteOutputSchema),
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
-  execute: async ({ newText, noteKey, oldText }, context): Promise<UpdateNoteOutput> => {
+  execute: async ({ newText, noteKey, oldText }, { requestContext }): Promise<UpdateNoteOutput> => {
     const mention = parseMentionKey(noteKey);
 
     if (mention.type !== "note") {
@@ -188,20 +187,15 @@ export const updateNoteTool = createTool({
       oldText,
       // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with the userId filter.
       noteId: toSafeId<"note">(mention.value),
-      threadId: context.requestContext.get("threadId"),
-      userId: context.requestContext.get("userId"),
+      threadId: requestContext.get("threadId"),
+      topicId: requestContext.get("filter")?.topicId,
+      userId: requestContext.get("userId"),
     });
 
     if (Result.isError(result)) {
       return matchError(result.error, {
         NoteToolError: (error) => ({ type: "error" as const, message: error.message }),
         DatabaseError: (cause) => {
-          throw new ToolError({ message: "Note could not be updated.", cause });
-        },
-        MemoryError: (cause) => {
-          throw new ToolError({ message: "Note could not be updated.", cause });
-        },
-        ThreadNotFoundError: (cause) => {
           throw new ToolError({ message: "Note could not be updated.", cause });
         },
       });

@@ -6,68 +6,37 @@ import type { DbKit } from "@/lib/db-kit.server";
 import { hashText } from "@/lib/hash";
 import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
-import type { MemoryKit } from "@/lib/memory-kit.server";
-import { resolveThread } from "@/lib/middleware/resolve-thread.server";
 import type { SafeId } from "@/lib/safe-id";
-import {
-  getThreadTopicId,
-  toNoteScope,
-} from "@/routes/_protected.chat.$threadId/-thread-api/notes.server";
 
 export class NoteToolError extends TaggedError("NoteToolError")<{
   message: string;
 }> {}
 
-type ReadNoteInScopeCtx = Kits<[DbKit, MemoryKit]>;
-
 type ReadNoteInScopeInput = {
   noteId: SafeId<"note">;
   threadId: string;
+  topicId: SafeId<"topic"> | undefined;
   userId: SafeId<"user">;
 };
 
+/** A note the agent may touch: one written in this thread, or one shared into the topic. */
 export const readNoteInScope = Kit.gen(async function* (
-  ctx: ReadNoteInScopeCtx,
+  ctx: Kits<[DbKit]>,
   input: ReadNoteInScopeInput,
 ) {
-  const [noteRow, { topicId }] = yield* await Kit.promiseAll([
-    ctx.db.run((db) =>
-      db.query.note.findFirst({
-        where: { id: input.noteId, userId: input.userId },
-        columns: { id: true, threadId: true, title: true, topicId: true },
-      }),
-    ),
-    resolveThread(ctx, { threadId: input.threadId, userId: input.userId }),
-  ]);
+  const noteRow = yield* await ctx.db.run((db) =>
+    db.query.note.findFirst({
+      where: { id: input.noteId, userId: input.userId },
+      columns: { id: true, threadId: true, title: true, topicId: true },
+    }),
+  );
 
-  if (!noteRow) {
-    return Result.err(new NoteToolError({ message: "Note not found" }));
+  if (noteRow?.threadId === input.threadId) {
+    return Result.ok({ id: noteRow.id, title: noteRow.title });
   }
 
-  const scope = toNoteScope(noteRow);
-  const found = { id: noteRow.id, scope, title: noteRow.title };
-
-  if (scope.type === "topic") {
-    if (scope.id === topicId) {
-      return Result.ok(found);
-    }
-
-    return Result.err(new NoteToolError({ message: "Note not found" }));
-  }
-
-  if (scope.id === input.threadId) {
-    return Result.ok(found);
-  }
-
-  if (topicId) {
-    const noteThreadTopicId = yield* await getThreadTopicId(ctx, {
-      threadId: scope.id,
-      userId: input.userId,
-    });
-
-    if (noteThreadTopicId === topicId) {
-      return Result.ok(found);
-    }
+  if (input.topicId && noteRow?.topicId === input.topicId) {
+    return Result.ok({ id: noteRow.id, title: noteRow.title });
   }
 
   return Result.err(new NoteToolError({ message: "Note not found" }));

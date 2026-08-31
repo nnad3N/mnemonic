@@ -20,6 +20,7 @@ import { computeTool } from "@/mastra/tools/compute-tool.server";
 import { createFileGraphRagTool } from "@/mastra/tools/file-graph-rag-tool.server";
 import { createFileVectorSearchTool } from "@/mastra/tools/file-vector-search-tool.server";
 import { readNoteTool } from "@/mastra/tools/read-note-tool.server";
+import { searchNotesTool } from "@/mastra/tools/search-notes-tool.server";
 import { updateNoteTool } from "@/mastra/tools/update-note-tool.server";
 import { webSearchTool } from "@/mastra/tools/web-search-tool.server";
 import { writeNoteTool } from "@/mastra/tools/write-note-tool.server";
@@ -45,6 +46,7 @@ const getTopicAgentTools = async ({ requestContext }: GetTopicAgentToolsInput) =
     fileGraphRag: createFileGraphRagTool(apiKey),
     fileVectorSearch: createFileVectorSearchTool(apiKey),
     readNote: readNoteTool,
+    searchNotes: searchNotesTool,
     updateNote: updateNoteTool,
     webSearch: webSearchTool,
     writeNote: writeNoteTool,

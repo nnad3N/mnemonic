@@ -9,9 +9,12 @@ import { createSafeId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
 import { NoteToolError } from "@/mastra/tools/note-tool-helpers.server";
 import { readAgentNoteFn } from "@/mastra/tools/read-note-tool.server";
+import { searchAgentNotesFn } from "@/mastra/tools/search-notes-tool.server";
+import type { SearchLanguage } from "@/mastra/tools/search-notes-tool.server";
 import { replaceNoteText, updateAgentNoteFn } from "@/mastra/tools/update-note-tool.server";
 import { createAgentNoteFn } from "@/mastra/tools/write-note-tool.server";
 import {
+  addNoteToTopicFn,
   createNoteFn,
   getNoteFn,
   saveAgentVersionFn,
@@ -79,6 +82,7 @@ describe("agent note versioning", () => {
         oldText: "draft",
         noteId: id,
         threadId,
+        topicId: undefined,
         userId,
       }),
     );
@@ -88,6 +92,7 @@ describe("agent note versioning", () => {
         oldText: "first",
         noteId: id,
         threadId,
+        topicId: undefined,
         userId,
       }),
     );
@@ -118,6 +123,7 @@ describe("agent note versioning", () => {
         oldText: "from run one",
         noteId: id,
         threadId,
+        topicId: undefined,
         userId,
       }),
     );
@@ -166,6 +172,7 @@ describe("agent note versioning", () => {
         oldText: "draft",
         noteId: id,
         threadId,
+        topicId: undefined,
         userId,
       }),
     );
@@ -253,6 +260,7 @@ describe("agent note versioning", () => {
         oldText: "draft",
         noteId: id,
         threadId,
+        topicId: undefined,
         userId,
       }),
     );
@@ -387,6 +395,7 @@ describe("agent note versioning", () => {
         oldText: "gamma",
         noteId: id,
         threadId,
+        topicId: undefined,
         userId,
       }),
     );
@@ -396,6 +405,7 @@ describe("agent note versioning", () => {
         oldText: "alpha",
         noteId: id,
         threadId,
+        topicId: undefined,
         userId,
       }),
     );
@@ -423,6 +433,7 @@ describe("agent note versioning", () => {
         oldText: 'plan - "draft" stage',
         noteId: id,
         threadId,
+        topicId: undefined,
         userId,
       }),
     );
@@ -464,13 +475,19 @@ describe("agent note versioning", () => {
     });
   });
 
-  it("reads notes of sibling topic threads and hides notes outside the scope", async () => {
-    const [threadId, siblingThreadId, foreignThreadId] = await Promise.all([
+  it("reads the topic's shared notes and hides a sibling thread's own notes", async () => {
+    const [threadId, siblingThreadId] = await Promise.all([
       seedThread({ resourceId: topicId }),
       seedThread({ resourceId: topicId }),
-      seedThread({ resourceId: userId }),
     ]);
-    const [sibling, foreign] = await Promise.all([
+    const [shared, sibling] = await Promise.all([
+      createNoteFn(ctx, {
+        author: "user",
+        content: "shared",
+        threadId,
+        title: "Shared",
+        userId,
+      }).then(expectOk),
       createNoteFn(ctx, {
         author: "user",
         content: "sibling",
@@ -478,19 +495,123 @@ describe("agent note versioning", () => {
         title: "Sibling",
         userId,
       }).then(expectOk),
-      createNoteFn(ctx, {
-        author: "user",
-        content: "foreign",
-        threadId: foreignThreadId,
-        title: "Foreign",
-        userId,
-      }).then(expectOk),
     ]);
+    expectOk(await addNoteToTopicFn(ctx, { noteId: shared.id, userId }));
 
-    const read = expectOk(await readAgentNoteFn(ctx, { noteId: sibling.id, threadId, userId }));
-    const denied = expectErr(await readAgentNoteFn(ctx, { noteId: foreign.id, threadId, userId }));
+    const read = expectOk(
+      await readAgentNoteFn(ctx, { noteId: shared.id, threadId, topicId, userId }),
+    );
+    const denied = expectErr(
+      await readAgentNoteFn(ctx, { noteId: sibling.id, threadId, topicId, userId }),
+    );
 
-    expect(read).toEqual({ content: "sibling", title: "Sibling" });
+    expect(read).toEqual({ content: "shared", title: "Shared" });
     expect(NoteToolError.is(denied)).toBe(true);
+  });
+});
+
+describe("agent note search", () => {
+  const search = async (
+    input: { threadId: string; language?: SearchLanguage; topicId?: SafeId<"topic"> },
+    query: string,
+  ) =>
+    expectOk(
+      await searchAgentNotesFn(ctx, {
+        language: "english",
+        limit: 10,
+        query,
+        topicId: undefined,
+        userId,
+        ...input,
+      }),
+    );
+
+  it("searches the latest version's text, not the ones it replaced", async () => {
+    const threadId = await seedThread({ resourceId: userId });
+    await seedRun(threadId);
+    const { id } = expectOk(
+      await createNoteFn(ctx, {
+        author: "user",
+        content: "the quarterly figures came from kumquat",
+        threadId,
+        title: "Plan",
+        userId,
+      }),
+    );
+
+    expectOk(
+      await updateAgentNoteFn(ctx, {
+        newText: "pomelo",
+        oldText: "kumquat",
+        noteId: id,
+        threadId,
+        topicId: undefined,
+        userId,
+      }),
+    );
+
+    const replaced = await search({ threadId }, "kumquat");
+    const current = await search({ threadId }, "pomelo");
+
+    expect(replaced.matches).toEqual([]);
+    expect(current.matches.map((match) => match.noteKey)).toEqual([`note::${id}`]);
+  });
+
+  it("covers this thread's notes and the topic's, but not another thread's", async () => {
+    const [threadId, siblingThreadId] = await Promise.all([
+      seedThread({ resourceId: topicId }),
+      seedThread({ resourceId: topicId }),
+    ]);
+    const seedNote = async (input: { content: string; threadId: string; title: string }) =>
+      expectOk(await createNoteFn(ctx, { author: "user", userId, ...input }));
+
+    const [own, , moved] = await Promise.all([
+      seedNote({ content: "kumquat harvest", threadId, title: "Own" }),
+      seedNote({ content: "kumquat prices", threadId: siblingThreadId, title: "Sibling" }),
+      seedNote({ content: "kumquat exports", threadId, title: "Moved" }),
+    ]);
+    expectOk(await addNoteToTopicFn(ctx, { noteId: moved.id, userId }));
+
+    const { matches } = await search({ threadId, topicId }, "kumquat");
+
+    expect(matches.map((match) => match.noteKey).toSorted()).toEqual(
+      [`note::${own.id}`, `note::${moved.id}`].toSorted(),
+    );
+  });
+
+  it("finds words in another language that the English configuration would drop", async () => {
+    const threadId = await seedThread({ resourceId: userId });
+    const { id } = expectOk(
+      await createNoteFn(ctx, {
+        author: "user",
+        content: "notatka o tym do czego on doszedł",
+        threadId,
+        title: "Rozmowa",
+        userId,
+      }),
+    );
+
+    const english = await search({ threadId }, "do");
+    const other = await search({ threadId, language: "other" }, "do");
+
+    expect(english.matches).toEqual([]);
+    expect(other.matches.map((match) => match.noteKey)).toEqual([`note::${id}`]);
+  });
+
+  it("finds a note by its title alone", async () => {
+    const threadId = await seedThread({ resourceId: userId });
+    const { id } = expectOk(
+      await createNoteFn(ctx, {
+        author: "user",
+        content: "nothing to see",
+        threadId,
+        title: "Kumquat harvest",
+        userId,
+      }),
+    );
+
+    const { matches } = await search({ threadId }, "kumquat");
+
+    expect(matches.map((match) => match.noteKey)).toEqual([`note::${id}`]);
   });
 });
