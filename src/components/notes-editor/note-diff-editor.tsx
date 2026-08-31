@@ -8,14 +8,7 @@ import { produce } from "immer";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { ElementApi, createSlatePlugin } from "platejs";
 import type { Descendant, Value } from "platejs";
-import {
-  Plate,
-  PlateContent,
-  PlateLeaf,
-  createPlateEditor,
-  toPlatePlugin,
-  usePlateEditor,
-} from "platejs/react";
+import { PlateLeaf, createPlateEditor, toPlatePlugin, usePlateEditor } from "platejs/react";
 import type { PlateLeafProps } from "platejs/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { PropsWithChildren } from "react";
@@ -23,7 +16,6 @@ import { toast } from "sonner";
 import { useDebouncedCallback } from "use-debounce";
 
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { ServerFnError } from "@/lib/errors/server-fn-error";
 import { hashText } from "@/lib/hash";
 import { markdownToText } from "@/lib/markdown";
@@ -39,6 +31,8 @@ import {
   saveNoteBody,
 } from "@/routes/_protected.chat.$threadId/-thread-api/notes.functions";
 
+import { NotePlate } from "./note-chrome";
+import { useNoteBaselineStore } from "./notes-store";
 import { notesEditorPlugins } from "./plugins";
 import { clearNoteDiff, setNoteDiffOpen } from "./use-open-note";
 
@@ -234,17 +228,19 @@ export const NoteDiffStats = ({ counts }: NoteDiffStatsProps) => (
   </div>
 );
 
-type NoteReviewDiffProps = {
+type NoteReviewEditorProps = {
   baseVersionId: string;
   noteId: string;
 };
 
-export const NoteReviewDiff = ({ baseVersionId, noteId }: NoteReviewDiffProps) => {
+export const NoteReviewEditor = ({ baseVersionId, noteId }: NoteReviewEditorProps) => {
   const gt = useGT();
   const queryClient = useQueryClient();
   const noteQuery = noteQueries.byId(noteId);
   const { data: note } = useSuspenseQuery(noteQuery);
   const { data: base } = useSuspenseQuery(noteQueries.version(noteId, baseVersionId));
+  const store = useNoteBaselineStore();
+  const { seedBaseline } = store.getState();
   // Seeded once: after that the edits live in this editor, and saves flow back into the
   // agent's version rather than the editor reseeding from the cache.
   const [diffValue] = useState(() => computeNoteDiffValue(base.content, note.content));
@@ -336,6 +332,7 @@ export const NoteReviewDiff = ({ baseVersionId, noteId }: NoteReviewDiffProps) =
         draft.versionUpdatedAt = saved.updatedAt;
       }),
     );
+    seedBaseline({ baseVersionId: null, contentHash: saved.contentHash });
     void queryClient.invalidateQueries({ queryKey: noteQueries.versionLists(noteId) });
   };
 
@@ -356,6 +353,7 @@ export const NoteReviewDiff = ({ baseVersionId, noteId }: NoteReviewDiffProps) =
           draft.versionId = saved.versionId;
         }),
       );
+      seedBaseline({ baseVersionId: saved.versionId, contentHash: saved.contentHash });
       void queryClient.invalidateQueries({ queryKey: noteQueries.versionLists(noteId) });
     },
     onError: () => {
@@ -370,46 +368,43 @@ export const NoteReviewDiff = ({ baseVersionId, noteId }: NoteReviewDiffProps) =
   const { containerRef, jumpToChange } = useDiffChangeNav();
 
   return (
-    <Plate
+    <NotePlate
+      containerRef={containerRef}
       editor={editor}
+      noteId={noteId}
       onValueChange={() => {
         saveDebounced();
       }}
-      primary={false}
+      title={note.title}
     >
-      <div className="relative flex min-h-0 flex-1 flex-col" ref={containerRef}>
-        <ScrollArea className="min-h-0 flex-1">
-          <PlateContent className="typeset px-4 py-2 pb-16 text-sm outline-none" />
-        </ScrollArea>
-        <NoteFloatingBar>
-          <NoteDiffNavButtons jumpToChange={jumpToChange} />
-          <NoteDiffStats counts={counts} />
-          <Button
-            disabled={reject.isPending}
-            onClick={() => {
-              saveDebounced.cancel();
-              reject.mutate();
-            }}
-            size="sm"
-            variant="ghost"
-          >
-            <T>Reject</T>
-          </Button>
-          <Button disabled={reject.isPending || save.isPending} onClick={commit} size="sm">
-            <T>Commit</T>
-          </Button>
-        </NoteFloatingBar>
-      </div>
-    </Plate>
+      <NoteFloatingBar>
+        <NoteDiffNavButtons jumpToChange={jumpToChange} />
+        <NoteDiffStats counts={counts} />
+        <Button
+          disabled={reject.isPending}
+          onClick={() => {
+            saveDebounced.cancel();
+            reject.mutate();
+          }}
+          size="sm"
+          variant="ghost"
+        >
+          <T>Reject</T>
+        </Button>
+        <Button disabled={reject.isPending || save.isPending} onClick={commit} size="sm">
+          <T>Commit</T>
+        </Button>
+      </NoteFloatingBar>
+    </NotePlate>
   );
 };
 
-type NoteHistoryDiffProps = {
+type NoteHistoryEditorProps = {
   baseVersionId: string;
   noteId: string;
 };
 
-export const NoteHistoryDiff = ({ baseVersionId, noteId }: NoteHistoryDiffProps) => {
+export const NoteHistoryEditor = ({ baseVersionId, noteId }: NoteHistoryEditorProps) => {
   const gt = useGT();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -430,23 +425,29 @@ export const NoteHistoryDiff = ({ baseVersionId, noteId }: NoteHistoryDiffProps)
   });
   const [diffValue] = useState(() => computeNoteDiffValue(base.content, note.content));
   const editor = usePlateEditor({ plugins: diffPlugins, value: diffValue });
-  // Editing through the history lens writes the current user version; while the agent's
-  // latest is newer the lens is read-only.
-  const editable = note.lastAuthor === "user";
-  const savedContentHash = useRef(note.contentHash);
+  const store = useNoteBaselineStore();
+  const { confirmSaved, markEdited, seedBaseline } = store.getState();
 
   const save = useMutation({
     mutationFn: async () => {
+      const baseline = store.getState();
+      const editSeq = baseline.editSeq;
       const content = plateToMarkdown(editor, stripDiffValue(editor.children));
       const contentHash = await hashText(content);
 
-      if (contentHash === savedContentHash.current) return;
+      if (contentHash === baseline.contentHash) {
+        confirmSaved(editSeq, { baseVersionId: baseline.baseVersionId, contentHash });
+
+        return;
+      }
 
       const saved = await saveNoteBody({
-        data: { baseVersionId: note.versionId, content, intent: "overwrite", noteId },
+        data: baseline.baseVersionId
+          ? { baseVersionId: baseline.baseVersionId, content, intent: "overwrite", noteId }
+          : { content, intent: "append", noteId },
       });
 
-      savedContentHash.current = saved.contentHash;
+      confirmSaved(editSeq, { baseVersionId: saved.versionId, contentHash: saved.contentHash });
 
       if (saved.isLatest) {
         queryClient.setQueryData(noteQuery.queryKey, (previous) =>
@@ -455,14 +456,26 @@ export const NoteHistoryDiff = ({ baseVersionId, noteId }: NoteHistoryDiffProps)
 
             draft.content = content;
             draft.contentHash = saved.contentHash;
+            draft.lastAuthor = "user";
+            draft.pendingReviewBaseVersionId = null;
+            draft.versionId = saved.versionId;
           }),
         );
       }
       void queryClient.invalidateQueries({ queryKey: noteQueries.versionLists(noteId) });
     },
-    onError: (error) => {
+    onError: async (error) => {
       if (ServerFnError.is(error) && error.status === STALE_NOTE_VERSION_STATUS) {
-        void queryClient.invalidateQueries({ queryKey: noteQuery.queryKey });
+        await queryClient.invalidateQueries({ queryKey: noteQuery.queryKey });
+
+        const fresh = queryClient.getQueryData(noteQuery.queryKey);
+
+        if (!fresh) return;
+
+        seedBaseline({
+          baseVersionId: fresh.lastAuthor === "user" ? fresh.versionId : null,
+          contentHash: fresh.contentHash,
+        });
 
         return;
       }
@@ -481,57 +494,51 @@ export const NoteHistoryDiff = ({ baseVersionId, noteId }: NoteHistoryDiffProps)
   );
 
   return (
-    <Plate
+    <NotePlate
       editor={editor}
+      noteId={noteId}
       onValueChange={() => {
-        if (!editable) return;
-
+        markEdited(note.pendingReviewBaseVersionId ? note.versionId : null);
         saveDebounced();
       }}
-      primary={false}
-      readOnly={!editable}
+      title={note.title}
     >
-      <div className="relative flex min-h-0 flex-1 flex-col">
-        <ScrollArea className="min-h-0 flex-1">
-          <PlateContent className="typeset px-4 py-2 pb-16 text-sm outline-none" />
-        </ScrollArea>
-        <NoteFloatingBar>
-          <Button
-            disabled={!olderVersionId}
-            onClick={async () => {
-              if (!olderVersionId) return;
+      <NoteFloatingBar>
+        <Button
+          disabled={!olderVersionId}
+          onClick={async () => {
+            if (!olderVersionId) return;
 
-              await navigate({ search: setNoteDiffOpen(olderVersionId), to: "." });
-            }}
-            size="icon-sm"
-            variant="ghost"
-          >
-            <ChevronLeftIcon />
-            <span className="sr-only">
-              <T>Older version</T>
-            </span>
-          </Button>
-          <Button
-            disabled={!newerVersionId}
-            onClick={async () => {
-              if (!newerVersionId) return;
+            await navigate({ search: setNoteDiffOpen(olderVersionId), to: "." });
+          }}
+          size="icon-sm"
+          variant="ghost"
+        >
+          <ChevronLeftIcon />
+          <span className="sr-only">
+            <T>Older version</T>
+          </span>
+        </Button>
+        <Button
+          disabled={!newerVersionId}
+          onClick={async () => {
+            if (!newerVersionId) return;
 
-              await navigate({ search: setNoteDiffOpen(newerVersionId), to: "." });
-            }}
-            size="icon-sm"
-            variant="ghost"
-          >
-            <ChevronRightIcon />
-            <span className="sr-only">
-              <T>Newer version</T>
-            </span>
-          </Button>
-          <NoteDiffStats counts={counts} />
-          <Button nativeButton={false} render={<Link search={clearNoteDiff} to="." />} size="xs">
-            <T>Close</T>
-          </Button>
-        </NoteFloatingBar>
-      </div>
-    </Plate>
+            await navigate({ search: setNoteDiffOpen(newerVersionId), to: "." });
+          }}
+          size="icon-sm"
+          variant="ghost"
+        >
+          <ChevronRightIcon />
+          <span className="sr-only">
+            <T>Newer version</T>
+          </span>
+        </Button>
+        <NoteDiffStats counts={counts} />
+        <Button nativeButton={false} render={<Link search={clearNoteDiff} to="." />} size="xs">
+          <T>Close</T>
+        </Button>
+      </NoteFloatingBar>
+    </NotePlate>
   );
 };
