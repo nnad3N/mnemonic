@@ -69,9 +69,7 @@ export const NotesTabs = ({ onClose, threadId }: NotesTabsProps) => {
 
           const nextId = remaining.at(-1);
 
-          draft.note = nextId
-            ? { id: nextId, timeline: draft.note.timeline }
-            : undefined;
+          draft.note = nextId ? { id: nextId, timeline: draft.note.timeline } : undefined;
         }),
       to: ".",
     });

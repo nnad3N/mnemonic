@@ -2,7 +2,7 @@ import { computeDiff, withGetFragmentExcludeDiff } from "@platejs/diff";
 import type { DiffOperation } from "@platejs/diff";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Result } from "better-result";
+import { Result, panic } from "better-result";
 import { T, useGT } from "gt-tanstack-start";
 import { produce } from "immer";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
@@ -146,87 +146,134 @@ const stripDiffValue = (value: Value): Value =>
     return children.length > 0 ? [{ ...clean, children }] : [];
   });
 
-const useDiffChangeNav = () => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const changeIndexRef = useRef(-1);
-
-  const jumpToChange = (direction: -1 | 1) => {
-    const container = containerRef.current;
-
-    if (!container) return;
-
-    const marks = container.querySelectorAll("[data-diff]");
-
-    if (marks.length === 0) return;
-
-    const next = (changeIndexRef.current + direction + marks.length) % marks.length;
-
-    changeIndexRef.current = next;
-    marks.item(next).scrollIntoView({ behavior: "smooth", block: "center" });
-  };
-
-  return { containerRef, jumpToChange };
-};
-
 export const NoteFloatingBar = ({ children }: PropsWithChildren) => (
-  <div className="absolute bottom-3 left-1/2 z-10 flex h-12 max-w-[calc(100%-1.5rem)] -translate-x-1/2 items-center gap-1 rounded-xl border border-foreground/3 bg-background/50 px-2 text-sm backdrop-blur md:h-10 dark:border-white/5">
+  <div className="absolute bottom-3 left-1/2 z-10 flex h-12 max-w-[calc(100%-1.5rem)] -translate-x-1/2 items-center gap-1 rounded-full border border-foreground/3 bg-background/50 px-2 text-sm backdrop-blur md:h-10 dark:border-white/5">
     {children}
   </div>
 );
 
-type NoteDiffNavButtonsProps = {
-  jumpToChange: (direction: -1 | 1) => void;
-};
-
-const NoteDiffNavButtons = ({ jumpToChange }: NoteDiffNavButtonsProps) => (
-  <>
-    <Button
-      onClick={() => {
-        jumpToChange(-1);
-      }}
-      size="icon-sm"
-      variant="ghost"
-    >
-      <ChevronLeftIcon />
-      <span className="sr-only">
-        <T>Previous change</T>
-      </span>
-    </Button>
-    <Button
-      onClick={() => {
-        jumpToChange(1);
-      }}
-      size="icon-sm"
-      variant="ghost"
-    >
-      <ChevronRightIcon />
-      <span className="sr-only">
-        <T>Next change</T>
-      </span>
-    </Button>
-  </>
-);
-
 type NoteDiffStatsProps = {
   counts: WordDiffCounts;
+  noteId: string;
 };
 
-export const NoteDiffStats = ({ counts }: NoteDiffStatsProps) => (
-  <div className="flex gap-2 px-2 text-xs tabular-nums">
-    {counts.added > 0 && (
-      <span className="text-f-green-600 dark:text-f-green-400">+{counts.added}</span>
-    )}
-    {counts.replaced > 0 && (
-      <span className="text-f-blue-600 dark:text-f-blue-400">~{counts.replaced}</span>
-    )}
-    {counts.removed > 0 && (
-      <span className="text-f-red-600 dark:text-f-red-400">−{counts.removed}</span>
-    )}
-    {counts.added === 0 && counts.replaced === 0 && counts.removed === 0 && (
-      <span className="text-muted-foreground">±0</span>
-    )}
-  </div>
-);
+const zeros = (value: number) => "0".repeat(String(value).length);
+
+export const NoteDiffStats = ({ counts, noteId }: NoteDiffStatsProps) => {
+  const { data: earliestVersionId } = useSuspenseQuery({
+    ...noteQueries.versions(noteId),
+    select: (data) => data.entries.at(-1)?.id ?? panic("Note has no versions"),
+  });
+  const { data: earliest } = useSuspenseQuery(noteQueries.version(noteId, earliestVersionId));
+  const { data: content } = useSuspenseQuery({
+    ...noteQueries.byId(noteId),
+    select: (note) => note.content,
+  });
+  const widest = useMemo(
+    () => diffWordCounts(markdownToText(earliest.content), markdownToText(content)),
+    [content, earliest.content],
+  );
+
+  return (
+    <div className="grid px-2 text-xs tabular-nums">
+      <div aria-hidden className="invisible col-start-1 row-start-1 flex gap-2">
+        <span>+{zeros(widest.added)}</span>
+        <span>~{zeros(widest.replaced)}</span>
+        <span>−{zeros(widest.removed)}</span>
+      </div>
+      <div className="col-start-1 row-start-1 flex justify-center gap-2">
+        <span
+          className={cn(
+            "text-f-green-600 dark:text-f-green-400",
+            counts.added === 0 && "opacity-50",
+          )}
+        >
+          +{counts.added}
+        </span>
+        <span
+          className={cn(
+            "text-f-blue-600 dark:text-f-blue-400",
+            counts.replaced === 0 && "opacity-50",
+          )}
+        >
+          ~{counts.replaced}
+        </span>
+        <span
+          className={cn("text-f-red-600 dark:text-f-red-400", counts.removed === 0 && "opacity-50")}
+        >
+          −{counts.removed}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+type NoteDiffBarProps = PropsWithChildren<{
+  counts: WordDiffCounts;
+  noteId: string;
+  /** The version the timeline marks as selected: the newest one while reviewing. */
+  selectedVersionId: string;
+}>;
+
+const NoteDiffBar = ({ children, counts, noteId, selectedVersionId }: NoteDiffBarProps) => {
+  const navigate = useNavigate();
+  const {
+    data: { newerVersionId, newestVersionId, olderVersionId },
+  } = useSuspenseQuery({
+    ...noteQueries.versions(noteId),
+    select: (data) => {
+      const index = data.entries.findIndex((entry) => entry.id === selectedVersionId);
+
+      return {
+        newerVersionId: index > 0 ? data.entries.at(index - 1)?.id : undefined,
+        newestVersionId: data.entries.at(0)?.id,
+        olderVersionId: index >= 0 ? data.entries.at(index + 1)?.id : undefined,
+      };
+    },
+  });
+
+  return (
+    <NoteFloatingBar>
+      <Button
+        disabled={!olderVersionId}
+        onClick={async () => {
+          if (!olderVersionId) return;
+
+          await navigate({ search: setNoteDiffOpen(olderVersionId), to: "." });
+        }}
+        size="icon-sm"
+        variant="ghost"
+      >
+        <ChevronLeftIcon />
+        <span className="sr-only">
+          <T>Older version</T>
+        </span>
+      </Button>
+      <Button
+        disabled={!newerVersionId}
+        onClick={async () => {
+          if (!newerVersionId) return;
+
+          // The newest version is the note itself, which the editor and the review already show.
+          await navigate({
+            search:
+              newerVersionId === newestVersionId ? clearNoteDiff : setNoteDiffOpen(newerVersionId),
+            to: ".",
+          });
+        }}
+        size="icon-sm"
+        variant="ghost"
+      >
+        <ChevronRightIcon />
+        <span className="sr-only">
+          <T>Newer version</T>
+        </span>
+      </Button>
+      <NoteDiffStats counts={counts} noteId={noteId} />
+      {children}
+    </NoteFloatingBar>
+  );
+};
 
 type NoteReviewEditorProps = {
   baseVersionId: string;
@@ -365,11 +412,9 @@ export const NoteReviewEditor = ({ baseVersionId, noteId }: NoteReviewEditorProp
     () => diffWordCounts(markdownToText(base.content), markdownToText(note.content)),
     [base.content, note.content],
   );
-  const { containerRef, jumpToChange } = useDiffChangeNav();
 
   return (
     <NotePlate
-      containerRef={containerRef}
       editor={editor}
       noteId={noteId}
       onValueChange={() => {
@@ -377,24 +422,22 @@ export const NoteReviewEditor = ({ baseVersionId, noteId }: NoteReviewEditorProp
       }}
       title={note.title}
     >
-      <NoteFloatingBar>
-        <NoteDiffNavButtons jumpToChange={jumpToChange} />
-        <NoteDiffStats counts={counts} />
+      <NoteDiffBar counts={counts} noteId={noteId} selectedVersionId={note.versionId}>
         <Button
           disabled={reject.isPending}
           onClick={() => {
             saveDebounced.cancel();
             reject.mutate();
           }}
-          size="sm"
+          size="xs"
           variant="ghost"
         >
-          <T>Reject</T>
+          <T>Decline</T>
         </Button>
-        <Button disabled={reject.isPending || save.isPending} onClick={commit} size="sm">
-          <T>Commit</T>
+        <Button disabled={reject.isPending || save.isPending} onClick={commit} size="xs">
+          <T>Accept</T>
         </Button>
-      </NoteFloatingBar>
+      </NoteDiffBar>
     </NotePlate>
   );
 };
@@ -407,22 +450,9 @@ type NoteHistoryEditorProps = {
 export const NoteHistoryEditor = ({ baseVersionId, noteId }: NoteHistoryEditorProps) => {
   const gt = useGT();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const noteQuery = noteQueries.byId(noteId);
   const { data: note } = useSuspenseQuery(noteQuery);
   const { data: base } = useSuspenseQuery(noteQueries.version(noteId, baseVersionId));
-  const {
-    data: { newerVersionId, olderVersionId },
-  } = useSuspenseQuery({
-    ...noteQueries.versions(noteId),
-    select: (data) => {
-      const index = data.entries.findIndex((entry) => entry.id === baseVersionId);
-      const newerVersionId = index > 1 ? data.entries.at(index - 1)?.id : undefined;
-      const olderVersionId = index >= 0 ? data.entries.at(index + 1)?.id : undefined;
-
-      return { newerVersionId, olderVersionId };
-    },
-  });
   const [diffValue] = useState(() => computeNoteDiffValue(base.content, note.content));
   const editor = usePlateEditor({ plugins: diffPlugins, value: diffValue });
   const store = useNoteBaselineStore();
@@ -503,42 +533,11 @@ export const NoteHistoryEditor = ({ baseVersionId, noteId }: NoteHistoryEditorPr
       }}
       title={note.title}
     >
-      <NoteFloatingBar>
-        <Button
-          disabled={!olderVersionId}
-          onClick={async () => {
-            if (!olderVersionId) return;
-
-            await navigate({ search: setNoteDiffOpen(olderVersionId), to: "." });
-          }}
-          size="icon-sm"
-          variant="ghost"
-        >
-          <ChevronLeftIcon />
-          <span className="sr-only">
-            <T>Older version</T>
-          </span>
-        </Button>
-        <Button
-          disabled={!newerVersionId}
-          onClick={async () => {
-            if (!newerVersionId) return;
-
-            await navigate({ search: setNoteDiffOpen(newerVersionId), to: "." });
-          }}
-          size="icon-sm"
-          variant="ghost"
-        >
-          <ChevronRightIcon />
-          <span className="sr-only">
-            <T>Newer version</T>
-          </span>
-        </Button>
-        <NoteDiffStats counts={counts} />
+      <NoteDiffBar counts={counts} noteId={noteId} selectedVersionId={baseVersionId}>
         <Button nativeButton={false} render={<Link search={clearNoteDiff} to="." />} size="xs">
           <T>Close</T>
         </Button>
-      </NoteFloatingBar>
+      </NoteDiffBar>
     </NotePlate>
   );
 };
