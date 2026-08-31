@@ -10,13 +10,10 @@ import { toServerFnError } from "@/lib/errors/server-fn-error";
 import { hashText } from "@/lib/hash";
 import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
-import { markdownToText } from "@/lib/markdown";
 import type { MemoryError, MemoryKit } from "@/lib/memory-kit.server";
 import { resolveThread } from "@/lib/middleware/resolve-thread.server";
 import { createSafeId, toSafeId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
-import { diffWordCounts } from "@/lib/word-diff";
-import type { WordDiffCounts } from "@/lib/word-diff";
 
 type NoteCtx = Kits<[DbKit]>;
 type ListNotesCtx = Kits<[DbKit, MemoryKit]>;
@@ -406,12 +403,10 @@ export const getNoteVersionFn = Kit.gen(async function* (ctx: NoteCtx, input: Ge
 
 type ListNoteVersionsInput = {
   noteId: SafeId<"note">;
-  compareVersionId: string | undefined;
 };
 
 export type NoteTimelineEntry = {
   author: NoteVersionAuthor;
-  counts: WordDiffCounts;
   createdAt: Date;
   id: SafeId<"noteVersion">;
   seq: number;
@@ -427,7 +422,6 @@ export const listNoteVersionsFn = Kit.gen(async function* (
       where: { noteId: input.noteId },
       columns: {
         author: true,
-        content: true,
         createdAt: true,
         id: true,
         seq: true,
@@ -437,26 +431,11 @@ export const listNoteVersionsFn = Kit.gen(async function* (
     }),
   );
 
-  const compare =
-    versions.find((version) => version.id === input.compareVersionId) ?? versions.at(0);
-
-  if (!compare) {
+  if (versions.length === 0) {
     return panic("Note has no versions");
   }
 
-  const compareText = markdownToText(compare.content);
-
-  return Result.ok({
-    compareVersionId: compare.id,
-    entries: versions.map((version) => ({
-      author: version.author,
-      counts: diffWordCounts(compareText, markdownToText(version.content)),
-      createdAt: version.createdAt,
-      id: version.id,
-      seq: version.seq,
-      updatedAt: version.updatedAt,
-    })),
-  });
+  return Result.ok({ entries: versions });
 });
 
 type SaveNoteTitleInput = {

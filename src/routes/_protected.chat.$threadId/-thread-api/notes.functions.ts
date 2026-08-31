@@ -51,10 +51,10 @@ export const noteQueries = {
       queryKey: [...noteQueries.versionDetails(noteId), versionId] as const,
     }),
   versionLists: (noteId: string) => [...noteQueries.byId(noteId).queryKey, "versions"] as const,
-  versions: (noteId: string, compareVersionId: string | undefined) =>
+  versions: (noteId: string) =>
     queryOptions({
-      queryFn: async () => listNoteVersions({ data: { compareVersionId, noteId } }),
-      queryKey: [...noteQueries.versionLists(noteId), compareVersionId ?? "latest"] as const,
+      queryFn: async () => listNoteVersions({ data: { noteId } }),
+      queryKey: [...noteQueries.versionLists(noteId), "list"] as const,
     }),
 };
 
@@ -156,20 +156,12 @@ export const getNoteVersion = createServerFn({ method: "GET" })
     ),
   );
 
-const listNoteVersionsInputSchema = v.object({
-  compareVersionId: v.optional(v.pipe(v.string(), v.nanoid())),
-  noteId: v.pipe(v.string(), v.nanoid()),
-});
-
 export const listNoteVersions = createServerFn({ method: "GET" })
-  .validator(listNoteVersionsInputSchema)
+  .validator(noteInputSchema)
   .middleware([noteAccessMiddleware])
-  .handler(async ({ context, data }) =>
+  .handler(async ({ context }) =>
     Kit.run(async () =>
-      listNoteVersionsFn(noteCtx, {
-        compareVersionId: data.compareVersionId,
-        noteId: context.note.id,
-      }),
+      listNoteVersionsFn(noteCtx, { noteId: context.note.id }),
     ).throws<ServerFnError>(() => toServerFnError.serverError("Failed to load the note history")),
   );
 

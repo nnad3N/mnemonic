@@ -81,21 +81,23 @@ export const NotesEditor = ({ onClose }: NotesEditorProps) => {
     <SidebarInset className="h-full min-h-0 overflow-hidden">
       {/* Export lives in the tab bar, outside the note's own `Plate`, and reaches it from here. */}
       <PlateController>
-        <NotesTabs onClose={onClose} threadId={threadMatch?.params.threadId} />
-        {activeNoteId && (
-          <div className="flex min-h-0 flex-1">
-            <div className="flex h-full min-w-0 flex-1 flex-col">
-              <Suspense>
-                <NoteView key={activeNoteId} noteId={activeNoteId} />
-              </Suspense>
-            </div>
-            {timelineOpen && (
-              <Suspense>
-                <NoteTimeline noteId={activeNoteId} />
-              </Suspense>
+        <div className="flex h-full min-h-0">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            <NotesTabs onClose={onClose} threadId={threadMatch?.params.threadId} />
+            {activeNoteId && (
+              <div className="flex min-h-0 flex-1 flex-col">
+                <Suspense>
+                  <NoteView key={activeNoteId} noteId={activeNoteId} />
+                </Suspense>
+              </div>
             )}
           </div>
-        )}
+          {timelineOpen && activeNoteId && (
+            <Suspense>
+              <NoteTimeline noteId={activeNoteId} />
+            </Suspense>
+          )}
+        </div>
       </PlateController>
     </SidebarInset>
   );
@@ -134,7 +136,13 @@ const NoteView = ({ noteId }: NoteViewProps) => {
 
   switch (view.kind) {
     case "history": {
-      return <NoteHistoryDiff baseVersionId={view.baseVersionId} noteId={noteId} />;
+      return (
+        <NoteHistoryDiff
+          baseVersionId={view.baseVersionId}
+          key={view.baseVersionId}
+          noteId={noteId}
+        />
+      );
     }
     case "review": {
       return <NoteReviewDiff baseVersionId={view.baseVersionId} noteId={noteId} />;

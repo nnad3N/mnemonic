@@ -70,7 +70,7 @@ export const NotesTabs = ({ onClose, threadId }: NotesTabsProps) => {
           const nextId = remaining.at(-1);
 
           draft.note = nextId
-            ? { id: nextId, timeline: draft.note.timeline ? {} : undefined }
+            ? { id: nextId, timeline: draft.note.timeline }
             : undefined;
         }),
       to: ".",
@@ -227,7 +227,7 @@ const NoteMenuItems = ({ noteId, onCloseTab }: NoteMenuItemsProps) => {
                 produce(prev, (draft) => {
                   if (!draft.note) return;
 
-                  draft.note.timeline = draft.note.timeline ? undefined : {};
+                  draft.note.timeline = draft.note.timeline ? undefined : true;
                 })
               }
               to="."

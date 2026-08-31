@@ -5,7 +5,7 @@ type NoteSearch = {
   note?: {
     id: string;
     diff?: string;
-    timeline?: { compare?: string };
+    timeline?: boolean;
   };
   notes?: boolean;
   noteTabs?: string[];
@@ -22,8 +22,7 @@ export const setNoteSearchOpen =
 
       if (draft.note?.id === noteId) return;
 
-      // Timeline visibility follows across notes; diff and compare state are per note.
-      draft.note = { id: noteId, timeline: draft.note?.timeline ? {} : undefined };
+      draft.note = { id: noteId, timeline: draft.note?.timeline };
     });
 
 export const setNoteDiffOpen =
@@ -40,6 +39,13 @@ export const clearNoteDiff = <Search extends NoteSearch>(prev: Search): Search =
     if (!draft.note) return;
 
     draft.note.diff = undefined;
+  });
+
+export const closeNoteTimeline = <Search extends NoteSearch>(prev: Search): Search =>
+  produce(prev, (draft: NoteSearch) => {
+    if (!draft.note) return;
+
+    draft.note.timeline = undefined;
   });
 
 export const useOpenNote = () => {

@@ -55,11 +55,7 @@ const sidebarSearchSchema = v.object({
     v.object({
       id: v.pipe(v.string(), v.nanoid()),
       diff: v.optional(v.pipe(v.string(), v.nanoid())),
-      timeline: v.optional(
-        v.object({
-          compare: v.optional(v.pipe(v.string(), v.nanoid())),
-        }),
-      ),
+      timeline: v.optional(v.boolean()),
     }),
   ),
   noteTabs: v.optional(v.array(v.pipe(v.string(), v.nanoid())), []),
