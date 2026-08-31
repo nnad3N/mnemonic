@@ -27,9 +27,10 @@ type UpdateNoteInput = {
   threadId: string;
   topicId: SafeId<"topic"> | undefined;
   userId: SafeId<"user">;
-  newText: string;
-  oldText: string;
-};
+} & (
+  | { mode: "replace"; newText: string; oldText: string }
+  | { mode: "overwrite"; newText: string }
+);
 
 /**
  * The ways a model's echo of prose drifts from the stored bytes: trailing whitespace, smart
@@ -109,6 +110,17 @@ export const updateAgentNoteFn = Kit.gen(async function* (
   ctx: UpdateNoteCtx,
   input: UpdateNoteInput,
 ) {
+  if (input.mode === "overwrite") {
+    yield* await readNoteInScope(ctx, input);
+    yield* await writeAgentNoteVersion(ctx, {
+      content: input.newText,
+      noteId: input.noteId,
+      threadId: input.threadId,
+    });
+
+    return Result.ok({ id: input.noteId });
+  }
+
   const [latest] = yield* await Kit.promiseAll([
     readLatestVersion(ctx, input),
     readNoteInScope(ctx, input),
@@ -141,19 +153,34 @@ export const updateAgentNoteFn = Kit.gen(async function* (
   return Result.ok({ id: input.noteId });
 });
 
-export const updateNoteInputSchema = v.object({
-  noteKey: v.pipe(
-    v.string(),
-    v.nonEmpty(),
-    v.description(`Mention key of the note, in the shape ${mentionKeyFormat(["note"])}.`),
-  ),
-  oldText: v.pipe(
-    v.string(),
-    v.nonEmpty(),
-    v.description("Exact text to replace. Must appear exactly once in the note."),
-  ),
-  newText: v.pipe(v.string(), v.description("Markdown.")),
-});
+const noteKeySchema = v.pipe(
+  v.string(),
+  v.nonEmpty(),
+  v.description(`Mention key of the note, in the shape ${mentionKeyFormat(["note"])}.`),
+);
+
+const newTextSchema = v.pipe(v.string(), v.description("Markdown."));
+
+export const updateNoteInputSchema = v.variant("mode", [
+  v.object({
+    mode: v.pipe(v.literal("replace"), v.description("Replace one passage of the note.")),
+    noteKey: noteKeySchema,
+    oldText: v.pipe(
+      v.string(),
+      v.nonEmpty(),
+      v.description("Exact text to replace. Must appear exactly once in the note."),
+    ),
+    newText: newTextSchema,
+  }),
+  v.object({
+    mode: v.pipe(
+      v.literal("overwrite"),
+      v.description("Replace the note's whole content, the only way to write into an empty note."),
+    ),
+    noteKey: noteKeySchema,
+    newText: newTextSchema,
+  }),
+]);
 
 export const updateNoteOutputSchema = v.variant("type", [
   v.object({
@@ -171,11 +198,12 @@ const noteToolCtx = Kit.createContext(dbKit);
 
 export const updateNoteTool = createTool({
   id: "update-note",
-  description: "Replaces one exact occurrence of text in a note.",
+  description:
+    "Replaces one exact occurrence of text in a note, or overwrites the note's whole content.",
   inputSchema: toToolInputSchema(updateNoteInputSchema),
   outputSchema: toStandardJsonSchema(updateNoteOutputSchema),
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
-  execute: async ({ newText, noteKey, oldText }, { requestContext }): Promise<UpdateNoteOutput> => {
+  execute: async ({ noteKey, ...edit }, { requestContext }): Promise<UpdateNoteOutput> => {
     const mention = parseMentionKey(noteKey);
 
     if (mention.type !== "note") {
@@ -183,8 +211,7 @@ export const updateNoteTool = createTool({
     }
 
     const result = await updateAgentNoteFn(noteToolCtx, {
-      newText,
-      oldText,
+      ...edit,
       // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with the userId filter.
       noteId: toSafeId<"note">(mention.value),
       threadId: requestContext.get("threadId"),

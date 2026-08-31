@@ -157,8 +157,10 @@ Done:
 Backend:
 
 - [x] Parent agent tools: read note, write note (creates in the current thread),
-      update note (exact once-only text replacement) — every write an `agent`
-      version, with the run-scoped overwrite recorded on `thread_run`
+      update note (exact once-only text replacement, or overwrite of the whole
+      content, which is the only way into a note the user created empty) — every
+      write an `agent` version, with the run-scoped overwrite recorded on
+      `thread_run`
 - [x] `note_version.updatedAt`, moved by the run-scoped overwrite
 - [x] Note search tool: Postgres full text search over the title and the latest
       version's content, ranked, with `ts_headline` snippets, over this thread's

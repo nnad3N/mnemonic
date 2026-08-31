@@ -78,6 +78,7 @@ describe("agent note versioning", () => {
 
     expectOk(
       await updateAgentNoteFn(ctx, {
+        mode: "replace",
         newText: "first",
         oldText: "draft",
         noteId: id,
@@ -88,6 +89,7 @@ describe("agent note versioning", () => {
     );
     expectOk(
       await updateAgentNoteFn(ctx, {
+        mode: "replace",
         newText: "second",
         oldText: "first",
         noteId: id,
@@ -100,6 +102,30 @@ describe("agent note versioning", () => {
     expect(await listVersions(id)).toEqual([
       { author: "user", content: "draft", seq: 1 },
       { author: "agent", content: "second", seq: 2 },
+    ]);
+  });
+
+  it("overwrites the whole content of a note the user created empty", async () => {
+    const threadId = await seedThread({ resourceId: userId });
+    await seedRun(threadId);
+    const { id } = expectOk(
+      await createNoteFn(ctx, { author: "user", content: "", threadId, title: "Plan", userId }),
+    );
+
+    expectOk(
+      await updateAgentNoteFn(ctx, {
+        mode: "overwrite",
+        newText: "# Plan\n\nFirst draft.",
+        noteId: id,
+        threadId,
+        topicId: undefined,
+        userId,
+      }),
+    );
+
+    expect(await listVersions(id)).toEqual([
+      { author: "user", content: "", seq: 1 },
+      { author: "agent", content: "# Plan\n\nFirst draft.", seq: 2 },
     ]);
   });
 
@@ -119,6 +145,7 @@ describe("agent note versioning", () => {
 
     expectOk(
       await updateAgentNoteFn(ctx, {
+        mode: "replace",
         newText: "from run two",
         oldText: "from run one",
         noteId: id,
@@ -168,6 +195,7 @@ describe("agent note versioning", () => {
 
     expectOk(
       await updateAgentNoteFn(ctx, {
+        mode: "replace",
         newText: "agent text",
         oldText: "draft",
         noteId: id,
@@ -256,6 +284,7 @@ describe("agent note versioning", () => {
 
     expectOk(
       await updateAgentNoteFn(ctx, {
+        mode: "replace",
         newText: "agent text",
         oldText: "draft",
         noteId: id,
@@ -391,6 +420,7 @@ describe("agent note versioning", () => {
 
     const missing = expectErr(
       await updateAgentNoteFn(ctx, {
+        mode: "replace",
         newText: "x",
         oldText: "gamma",
         noteId: id,
@@ -401,6 +431,7 @@ describe("agent note versioning", () => {
     );
     const ambiguous = expectErr(
       await updateAgentNoteFn(ctx, {
+        mode: "replace",
         newText: "x",
         oldText: "alpha",
         noteId: id,
@@ -429,6 +460,7 @@ describe("agent note versioning", () => {
 
     expectOk(
       await updateAgentNoteFn(ctx, {
+        mode: "replace",
         newText: 'plan - "final" stage',
         oldText: 'plan - "draft" stage',
         noteId: id,
@@ -541,6 +573,7 @@ describe("agent note search", () => {
 
     expectOk(
       await updateAgentNoteFn(ctx, {
+        mode: "replace",
         newText: "pomelo",
         oldText: "kumquat",
         noteId: id,
