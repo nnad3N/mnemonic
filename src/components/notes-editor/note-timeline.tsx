@@ -12,6 +12,8 @@ import type { NoteTimelineEntry } from "@/routes/_protected.chat.$threadId/-thre
 
 import { clearNoteDiff, closeNoteTimeline, setNoteDiffOpen } from "./use-open-note";
 
+export const NOTE_TIMELINE_ID = "note-timeline";
+
 const groupTimelineBlocks = (entries: NoteTimelineEntry[]): NoteTimelineEntry[][] => {
   const blocks: NoteTimelineEntry[][] = [];
 
@@ -47,7 +49,10 @@ export const NoteTimeline = ({ noteId }: NoteTimelineProps) => {
   });
 
   return (
-    <div className="flex h-full w-56 shrink-0 flex-col border-l border-foreground/3 dark:border-white/5">
+    <div
+      className="flex h-full w-56 shrink-0 flex-col border-l border-foreground/3 dark:border-white/5"
+      id={NOTE_TIMELINE_ID}
+    >
       <div className="flex h-12 shrink-0 items-center justify-between gap-1 border-b border-foreground/3 pr-2 pl-3 text-sm font-medium md:h-10 dark:border-white/5">
         <T>Timeline</T>
         <Button

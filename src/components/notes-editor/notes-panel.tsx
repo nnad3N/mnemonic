@@ -19,6 +19,7 @@ import {
   NOTES_PANEL_WIDTH_COOKIE_NAME,
 } from "@/lib/layout-consts";
 
+import { NOTE_TIMELINE_ID } from "./note-timeline";
 import { NotesEditor } from "./notes-editor";
 
 type NotesPanelProps = {
@@ -58,13 +59,16 @@ export const NotesPanel = ({ minSize, onClose, threadPanelRef, width }: NotesPan
       <ResizableHandle
         disableDoubleClick
         onDoubleClick={() => {
+          // Timeline sits outside the split, like the sidebar: 50% of chat + editor only.
+          const timelineWidth = document.getElementById(NOTE_TIMELINE_ID)?.offsetWidth ?? 0;
           const combinedWidth =
             (threadPanelRef.current?.getSize().inPixels ?? 0) +
-            (panelRef.current?.getSize().inPixels ?? 0);
+            (panelRef.current?.getSize().inPixels ?? 0) -
+            timelineWidth;
 
-          if (combinedWidth === 0) return;
+          if (combinedWidth <= 0) return;
 
-          panelRef.current?.resize(`${Math.round(combinedWidth / 2)}px`);
+          panelRef.current?.resize(`${Math.round(combinedWidth / 2 + timelineWidth)}px`);
         }}
       />
       <ResizablePanel
