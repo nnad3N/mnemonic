@@ -101,7 +101,7 @@ export const writeAgentNoteVersion = Kit.gen(async function* (
     if (run && latestVersion?.author === "agent" && run.versionedNoteIds.includes(input.noteId)) {
       await tx
         .update(noteVersion)
-        .set({ content: input.content, contentHash })
+        .set({ content: input.content, contentHash, reviewedAt: null })
         .where(eq(noteVersion.id, latestVersion.id));
     } else {
       await tx.insert(noteVersion).values({

@@ -1,23 +1,8 @@
-import {
-  BasicMarksPlugin,
-  BlockquotePlugin,
-  HeadingPlugin,
-  HorizontalRulePlugin,
-} from "@platejs/basic-nodes/react";
-import { FontSizePlugin } from "@platejs/basic-styles/react";
-import { CodeBlockPlugin, CodeLinePlugin } from "@platejs/code-block/react";
-import { IndentPlugin } from "@platejs/indent/react";
-import { LinkPlugin } from "@platejs/link/react";
-import { BulletedListRules, OrderedListRules, TaskListRules } from "@platejs/list";
-import { ListPlugin } from "@platejs/list/react";
-import { MarkdownPlugin } from "@platejs/markdown";
-import { SlashInputPlugin, SlashPlugin } from "@platejs/slash-command/react";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useMatch, useSearch } from "@tanstack/react-router";
 import { T, useGT } from "gt-tanstack-start";
 import { produce } from "immer";
 import { ALargeSmallIcon, BoldIcon, IndentIcon, ListIcon } from "lucide-react";
-import { KEYS, TrailingBlockPlugin } from "platejs";
 import {
   Plate,
   PlateContent,
@@ -26,9 +11,10 @@ import {
   usePlateEditor,
 } from "platejs/react";
 import type { PropsWithChildren } from "react";
-import { Suspense, useEffect, useId, useRef } from "react";
-import remarkGfm from "remark-gfm";
+import { Suspense, useId, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { useDebouncedCallback } from "use-debounce";
+import { useStore } from "zustand/react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -38,25 +24,30 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SidebarInset } from "@/components/ui/sidebar";
+import { ServerFnError } from "@/lib/errors/server-fn-error";
 import { hashText } from "@/lib/hash";
+import { markdownToText } from "@/lib/markdown";
 import { markdownToPlate, plateToMarkdown } from "@/lib/plate";
+import { diffWordCounts } from "@/lib/word-diff";
 import {
+  STALE_NOTE_VERSION_STATUS,
   noteQueries,
   saveNoteBody,
   saveNoteTitle,
 } from "@/routes/_protected.chat.$threadId/-thread-api/notes.functions";
 
 import { NoteFontSizeButton } from "./font-size-button";
-import { NoteLinkToolbar } from "./link-toolbar";
+import { NoteBaselineContext } from "./note-baseline-context";
+import { NoteDiffStats, NoteFloatingBar, NoteHistoryDiff, NoteReviewDiff } from "./note-diff-view";
+import { NoteTimeline } from "./note-timeline";
 import {
-  NoteBlockList,
-  NoteBlockquoteElement,
-  NoteCodeBlockElement,
-  NoteHorizontalRuleElement,
-  NoteLinkElement,
-} from "./nodes";
+  createNoteBaselineStore,
+  resolveNoteView,
+  shouldAdoptAgentWrite,
+  useNoteBaselineStore,
+} from "./notes-store";
 import { NotesTabs } from "./notes-tabs";
-import { NoteSlashInputElement } from "./slash-input";
+import { notesEditorPlugins } from "./plugins";
 import {
   NoteClearFormattingButton,
   NoteHistoryButtons,
@@ -68,42 +59,9 @@ import {
   NoteTurnIntoButton,
 } from "./toolbar-buttons";
 
-const indentTargets = [...KEYS.heading, KEYS.p, KEYS.blockquote, KEYS.codeBlock];
-
-const notesEditorPlugins = [
-  HeadingPlugin,
-  BlockquotePlugin.withComponent(NoteBlockquoteElement),
-  HorizontalRulePlugin.withComponent(NoteHorizontalRuleElement),
-  BasicMarksPlugin,
-  FontSizePlugin,
-  CodeBlockPlugin.withComponent(NoteCodeBlockElement),
-  CodeLinePlugin,
-  IndentPlugin.configure({ inject: { targetPlugins: indentTargets } }),
-  ListPlugin.configure({
-    inject: { targetPlugins: indentTargets },
-    inputRules: [
-      BulletedListRules.markdown({ variant: "-" }),
-      OrderedListRules.markdown({ variant: "." }),
-      TaskListRules.markdown({ checked: false }),
-    ],
-    render: { belowNodes: NoteBlockList },
-  }),
-  LinkPlugin.configure({
-    render: { afterEditable: NoteLinkToolbar },
-  }).withComponent(NoteLinkElement),
-  SlashPlugin.configure({
-    options: {
-      triggerQuery: (editor) =>
-        !editor.api.some({ match: { type: editor.getType(KEYS.codeBlock) } }),
-    },
-  }),
-  SlashInputPlugin.withComponent(NoteSlashInputElement),
-  MarkdownPlugin.configure({ options: { remarkPlugins: [remarkGfm] } }),
-  TrailingBlockPlugin,
-];
-
-const BODY_SAVE_INTERVAL_MS = 3000;
-const TITLE_SAVE_DEBOUNCE_MS = 500;
+const BODY_SAVE_DEBOUNCE_MS = 300;
+const BODY_SAVE_MAX_WAIT_MS = 1000;
+const TITLE_SAVE_DEBOUNCE_MS = 250;
 
 type NotesEditorProps = {
   onClose: () => void;
@@ -111,7 +69,13 @@ type NotesEditorProps = {
 
 export const NotesEditor = ({ onClose }: NotesEditorProps) => {
   const threadMatch = useMatch({ from: "/_protected/chat/$threadId", shouldThrow: false });
-  const activeNoteId = useSearch({ from: "/_protected", select: (search) => search.note });
+  const { activeNoteId, timelineOpen } = useSearch({
+    from: "/_protected",
+    select: (search) => ({
+      activeNoteId: search.note?.id,
+      timelineOpen: Boolean(search.note?.timeline),
+    }),
+  });
 
   return (
     <SidebarInset className="h-full min-h-0 overflow-hidden">
@@ -119,122 +83,195 @@ export const NotesEditor = ({ onClose }: NotesEditorProps) => {
       <PlateController>
         <NotesTabs onClose={onClose} threadId={threadMatch?.params.threadId} />
         {activeNoteId && (
-          <Suspense>
-            <NoteEditor key={activeNoteId} noteId={activeNoteId} />
-          </Suspense>
+          <div className="flex min-h-0 flex-1">
+            <div className="flex h-full min-w-0 flex-1 flex-col">
+              <Suspense>
+                <NoteView key={activeNoteId} noteId={activeNoteId} />
+              </Suspense>
+            </div>
+            {timelineOpen && (
+              <Suspense>
+                <NoteTimeline noteId={activeNoteId} />
+              </Suspense>
+            )}
+          </div>
         )}
       </PlateController>
     </SidebarInset>
   );
 };
 
+type NoteViewProps = {
+  noteId: string;
+};
+
+const createNoteSession = (
+  note: { contentHash: string; lastAuthor: "agent" | "user"; versionId: string },
+  seq: number,
+) => ({
+  seq,
+  store: createNoteBaselineStore({
+    baseVersionId: note.lastAuthor === "user" ? note.versionId : null,
+    contentHash: note.contentHash,
+  }),
+});
+
+const NoteView = ({ noteId }: NoteViewProps) => {
+  const historyDiffId = useSearch({ from: "/_protected", select: (search) => search.note?.diff });
+  const { data: note } = useSuspenseQuery(noteQueries.byId(noteId));
+  const [session, setSession] = useState(() => createNoteSession(note, 0));
+  const baseline = useStore(session.store);
+
+  // Render-time state adjustment: the fresh session remounts the editor, which reads the
+  // agent's content at mount.
+  if (shouldAdoptAgentWrite(note, baseline)) {
+    setSession(createNoteSession(note, session.seq + 1));
+
+    return null;
+  }
+
+  const view = resolveNoteView(note, baseline, historyDiffId);
+
+  switch (view.kind) {
+    case "history": {
+      return <NoteHistoryDiff baseVersionId={view.baseVersionId} noteId={noteId} />;
+    }
+    case "review": {
+      return <NoteReviewDiff baseVersionId={view.baseVersionId} noteId={noteId} />;
+    }
+    case "editor": {
+      return (
+        <NoteBaselineContext value={session.store}>
+          <NoteEditor key={session.seq} noteId={noteId} />
+        </NoteBaselineContext>
+      );
+    }
+  }
+};
+
 type NoteEditorProps = {
   noteId: string;
 };
 
-type SaveBaseline = {
-  contentHash: string;
-  mode: "behind" | "detached" | "tracking";
-  versionId: string;
-};
-
 const NoteEditor = ({ noteId }: NoteEditorProps) => {
+  const gt = useGT();
   const queryClient = useQueryClient();
   const noteQuery = noteQueries.byId(noteId);
   const { data: note } = useSuspenseQuery(noteQuery);
+  const store = useNoteBaselineStore();
+  const { allowReview, confirmSaved, markEdited, seedBaseline } = store.getState();
   const editor = usePlateEditor({
     plugins: notesEditorPlugins,
     value: (plate) => markdownToPlate(plate, note.content),
   });
   const saveMutationKey = [...noteQuery.queryKey, "body"] as const;
-  // The version the editor's content is based on. "behind": the agent's latest moved past
-  // the base, saves land in the base version. "detached": the base is an agent version that
-  // was replaced, saves stop.
-  const baseline = useRef<SaveBaseline>({
-    contentHash: note.contentHash,
-    mode: "tracking",
-    versionId: note.versionId,
-  });
+
   const save = useMutation({
     mutationKey: saveMutationKey,
     mutationFn: async () => {
       // The count includes this call, so above one means an earlier save is still in flight.
       if (queryClient.isMutating({ mutationKey: saveMutationKey }) > 1) return;
-      if (baseline.current.mode === "detached") return;
 
+      const baseline = store.getState();
+      const editSeq = baseline.editSeq;
       const content = plateToMarkdown(editor);
       const contentHash = await hashText(content);
 
-      if (contentHash === baseline.current.contentHash) {
-        if (baseline.current.mode !== "tracking") return;
-
-        const cached = queryClient.getQueryData(noteQuery.queryKey);
-
-        if (!cached) return;
-
-        // An agent run overwrites its own version in place, so a matching id can carry new content.
-        const sameVersion = cached.versionId === baseline.current.versionId;
-        const sameContent = cached.contentHash === baseline.current.contentHash;
-
-        if (sameVersion && sameContent) return;
-
-        editor.tf.setValue(markdownToPlate(editor, cached.content));
-        baseline.current = {
-          contentHash: cached.contentHash,
-          mode: "tracking",
-          versionId: cached.versionId,
-        };
+      if (contentHash === baseline.contentHash) {
+        confirmSaved(editSeq, { baseVersionId: baseline.baseVersionId, contentHash });
 
         return;
       }
 
       const saved = await saveNoteBody({
-        data: { baseVersionId: baseline.current.versionId, content, noteId },
+        data: baseline.baseVersionId
+          ? { baseVersionId: baseline.baseVersionId, content, intent: "overwrite", noteId }
+          : { content, intent: "append", noteId },
       });
 
-      if (saved.status === "stale") {
-        baseline.current.mode = "detached";
+      confirmSaved(editSeq, { baseVersionId: saved.versionId, contentHash: saved.contentHash });
 
-        return;
-      }
-
-      baseline.current = {
-        contentHash: saved.contentHash,
-        mode: saved.status === "latest" ? "tracking" : "behind",
-        versionId: saved.versionId,
-      };
-
-      if (saved.status === "latest") {
+      if (saved.isLatest) {
         queryClient.setQueryData(noteQuery.queryKey, (previous) =>
           produce(previous, (draft) => {
             if (!draft) return;
 
             draft.content = content;
             draft.contentHash = saved.contentHash;
+            draft.lastAuthor = "user";
+            draft.pendingReviewBaseVersionId = null;
             draft.versionId = saved.versionId;
           }),
         );
       }
+
+      void queryClient.invalidateQueries({ queryKey: noteQueries.versionLists(noteId) });
+
+      return saved;
+    },
+    onError: async (error) => {
+      if (ServerFnError.is(error) && error.status === STALE_NOTE_VERSION_STATUS) {
+        // Another tab moved the chain; that tab's state wins and this editor reseeds onto it.
+        await queryClient.invalidateQueries({ queryKey: noteQuery.queryKey });
+
+        const fresh = queryClient.getQueryData(noteQuery.queryKey);
+
+        if (!fresh) return;
+
+        editor.tf.setValue(markdownToPlate(editor, fresh.content));
+        seedBaseline({
+          baseVersionId: fresh.lastAuthor === "user" ? fresh.versionId : null,
+          contentHash: fresh.contentHash,
+        });
+
+        return;
+      }
+
+      toast.error(gt("Failed to save the note"));
     },
   });
   const runSave = save.mutate;
+  const saveDebounced = useDebouncedCallback(runSave, BODY_SAVE_DEBOUNCE_MS, {
+    flushOnExit: true,
+    maxWait: BODY_SAVE_MAX_WAIT_MS,
+  });
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      runSave();
-    }, BODY_SAVE_INTERVAL_MS);
+  const remoteCounts = useMemo(() => {
+    if (!note.pendingReviewBaseVersionId) return null;
 
-    return () => {
-      clearInterval(interval);
-      runSave();
-    };
-  }, [runSave]);
+    return diffWordCounts(markdownToText(plateToMarkdown(editor)), markdownToText(note.content));
+  }, [editor, note.content, note.pendingReviewBaseVersionId]);
 
   return (
-    <Plate editor={editor}>
+    <Plate
+      editor={editor}
+      onValueChange={() => {
+        markEdited(note.pendingReviewBaseVersionId ? note.versionId : null);
+        saveDebounced();
+      }}
+    >
       <NotesEditorToolbar />
       <NoteTitleInput noteId={noteId} title={note.title} />
-      <NotesEditorBody />
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <NotesEditorBody />
+        {note.pendingReviewBaseVersionId && (
+          <NoteFloatingBar>
+            <span className="px-1">
+              <T>Assistant updated this note</T>
+            </span>
+            {remoteCounts && <NoteDiffStats counts={remoteCounts} />}
+            <Button
+              onClick={() => {
+                allowReview();
+                saveDebounced.flush();
+              }}
+              size="sm"
+            >
+              <T>Review</T>
+            </Button>
+          </NoteFloatingBar>
+        )}
+      </div>
     </Plate>
   );
 };
@@ -251,9 +288,13 @@ const NoteTitleInput = ({ noteId, title }: NoteTitleInputProps) => {
   const saveTitle = useMutation({
     mutationFn: async (nextTitle: string) => saveNoteTitle({ data: { noteId, title: nextTitle } }),
   });
-  const saveTitleDebounced = useDebouncedCallback((nextTitle: string) => {
-    saveTitle.mutate(nextTitle);
-  }, TITLE_SAVE_DEBOUNCE_MS);
+  const saveTitleDebounced = useDebouncedCallback(
+    (nextTitle: string) => {
+      saveTitle.mutate(nextTitle);
+    },
+    TITLE_SAVE_DEBOUNCE_MS,
+    { flushOnExit: true },
+  );
 
   const setTitle = (nextTitle: string) => {
     queryClient.setQueryData(noteQueries.byId(noteId).queryKey, (previous) =>
@@ -264,8 +305,6 @@ const NoteTitleInput = ({ noteId, title }: NoteTitleInputProps) => {
       }),
     );
   };
-
-  useEffect(() => saveTitleDebounced.flush, [saveTitleDebounced]);
 
   return (
     <div className="shrink-0 px-4 pt-4">

@@ -18,7 +18,10 @@ import {
   createNoteFn,
   deleteNoteFn,
   getNoteFn,
+  getNoteVersionFn,
+  listNoteVersionsFn,
   listNotesFn,
+  saveAgentVersionFn,
   saveNoteBodyFn,
   saveNoteTitleFn,
   addNoteToTopicFn,
@@ -32,13 +35,26 @@ export const noteQueries = {
       queryFn: async () => listNotes({ data: { page, pageSize, scope, search } }),
       queryKey: [...noteQueries.byScope(scope), { page, pageSize, search }] as const,
     }),
-  scopeBase: () => [...noteQueries.all(), "scope"] as const,
+  lists: () => [...noteQueries.all(), "list"] as const,
   byScope: (scope: ListNotesParams["scope"]) =>
-    [...noteQueries.scopeBase(), scope.type, scope.id] as const,
+    [...noteQueries.lists(), scope.type, scope.id] as const,
+  details: () => [...noteQueries.all(), "detail"] as const,
   byId: (noteId: string) =>
     queryOptions({
       queryFn: async () => getNote({ data: { noteId } }),
-      queryKey: [...noteQueries.all(), "byId", noteId] as const,
+      queryKey: [...noteQueries.details(), noteId] as const,
+    }),
+  versionDetails: (noteId: string) => [...noteQueries.byId(noteId).queryKey, "version"] as const,
+  version: (noteId: string, versionId: string) =>
+    queryOptions({
+      queryFn: async () => getNoteVersion({ data: { noteId, versionId } }),
+      queryKey: [...noteQueries.versionDetails(noteId), versionId] as const,
+    }),
+  versionLists: (noteId: string) => [...noteQueries.byId(noteId).queryKey, "versions"] as const,
+  versions: (noteId: string, compareVersionId: string | undefined) =>
+    queryOptions({
+      queryFn: async () => listNoteVersions({ data: { compareVersionId, noteId } }),
+      queryKey: [...noteQueries.versionLists(noteId), compareVersionId ?? "latest"] as const,
     }),
 };
 
@@ -121,23 +137,103 @@ export const createNote = createServerFn({ method: "POST" })
     ).throws<ServerFnError>(() => toServerFnError.serverError("Failed to create the note")),
   );
 
-const saveNoteBodyInputSchema = v.object({
-  baseVersionId: v.pipe(v.string(), v.nanoid()),
-  content: v.string(),
+const noteVersionInputSchema = v.object({
+  noteId: v.pipe(v.string(), v.nanoid()),
+  versionId: v.pipe(v.string(), v.nanoid()),
+});
+
+export const getNoteVersion = createServerFn({ method: "GET" })
+  .validator(noteVersionInputSchema)
+  .middleware([noteAccessMiddleware])
+  .handler(async ({ context, data }) =>
+    Kit.run(async () =>
+      getNoteVersionFn(noteCtx, { noteId: context.note.id, versionId: data.versionId }),
+    ).throws<ServerFnError>((error) =>
+      matchError(error, {
+        DatabaseError: () => toServerFnError.serverError("Failed to load the note version"),
+        ServerFnError: (error) => error,
+      }),
+    ),
+  );
+
+const listNoteVersionsInputSchema = v.object({
+  compareVersionId: v.optional(v.pipe(v.string(), v.nanoid())),
   noteId: v.pipe(v.string(), v.nanoid()),
 });
+
+export const listNoteVersions = createServerFn({ method: "GET" })
+  .validator(listNoteVersionsInputSchema)
+  .middleware([noteAccessMiddleware])
+  .handler(async ({ context, data }) =>
+    Kit.run(async () =>
+      listNoteVersionsFn(noteCtx, {
+        compareVersionId: data.compareVersionId,
+        noteId: context.note.id,
+      }),
+    ).throws<ServerFnError>(() => toServerFnError.serverError("Failed to load the note history")),
+  );
+
+const saveAgentVersionInputSchema = v.object({
+  commit: v.optional(v.boolean(), false),
+  content: v.string(),
+  noteId: v.pipe(v.string(), v.nanoid()),
+  versionId: v.pipe(v.string(), v.nanoid()),
+  versionUpdatedAt: v.pipe(v.number(), v.integer()),
+});
+
+export const STALE_NOTE_VERSION_STATUS = "stale-note-version";
+
+export const saveAgentVersion = createServerFn({ method: "POST" })
+  .validator(saveAgentVersionInputSchema)
+  .middleware([noteAccessMiddleware])
+  .handler(async ({ context, data }) =>
+    Kit.run(async () =>
+      saveAgentVersionFn(noteCtx, {
+        commit: data.commit,
+        content: data.content,
+        noteId: context.note.id,
+        versionId: data.versionId,
+        versionUpdatedAt: data.versionUpdatedAt,
+      }),
+    ).throws<ServerFnError>((error) =>
+      matchError(error, {
+        DatabaseError: () => toServerFnError.serverError("Failed to save the note"),
+        StaleNoteVersionError: () =>
+          toServerFnError.custom(
+            STALE_NOTE_VERSION_STATUS,
+            "The note version moved past this edit",
+          ),
+      }),
+    ),
+  );
+
+const saveNoteBodyInputSchema = v.variant("intent", [
+  v.object({
+    content: v.string(),
+    intent: v.literal("append"),
+    noteId: v.pipe(v.string(), v.nanoid()),
+  }),
+  v.object({
+    baseVersionId: v.pipe(v.string(), v.nanoid()),
+    content: v.string(),
+    intent: v.literal("overwrite"),
+    noteId: v.pipe(v.string(), v.nanoid()),
+  }),
+]);
 
 export const saveNoteBody = createServerFn({ method: "POST" })
   .validator(saveNoteBodyInputSchema)
   .middleware([noteAccessMiddleware])
   .handler(async ({ context, data }) =>
     Kit.run(async () =>
-      saveNoteBodyFn(noteCtx, {
-        baseVersionId: data.baseVersionId,
-        content: data.content,
-        noteId: context.note.id,
+      saveNoteBodyFn(noteCtx, { ...data, noteId: context.note.id }),
+    ).throws<ServerFnError>((error) =>
+      matchError(error, {
+        DatabaseError: () => toServerFnError.serverError("Failed to save the note"),
+        StaleNoteVersionError: () =>
+          toServerFnError.custom(STALE_NOTE_VERSION_STATUS, "The note moved past this edit"),
       }),
-    ).throws<ServerFnError>(() => toServerFnError.serverError("Failed to save the note")),
+    ),
   );
 
 const saveNoteTitleInputSchema = v.object({

@@ -62,7 +62,7 @@ export const threadQueries = {
           },
           onData: (dataPart) => {
             if (dataPart.type === "data-note-created") {
-              void client.invalidateQueries({ queryKey: noteQueries.scopeBase() });
+              void client.invalidateQueries({ queryKey: noteQueries.lists() });
               void getClientRouter().navigate({
                 search: setNoteSearchOpen(dataPart.data.noteId),
                 to: ".",

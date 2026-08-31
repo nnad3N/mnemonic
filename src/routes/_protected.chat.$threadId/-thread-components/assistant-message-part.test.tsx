@@ -43,7 +43,10 @@ describe("AssistantMessagePart", () => {
     const mention = await screen.findByRole("link", { name: /My planning note/ });
 
     expect(mention).toHaveAttribute("href", expect.stringContaining("notes=true"));
-    expect(mention).toHaveAttribute("href", expect.stringContaining("note=gsvEZlkTFRmSaOFO3PJ2u"));
+    expect(mention).toHaveAttribute(
+      "href",
+      expect.stringContaining(`note=${encodeURIComponent('{"id":"gsvEZlkTFRmSaOFO3PJ2u"}')}`),
+    );
   });
 
   it("keeps regular links on the default renderer with the safety modal", async () => {

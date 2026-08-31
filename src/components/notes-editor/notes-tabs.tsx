@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { CatchBoundary, useNavigate, useSearch } from "@tanstack/react-router";
+import { CatchBoundary, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { T, useGT } from "gt-tanstack-start";
 import { produce } from "immer";
 import {
@@ -7,6 +7,7 @@ import {
   FileQuestionMarkIcon,
   FileTextIcon,
   FolderPlusIcon,
+  HistoryIcon,
   MessageSquareTextIcon,
   MoreHorizontalIcon,
   PanelRightIcon,
@@ -51,7 +52,7 @@ export const NotesTabs = ({ onClose, threadId }: NotesTabsProps) => {
   const { activeNoteId, openNoteIds, topicId } = useSearch({
     from: "/_protected",
     select: (search) => ({
-      activeNoteId: search.note,
+      activeNoteId: search.note?.id,
       openNoteIds: search.noteTabs,
       topicId: search.topic,
     }),
@@ -63,7 +64,14 @@ export const NotesTabs = ({ onClose, threadId }: NotesTabsProps) => {
       search: (prev) =>
         produce(prev, (draft) => {
           draft.noteTabs = remaining;
-          draft.note = draft.note === noteId ? remaining.at(-1) : draft.note;
+
+          if (draft.note?.id !== noteId) return;
+
+          const nextId = remaining.at(-1);
+
+          draft.note = nextId
+            ? { id: nextId, timeline: draft.note.timeline ? {} : undefined }
+            : undefined;
         }),
       to: ".",
     });
@@ -142,7 +150,7 @@ const NoteMenuItems = ({ noteId, onCloseTab }: NoteMenuItemsProps) => {
   const gt = useGT();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const activeNoteId = useSearch({ from: "/_protected", select: (search) => search.note });
+  const activeNoteId = useSearch({ from: "/_protected", select: (search) => search.note?.id });
   const note = useQuery(noteQueries.byId(noteId));
 
   const moveToTopic = useMutation({
@@ -173,7 +181,7 @@ const NoteMenuItems = ({ noteId, onCloseTab }: NoteMenuItemsProps) => {
         params: { threadId: note.data.scope.id },
         search: (prev) =>
           produce(prev, (draft) => {
-            draft.note = noteId;
+            draft.note = { id: noteId };
             draft.topic = note.data.threadTopicId ?? undefined;
           }),
         to: "/chat/$threadId",
@@ -192,7 +200,7 @@ const NoteMenuItems = ({ noteId, onCloseTab }: NoteMenuItemsProps) => {
       params: { threadId: latest.id },
       search: (prev) =>
         produce(prev, (draft) => {
-          draft.note = noteId;
+          draft.note = { id: noteId };
           draft.topic = noteTopicId;
         }),
       to: "/chat/$threadId",
@@ -209,6 +217,27 @@ const NoteMenuItems = ({ noteId, onCloseTab }: NoteMenuItemsProps) => {
         <MessageSquareTextIcon />
         <T>Go to thread</T>
       </DropdownMenuItem>
+      {noteId === activeNoteId && (
+        <DropdownMenuItem
+          className="whitespace-nowrap"
+          nativeButton={false}
+          render={
+            <Link
+              search={(prev) =>
+                produce(prev, (draft) => {
+                  if (!draft.note) return;
+
+                  draft.note.timeline = draft.note.timeline ? undefined : {};
+                })
+              }
+              to="."
+            />
+          }
+        >
+          <HistoryIcon />
+          <T>Timeline</T>
+        </DropdownMenuItem>
+      )}
       {note.isSuccess && noteId === activeNoteId && <NoteExportSubmenu title={note.data.title} />}
       {note.isSuccess && note.data.threadTopicId && (
         <DropdownMenuItem

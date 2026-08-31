@@ -51,7 +51,17 @@ const readCookie = createIsomorphicFn()
   .client((name: string) => Kit.cookies.get(name).unwrapOr(undefined));
 
 const sidebarSearchSchema = v.object({
-  note: v.optional(v.pipe(v.string(), v.nanoid())),
+  note: v.optional(
+    v.object({
+      id: v.pipe(v.string(), v.nanoid()),
+      diff: v.optional(v.pipe(v.string(), v.nanoid())),
+      timeline: v.optional(
+        v.object({
+          compare: v.optional(v.pipe(v.string(), v.nanoid())),
+        }),
+      ),
+    }),
+  ),
   noteTabs: v.optional(v.array(v.pipe(v.string(), v.nanoid())), []),
   notes: v.optional(v.boolean()),
   topic: v.optional(v.pipe(v.string(), v.nanoid())),

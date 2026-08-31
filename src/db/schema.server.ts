@@ -79,7 +79,6 @@ export const byok = sqliteTable(
 
     name: text("name").notNull().default("OpenRouter"),
 
-    /** Encrypted with `encryptSecret`; never returned to the client. */
     value: text("value").notNull(),
     keyPreview: text("key_preview").notNull(),
     activatedAt: integer("activated_at", { mode: "timestamp_ms" }),
@@ -142,7 +141,6 @@ export const threadRun = sqliteTable(
   (table) => [index("thread_run_user_id_idx").on(table.userId)],
 );
 
-/** What mnemonic records about a reply, keyed by the user message whose run produced it. */
 export const threadReply = sqliteTable(
   "thread_reply",
   {
@@ -155,7 +153,6 @@ export const threadReply = sqliteTable(
 
 export type NoteVersionAuthor = "user" | "agent";
 
-/** A note's current content is its highest-`seq` row in `noteVersion`. */
 export const note = sqliteTable(
   "note",
   {
@@ -167,7 +164,6 @@ export const note = sqliteTable(
       .$type<SafeId<"user">>()
       .notNull()
       .references(() => user.id, { onDelete: "restrict" }),
-    /** A note is scoped by its topic when it has one, and by its thread otherwise. */
     topicId: text("topic_id")
       .$type<SafeId<"topic">>()
       .references(() => topic.id, { onDelete: "restrict" }),
@@ -191,10 +187,6 @@ export const note = sqliteTable(
   ],
 );
 
-/**
- * Full snapshot per save. A user save overwrites the latest version when they wrote it too, and
- * appends a new one when the agent wrote last, so an agent's text stays diffable on its own.
- */
 export const noteVersion = sqliteTable(
   "note_version",
   {
@@ -211,6 +203,7 @@ export const noteVersion = sqliteTable(
     content: text("content").notNull(),
     contentHash: text("content_hash").notNull(),
     author: text("author").$type<NoteVersionAuthor>().notNull(),
+    reviewedAt: integer("reviewed_at", { mode: "timestamp_ms" }),
 
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
     // SQLite ADD COLUMN only takes constant defaults, so the runtime default carries inserts.

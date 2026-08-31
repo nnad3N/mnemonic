@@ -1,4 +1,4 @@
-import { matchError, panic, Result } from "better-result";
+import { matchError, panic, Result, TaggedError } from "better-result";
 import type { Result as ResultType } from "better-result";
 import { and, eq, isNotNull, sql } from "drizzle-orm";
 
@@ -10,18 +10,17 @@ import { toServerFnError } from "@/lib/errors/server-fn-error";
 import { hashText } from "@/lib/hash";
 import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
+import { markdownToText } from "@/lib/markdown";
 import type { MemoryError, MemoryKit } from "@/lib/memory-kit.server";
 import { resolveThread } from "@/lib/middleware/resolve-thread.server";
 import { createSafeId, toSafeId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
+import { diffWordCounts } from "@/lib/word-diff";
+import type { WordDiffCounts } from "@/lib/word-diff";
 
 type NoteCtx = Kits<[DbKit]>;
 type ListNotesCtx = Kits<[DbKit, MemoryKit]>;
 type AddNoteToTopicCtx = Kits<[DbKit, MemoryKit]>;
-
-type NoteIdInput = {
-  noteId: SafeId<"note">;
-};
 
 export const toNoteScope = (row: {
   threadId: string | null;
@@ -58,11 +57,22 @@ const readNote = Kit.gen(async function* (ctx: NoteCtx, input: ReadNoteInput) {
   return Result.ok({ id: note.id, scope: toNoteScope(note), title: note.title });
 });
 
-export const readLatestVersion = Kit.gen(async function* (ctx: NoteCtx, input: NoteIdInput) {
+export const readLatestVersion = Kit.gen(async function* (
+  ctx: NoteCtx,
+  input: { noteId: SafeId<"note"> },
+) {
   const latestVersion = yield* await ctx.db.run((db) =>
     db.query.noteVersion.findFirst({
       where: { noteId: input.noteId },
-      columns: { author: true, content: true, contentHash: true, id: true, seq: true },
+      columns: {
+        author: true,
+        content: true,
+        contentHash: true,
+        id: true,
+        reviewedAt: true,
+        seq: true,
+        updatedAt: true,
+      },
       orderBy: { seq: "desc" },
     }),
   );
@@ -197,7 +207,8 @@ export const listNotesFn = Kit.gen(async function* (ctx: ListNotesCtx, input: Li
   });
 });
 
-type GetNoteInput = NoteIdInput & {
+type GetNoteInput = {
+  noteId: SafeId<"note">;
   userId: SafeId<"user">;
 };
 
@@ -206,8 +217,15 @@ export const getNoteFn = Kit.gen(async function* (
   input: GetNoteInput,
 ) {
   const note = yield* await readNote(ctx, input);
-  const [latest, threadTopicId] = yield* await Kit.promiseAll([
+  const [latest, latestUserVersion, threadTopicId] = yield* await Kit.promiseAll([
     readLatestVersion(ctx, input),
+    ctx.db.run((db) =>
+      db.query.noteVersion.findFirst({
+        where: { author: "user", noteId: input.noteId },
+        columns: { content: true, id: true },
+        orderBy: { seq: "desc" },
+      }),
+    ),
     getThreadTopicId(ctx, {
       threadId: note.scope.type === "thread" ? note.scope.id : null,
       userId: input.userId,
@@ -218,87 +236,231 @@ export const getNoteFn = Kit.gen(async function* (
     return Result.err(toServerFnError.notFound("Note not found"));
   }
 
+  const reviewPending = latest.author === "agent" && !latest.reviewedAt;
+  const pendingReviewBaseVersionId =
+    reviewPending && latestUserVersion?.content ? latestUserVersion.id : null;
+
   return Result.ok({
     content: latest.content,
     contentHash: latest.contentHash,
     id: note.id,
+    lastAuthor: latest.author,
+    pendingReviewBaseVersionId,
     scope: note.scope,
     threadTopicId,
     title: note.title,
     versionId: latest.id,
+    versionUpdatedAt: latest.updatedAt,
   });
 });
 
-type SaveNoteBodyInput = NoteIdInput & {
-  baseVersionId: string;
+type SaveNoteBodyInput = {
+  noteId: SafeId<"note">;
   content: string;
-};
+} & ({ intent: "append" } | { intent: "overwrite"; baseVersionId: string });
 
 export const saveNoteBodyFn = Kit.gen(async function* (ctx: NoteCtx, input: SaveNoteBodyInput) {
   const contentHash = await hashText(input.content);
 
   const saved = yield* await ctx.db.transaction(async (tx) => {
+    const [latestVersion, latestUserVersion] = await Promise.all([
+      tx.query.noteVersion.findFirst({
+        where: { noteId: input.noteId },
+        columns: { author: true, id: true, seq: true },
+        orderBy: { seq: "desc" },
+      }),
+      tx.query.noteVersion.findFirst({
+        where: { author: "user", noteId: input.noteId },
+        columns: { id: true },
+        orderBy: { seq: "desc" },
+      }),
+    ]);
+
+    if (input.intent === "overwrite") {
+      if (input.baseVersionId !== latestUserVersion?.id) {
+        return new StaleNoteVersionError({ message: "The base is not the latest user version" });
+      }
+
+      await tx
+        .update(noteVersion)
+        .set({ content: input.content, contentHash })
+        .where(eq(noteVersion.id, latestUserVersion.id));
+
+      return {
+        isLatest: latestUserVersion.id === latestVersion?.id,
+        versionId: latestUserVersion.id,
+      };
+    }
+
+    if (latestVersion?.author !== "agent") {
+      return new StaleNoteVersionError({
+        message: "A new user version can only follow an agent version",
+      });
+    }
+
+    const versionId = createSafeId<"noteVersion">();
+
+    await Promise.all([
+      tx.insert(noteVersion).values({
+        author: "user",
+        content: input.content,
+        contentHash,
+        id: versionId,
+        noteId: input.noteId,
+        seq: latestVersion.seq + 1,
+      }),
+      tx.update(note).set({ updatedAt: new Date() }).where(eq(note.id, input.noteId)),
+    ]);
+
+    return { isLatest: true, versionId };
+  });
+
+  if (StaleNoteVersionError.is(saved)) {
+    return Result.err(saved);
+  }
+
+  return Result.ok({ contentHash, isLatest: saved.isLatest, versionId: saved.versionId });
+});
+
+export class StaleNoteVersionError extends TaggedError("StaleNoteVersionError")<{
+  message: string;
+}> {}
+
+type SaveAgentVersionInput = {
+  noteId: SafeId<"note">;
+  commit: boolean;
+  content: string;
+  versionId: string;
+  versionUpdatedAt: number;
+};
+
+export const saveAgentVersionFn = Kit.gen(async function* (
+  ctx: NoteCtx,
+  input: SaveAgentVersionInput,
+) {
+  const contentHash = await hashText(input.content);
+
+  const saved = yield* await ctx.db.transaction(async (tx) => {
     const latestVersion = await tx.query.noteVersion.findFirst({
       where: { noteId: input.noteId },
-      columns: { author: true, id: true, seq: true },
+      columns: { author: true, id: true, updatedAt: true },
       orderBy: { seq: "desc" },
     });
 
-    if (latestVersion?.id === input.baseVersionId) {
-      if (latestVersion.author === "user") {
-        await tx
-          .update(noteVersion)
-          .set({ content: input.content, contentHash })
-          .where(eq(noteVersion.id, latestVersion.id));
-
-        return { status: "latest" as const, versionId: latestVersion.id };
-      }
-
-      const versionId = createSafeId<"noteVersion">();
-
-      await Promise.all([
-        tx.insert(noteVersion).values({
-          author: "user",
-          content: input.content,
-          contentHash,
-          id: versionId,
-          noteId: input.noteId,
-          seq: latestVersion.seq + 1,
-        }),
-        tx.update(note).set({ updatedAt: new Date() }).where(eq(note.id, input.noteId)),
-      ]);
-
-      return { status: "latest" as const, versionId };
-    }
-
-    // Latest moved past the base: the save goes into the user's base version. Agent versions
-    // are never overwritten.
-    const baseVersion = await tx.query.noteVersion.findFirst({
-      // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with the noteId filter.
-      where: { id: toSafeId<"noteVersion">(input.baseVersionId), noteId: input.noteId },
-      columns: { author: true, id: true },
-    });
-
-    if (baseVersion?.author !== "user") {
+    if (latestVersion?.id !== input.versionId || latestVersion.author !== "agent") {
       return { status: "stale" as const };
     }
 
-    await tx
-      .update(noteVersion)
-      .set({ content: input.content, contentHash })
-      .where(eq(noteVersion.id, baseVersion.id));
+    // A moved stamp means the agent wrote after the edit's snapshot; the client merges first.
+    if (latestVersion.updatedAt.getTime() !== input.versionUpdatedAt) {
+      return { status: "stale" as const };
+    }
 
-    return { status: "behind" as const, versionId: baseVersion.id };
+    const updatedAt = new Date();
+
+    await Promise.all([
+      tx
+        .update(noteVersion)
+        .set({
+          content: input.content,
+          contentHash,
+          reviewedAt: input.commit ? updatedAt : null,
+          updatedAt,
+        })
+        .where(eq(noteVersion.id, latestVersion.id)),
+      tx.update(note).set({ updatedAt }).where(eq(note.id, input.noteId)),
+    ]);
+
+    return { status: "saved" as const, updatedAt };
   });
 
   if (saved.status === "stale") {
-    return Result.ok({ status: saved.status });
+    return Result.err(
+      new StaleNoteVersionError({ message: "The note version moved past this edit" }),
+    );
   }
 
-  return Result.ok({ contentHash, status: saved.status, versionId: saved.versionId });
+  return Result.ok({ contentHash, updatedAt: saved.updatedAt });
 });
 
-type SaveNoteTitleInput = NoteIdInput & {
+type GetNoteVersionInput = {
+  noteId: SafeId<"note">;
+  versionId: string;
+};
+
+export const getNoteVersionFn = Kit.gen(async function* (ctx: NoteCtx, input: GetNoteVersionInput) {
+  const version = yield* await ctx.db.run((db) =>
+    db.query.noteVersion.findFirst({
+      // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with the noteId filter.
+      where: { id: toSafeId<"noteVersion">(input.versionId), noteId: input.noteId },
+      columns: { content: true, id: true },
+    }),
+  );
+
+  if (!version) {
+    return Result.err(toServerFnError.notFound("Note version not found"));
+  }
+
+  return Result.ok(version);
+});
+
+type ListNoteVersionsInput = {
+  noteId: SafeId<"note">;
+  compareVersionId: string | undefined;
+};
+
+export type NoteTimelineEntry = {
+  author: NoteVersionAuthor;
+  counts: WordDiffCounts;
+  createdAt: Date;
+  id: SafeId<"noteVersion">;
+  seq: number;
+  updatedAt: Date;
+};
+
+export const listNoteVersionsFn = Kit.gen(async function* (
+  ctx: NoteCtx,
+  input: ListNoteVersionsInput,
+) {
+  const versions = yield* await ctx.db.run((db) =>
+    db.query.noteVersion.findMany({
+      where: { noteId: input.noteId },
+      columns: {
+        author: true,
+        content: true,
+        createdAt: true,
+        id: true,
+        seq: true,
+        updatedAt: true,
+      },
+      orderBy: { seq: "desc" },
+    }),
+  );
+
+  const compare =
+    versions.find((version) => version.id === input.compareVersionId) ?? versions.at(0);
+
+  if (!compare) {
+    return panic("Note has no versions");
+  }
+
+  const compareText = markdownToText(compare.content);
+
+  return Result.ok({
+    compareVersionId: compare.id,
+    entries: versions.map((version) => ({
+      author: version.author,
+      counts: diffWordCounts(compareText, markdownToText(version.content)),
+      createdAt: version.createdAt,
+      id: version.id,
+      seq: version.seq,
+      updatedAt: version.updatedAt,
+    })),
+  });
+});
+
+type SaveNoteTitleInput = {
+  noteId: SafeId<"note">;
   title: string;
 };
 
@@ -310,7 +472,8 @@ export const saveNoteTitleFn = Kit.gen(async function* (ctx: NoteCtx, input: Sav
   return Result.ok({ id: input.noteId });
 });
 
-type AddNoteToTopicInput = NoteIdInput & {
+type AddNoteToTopicInput = {
+  noteId: SafeId<"note">;
   userId: SafeId<"user">;
 };
 
@@ -344,7 +507,10 @@ export const addNoteToTopicFn = Kit.gen(async function* (
   return Result.ok({ id: input.noteId });
 });
 
-export const deleteNoteFn = Kit.gen(async function* (ctx: NoteCtx, input: NoteIdInput) {
+export const deleteNoteFn = Kit.gen(async function* (
+  ctx: NoteCtx,
+  input: { noteId: SafeId<"note"> },
+) {
   yield* await ctx.db.run((db) => db.delete(note).where(eq(note.id, input.noteId)));
 
   return Result.ok({ id: input.noteId });

@@ -27,21 +27,23 @@ agent memory, which the user never sees.
 
 - One linear chain of full snapshots, never stored diffs. Each version carries
   its content, a hash of it, and the author (user or agent).
-- There is no commit and no draft: a save writes a version, carrying the id of
-  the version the editor is based on. A user save overwrites that base version
-  when the user wrote it — even when the agent has appended past it, so a late
-  autosave lands in the user's own entry mid-chain instead of burying the
-  agent's — and appends a new version when the base is the agent's latest, so an
-  agent's text always survives as its own entry to diff against.
+- There is no commit and no draft: a save writes a version. The editor is
+  always anchored to the latest user version — a save's base can never be an
+  agent version. An anchored save overwrites that user version, even when the
+  agent has appended past it, so a late autosave lands in the user's own entry
+  mid-chain instead of burying the agent's; an editor sitting on the agent's
+  latest sends no base and appends a new user version on top. User versions are
+  never consecutive, and both invariants are hard-checked server-side.
 - A run is the agent's unit, not a tool call: the first note write in a run
   appends a version and later writes in the same run overwrite it. The run
   records which notes it has already versioned on `thread_run`, so no version
   points at a run and deleting run rows breaks nothing.
 - Versions carry `createdAt` and `updatedAt`; an overwritten version keeps the
   first timestamp and moves the second, which is what the timeline shows.
-- The user's editor autosaves the body on a timer, comparing the hash of the
-  markdown against the stored one, and the title on a debounce. The two are
-  separate writes so renaming never rewrites the body.
+- The user's editor autosaves the body on a debounce off the editor's change
+  event, comparing the hash of the markdown against the stored one, and the
+  title on its own debounce. The two are separate writes so renaming never
+  rewrites the body.
 - Reading a version and writing it share a transaction; concurrent saves would
   otherwise pick the same sequence number.
 - Reverting truncates the chain: the versions above the target are dropped and
@@ -71,25 +73,27 @@ agent memory, which the user never sees.
   nothing on screen pointing at the agent's newer version until the diff-based
   sync below lands.
 
-### Diff-based sync (direction, not yet settled)
+### Diff-based sync
 
-Ideas for making agent edits robust once version diffing lands; recorded so
-they are not lost, details to be worked out then.
+The invariant is in place: every save carries its base version, so a local
+edit can never overwrite an agent version — it lands in the user's own entry,
+and the diff view resolves the divergence with Commit or Reject, both forward
+moves on the chain. Commit stamps the agent version's `reviewedAt` (any agent
+write clears it), and the review view derives from that state instead of being
+routed, so a refresh restores it from the database. An agent write landing while the review is open resolves
+without asking: the review edits are rebased onto the agent's new text with a
+line-level three-way merge, overlapping edits going to the agent — whoever
+asks the agent to edit a note they are editing has accepted merge semantics.
+Saves into the agent version carry the version's `updatedAt` as an
+optimistic-concurrency token; a write based on a stale snapshot is refused and
+merges first. Still open:
 
 - The note data event carries the agent's change as a diff the client applies
   to the editor directly. The user sees the change the moment the tool
   finishes, instead of after the invalidation round trip; invalidation stays as
   reconciliation, not as the way changes arrive.
-- The editor shows the agent's change as a diff against the version the user
-  was looking at, so what the agent did is visible at a glance rather than the
-  content just being different.
-- Sync becomes an invariant instead of a race: the agent's version is always
-  the base. An agent edit is a replacement anchored in a known version, so it
-  is always safe to build on; the user's uncommitted edits are what get rebased
-  onto it, non-overlapping ones preserved, overlapping ones rejected. The
-  base-version save already gives half of this invariant — local edits can no
-  longer overwrite an agent version; the rebase of user edits onto it is what
-  remains.
+- The merge reseeds the diff document, which drops the cursor; a finer-grained
+  rebase of editor operations would keep it.
 
 ### Retrieval
 
@@ -149,27 +153,40 @@ Backend:
 - [x] `note_version.updatedAt`, moved by the run-scoped overwrite
 - [ ] Note search tool: FTS5 over note content, scoped
 - [x] `listNotes` over a thread or topic scope, with search and pagination
-- [x] Base-version saves: a user save carries the version id it is based on and
-      the server routes it — overwrite the base, append after the agent's
-      latest, or land mid-chain when the agent moved past it
-- [ ] A save whose base is an agent version the agent has since replaced is
-      dropped: the editor detaches and those edits live only until the note
-      closes. Needs a real home — rebasing them onto the agent's latest — when
-      diff-based sync lands
+- [x] Anchored saves: a user save declares its intent as a variant — overwrite,
+      carrying the latest user version's id (valid even mid-chain below an
+      agent latest), or append, valid only on top of an agent latest. The shape
+      makes other combinations unrepresentable and the server rejects stale
+      ones
+- [x] Timeline word counts diff the text extracted from the markdown-it token
+      stream, so syntax-only edits count as no change
 
 Frontend:
 
 - [x] Notes table for a topic and for a thread
-- [ ] Diff-based sync when an agent writes a note that is open in the editor —
-      today a clean editor adopts the agent's write, and concurrent local edits
-      land in the user's base version below the agent's latest, invisibly until
-      the note reopens; see the diff-based sync section for the intended model
+- [x] Diff-based sync when an agent writes a note that is open in the editor —
+      the review view is derived from data, not routed: an uncommitted agent
+      latest (`reviewedAt` null) over a non-empty user version renders the diff
+      in place of the editor. A clean editor swaps immediately; with local
+      edits a floating banner offers Review, and saves keep landing in the
+      user's version. The diff renders through `@platejs/diff` in the editor's
+      own typography and is editable inline, with edits saving on a debounce
+      into the agent's latest version (keeping its authorship). Commit marks
+      the version reviewed and exits; Reject appends the user's base text as a
+      new version on top, the agent's surviving below. Editor dirtiness and the
+      save baseline live in a zustand store keyed by note id
+- [x] History diff from the timeline: one URL id — the old version — diffed
+      against the current document, editable when the user's version is the
+      latest, with edits saving into it; a Close button exits
 - [x] Notes in the mention menu: the mentions query is keyed by the thread and the
       server resolves its topic; a topic thread lists the topic's files, notes,
       the topic's threads and their notes, a standalone thread only its own notes.
       Adding or clicking a note mention opens it in the panel, and a response link
       with a `mention:note::…` href renders as a mention chip
-- [ ] Timeline endpoint: entries with word counts relative to a selected version
-- [ ] Timeline panel with author labels, indicators and collapsed agent blocks
-- [ ] Diff viewer, with revert
+- [x] Timeline endpoint: entries with word counts relative to a selected version
+- [x] Timeline panel with author labels, indicators and collapsed agent blocks,
+      as a column inside the notes panel; the selected comparison version and
+      the panel toggle live in URL search params
+- [x] Diff viewer (revert still pending)
+- [ ] Revert from the timeline
 - [x] Export to markdown and docx, print to pdf
