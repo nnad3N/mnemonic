@@ -9,7 +9,6 @@ import * as Kit from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit.server";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
 import { FIRECRAWL_SCRAPE_TIMEOUT_MS, firecrawl } from "@/mastra/tools/firecrawl-client.server";
-import { toToolInputSchema } from "@/mastra/tools/tool-input-schema.server";
 
 const inputSchema = v.object({
   url: v.pipe(v.string(), v.url()),
@@ -73,7 +72,7 @@ const fetchUrl = async (url: string): Promise<WebFetchSuccess | WebFetchError> =
 
 export const webFetchTool = createTool({
   id: "web-fetch",
-  inputSchema: toToolInputSchema(inputSchema),
+  inputSchema: toStandardJsonSchema(inputSchema),
   outputSchema: toStandardJsonSchema(outputSchema),
   description: "Fetches one URL and returns its main content as markdown.",
   execute: async ({ url }) => fetchUrl(url),
@@ -115,7 +114,7 @@ export const isUserProvidedUrl = (url: string, texts: string[]): boolean => {
 
 export const userLinkWebFetchTool = createTool({
   id: "user-link-web-fetch",
-  inputSchema: toToolInputSchema(inputSchema),
+  inputSchema: toStandardJsonSchema(inputSchema),
   outputSchema: toStandardJsonSchema(outputSchema),
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
   description:

@@ -11,7 +11,6 @@ import { mentionKeyFormat, parseMentionKey } from "@/lib/mention-key";
 import { toSafeId, type SafeId } from "@/lib/safe-id";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
 import { NoteToolError, readNoteInScope } from "@/mastra/tools/note-tool-helpers.server";
-import { toToolInputSchema } from "@/mastra/tools/tool-input-schema.server";
 import { readLatestVersion } from "@/routes/_protected.chat.$threadId/-thread-api/notes.server";
 
 type ReadNoteCtx = Kits<[DbKit]>;
@@ -63,7 +62,7 @@ const noteToolCtx = Kit.createContext(dbKit);
 export const readNoteTool = createTool({
   id: "read-note",
   description: "Reads a note's title and markdown content.",
-  inputSchema: toToolInputSchema(inputSchema),
+  inputSchema: toStandardJsonSchema(inputSchema),
   outputSchema: toStandardJsonSchema(outputSchema),
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
   execute: async ({ noteKey }, { requestContext }): Promise<ReadNoteOutput> => {

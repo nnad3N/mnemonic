@@ -9,7 +9,6 @@ import { toFileText } from "@/lib/get-file.server";
 import { mentionKeyFormat } from "@/lib/mention-key";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
 import { extractSchema, loadMentionedFile } from "@/mastra/tools/file-tool-helpers.server";
-import { toToolInputSchema } from "@/mastra/tools/tool-input-schema.server";
 
 const inputSchema = v.object({
   fileKey: v.pipe(
@@ -44,7 +43,7 @@ const toModelOutput = (output: ReadTextOutput): ToolResultOutput => ({
 
 export const readTextTool = createTool({
   id: "read-text",
-  inputSchema: toToolInputSchema(inputSchema),
+  inputSchema: toStandardJsonSchema(inputSchema),
   outputSchema: toStandardJsonSchema(outputSchema),
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
   description:

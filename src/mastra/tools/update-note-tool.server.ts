@@ -17,7 +17,6 @@ import {
   readNoteInScope,
   writeAgentNoteVersion,
 } from "@/mastra/tools/note-tool-helpers.server";
-import { toToolInputSchema } from "@/mastra/tools/tool-input-schema.server";
 import { readLatestVersion } from "@/routes/_protected.chat.$threadId/-thread-api/notes.server";
 
 type UpdateNoteCtx = Kits<[DbKit]>;
@@ -161,26 +160,19 @@ const noteKeySchema = v.pipe(
 
 const newTextSchema = v.pipe(v.string(), v.description("Markdown."));
 
-export const updateNoteInputSchema = v.variant("mode", [
-  v.object({
-    mode: v.pipe(v.literal("replace"), v.description("Replace one passage of the note.")),
-    noteKey: noteKeySchema,
-    oldText: v.pipe(
+const inputSchema = v.object({
+  noteKey: noteKeySchema,
+  oldText: v.optional(
+    v.pipe(
       v.string(),
       v.nonEmpty(),
-      v.description("Exact text to replace. Must appear exactly once in the note."),
+      v.description(
+        "Exact text to replace, appearing exactly once in the note. Omit to replace the whole content.",
+      ),
     ),
-    newText: newTextSchema,
-  }),
-  v.object({
-    mode: v.pipe(
-      v.literal("overwrite"),
-      v.description("Replace the note's whole content, the only way to write into an empty note."),
-    ),
-    noteKey: noteKeySchema,
-    newText: newTextSchema,
-  }),
-]);
+  ),
+  newText: newTextSchema,
+});
 
 export const updateNoteOutputSchema = v.variant("type", [
   v.object({
@@ -202,15 +194,19 @@ export const updateNoteTool = createTool({
   id: "update-note",
   description:
     "Replaces one exact occurrence of text in a note, or overwrites the note's whole content.",
-  inputSchema: toToolInputSchema(updateNoteInputSchema),
+  inputSchema: toStandardJsonSchema(inputSchema),
   outputSchema: toStandardJsonSchema(updateNoteOutputSchema),
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
-  execute: async ({ noteKey, ...edit }, { requestContext }): Promise<UpdateNoteOutput> => {
+  execute: async ({ noteKey, oldText, newText }, { requestContext }): Promise<UpdateNoteOutput> => {
     const mention = parseMentionKey(noteKey);
 
     if (mention.type !== "note") {
       return { type: "error", message: `Not a note mention key: ${noteKey}` };
     }
+
+    const edit = oldText
+      ? ({ mode: "replace", oldText, newText } as const)
+      : ({ mode: "overwrite", newText } as const);
 
     const result = await updateAgentNoteFn(noteToolCtx, {
       ...edit,

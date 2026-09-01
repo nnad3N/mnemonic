@@ -10,7 +10,6 @@ import { ImageMimeType } from "@/lib/file-validation";
 import { mentionKeyFormat } from "@/lib/mention-key";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
 import { loadMentionedFile } from "@/mastra/tools/file-tool-helpers.server";
-import { toToolInputSchema } from "@/mastra/tools/tool-input-schema.server";
 
 const DEFAULT_LIMIT = 10;
 const MAX_TERM_DISTANCE = 2;
@@ -122,7 +121,7 @@ const lineAt = (content: string, offset: number): number => {
 
 export const searchFileTool = createTool({
   id: "search-file",
-  inputSchema: toToolInputSchema(inputSchema),
+  inputSchema: toStandardJsonSchema(inputSchema),
   outputSchema: toStandardJsonSchema(outputSchema),
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
   description:

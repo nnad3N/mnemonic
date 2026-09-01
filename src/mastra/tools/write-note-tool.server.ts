@@ -13,7 +13,6 @@ import { memoryKit, type MemoryKit } from "@/lib/memory-kit.server";
 import { rawId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
-import { toToolInputSchema } from "@/mastra/tools/tool-input-schema.server";
 import { createNoteFn } from "@/routes/_protected.chat.$threadId/-thread-api/notes.server";
 
 type CreateAgentNoteInput = {
@@ -67,7 +66,7 @@ const noteToolCtx = Kit.createContext(dbKit, memoryKit);
 export const writeNoteTool = createTool({
   id: "write-note",
   description: "Creates a note in the current conversation from markdown content.",
-  inputSchema: toToolInputSchema(inputSchema),
+  inputSchema: toStandardJsonSchema(inputSchema),
   outputSchema: toStandardJsonSchema(writeNoteOutputSchema),
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
   execute: async ({ content, title }, context): Promise<WriteNoteOutput> => {

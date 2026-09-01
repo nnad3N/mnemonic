@@ -20,7 +20,6 @@ import {
   loadMentionedFile,
   visualSchema,
 } from "@/mastra/tools/file-tool-helpers.server";
-import { toToolInputSchema } from "@/mastra/tools/tool-input-schema.server";
 
 const inputSchema = v.object({
   fileKey: v.pipe(
@@ -94,7 +93,7 @@ const toModelOutput = (output: ReadFileOutput): ToolResultOutput => {
 
 export const readFileTool = createTool({
   id: "read-file",
-  inputSchema: toToolInputSchema(inputSchema),
+  inputSchema: toStandardJsonSchema(inputSchema),
   outputSchema: toStandardJsonSchema(outputSchema),
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
   description:

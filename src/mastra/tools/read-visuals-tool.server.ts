@@ -20,7 +20,6 @@ import {
   loadMentionedFile,
   visualSchema,
 } from "@/mastra/tools/file-tool-helpers.server";
-import { toToolInputSchema } from "@/mastra/tools/tool-input-schema.server";
 
 const DOWNLOAD_TIMEOUT_MS = 30_000;
 const DOWNLOAD_RETRY_DELAY_MS = 500;
@@ -37,26 +36,26 @@ const isTransientDownloadError = ({ cause }: UnhandledException) => {
   return cause.statusCode === 429 || cause.statusCode >= 500;
 };
 
-const inputSchema = v.variant("source", [
-  v.object({
-    source: v.literal("file-key"),
-    value: v.pipe(
+const inputSchema = v.object({
+  fileKey: v.optional(
+    v.pipe(
       v.string(),
       v.nonEmpty(),
       v.description(
-        `Mention key of the file, in the shape ${mentionKeyFormat(["file", "attachment"])}.`,
+        `Mention key of the file, in the shape ${mentionKeyFormat(["file", "attachment"])}. Pass this or \`url\`.`,
       ),
     ),
-  }),
-  v.object({
-    source: v.literal("url"),
-    value: v.pipe(
+  ),
+  url: v.optional(
+    v.pipe(
       v.string(),
       v.url(),
-      v.description("Link to the file itself, not to a page that displays it."),
+      v.description(
+        "Link to the file itself, not to a page that displays it. Pass this or `fileKey`.",
+      ),
     ),
-  }),
-]);
+  ),
+});
 
 type ReadVisualsInput = v.InferOutput<typeof inputSchema>;
 
@@ -92,8 +91,8 @@ const loadSource = async ({
   input,
   requestContext,
 }: LoadSourceInput): Promise<Result<VisualSource, GetFileError | GetAttachmentError>> => {
-  if (input.source === "file-key") {
-    const file = await loadMentionedFile({ fileKey: input.value, requestContext });
+  if (input.fileKey) {
+    const file = await loadMentionedFile({ fileKey: input.fileKey, requestContext });
 
     if (Result.isError(file)) {
       return Result.err(file.error);
@@ -104,10 +103,16 @@ const loadSource = async ({
     return Result.ok({ bytes, displayName, mimeType });
   }
 
+  const url = input.url;
+
+  if (!url) {
+    return Result.err(new GetFileError({ message: "Pass either a fileKey or a url." }));
+  }
+
   const timeout = AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS);
 
   const blob = await Result.tryPromise(
-    async ({ signal }) => downloadBlob(input.value, { abortSignal: signal }),
+    async ({ signal }) => downloadBlob(url, { abortSignal: signal }),
     {
       signal: abortSignal ? AbortSignal.any([timeout, abortSignal]) : timeout,
       retry: {
@@ -120,12 +125,12 @@ const loadSource = async ({
   );
 
   if (Result.isError(blob)) {
-    return Result.err(new GetFileError({ message: `"${input.value}" could not be downloaded.` }));
+    return Result.err(new GetFileError({ message: `"${url}" could not be downloaded.` }));
   }
 
   const bytes = Buffer.from(await blob.value.arrayBuffer());
 
-  return Result.ok({ bytes, displayName: input.value, mimeType: detectMimeType(bytes) });
+  return Result.ok({ bytes, displayName: url, mimeType: detectMimeType(bytes) });
 };
 
 const toModelOutput = (output: ReadVisualsOutput): ToolResultOutput => {
@@ -161,7 +166,7 @@ const toModelOutput = (output: ReadVisualsOutput): ToolResultOutput => {
 
 export const readVisualsTool = createTool({
   id: "read-visuals",
-  inputSchema: toToolInputSchema(inputSchema),
+  inputSchema: toStandardJsonSchema(inputSchema),
   outputSchema: toStandardJsonSchema(outputSchema),
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
   description: "Reads the images in one file or at one URL; an image comes back as itself.",

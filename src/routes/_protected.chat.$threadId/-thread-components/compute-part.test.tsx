@@ -25,7 +25,7 @@ const successCompute = (
     result?: JSONValue;
     logs?: string;
   },
-  args?: JSONValue,
+  args?: NonNullable<ComputeToolPart["input"]>["args"],
 ): ComputeToolPart =>
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- tool UI fixture for component render.
   ({
@@ -34,7 +34,7 @@ const successCompute = (
     state: "output-available",
     input: { code, args },
     output: { type: "success", ...output },
-  }) as ComputeToolPart;
+  });
 
 const errorCompute = (code: string): ComputeToolPart =>
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- tool UI fixture for component render.
@@ -44,7 +44,7 @@ const errorCompute = (code: string): ComputeToolPart =>
     state: "output-available",
     input: { code },
     output: { type: "error", name: "TypeError", message: "nope" },
-  }) as ComputeToolPart;
+  });
 
 describe("ComputePart", () => {
   it("falls back to the plain tool indicator when there is no code yet", () => {

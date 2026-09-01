@@ -17,7 +17,6 @@ import { getMentionKey } from "@/lib/mention-key";
 import { rawId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
-import { toToolInputSchema } from "@/mastra/tools/tool-input-schema.server";
 
 const DEFAULT_LIMIT = 10;
 
@@ -143,7 +142,7 @@ export const searchNotesTool = createTool({
   description:
     "Finds notes whose title or text matches the query, with a snippet around the hits. Covers this thread's notes, plus the topic's notes when the thread is in a topic. Matches words, not meaning.",
   inputExamples: [{ input: { language: "english", query: '"cash flow" OR runway -draft' } }],
-  inputSchema: toToolInputSchema(inputSchema),
+  inputSchema: toStandardJsonSchema(inputSchema),
   outputSchema: toStandardJsonSchema(outputSchema),
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
   execute: async ({ language, limit = DEFAULT_LIMIT, query }, { requestContext }) => {

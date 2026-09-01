@@ -13,7 +13,6 @@ import { mentionKeyFormat } from "@/lib/mention-key";
 import { runCode } from "@/lib/sandbox/run-code.server";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
 import { extractSchema, loadMentionedFile } from "@/mastra/tools/file-tool-helpers.server";
-import { toToolInputSchema } from "@/mastra/tools/tool-input-schema.server";
 
 const jsonValueSchema = v.union([
   v.string(),
@@ -32,8 +31,16 @@ const codeSchema = v.pipe(
   ),
 );
 
+/**
+ * Not `jsonValueSchema`: a union emits `anyOf`, and some models answer those with the value JSON-encoded
+ * into a string (`"args": "[10, 20, 30]"`) instead of as a value. Output schemas never reach the
+ * model, so `result` can stay a union.
+ */
 const argsSchema = v.optional(
-  v.pipe(jsonValueSchema, v.description("Available to the code as `env.args`.")),
+  v.pipe(
+    v.record(v.string(), v.unknown()),
+    v.description("Data the code reads as `env.args`, keyed by name."),
+  ),
 );
 
 const sandboxFileFields = Object.keys({
@@ -45,29 +52,27 @@ const sandboxFileFields = Object.keys({
   .map((field) => `\`${field}\``)
   .join(", ");
 
-const inputSchema = v.variant("mode", [
-  v.object({
-    mode: v.pipe(v.literal("code"), v.description("Run code that needs no file.")),
-    code: codeSchema,
-    args: argsSchema,
-  }),
-  v.object({
-    mode: v.pipe(
-      v.literal("file"),
-      v.description("Run code over a referenced file, loaded for the sandbox as `env.file`."),
-    ),
-    code: codeSchema,
-    args: argsSchema,
-    fileKey: v.pipe(
-      v.string(),
-      v.nonEmpty(),
+const inputSchema = v.object({
+  code: codeSchema,
+  args: argsSchema,
+  file: v.optional(
+    v.pipe(
+      v.object({
+        key: v.pipe(
+          v.string(),
+          v.nonEmpty(),
+          v.description(
+            `Mention key of the file, in the shape ${mentionKeyFormat(["file", "attachment"])}.`,
+          ),
+        ),
+        extract: extractSchema,
+      }),
       v.description(
-        `Mention key of the file, in the shape ${mentionKeyFormat(["file", "attachment"])}. Loaded as \`env.file\` with ${sandboxFileFields}; \`contents\` is empty for images.`,
+        `The file to work over, loaded as \`env.file\` with ${sandboxFileFields}; \`contents\` is empty for images. Omit when the code needs no file.`,
       ),
     ),
-    extract: extractSchema,
-  }),
-]);
+  ),
+});
 
 const successOutputSchema = v.object({
   type: v.literal("success"),
@@ -111,13 +116,13 @@ const toSandboxFile = async (file: FetchedFile, extract?: boolean) => {
 
 export const computeTool = createTool({
   id: "compute",
-  inputSchema: toToolInputSchema(inputSchema),
+  inputSchema: toStandardJsonSchema(inputSchema),
   outputSchema: toStandardJsonSchema(outputSchema),
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
   description: [
     "Computes with JavaScript in a sandbox: arithmetic, statistics, unit conversions and parsing of text, CSV or JSON.",
     "Export the result with `export default`; console output is in `logs`.",
-    'Always use mode "file" to work over a file, never inline file contents into `code` or `args`. `env.file.contents` exists only in that mode: source for text formats, converted text otherwise.',
+    "Always pass `file` to work over a file, never inline file contents into `code` or `args`. `env.file.contents` is the source for text formats, converted text otherwise.",
     `Available libraries: ${docsLibraries
       .map((library) => `\`${docs[library].library.importHint}\``)
       .join(" and ")}.`,
@@ -125,9 +130,9 @@ export const computeTool = createTool({
   execute: async (input, context) => {
     let file: SandboxFile | undefined;
 
-    if (input.mode === "file") {
+    if (input.file) {
       const loaded = await loadMentionedFile({
-        fileKey: input.fileKey,
+        fileKey: input.file.key,
         requestContext: context.requestContext,
       });
 
@@ -135,7 +140,7 @@ export const computeTool = createTool({
         return { type: "error", message: loaded.error.message } satisfies ComputeError;
       }
 
-      const sandboxFile = await toSandboxFile(loaded.value, input.extract);
+      const sandboxFile = await toSandboxFile(loaded.value, input.file.extract);
 
       if (Result.isError(sandboxFile)) {
         return { type: "error", message: sandboxFile.error.message } satisfies ComputeError;
