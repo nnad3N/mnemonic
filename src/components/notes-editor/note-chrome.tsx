@@ -1,12 +1,20 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { T, useGT } from "gt-tanstack-start";
 import { produce } from "immer";
+import { ALargeSmallIcon } from "lucide-react";
 import { Plate, PlateContent, useEditorContainerRef } from "platejs/react";
 import type { PlateEditor } from "platejs/react";
 import type { PropsWithChildren, ReactNode } from "react";
 import { useId } from "react";
 import { useDebouncedCallback } from "use-debounce";
 
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { HorizontalScroller } from "@/components/ui/horizontal-scroller";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   noteQueries,
@@ -87,21 +95,47 @@ const NoteTitleInput = ({ noteId, title }: NoteTitleInputProps) => {
 };
 
 const NotesEditorToolbar = () => (
-  <div className="flex shrink-0 items-center gap-0.5 border-b border-foreground/3 px-2 py-1 dark:border-white/5">
-    <NoteHistoryButtons />
-    <NoteToolbarSeparator />
-    <NoteTurnIntoButton />
-    <NoteToolbarSeparator />
-    <NoteFontSizeButton />
-    <NoteToolbarSeparator />
-    <NoteMarkButtons />
-    <NoteMoreFormatMenu />
-    <NoteToolbarSeparator />
-    <NoteListsMenu />
-    <NoteToolbarSeparator />
-    <NoteTableMenu />
+  <div className="@container/toolbar shrink-0 border-b border-foreground/3 dark:border-white/5">
+    <HorizontalScroller>
+      <div className="flex w-max items-center gap-0.5 px-2 py-1">
+        <NoteHistoryButtons />
+        <NoteToolbarSeparator />
+        <NoteTurnIntoButton />
+        <NoteToolbarSeparator />
+        <NoteFontSizeGroup />
+        <NoteToolbarSeparator />
+        <NoteMarkButtons />
+        <NoteMoreFormatMenu />
+        <NoteToolbarSeparator />
+        <NoteListsMenu />
+        <NoteToolbarSeparator />
+        <NoteTableMenu />
+      </div>
+    </HorizontalScroller>
   </div>
 );
+
+const NoteFontSizeGroup = () => {
+  const gt = useGT();
+
+  return (
+    <>
+      <NoteFontSizeButton className="hidden @xl/toolbar:flex" />
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          className="@xl/toolbar:hidden"
+          render={<Button size="icon-sm" variant="ghost" />}
+        >
+          <ALargeSmallIcon />
+          <span className="sr-only">{gt("Font size")}</span>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-auto min-w-0" finalFocus={false}>
+          <NoteFontSizeButton />
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
+  );
+};
 
 type NotePlateProps = {
   children?: ReactNode;

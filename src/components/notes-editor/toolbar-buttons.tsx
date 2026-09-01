@@ -166,9 +166,10 @@ export const NoteTurnIntoButton = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        render={<Button className="w-40 justify-between" size="sm" variant="ghost" />}
+        render={<Button className="justify-start @xl/toolbar:w-40" size="sm" variant="ghost" />}
       >
-        {selected.label}
+        {selected.icon}
+        <span className="@max-xl/toolbar:sr-only">{selected.label}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="min-w-48" finalFocus={false}>
         <DropdownMenuRadioGroup

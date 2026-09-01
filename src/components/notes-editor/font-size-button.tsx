@@ -7,6 +7,7 @@ import { useEditorPlugin, useEditorSelector } from "platejs/react";
 import { useId, useState } from "react";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 import { NoteToolbarButton } from "./toolbar-buttons";
 
@@ -31,7 +32,11 @@ const headingFontSize = (blockType: string) => {
 
 const fontSizes = ["10", "12", "14", "16", "18", "20", "24", "28", "32", "48"];
 
-export const NoteFontSizeButton = () => {
+type NoteFontSizeButtonProps = {
+  className?: string;
+};
+
+export const NoteFontSizeButton = ({ className }: NoteFontSizeButtonProps) => {
   const gt = useGT();
   const { editor, tf } = useEditorPlugin(FontSizePlugin);
   const inputId = useId();
@@ -61,7 +66,7 @@ export const NoteFontSizeButton = () => {
   };
 
   return (
-    <div className="flex items-center">
+    <div className={cn("flex items-center", className)}>
       <NoteToolbarButton
         onClick={() => {
           setFontSize(String(Number(value) - 1));
