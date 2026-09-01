@@ -189,6 +189,10 @@ const NoteVersionNavButton = ({ children, opensLatest, versionId }: NoteVersionN
 };
 
 const NoteDiffBar = ({ children, counts, noteId, selectedVersionId }: NoteDiffBarProps) => {
+  const { data: reviewPending } = useSuspenseQuery({
+    ...noteQueries.byId(noteId),
+    select: (note) => Boolean(note.pendingReviewBaseVersionId),
+  });
   const {
     data: { newerVersionId, newestVersionId, olderVersionId },
   } = useSuspenseQuery({
@@ -204,6 +208,11 @@ const NoteDiffBar = ({ children, counts, noteId, selectedVersionId }: NoteDiffBa
     },
   });
 
+  // Stepping onto the latest version leaves the diff, and only a pending review puts a bar of
+  // its own in this one's place.
+  const opensLatest = newerVersionId === newestVersionId;
+  const newerTargetId = opensLatest && !reviewPending ? undefined : newerVersionId;
+
   return (
     <NoteFloatingBar>
       <NoteVersionNavButton versionId={olderVersionId}>
@@ -212,10 +221,7 @@ const NoteDiffBar = ({ children, counts, noteId, selectedVersionId }: NoteDiffBa
           <T>Older version</T>
         </span>
       </NoteVersionNavButton>
-      <NoteVersionNavButton
-        opensLatest={newerVersionId === newestVersionId}
-        versionId={newerVersionId}
-      >
+      <NoteVersionNavButton opensLatest={opensLatest} versionId={newerTargetId}>
         <ChevronRightIcon />
         <span className="sr-only">
           <T>Newer version</T>
