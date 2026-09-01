@@ -105,24 +105,41 @@ export const threadQueries = {
     }),
 };
 
+const resumingChats = new WeakSet<Chat<ThreadUIMessage>>();
+
 /**
  * The reconnect route replays the run from its first chunk, so whatever the client holds of
  * the reply — fragments loaded with the thread or a stream it stopped — is rebuilt by the
  * replay and must not be appended to.
+ *
+ * One attempt per chat at a time: a second call (route remount) would abort the first inside
+ * `resumeStream`, whose restore below then puts the reply back while the second call's request
+ * snapshots it — the replay then appends to that copy and pushes it as a duplicate message.
+ * `chat.status` cannot gate this; it stays `ready` until the reconnect response arrives.
  */
 export const resumeThreadStream = async (chat: Chat<ThreadUIMessage>) => {
-  const hadReply = chat.lastMessage?.role === "assistant";
-
-  if (hadReply) {
-    chat.messages = chat.messages.slice(0, -1);
+  if (resumingChats.has(chat)) {
+    return;
   }
 
-  await chat.resumeStream();
+  resumingChats.add(chat);
 
-  // Nothing to attach to: the run settled or died in between, and the server has the reply.
-  if (hadReply && chat.lastMessage.role !== "assistant") {
-    const data = await getThread({ data: { threadId: chat.id } });
-    chat.messages = data.messages;
+  try {
+    const hadReply = chat.lastMessage?.role === "assistant";
+
+    if (hadReply) {
+      chat.messages = chat.messages.slice(0, -1);
+    }
+
+    await chat.resumeStream();
+
+    // Nothing to attach to: the run settled or died in between, and the server has the reply.
+    if (hadReply && chat.lastMessage.role !== "assistant") {
+      const data = await getThread({ data: { threadId: chat.id } });
+      chat.messages = data.messages;
+    }
+  } finally {
+    resumingChats.delete(chat);
   }
 };
 
