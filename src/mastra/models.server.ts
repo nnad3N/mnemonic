@@ -42,7 +42,7 @@ export const models: Record<ModelOption, AgentModel> = {
   research: {
     model: "z-ai/glm-5.3-flash",
   },
-  reader: {
+  analysis: {
     model: "google/gemini-3.7-flash",
     openrouter: {
       reasoning: {

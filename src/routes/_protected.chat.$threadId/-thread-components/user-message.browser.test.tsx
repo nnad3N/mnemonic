@@ -111,12 +111,14 @@ describe("UserMessage browser", () => {
     assert(modelTrigger, "Expected edit model trigger");
 
     await userEvent.click(page.elementLocator(modelTrigger));
-    await expect.element(page.getByText("Reader")).toBeVisible();
+    await expect.element(page.getByText("Analysis")).toBeVisible();
 
-    const readerItem = document.querySelector<HTMLElement>('[data-test-id="model-option-reader"]');
-    assert(readerItem, "Expected the reader model option");
+    const analysisItem = document.querySelector<HTMLElement>(
+      '[data-test-id="model-option-analysis"]',
+    );
+    assert(analysisItem, "Expected the analysis model option");
 
-    await userEvent.click(page.elementLocator(readerItem));
+    await userEvent.click(page.elementLocator(analysisItem));
 
     expect(useChatStore.getState().editingState?.messageId).toBe(MESSAGE_ID);
   });

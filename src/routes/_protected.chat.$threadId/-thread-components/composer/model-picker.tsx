@@ -30,8 +30,8 @@ export const ModelPicker = () => {
     select: (data) => data.modelOption,
   });
   const labels = {
+    analysis: gt("Analysis"),
     knowledge: gt("Knowledge"),
-    reader: gt("Reader"),
     research: gt("Research"),
   } satisfies Record<ModelOption, string>;
   const upsertModelOption = useUpsertModelOption(threadId);
