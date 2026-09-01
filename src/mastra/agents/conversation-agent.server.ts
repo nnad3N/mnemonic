@@ -6,6 +6,7 @@ import { readerAgent } from "@/mastra/agents/reader-agent.server";
 import { getAgentModel } from "@/mastra/config.server";
 import { CONVERSATION_AGENT_ID } from "@/mastra/models.server";
 import { hoistToolResultMediaProcessor } from "@/mastra/processors/hoist-tool-result-media.server";
+import { pinSubagentSteps } from "@/mastra/processors/soft-stop.server";
 import { stripFilePartsProcessor } from "@/mastra/processors/strip-file-parts.server";
 import { stripGeminiReasoningProcessor } from "@/mastra/processors/strip-gemini-reasoning.server";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
@@ -46,6 +47,9 @@ Reader sees only your prompt, not conversation: exact question, output wanted, e
 Report answers its task; never redo its work to check it. Part unanswered -> delegate remainder or tell user what is missing.
 `,
   agents: { reader: readerAgent },
+  defaultOptions: {
+    delegation: { onDelegationStart: pinSubagentSteps },
+  },
   durable: true,
   inputProcessors: [
     stripFilePartsProcessor,

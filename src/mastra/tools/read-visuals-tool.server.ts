@@ -1,12 +1,19 @@
 import type { ToolResultOutput } from "@ai-sdk/provider-utils";
+import { DownloadError, downloadBlob } from "@ai-sdk/provider-utils";
+import { detectMimeType } from "@kreuzberg/node";
+import type { RequestContext } from "@mastra/core/request-context";
 import { createTool } from "@mastra/core/tools";
 import { toStandardJsonSchema } from "@valibot/to-json-schema";
+import type { UnhandledException } from "better-result";
 import { Result } from "better-result";
 import * as v from "valibot";
 
 import { ToolError } from "@/lib/errors/tool-error";
 import { ImageMimeType } from "@/lib/file-validation";
+import type { GetAttachmentError } from "@/lib/get-attachment.server";
+import { GetFileError } from "@/lib/get-file.server";
 import { mentionKeyFormat } from "@/lib/mention-key";
+import type { MnemonicRequestContext } from "@/mastra/request-context.server";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
 import {
   extractFile,
@@ -15,15 +22,43 @@ import {
 } from "@/mastra/tools/file-tool-helpers.server";
 import { toToolInputSchema } from "@/mastra/tools/tool-input-schema.server";
 
-const inputSchema = v.object({
-  fileKey: v.pipe(
-    v.string(),
-    v.nonEmpty(),
-    v.description(
-      `Mention key of the file, in the shape ${mentionKeyFormat(["file", "attachment"])}.`,
+const DOWNLOAD_TIMEOUT_MS = 30_000;
+const DOWNLOAD_RETRY_DELAY_MS = 500;
+
+const isTransientDownloadError = ({ cause }: UnhandledException) => {
+  if (!DownloadError.isInstance(cause)) {
+    return false;
+  }
+
+  if (cause.statusCode === undefined) {
+    return true;
+  }
+
+  return cause.statusCode === 429 || cause.statusCode >= 500;
+};
+
+const inputSchema = v.variant("source", [
+  v.object({
+    source: v.literal("file-key"),
+    value: v.pipe(
+      v.string(),
+      v.nonEmpty(),
+      v.description(
+        `Mention key of the file, in the shape ${mentionKeyFormat(["file", "attachment"])}.`,
+      ),
     ),
-  ),
-});
+  }),
+  v.object({
+    source: v.literal("url"),
+    value: v.pipe(
+      v.string(),
+      v.url(),
+      v.description("Link to the file itself, not to a page that displays it."),
+    ),
+  }),
+]);
+
+type ReadVisualsInput = v.InferOutput<typeof inputSchema>;
 
 const outputSchema = v.variant("type", [
   v.object({
@@ -39,6 +74,59 @@ const outputSchema = v.variant("type", [
 ]);
 
 type ReadVisualsOutput = v.InferOutput<typeof outputSchema>;
+
+type VisualSource = {
+  bytes: Uint8Array;
+  displayName: string;
+  mimeType: string;
+};
+
+type LoadSourceInput = {
+  abortSignal: AbortSignal | undefined;
+  input: ReadVisualsInput;
+  requestContext: RequestContext<MnemonicRequestContext> | undefined;
+};
+
+const loadSource = async ({
+  abortSignal,
+  input,
+  requestContext,
+}: LoadSourceInput): Promise<Result<VisualSource, GetFileError | GetAttachmentError>> => {
+  if (input.source === "file-key") {
+    const file = await loadMentionedFile({ fileKey: input.value, requestContext });
+
+    if (Result.isError(file)) {
+      return Result.err(file.error);
+    }
+
+    const { bytes, displayName, mimeType } = file.value;
+
+    return Result.ok({ bytes, displayName, mimeType });
+  }
+
+  const timeout = AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS);
+
+  const blob = await Result.tryPromise(
+    async ({ signal }) => downloadBlob(input.value, { abortSignal: signal }),
+    {
+      signal: abortSignal ? AbortSignal.any([timeout, abortSignal]) : timeout,
+      retry: {
+        times: 2,
+        delayMs: DOWNLOAD_RETRY_DELAY_MS,
+        backoff: "exponential",
+        shouldRetry: isTransientDownloadError,
+      },
+    },
+  );
+
+  if (Result.isError(blob)) {
+    return Result.err(new GetFileError({ message: `"${input.value}" could not be downloaded.` }));
+  }
+
+  const bytes = Buffer.from(await blob.value.arrayBuffer());
+
+  return Result.ok({ bytes, displayName: input.value, mimeType: detectMimeType(bytes) });
+};
 
 const toModelOutput = (output: ReadVisualsOutput): ToolResultOutput => {
   if (output.type === "error") {
@@ -76,15 +164,19 @@ export const readVisualsTool = createTool({
   inputSchema: toToolInputSchema(inputSchema),
   outputSchema: toStandardJsonSchema(outputSchema),
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
-  description: "Reads the images in one file; an image file comes back as itself.",
-  execute: async ({ fileKey }, context): Promise<ReadVisualsOutput> => {
-    const file = await loadMentionedFile({ fileKey, requestContext: context.requestContext });
+  description: "Reads the images in one file or at one URL; an image comes back as itself.",
+  execute: async (input, { abortSignal, requestContext }): Promise<ReadVisualsOutput> => {
+    const source = await loadSource({
+      abortSignal,
+      input,
+      requestContext,
+    });
 
-    if (Result.isError(file)) {
-      return { type: "error", message: file.error.message };
+    if (Result.isError(source)) {
+      return { type: "error", message: source.error.message };
     }
 
-    const { bytes, displayName, mimeType } = file.value;
+    const { bytes, displayName, mimeType } = source.value;
 
     if (ImageMimeType.is(mimeType)) {
       return {

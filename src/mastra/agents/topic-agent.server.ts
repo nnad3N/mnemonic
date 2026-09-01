@@ -11,6 +11,7 @@ import { readerAgent } from "@/mastra/agents/reader-agent.server";
 import { workerAgent } from "@/mastra/agents/worker-agent.server";
 import { getAgentModel } from "@/mastra/config.server";
 import { TOPIC_AGENT_ID } from "@/mastra/models.server";
+import { pinSubagentSteps } from "@/mastra/processors/soft-stop.server";
 import { stripFilePartsProcessor } from "@/mastra/processors/strip-file-parts.server";
 import { stripGeminiReasoningProcessor } from "@/mastra/processors/strip-gemini-reasoning.server";
 import type { MnemonicRequestContext } from "@/mastra/request-context.server";
@@ -72,6 +73,9 @@ Question has separate parts -> split it, one delegation per part, no overlap bet
 Report answers its task; never redo its work to check it. Part unanswered -> delegate remainder or tell user what is missing.
 `,
   agents: { reader: readerAgent, worker: workerAgent },
+  defaultOptions: {
+    delegation: { onDelegationStart: pinSubagentSteps },
+  },
   durable: true,
   inputProcessors: [stripFilePartsProcessor, stripGeminiReasoningProcessor],
   memory: getAgentMemory("resource"),

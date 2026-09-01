@@ -11,6 +11,7 @@ import { resolveProviderKeyById } from "@/lib/middleware/resolve-provider-key.se
 import { getAgentModel } from "@/mastra/config.server";
 import { WORKER_AGENT_ID } from "@/mastra/models.server";
 import { hoistToolResultMediaProcessor } from "@/mastra/processors/hoist-tool-result-media.server";
+import { workerSoftStop } from "@/mastra/processors/soft-stop.server";
 import { stripGeminiReasoningProcessor } from "@/mastra/processors/strip-gemini-reasoning.server";
 import type { MnemonicRequestContext } from "@/mastra/request-context.server";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
@@ -33,10 +34,6 @@ type GetWorkerCodeModeInput = {
   requestContext: RequestContext<MnemonicRequestContext>;
 };
 
-/**
- * The retrieval tools embed with the user's key, so code mode and the stubs in its instructions
- * are built per request. Mastra resolves `tools` and `instructions` separately, hence both call this.
- */
 const getWorkerCodeMode = async ({ requestContext }: GetWorkerCodeModeInput) => {
   const result = await resolveProviderKeyById(providerKeyCtx, requestContext.get("providerKeyId"));
 
@@ -84,9 +81,13 @@ export const workerAgent = new Agent({
   instructions: async (input) =>
     `${workerInstructions}\n${(await getWorkerCodeMode(input)).instructions}\n`,
   defaultOptions: {
-    maxSteps: 15,
+    maxSteps: workerSoftStop.maxSteps,
   },
-  inputProcessors: [hoistToolResultMediaProcessor, stripGeminiReasoningProcessor],
+  inputProcessors: [
+    hoistToolResultMediaProcessor,
+    stripGeminiReasoningProcessor,
+    workerSoftStop.processor,
+  ],
   memory: workerMemory,
   requestContextSchema: mnemonicRequestContextSchema,
   model: getAgentModel(WORKER_AGENT_ID),

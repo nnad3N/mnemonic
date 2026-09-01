@@ -6,6 +6,7 @@ import { Memory } from "@mastra/memory";
 import { getStaticModel } from "@/mastra/config.server";
 import { READER_AGENT_ID } from "@/mastra/models.server";
 import { hoistToolResultMediaProcessor } from "@/mastra/processors/hoist-tool-result-media.server";
+import { readerSoftStop } from "@/mastra/processors/soft-stop.server";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
 import { mastraStore } from "@/mastra/storage.server";
 import { readTextTool } from "@/mastra/tools/read-text-tool.server";
@@ -40,9 +41,9 @@ Sources do not settle task -> say so, state closest thing they cover. Never fill
 ${codeMode.instructions}
 `,
   defaultOptions: {
-    maxSteps: 5,
+    maxSteps: readerSoftStop.maxSteps,
   },
-  inputProcessors: [hoistToolResultMediaProcessor],
+  inputProcessors: [hoistToolResultMediaProcessor, readerSoftStop.processor],
   memory: readerMemory,
   requestContextSchema: mnemonicRequestContextSchema,
   model: getStaticModel("xiaomi/mimo-v2.5"),
