@@ -10,7 +10,6 @@ import { ToolError } from "@/lib/errors/tool-error";
 import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
 import { memoryKit, type MemoryKit } from "@/lib/memory-kit.server";
-import { getMentionKey } from "@/lib/mention-key";
 import { rawId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
@@ -30,7 +29,7 @@ export const createAgentNoteFn = Kit.gen(async function* (
   ctx: CreateAgentNoteCtx,
   input: CreateAgentNoteInput,
 ) {
-  const { id } = yield* await createNoteFn(ctx, { ...input, author: "agent" });
+  const { id, versionId } = yield* await createNoteFn(ctx, { ...input, author: "agent" });
 
   // Created in this run, so later writes in the same run overwrite version 1.
   yield* await ctx.db.transaction(async (tx) => {
@@ -47,7 +46,7 @@ export const createAgentNoteFn = Kit.gen(async function* (
     }
   });
 
-  return Result.ok({ id });
+  return Result.ok({ id, versionId });
 });
 
 const inputSchema = v.object({
@@ -57,7 +56,8 @@ const inputSchema = v.object({
 
 export const writeNoteOutputSchema = v.object({
   type: v.literal("created"),
-  noteKey: v.string(),
+  noteId: v.string(),
+  versionId: v.string(),
 });
 
 type WriteNoteOutput = v.InferOutput<typeof writeNoteOutputSchema>;
@@ -88,7 +88,8 @@ export const writeNoteTool = createTool({
 
     return {
       type: "created",
-      noteKey: getMentionKey({ type: "note", value: rawId(result.value.id) }),
+      noteId: rawId(result.value.id),
+      versionId: rawId(result.value.versionId),
     };
   },
 });

@@ -1,0 +1,123 @@
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
+import { T, useGT } from "gt-tanstack-start";
+import { FileTextIcon } from "lucide-react";
+
+import { setNoteSearchOpen, setNotesSearchOpen } from "@/components/notes-editor/use-open-note";
+import { Button } from "@/components/ui/button";
+import { WordsAdded, WordsChanged, WordsRemoved } from "@/components/word-diff";
+import {
+  noteQueries,
+  type AffectedNoteStats,
+} from "@/routes/_protected.chat.$threadId/-thread-api/notes.functions";
+import type { ThreadUIMessagePart } from "@/routes/_protected.chat.$threadId/-thread-types";
+
+type AffectedNote = {
+  noteId: string;
+  versionId: string;
+};
+
+const extractAffectedNotes = (parts: ThreadUIMessagePart[]): AffectedNote[] => {
+  const byVersionId = new Map<string, AffectedNote>();
+
+  for (const part of parts) {
+    if (part.type !== "tool-writeNote" && part.type !== "tool-updateNote") {
+      continue;
+    }
+
+    if (part.state !== "output-available" || part.output.type === "error") {
+      continue;
+    }
+
+    byVersionId.set(part.output.versionId, {
+      noteId: part.output.noteId,
+      versionId: part.output.versionId,
+    });
+  }
+
+  return [...byVersionId.values()];
+};
+
+type AffectedNotesRowProps = {
+  noteId: string;
+  stats: AffectedNoteStats;
+};
+
+const AffectedNotesRow = ({ noteId, stats }: AffectedNotesRowProps) => (
+  <li>
+    <Link
+      className="flex items-center gap-2 rounded-lg px-2 py-1 transition-colors hover:bg-accent"
+      search={setNoteSearchOpen(noteId, stats.baseVersionId ?? undefined)}
+      to="."
+    >
+      <FileTextIcon className="size-3.5 shrink-0 text-muted-foreground" />
+      <span className="min-w-0 flex-1 truncate">{stats.title}</span>
+      <div className="flex shrink-0 gap-1.5 text-xs tabular-nums">
+        <WordsAdded dimmed={stats.counts.added === 0}>{stats.counts.added}</WordsAdded>
+        <WordsChanged dimmed={stats.counts.replaced === 0}>{stats.counts.replaced}</WordsChanged>
+        <WordsRemoved dimmed={stats.counts.removed === 0}>{stats.counts.removed}</WordsRemoved>
+      </div>
+    </Link>
+  </li>
+);
+
+type AffectedNotesProps = {
+  parts: ThreadUIMessagePart[];
+};
+
+export const AffectedNotes = ({ parts }: AffectedNotesProps) => {
+  const gt = useGT();
+  const notes = extractAffectedNotes(parts);
+  const { data: stats } = useQuery({
+    ...noteQueries.affected(notes.map((note) => note.versionId)),
+    enabled: notes.length > 0,
+  });
+
+  if (!stats) {
+    return null;
+  }
+
+  const statsByVersionId = new Map(stats.map((item) => [item.versionId, item]));
+  // A version the run wrote can be gone by the time an old message renders, pruned by the
+  // version limit.
+  const rows = notes.flatMap((note) => {
+    const versionStats = statsByVersionId.get(note.versionId);
+
+    if (!versionStats) {
+      return [];
+    }
+
+    return [{ noteId: note.noteId, stats: versionStats }];
+  });
+
+  if (rows.length === 0) {
+    return null;
+  }
+
+  const header =
+    rows.length === 1
+      ? gt("Affected note")
+      : gt("Affected notes ({count})", { count: rows.length });
+
+  return (
+    <div className="not-typeset mt-1 rounded-xl border border-border bg-card text-sm">
+      <div className="flex items-center justify-between gap-2 py-1.5 pl-2.5 text-muted-foreground">
+        <span>{header}</span>
+        <Button
+          className="text-muted-foreground"
+          nativeButton={false}
+          render={<Link search={setNotesSearchOpen(rows.map((row) => row.noteId))} to="." />}
+          size="xs"
+          variant="ghost"
+        >
+          <T>View</T>
+        </Button>
+      </div>
+      <ul className="flex flex-col px-1 pb-1">
+        {rows.map((row) => (
+          <AffectedNotesRow key={row.stats.versionId} noteId={row.noteId} stats={row.stats} />
+        ))}
+      </ul>
+    </div>
+  );
+};

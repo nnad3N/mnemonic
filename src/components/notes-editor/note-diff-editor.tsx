@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { useDebouncedCallback } from "use-debounce";
 
 import { Button } from "@/components/ui/button";
+import { WordsAdded, WordsChanged, WordsRemoved } from "@/components/word-diff";
 import { ServerFnError } from "@/lib/errors/server-fn-error";
 import { hashText } from "@/lib/hash";
 import { markdownToText } from "@/lib/markdown";
@@ -169,24 +170,9 @@ export const NoteDiffStats = ({ counts }: NoteDiffStatsProps) => (
       <span>−9999+</span>
     </div>
     <div className="col-start-1 row-start-1 flex justify-center gap-2">
-      <span
-        className={cn("text-f-green-600 dark:text-f-green-400", counts.added === 0 && "opacity-50")}
-      >
-        +{formatCount(counts.added)}
-      </span>
-      <span
-        className={cn(
-          "text-f-blue-600 dark:text-f-blue-400",
-          counts.replaced === 0 && "opacity-50",
-        )}
-      >
-        ~{formatCount(counts.replaced)}
-      </span>
-      <span
-        className={cn("text-f-red-600 dark:text-f-red-400", counts.removed === 0 && "opacity-50")}
-      >
-        −{formatCount(counts.removed)}
-      </span>
+      <WordsAdded dimmed={counts.added === 0}>{formatCount(counts.added)}</WordsAdded>
+      <WordsChanged dimmed={counts.replaced === 0}>{formatCount(counts.replaced)}</WordsChanged>
+      <WordsRemoved dimmed={counts.removed === 0}>{formatCount(counts.removed)}</WordsRemoved>
     </div>
   </div>
 );

@@ -73,6 +73,7 @@ export const threadQueries = {
               void client.invalidateQueries({
                 queryKey: noteQueries.byId(dataPart.data.noteId).queryKey,
               });
+              void client.invalidateQueries({ queryKey: noteQueries.affectedAll() });
             }
           },
           onError: (error) => {

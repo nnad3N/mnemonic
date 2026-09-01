@@ -56,7 +56,7 @@ onSubmit={async (event) => {
 
 Prefer arrow function components. Implicit-return `() => (...)` when the body is only JSX. Components that call hooks use a block body.
 
-Define a named `ComponentNameProps` type for each component. Do not inline the props object type in the parameter list.
+Define a named `ComponentNameProps` type for each component, directly above the component it belongs to. Nothing else goes between them. Do not inline the props object type in the parameter list.
 
 Pass `ref` as a prop. Do not use `React.forwardRef`.
 

@@ -1,6 +1,7 @@
 import { matchError, panic, Result, TaggedError } from "better-result";
 import type { Result as ResultType } from "better-result";
-import { and, eq, gt, isNotNull, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNotNull, lt, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 
 import { note, noteVersion } from "@/db/schema.server";
 import type { NoteVersionAuthor } from "@/db/schema.server";
@@ -10,10 +11,13 @@ import { toServerFnError } from "@/lib/errors/server-fn-error";
 import { hashText } from "@/lib/hash";
 import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
+import { markdownToText } from "@/lib/markdown";
 import type { MemoryError, MemoryKit } from "@/lib/memory-kit.server";
 import { resolveThread } from "@/lib/middleware/resolve-thread.server";
 import { createSafeId, toSafeId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
+import { diffWordCounts } from "@/lib/word-diff";
+import type { WordDiffCounts } from "@/lib/word-diff";
 
 type NoteCtx = Kits<[DbKit]>;
 type ListNotesCtx = Kits<[DbKit, MemoryKit]>;
@@ -87,6 +91,7 @@ type CreateNoteInput = {
 
 export const createNoteFn = Kit.gen(async function* (ctx: NoteCtx, input: CreateNoteInput) {
   const id = createSafeId<"note">();
+  const versionId = createSafeId<"noteVersion">();
   const contentHash = await hashText(input.content);
 
   yield* await ctx.db.transaction(async (tx) => {
@@ -101,12 +106,13 @@ export const createNoteFn = Kit.gen(async function* (ctx: NoteCtx, input: Create
       author: input.author,
       content: input.content,
       contentHash,
+      id: versionId,
       noteId: id,
       seq: 1,
     });
   });
 
-  return Result.ok({ id });
+  return Result.ok({ id, versionId });
 });
 
 type ListNotesInput = {
@@ -252,6 +258,75 @@ export const getNoteFn = Kit.gen(async function* (
     versionId: latest.id,
     versionUpdatedAt: latest.updatedAt,
   });
+});
+
+type AffectedNoteStats = {
+  baseVersionId: string | null;
+  counts: WordDiffCounts;
+  title: string;
+  versionId: string;
+};
+
+type ListAffectedNotesInput = {
+  userId: SafeId<"user">;
+  versionIds: string[];
+};
+
+export const listAffectedNotesFn = Kit.gen(async function* (
+  ctx: NoteCtx,
+  input: ListAffectedNotesInput,
+) {
+  if (input.versionIds.length === 0) {
+    return Result.ok<AffectedNoteStats[]>([]);
+  }
+
+  const previousVersion = alias(noteVersion, "previous_version");
+
+  const rows = yield* await ctx.db.run((db) => {
+    const previous = db
+      .select({ content: previousVersion.content, id: previousVersion.id })
+      .from(previousVersion)
+      .where(
+        and(
+          eq(previousVersion.noteId, noteVersion.noteId),
+          lt(previousVersion.seq, noteVersion.seq),
+        ),
+      )
+      .orderBy(desc(previousVersion.seq))
+      .limit(1)
+      .as("previous");
+
+    return db
+      .select({
+        baseContent: previous.content,
+        baseVersionId: previous.id,
+        content: noteVersion.content,
+        title: note.title,
+        versionId: noteVersion.id,
+      })
+      .from(noteVersion)
+      .innerJoin(note, eq(note.id, noteVersion.noteId))
+      .leftJoinLateral(previous, sql`true`)
+      .where(
+        and(
+          inArray(
+            noteVersion.id,
+            // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with the userId filter.
+            input.versionIds.map((versionId) => toSafeId<"noteVersion">(versionId)),
+          ),
+          eq(note.userId, input.userId),
+        ),
+      );
+  });
+
+  return Result.ok<AffectedNoteStats[]>(
+    rows.map((row) => ({
+      baseVersionId: row.baseVersionId,
+      counts: diffWordCounts(markdownToText(row.baseContent ?? ""), markdownToText(row.content)),
+      title: row.title,
+      versionId: row.versionId,
+    })),
+  );
 });
 
 const NOTE_VERSION_LIMIT = 100;

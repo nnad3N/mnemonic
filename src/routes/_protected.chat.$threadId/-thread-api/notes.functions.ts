@@ -27,6 +27,7 @@ import {
   saveNoteBodyFn,
   saveNoteTitleFn,
   addNoteToTopicFn,
+  listAffectedNotesFn,
 } from "./notes.server";
 
 export const noteQueries = {
@@ -58,6 +59,12 @@ export const noteQueries = {
     queryOptions({
       queryFn: async () => listNoteVersions({ data: { noteId } }),
       queryKey: [...noteQueries.versionLists(noteId), "list"] as const,
+    }),
+  affectedAll: () => [...noteQueries.all(), "affected"] as const,
+  affected: (versionIds: string[]) =>
+    queryOptions({
+      queryFn: async () => listAffectedNotes({ data: { versionIds } }),
+      queryKey: [...noteQueries.affectedAll(), { versionIds }] as const,
     }),
 };
 
@@ -119,6 +126,25 @@ export const getNote = createServerFn({ method: "GET" })
       }),
     ),
   );
+
+const listAffectedNotesInputSchema = v.object({
+  versionIds: v.pipe(v.array(v.pipe(v.string(), v.nanoid())), v.maxLength(50)),
+});
+
+export const listAffectedNotes = createServerFn({ method: "GET" })
+  .validator(listAffectedNotesInputSchema)
+  .middleware([authMiddleware])
+  .handler(async ({ context, data }) =>
+    Kit.run(async () =>
+      listAffectedNotesFn(noteCtx, { userId: context.user.id, versionIds: data.versionIds }),
+    ).throws<ServerFnError>((error) =>
+      matchError(error, {
+        DatabaseError: () => toServerFnError.serverError("Failed to load the affected notes"),
+      }),
+    ),
+  );
+
+export type AffectedNoteStats = Awaited<ReturnType<typeof listAffectedNotes>>[number];
 
 const createNoteInputSchema = v.object({
   threadId: v.pipe(v.string(), v.nanoid()),

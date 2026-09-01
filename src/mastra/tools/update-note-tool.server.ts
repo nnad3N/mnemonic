@@ -9,7 +9,7 @@ import { ToolError } from "@/lib/errors/tool-error";
 import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
 import { mentionKeyFormat, parseMentionKey } from "@/lib/mention-key";
-import { toSafeId } from "@/lib/safe-id";
+import { rawId, toSafeId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
 import {
@@ -112,13 +112,13 @@ export const updateAgentNoteFn = Kit.gen(async function* (
 ) {
   if (input.mode === "overwrite") {
     yield* await readNoteInScope(ctx, input);
-    yield* await writeAgentNoteVersion(ctx, {
+    const written = yield* await writeAgentNoteVersion(ctx, {
       content: input.newText,
       noteId: input.noteId,
       threadId: input.threadId,
     });
 
-    return Result.ok({ id: input.noteId });
+    return Result.ok(written);
   }
 
   const [latest] = yield* await Kit.promiseAll([
@@ -144,13 +144,13 @@ export const updateAgentNoteFn = Kit.gen(async function* (
     );
   }
 
-  yield* await writeAgentNoteVersion(ctx, {
+  const written = yield* await writeAgentNoteVersion(ctx, {
     content: replaced.content,
     noteId: input.noteId,
     threadId: input.threadId,
   });
 
-  return Result.ok({ id: input.noteId });
+  return Result.ok(written);
 });
 
 const noteKeySchema = v.pipe(
@@ -185,6 +185,8 @@ export const updateNoteInputSchema = v.variant("mode", [
 export const updateNoteOutputSchema = v.variant("type", [
   v.object({
     type: v.literal("updated"),
+    noteId: v.string(),
+    versionId: v.string(),
   }),
   v.object({
     type: v.literal("error"),
@@ -228,6 +230,10 @@ export const updateNoteTool = createTool({
       });
     }
 
-    return { type: "updated" };
+    return {
+      type: "updated",
+      noteId: rawId(result.value.id),
+      versionId: rawId(result.value.versionId),
+    };
   },
 });

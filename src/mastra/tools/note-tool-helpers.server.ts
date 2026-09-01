@@ -6,6 +6,7 @@ import type { DbKit } from "@/lib/db-kit.server";
 import { hashText } from "@/lib/hash";
 import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
+import { createSafeId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
 
 export class NoteToolError extends TaggedError("NoteToolError")<{
@@ -54,7 +55,7 @@ export const writeAgentNoteVersion = Kit.gen(async function* (
 ) {
   const contentHash = await hashText(input.content);
 
-  yield* await ctx.db.transaction(async (tx) => {
+  const versionId = yield* await ctx.db.transaction(async (tx) => {
     const [run, latestVersion] = await Promise.all([
       tx.query.threadRun.findFirst({
         where: { threadId: input.threadId },
@@ -67,30 +68,37 @@ export const writeAgentNoteVersion = Kit.gen(async function* (
       }),
     ]);
 
+    await tx.update(note).set({ updatedAt: new Date() }).where(eq(note.id, input.noteId));
+
     if (run && latestVersion?.author === "agent" && run.versionedNoteIds.includes(input.noteId)) {
       await tx
         .update(noteVersion)
         .set({ content: input.content, contentHash, reviewedAt: null })
         .where(eq(noteVersion.id, latestVersion.id));
-    } else {
-      await tx.insert(noteVersion).values({
-        author: "agent",
-        content: input.content,
-        contentHash,
-        noteId: input.noteId,
-        seq: (latestVersion?.seq ?? 0) + 1,
-      });
 
-      if (run) {
-        await tx
-          .update(threadRun)
-          .set({ versionedNoteIds: [...run.versionedNoteIds, input.noteId] })
-          .where(eq(threadRun.threadId, input.threadId));
-      }
+      return latestVersion.id;
     }
 
-    await tx.update(note).set({ updatedAt: new Date() }).where(eq(note.id, input.noteId));
+    const nextVersionId = createSafeId<"noteVersion">();
+
+    await tx.insert(noteVersion).values({
+      author: "agent",
+      content: input.content,
+      contentHash,
+      id: nextVersionId,
+      noteId: input.noteId,
+      seq: (latestVersion?.seq ?? 0) + 1,
+    });
+
+    if (run) {
+      await tx
+        .update(threadRun)
+        .set({ versionedNoteIds: [...run.versionedNoteIds, input.noteId] })
+        .where(eq(threadRun.threadId, input.threadId));
+    }
+
+    return nextVersionId;
   });
 
-  return Result.ok({ id: input.noteId });
+  return Result.ok({ id: input.noteId, versionId });
 });

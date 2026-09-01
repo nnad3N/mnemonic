@@ -12,17 +12,37 @@ type NoteSearch = {
 };
 
 export const setNoteSearchOpen =
-  (noteId: string) =>
+  (noteId: string, diff?: string) =>
   <Search extends NoteSearch>(prev: Search): Search =>
     produce(prev, (draft: NoteSearch) => {
+      const openDiff = diff ?? (draft.note?.id === noteId ? draft.note.diff : undefined);
+
       draft.notes = true;
-      draft.noteTabs = draft.noteTabs?.includes(noteId)
-        ? draft.noteTabs
-        : [...(draft.noteTabs ?? []), noteId];
+      draft.noteTabs ??= [];
+      draft.note = { id: noteId, diff: openDiff, timeline: draft.note?.timeline };
 
-      if (draft.note?.id === noteId) return;
+      if (!draft.noteTabs.includes(noteId)) {
+        draft.noteTabs.push(noteId);
+      }
+    });
 
-      draft.note = { id: noteId, timeline: draft.note?.timeline };
+export const setNotesSearchOpen =
+  (noteIds: string[]) =>
+  <Search extends NoteSearch>(prev: Search): Search =>
+    produce(prev, (draft: NoteSearch) => {
+      const [firstId] = noteIds;
+
+      if (!firstId) return;
+
+      draft.notes = true;
+      draft.noteTabs ??= [];
+      draft.note = { id: firstId, timeline: draft.note?.timeline };
+
+      for (const noteId of noteIds) {
+        if (!draft.noteTabs.includes(noteId)) {
+          draft.noteTabs.push(noteId);
+        }
+      }
     });
 
 export const setNoteDiffOpen =

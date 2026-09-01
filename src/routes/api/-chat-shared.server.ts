@@ -11,14 +11,10 @@ import type { DbKit } from "@/lib/db-kit.server";
 import type { DurableAgentsKit, RunTiming } from "@/lib/durable-agents-kit.server";
 import type { Kits } from "@/lib/kit";
 import * as Kit from "@/lib/kit";
-import { parseMentionKey } from "@/lib/mention-key";
 import type { SafeId } from "@/lib/safe-id";
 import { getMnemonicAgent, MnemonicAgentIds } from "@/mastra/agents/id.server";
 import type { MnemonicToolName } from "@/mastra/mnemonic-tool-types.server";
-import {
-  updateNoteInputSchema,
-  updateNoteOutputSchema,
-} from "@/mastra/tools/update-note-tool.server";
+import { updateNoteOutputSchema } from "@/mastra/tools/update-note-tool.server";
 import { writeNoteOutputSchema } from "@/mastra/tools/write-note-tool.server";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 
@@ -90,19 +86,15 @@ export const reconcileRuns = Kit.gen(async function* (ctx: ReconcileRunsCtx, run
 const UPDATE_NOTE = "updateNote" satisfies MnemonicToolName;
 const WRITE_NOTE = "writeNote" satisfies MnemonicToolName;
 
+type NoteToolCall = typeof UPDATE_NOTE | typeof WRITE_NOTE;
+
 const trackSavedNote = (
   chunk: InferUIMessageChunk<ThreadUIMessage>,
-  noteToolCalls: Map<string, { noteId: string } | typeof WRITE_NOTE>,
+  noteToolCalls: Map<string, NoteToolCall>,
 ): { type: "created" | "updated"; noteId: string } | undefined => {
   if (chunk.type === "tool-input-available") {
     if (chunk.toolName === UPDATE_NOTE) {
-      const input = v.safeParse(updateNoteInputSchema, chunk.input);
-
-      if (input.success) {
-        noteToolCalls.set(chunk.toolCallId, {
-          noteId: parseMentionKey(input.output.noteKey).value,
-        });
-      }
+      noteToolCalls.set(chunk.toolCallId, UPDATE_NOTE);
     }
 
     if (chunk.toolName === WRITE_NOTE) {
@@ -118,7 +110,7 @@ const trackSavedNote = (
 
   const call = noteToolCalls.get(chunk.toolCallId);
 
-  if (call === undefined) {
+  if (!call) {
     return;
   }
 
@@ -127,16 +119,20 @@ const trackSavedNote = (
   if (call === WRITE_NOTE) {
     const output = v.safeParse(writeNoteOutputSchema, chunk.output);
 
-    return output.success
-      ? { type: "created", noteId: parseMentionKey(output.output.noteKey).value }
-      : undefined;
+    if (!output.success) {
+      return;
+    }
+
+    return { type: "created", noteId: output.output.noteId };
   }
 
   const output = v.safeParse(updateNoteOutputSchema, chunk.output);
 
-  return output.success && output.output.type === "updated"
-    ? { type: "updated", noteId: call.noteId }
-    : undefined;
+  if (!output.success || output.output.type !== "updated") {
+    return;
+  }
+
+  return { type: "updated", noteId: output.output.noteId };
 };
 
 // Work only ever opens or closes, in order, so the count of both is the clock's position.
@@ -172,7 +168,7 @@ export const toThreadUIStream = ({
       // The recorder moves the clock as soon as a chunk is published; the matching UI part
       // arrives here a tick later, so the metadata always follows the part that caused it.
       let sentSteps = 0;
-      const noteToolCalls = new Map<string, { noteId: string } | "writeNote">();
+      const noteToolCalls = new Map<string, NoteToolCall>();
 
       try {
         for await (const part of stream) {
