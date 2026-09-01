@@ -20,7 +20,7 @@ export const renderThreadBrowser = async (messages: ThreadUIMessage[]) => {
     topicId: undefined,
   });
   queryClient.setQueryData(threadSettingsQueries.byThread(threadId).queryKey, {
-    modelCapability: "standard",
+    modelOption: "research",
   });
 
   const { router, tree } = createProviderTree({ queryClient });

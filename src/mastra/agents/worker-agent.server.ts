@@ -8,8 +8,8 @@ import { Result } from "better-result";
 import { dbKit } from "@/lib/db-kit.server";
 import * as Kit from "@/lib/kit";
 import { resolveProviderKeyById } from "@/lib/middleware/resolve-provider-key.server";
-import { getAgentModel } from "@/mastra/config.server";
-import { WORKER_AGENT_ID } from "@/mastra/models.server";
+import { getStaticModel } from "@/mastra/config.server";
+import { SUBAGENT_MODEL, WORKER_AGENT_ID } from "@/mastra/models.server";
 import { hoistToolResultMediaProcessor } from "@/mastra/processors/hoist-tool-result-media.server";
 import { workerSoftStop } from "@/mastra/processors/soft-stop.server";
 import { stripGeminiReasoningProcessor } from "@/mastra/processors/strip-gemini-reasoning.server";
@@ -90,7 +90,7 @@ export const workerAgent = new Agent({
   ],
   memory: workerMemory,
   requestContextSchema: mnemonicRequestContextSchema,
-  model: getAgentModel(WORKER_AGENT_ID),
+  model: getStaticModel(SUBAGENT_MODEL),
   name: "Worker",
   tools: async (input) => ({
     execute_typescript: (await getWorkerCodeMode(input)).tool,

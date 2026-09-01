@@ -20,7 +20,7 @@ import { memoryKit, type MemoryKit } from "@/lib/memory-kit.server";
 import { authMiddleware } from "@/lib/middleware/auth.middleware";
 import { resolveProviderKey } from "@/lib/middleware/resolve-provider-key.server";
 import { resolveThread } from "@/lib/middleware/resolve-thread.server";
-import { modelCapabilityLevels } from "@/lib/model-capability";
+import { ModelOptions } from "@/lib/model-option";
 import type { SafeId } from "@/lib/safe-id";
 import { createSafeId } from "@/lib/safe-id";
 import { getMnemonicAgent } from "@/mastra/agents/id.server";
@@ -40,7 +40,7 @@ const chatRequestSchema = v.object({
   threadId: v.pipe(v.string(), v.nanoid()),
   messages: v.array(uiMessageSchema),
   settings: v.object({
-    modelCapability: v.picklist(modelCapabilityLevels),
+    modelOption: v.picklist(ModelOptions.values),
   }),
   trigger: v.optional(v.picklist(["submit-message", "regenerate-message"])),
   id: v.optional(v.pipe(v.string(), v.nanoid())),
@@ -177,7 +177,7 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
   const requestContext = new RequestContext<MnemonicRequestContext>();
   requestContext.set("providerKeyId", providerKey.id);
   requestContext.set("userId", input.userId);
-  requestContext.set("modelCapability", input.body.settings.modelCapability);
+  requestContext.set("modelOption", input.body.settings.modelOption);
   requestContext.set("threadId", input.body.threadId);
 
   if (topicId) {

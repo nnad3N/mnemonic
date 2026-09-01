@@ -7,9 +7,15 @@ import * as v from "valibot";
 import { dbKit } from "@/lib/db-kit.server";
 import * as Kit from "@/lib/kit";
 import { resolveProviderKeyById } from "@/lib/middleware/resolve-provider-key.server";
-import { DEFAULT_MODEL_CAPABILITY } from "@/lib/model-capability";
-import type { ChatModel, ModelAgentId } from "@/mastra/models.server";
-import { getAgentModelConfig } from "@/mastra/models.server";
+import { DEFAULT_MODEL_OPTION } from "@/lib/model-option";
+import type { ChatModel } from "@/mastra/models.server";
+import {
+  EMBEDDING_MODEL,
+  MEMORY_EMBEDDING_DIMENSION,
+  models,
+  OBSERVATIONAL_MEMORY_MODEL,
+  THREAD_TITLE_MODEL,
+} from "@/mastra/models.server";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
 
 const createOpenrouterProvider = (apiKey: string) =>
@@ -17,17 +23,6 @@ const createOpenrouterProvider = (apiKey: string) =>
     apiKey,
     appName: "Mnemonic",
   });
-
-const EMBEDDING_MODEL = "qwen/qwen3-embedding-8b";
-
-/**
- * Requested from the model via Matryoshka truncation for Mastra's memory indexes only:
- * Mastra creates them with the ivfflat default, and pgvector caps ANN indexes at 2000
- * dimensions. Our own file index is flat (exact scan) and takes the native 4096.
- */
-const MEMORY_EMBEDDING_DIMENSION = 1536;
-const OBSERVATIONAL_MEMORY_MODEL: ChatModel = "xiaomi/mimo-v2.5";
-const THREAD_TITLE_MODEL: ChatModel = "google/gemma-4-26b-a4b-it";
 
 /**
  * Mastra only accepts embedding models tagged `v2` or `v3`, while the AI SDK v7 OpenRouter
@@ -88,19 +83,19 @@ const getRequestProvider = async (input: ModelResolverInput) => {
   }
 
   return {
-    modelCapability: parsed.output.modelCapability,
+    modelOption: parsed.output.modelOption,
     openrouter: createOpenrouterProvider(result.value.key),
   };
 };
 
-export const getAgentModel = (agentId: ModelAgentId) => async (input: ModelResolverInput) => {
+export const getThreadModel = async (input: ModelResolverInput) => {
   const resolved = await getRequestProvider(input);
 
   if (!resolved) {
-    return getAgentModelConfig(agentId, DEFAULT_MODEL_CAPABILITY).model;
+    return models[DEFAULT_MODEL_OPTION].model;
   }
 
-  const config = getAgentModelConfig(agentId, resolved.modelCapability);
+  const config = models[resolved.modelOption];
 
   return resolved.openrouter(config.model, config.openrouter);
 };

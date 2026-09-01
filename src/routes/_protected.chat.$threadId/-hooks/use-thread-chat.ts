@@ -90,7 +90,7 @@ export const threadQueries = {
                 body: {
                   ...body,
                   messages: getMessagesToSend(requestMessages, body.trigger),
-                  settings: { modelCapability: settings.modelCapability },
+                  settings: { modelOption: settings.modelOption },
                   threadId,
                 },
               };

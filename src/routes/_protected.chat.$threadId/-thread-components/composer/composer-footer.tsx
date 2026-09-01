@@ -9,7 +9,7 @@ import { useComposerActions } from "../../-hooks/use-composer-actions";
 import { useComposerUpload } from "../../-hooks/use-composer-upload";
 import { useThreadChat } from "../../-hooks/use-thread-chat";
 import type { ThreadInputLocation } from "../../../-chat-store";
-import { CapabilityPicker } from "./capability-picker";
+import { ModelPicker } from "./model-picker";
 
 type ComposerFooterProps = {
   location: ThreadInputLocation;
@@ -25,7 +25,7 @@ export const ComposerFooter = ({ location }: ComposerFooterProps) => {
 
   return (
     <div className="flex w-full items-center justify-between">
-      <CapabilityPicker />
+      <ModelPicker />
       <div className="ml-auto flex items-center gap-1">
         <ClientOnly fallback={fallback}>
           <Suspense fallback={fallback}>

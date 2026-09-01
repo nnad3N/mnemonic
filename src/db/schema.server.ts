@@ -14,8 +14,8 @@ import {
 import { nanoid } from "nanoid";
 
 import { user } from "@/db/auth-schema.server";
-import type { ModelCapability } from "@/lib/model-capability";
-import { DEFAULT_MODEL_CAPABILITY } from "@/lib/model-capability";
+import type { ModelOption } from "@/lib/model-option";
+import { DEFAULT_MODEL_OPTION } from "@/lib/model-option";
 import type { SafeId } from "@/lib/safe-id";
 import type { MnemonicAgentId } from "@/mastra/agents/id.server";
 import type { WorkTiming } from "@/routes/_protected.chat.$threadId/-thread-types";
@@ -112,10 +112,7 @@ export const threadSettings = pgTable("thread_settings", {
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
 
-  modelCapability: text("model_capability")
-    .$type<ModelCapability>()
-    .notNull()
-    .default(DEFAULT_MODEL_CAPABILITY),
+  modelOption: text("model_option").$type<ModelOption>().notNull().default(DEFAULT_MODEL_OPTION),
 
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })

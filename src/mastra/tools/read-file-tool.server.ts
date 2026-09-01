@@ -7,7 +7,13 @@ import * as v from "valibot";
 import { ToolError } from "@/lib/errors/tool-error";
 import { ImageMimeType, PDF_MIME_TYPE } from "@/lib/file-validation";
 import { mentionKeyFormat } from "@/lib/mention-key";
-import { getAgentModelConfig, modelAcceptsPdf, ModelAgentIds } from "@/mastra/models.server";
+import {
+  modelAcceptsPdf,
+  ModelAgentIds,
+  models,
+  SUBAGENT_MODEL,
+  WORKER_AGENT_ID,
+} from "@/mastra/models.server";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
 import {
   extractFile,
@@ -100,7 +106,7 @@ export const readFileTool = createTool({
       panic(`Unknown agent ${agentId} for read-file`);
     }
 
-    const modelCapability = context.requestContext.get("modelCapability");
+    const modelOption = context.requestContext.get("modelOption");
 
     const file = await loadMentionedFile({ fileKey, requestContext: context.requestContext });
 
@@ -110,10 +116,10 @@ export const readFileTool = createTool({
 
     const { bytes, displayName, mimeType } = file.value;
 
+    const agentModel = agentId === WORKER_AGENT_ID ? SUBAGENT_MODEL : models[modelOption].model;
+
     const viewable =
-      ImageMimeType.is(mimeType) ||
-      (mimeType === PDF_MIME_TYPE &&
-        modelAcceptsPdf(getAgentModelConfig(agentId, modelCapability).model));
+      ImageMimeType.is(mimeType) || (mimeType === PDF_MIME_TYPE && modelAcceptsPdf(agentModel));
 
     if (viewable) {
       return {

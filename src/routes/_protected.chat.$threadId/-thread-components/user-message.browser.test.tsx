@@ -3,7 +3,6 @@ import { assert, describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 
 import { useChatStore } from "@/routes/-chat-store";
-import { threadSettingsQueries } from "@/routes/_protected.chat.$threadId/-thread-api/thread-settings.functions";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 import { renderThreadBrowser } from "@/test/render-thread-browser";
 import { waitForFrames } from "@/test/utils";
@@ -55,9 +54,9 @@ const getEditComposerRoot = () =>
     '[data-test-id="thread-composer-edit"] [data-test-id="thread-composer-editor"]',
   );
 
-const getEditCapabilityTrigger = () =>
+const getEditModelTrigger = () =>
   document.querySelector<HTMLButtonElement>(
-    '[data-test-id="thread-composer-edit"] [data-test-id="capability-picker-trigger"]',
+    '[data-test-id="thread-composer-edit"] [data-test-id="model-picker-trigger"]',
   );
 
 describe("UserMessage browser", () => {
@@ -94,38 +93,32 @@ describe("UserMessage browser", () => {
     assert(editRoot, "Expected edit composer");
 
     expect(useChatStore.getState().editingState?.messageId).toBe(MESSAGE_ID);
-    expect(getEditCapabilityTrigger()).toBeTruthy();
+    expect(getEditModelTrigger()).toBeTruthy();
 
     const textTopAfter = getFirstTextTop(editRoot);
     expect(Math.abs(textTopAfter - textTopBefore)).toBeLessThanOrEqual(1);
   });
 
-  it("keeps edit state when changing capability from the picker", async () => {
-    const { queryClient, threadId } = await renderThreadBrowser([userMessage]);
+  it("keeps edit state when changing the model from the picker", async () => {
+    await renderThreadBrowser([userMessage]);
 
     await expect.element(page.getByText("Line 1 of the user message")).toBeVisible();
     await userEvent.click(page.getByText("Line 1 of the user message"));
 
     expect(useChatStore.getState().editingState?.messageId).toBe(MESSAGE_ID);
 
-    const capabilityTrigger = getEditCapabilityTrigger();
-    assert(capabilityTrigger, "Expected edit capability trigger");
+    const modelTrigger = getEditModelTrigger();
+    assert(modelTrigger, "Expected edit model trigger");
 
-    await userEvent.click(page.elementLocator(capabilityTrigger));
-    await expect.element(page.getByText("Capability")).toBeVisible();
+    await userEvent.click(page.elementLocator(modelTrigger));
+    await expect.element(page.getByText("Reader")).toBeVisible();
 
-    const balancedButton = document.querySelector<HTMLButtonElement>(
-      '[data-test-id="capability-option-balanced"]',
-    );
-    assert(balancedButton, "Expected the balanced capability option");
+    const readerItem = document.querySelector<HTMLElement>('[data-test-id="model-option-reader"]');
+    assert(readerItem, "Expected the reader model option");
 
-    await userEvent.click(page.elementLocator(balancedButton));
+    await userEvent.click(page.elementLocator(readerItem));
 
     expect(useChatStore.getState().editingState?.messageId).toBe(MESSAGE_ID);
-    expect(queryClient.getQueryData(threadSettingsQueries.byThread(threadId).queryKey)).toEqual({
-      modelCapability: "balanced",
-    });
-    expect(getEditCapabilityTrigger()?.textContent).toMatch(/Balanced/);
   });
 
   it("keeps the same whitespace behavior when entering edit", async () => {

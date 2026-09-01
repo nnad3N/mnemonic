@@ -1,22 +1,22 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import type { ModelCapability } from "@/lib/model-capability";
+import type { ModelOption } from "@/lib/model-option";
 
 import {
   threadSettingsQueries,
-  upsertThreadCapability,
+  upsertThreadModelOption,
 } from "../-thread-api/thread-settings.functions";
 
-export const useUpsertCapability = (threadId: string) => {
+export const useUpsertModelOption = (threadId: string) => {
   const queryClient = useQueryClient();
   const settingsQuery = threadSettingsQueries.byThread(threadId);
 
   return useMutation({
-    mutationFn: async (nextCapability: ModelCapability) =>
-      upsertThreadCapability({
-        data: { modelCapability: nextCapability, threadId },
+    mutationFn: async (nextOption: ModelOption) =>
+      upsertThreadModelOption({
+        data: { modelOption: nextOption, threadId },
       }),
-    onMutate: async (nextCapability) => {
+    onMutate: async (nextOption) => {
       await queryClient.cancelQueries({
         queryKey: settingsQuery.queryKey,
       });
@@ -24,12 +24,12 @@ export const useUpsertCapability = (threadId: string) => {
       const previousSettings = queryClient.getQueryData(settingsQuery.queryKey);
 
       queryClient.setQueryData(settingsQuery.queryKey, {
-        modelCapability: nextCapability,
+        modelOption: nextOption,
       });
 
       return { previousSettings };
     },
-    onError: (_error, _nextCapability, context) => {
+    onError: (_error, _nextOption, context) => {
       queryClient.setQueryData(settingsQuery.queryKey, context?.previousSettings);
     },
     onSettled: async () =>
