@@ -130,6 +130,19 @@
   --typeset-leading: 1.6;
   --typeset-flow: 1em;
 }
+
+.typeset-notes :is(h1) {
+  font-size: 1.25rem;
+}
+
+.typeset-notes :is(h2) {
+  font-size: 1.125rem;
+}
+
+.typeset-notes :is(h3) {
+  font-size: 0.875rem;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

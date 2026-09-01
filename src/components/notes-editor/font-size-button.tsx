@@ -15,13 +15,13 @@ const DEFAULT_FONT_SIZE = "14";
 const headingFontSize = (blockType: string) => {
   switch (blockType) {
     case KEYS.h1: {
-      return "24";
+      return "20";
     }
     case KEYS.h2: {
       return "18";
     }
     case KEYS.h3: {
-      return "16";
+      return "14";
     }
     default: {
       return DEFAULT_FONT_SIZE;

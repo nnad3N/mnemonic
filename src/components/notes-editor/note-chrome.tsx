@@ -62,7 +62,7 @@ const NoteTitleInput = ({ noteId, title }: NoteTitleInputProps) => {
         <T>Note title</T>
       </label>
       <input
-        className="w-full bg-transparent text-xl font-medium outline-none placeholder:text-muted-foreground"
+        className="w-full bg-transparent text-xl font-bold outline-none placeholder:text-muted-foreground"
         id={inputId}
         onBlur={() => {
           if (title.trim().length > 0) return;
@@ -128,7 +128,7 @@ const NotePlateBody = ({ children }: PropsWithChildren) => {
       <ScrollArea className="min-h-0 flex-1 cursor-text" viewportRef={editorContainerRef}>
         {/* Bottom padding is twice `NoteFloatingBar`'s height plus its offset, so text scrolls clear of it. */}
         <PlateContent
-          className="typeset px-4 py-2 pb-26 text-sm outline-none **:data-slate-placeholder:text-muted-foreground"
+          className="typeset typeset-notes px-4 py-2 pb-26 text-sm outline-none **:data-slate-placeholder:text-muted-foreground"
           placeholder={gt("Write something…")}
         />
       </ScrollArea>
