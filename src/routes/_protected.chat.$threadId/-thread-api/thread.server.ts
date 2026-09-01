@@ -2,10 +2,10 @@ import { toAISdkMessages } from "@mastra/ai-sdk/ui";
 import type { TsrSerializable } from "@tanstack/router-core";
 import { generateText } from "ai";
 import { Result } from "better-result";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, or } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
-import { file, threadRun, threadSettings, threadReply, topic } from "@/db/schema.server";
+import { file, note, threadRun, threadSettings, threadReply, topic } from "@/db/schema.server";
 import type { DbKit } from "@/lib/db-kit.server";
 import { toServerFnError } from "@/lib/errors/server-fn-error";
 import * as Kit from "@/lib/kit";
@@ -116,6 +116,15 @@ export const deleteTopicFn = Kit.gen(async function* (
           threads.map((thread) => thread.id),
         ),
       ),
+      tx.delete(note).where(
+        or(
+          eq(note.topicId, input.topicId),
+          inArray(
+            note.threadId,
+            threads.map((thread) => thread.id),
+          ),
+        ),
+      ),
       tx.delete(topic).where(eq(topic.id, input.topicId)),
     ]),
   );
@@ -139,6 +148,7 @@ export const deleteConversationFn = Kit.gen(async function* (
 
   yield* await ctx.db.transaction(async (tx) =>
     Promise.all([
+      tx.delete(note).where(eq(note.threadId, input.threadId)),
       tx.delete(threadSettings).where(eq(threadSettings.threadId, input.threadId)),
       tx.delete(threadRun).where(eq(threadRun.threadId, input.threadId)),
       tx.delete(threadReply).where(eq(threadReply.threadId, input.threadId)),

@@ -30,6 +30,7 @@ export const listSidebarConversations = createServerFn({ method: "GET" })
       }),
     ).throws<ServerFnError>((error) =>
       matchError(error, {
+        DatabaseError: () => toServerFnError.serverError("Failed to list conversations"),
         MemoryError: () => toServerFnError.serverError("Failed to list conversations"),
       }),
     ),

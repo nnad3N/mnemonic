@@ -1,10 +1,12 @@
 import { Result } from "better-result";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { note } from "@/db/schema.server";
 import { dbKit } from "@/lib/db-kit.server";
 import * as Kit from "@/lib/kit";
 import { createMemoryKit, type MemoryApi, MemoryError, memoryKit } from "@/lib/memory-kit.server";
 import { createSafeId, toSafeId } from "@/lib/safe-id";
+import type { SafeId } from "@/lib/safe-id";
 import { createVectorKit, type VectorApi, VectorError, vectorKit } from "@/lib/vector-kit.server";
 import { EMBEDDING_DIMENSION } from "@/mastra/rag-config.server";
 import { FILE_EMBEDDINGS_INDEX } from "@/mastra/rag-config.server";
@@ -15,7 +17,12 @@ import { createFakeS3 } from "@/test/fake-s3";
 import { expectErr, expectOk } from "@/test/result";
 import { seedFile, seedThread, seedTopic, seedUser } from "@/test/seed";
 
-import { deleteTopicFn, mergeConsecutiveAssistantMessages, sanitizeTitle } from "./thread.server";
+import {
+  deleteConversationFn,
+  deleteTopicFn,
+  mergeConsecutiveAssistantMessages,
+  sanitizeTitle,
+} from "./thread.server";
 
 const db = Kit.get(dbKit);
 const memory = Kit.get(memoryKit);
@@ -70,6 +77,27 @@ const fileIdsForTopic = async (id: string) => {
   );
 
   return expectOk(result).map((row) => row.id);
+};
+
+const seedNote = async (input: { threadId?: string; title: string; topicId?: SafeId<"topic"> }) =>
+  expectOk(
+    await db.run((database) =>
+      database.insert(note).values({
+        id: createSafeId<"note">(),
+        threadId: input.threadId ?? null,
+        title: input.title,
+        topicId: input.topicId ?? null,
+        userId,
+      }),
+    ),
+  );
+
+const noteTitles = async () => {
+  const result = await db.run((database) =>
+    database.query.note.findMany({ columns: { title: true } }),
+  );
+
+  return expectOk(result).map((row) => row.title);
 };
 
 const threadIdsForResource = async (resourceId: string) => {
@@ -206,6 +234,23 @@ describe("deleteTopicFn", () => {
     expect(await threadIdsForResource(userId)).toEqual([standaloneThreadId]);
   });
 
+  it("deletes the notes shared with the topic and those private to its threads", async () => {
+    const [threadId, standaloneThreadId] = await Promise.all([
+      seedThread({ resourceId: topicId }),
+      seedThread({ resourceId: userId }),
+    ]);
+    await Promise.all([
+      seedNote({ title: "Shared note", topicId }),
+      seedNote({ title: "Private note", threadId }),
+      seedNote({ title: "Standalone note", threadId: standaloneThreadId }),
+    ]);
+    const ctx = Kit.createContext(dbKit, fakeS3.kit, memoryKit, vectorKit);
+
+    expectOk(await deleteTopicFn(ctx, { topicId, userId }));
+
+    expect(await noteTitles()).toEqual(["Standalone note"]);
+  });
+
   it("keeps the database rows when the object delete fails", async () => {
     const { fileId, s3Key } = await seedFile({ userId, topicId, status: "ready" });
     fakeS3.failingKeys.add(s3Key);
@@ -247,6 +292,30 @@ describe("deleteTopicFn", () => {
     expect(await threadIdsForResource(topicId)).toEqual([threadId]);
     // S3 and memory delete run concurrently; S3 may still succeed when memory fails.
     expect(fakeS3.objects.has(s3Key)).toBe(false);
+  });
+});
+
+describe("deleteConversationFn", () => {
+  beforeEach(async () => {
+    await seedUser({ id: userId });
+    await seedTopic({ userId, id: topicId });
+  });
+
+  afterEach(async () => {
+    await clearDatabase();
+  });
+
+  it("deletes the notes private to the conversation and keeps those shared with the topic", async () => {
+    const threadId = await seedThread({ resourceId: topicId });
+    await Promise.all([
+      seedNote({ title: "Private note", threadId }),
+      seedNote({ title: "Shared note", topicId }),
+    ]);
+    const ctx = Kit.createContext(dbKit, memoryKit);
+
+    expectOk(await deleteConversationFn(ctx, { threadId }));
+
+    expect(await noteTitles()).toEqual(["Shared note"]);
   });
 });
 
