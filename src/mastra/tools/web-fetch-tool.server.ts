@@ -3,7 +3,7 @@ import { toStandardJsonSchema } from "@valibot/to-json-schema";
 import { Result } from "better-result";
 import * as v from "valibot";
 
-import { firecrawl } from "@/mastra/tools/firecrawl-client.server";
+import { FIRECRAWL_SCRAPE_TIMEOUT_MS, firecrawl } from "@/mastra/tools/firecrawl-client.server";
 import { toToolInputSchema } from "@/mastra/tools/tool-input-schema.server";
 
 const inputSchema = v.object({
@@ -39,6 +39,7 @@ export const webFetchTool = createTool({
       firecrawl.scrape(url, {
         formats: ["markdown"],
         onlyMainContent: true,
+        timeout: FIRECRAWL_SCRAPE_TIMEOUT_MS,
       }),
     );
 

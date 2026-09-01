@@ -5,7 +5,7 @@ import type { Document, SearchResultWeb } from "firecrawl";
 import * as v from "valibot";
 
 import { ToolError } from "@/lib/errors/tool-error";
-import { firecrawl } from "@/mastra/tools/firecrawl-client.server";
+import { FIRECRAWL_SEARCH_TIMEOUT_MS, firecrawl } from "@/mastra/tools/firecrawl-client.server";
 import { toToolInputSchema } from "@/mastra/tools/tool-input-schema.server";
 
 const SEARCH_LIMIT = 5;
@@ -48,7 +48,7 @@ export const webSearchTool = createTool({
   description: "Searches the live web; results include the search engine's description snippet.",
   execute: async ({ query }) => {
     const searchResult = await Result.tryPromise(async () =>
-      firecrawl.search(query, { limit: SEARCH_LIMIT }),
+      firecrawl.search(query, { limit: SEARCH_LIMIT, timeout: FIRECRAWL_SEARCH_TIMEOUT_MS }),
     );
 
     if (Result.isError(searchResult)) {
