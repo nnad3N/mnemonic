@@ -62,7 +62,7 @@ const inputSchema = v.variant("mode", [
       v.string(),
       v.nonEmpty(),
       v.description(
-        `Mention key of the file, in the shape ${mentionKeyFormat(["file", "attachment"])}. Loaded as \`env.file\` with ${sandboxFileFields}; \`contents\` is the extracted text, PDFs included; empty for images.`,
+        `Mention key of the file, in the shape ${mentionKeyFormat(["file", "attachment"])}. Loaded as \`env.file\` with ${sandboxFileFields}; \`contents\` is empty for images.`,
       ),
     ),
   }),
@@ -116,7 +116,7 @@ export const computeTool = createTool({
   description: [
     "Computes with JavaScript in a sandbox: arithmetic, statistics, unit conversions and parsing of text, CSV or JSON.",
     "Export the result with `export default`; console output is in `logs`.",
-    'Always use mode "file" to work over a file, PDFs included: `env.file.contents` is its text and exists only in that mode. Never inline file contents into `code` or `args`.',
+    'Always use mode "file" to work over a file: `env.file.contents` exists only in that mode. Text formats arrive as the raw file source to parse yourself; PDFs, Office documents and archives arrive as extracted text. Never inline file contents into `code` or `args`.',
     `Available libraries: ${docsLibraries
       .map((library) => `\`${docs[library].library.importHint}\``)
       .join(" and ")}.`,

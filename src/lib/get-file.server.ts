@@ -2,6 +2,7 @@ import { extractBytes } from "@kreuzberg/node";
 import { Result, TaggedError } from "better-result";
 
 import type { DbKit } from "@/lib/db-kit.server";
+import { RawTextMimeType } from "@/lib/file-validation";
 import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
 import type { S3Kit } from "@/lib/s3-kit.server";
@@ -25,8 +26,12 @@ export type GetFileInput = {
   topicId: SafeId<"topic">;
 };
 
-export const toFileText = async (file: FetchedFile): Promise<Result<string, GetFileError>> =>
-  Result.tryPromise({
+export const toFileText = async (file: FetchedFile): Promise<Result<string, GetFileError>> => {
+  if (RawTextMimeType.is(file.mimeType)) {
+    return Result.ok(new TextDecoder().decode(file.bytes));
+  }
+
+  return Result.tryPromise({
     try: async () => {
       const extraction = await extractBytes(file.bytes, file.mimeType);
       return extraction.content;
@@ -36,6 +41,7 @@ export const toFileText = async (file: FetchedFile): Promise<Result<string, GetF
         message: "File could not be loaded.",
       }),
   });
+};
 
 type GetFileCtx = Kits<[DbKit, S3Kit]>;
 

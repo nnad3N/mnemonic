@@ -47,7 +47,7 @@ export const readTextTool = createTool({
   outputSchema: toStandardJsonSchema(outputSchema),
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
   description:
-    "Reads one file as plain text. PDFs, documents and spreadsheets are converted; images have no text to extract.",
+    "Reads one file. Text formats come back as the raw file source; PDFs, Office documents and archives are converted to extracted text; images have no text to extract.",
   execute: async ({ fileKey }, context): Promise<ReadTextOutput> => {
     const file = await loadMentionedFile({ fileKey, requestContext: context.requestContext });
 
