@@ -148,7 +148,7 @@ const stripDiffValue = (value: Value): Value =>
   });
 
 export const NoteFloatingBar = ({ children }: PropsWithChildren) => (
-  <div className="absolute bottom-3 left-1/2 z-10 flex h-12 max-w-[calc(100%-1.5rem)] -translate-x-1/2 items-center gap-1 rounded-full border border-foreground/3 bg-background/50 px-2 text-sm backdrop-blur md:h-10 dark:border-white/5">
+  <div className="absolute bottom-3 left-1/2 z-10 flex h-10 max-w-[calc(100%-1.5rem)] -translate-x-1/2 items-center gap-1 rounded-full border border-foreground/3 bg-background/50 px-2 text-sm backdrop-blur dark:border-white/5">
     {children}
   </div>
 );

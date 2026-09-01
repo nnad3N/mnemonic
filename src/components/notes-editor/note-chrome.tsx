@@ -253,8 +253,9 @@ const NotePlateBody = ({ children }: PropsWithChildren) => {
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
       <ScrollArea className="min-h-0 flex-1 cursor-text" viewportRef={editorContainerRef}>
+        {/* Bottom padding is twice `NoteFloatingBar`'s height plus its offset, so text scrolls clear of it. */}
         <PlateContent
-          className="typeset px-4 py-2 pb-16 text-sm outline-none **:data-slate-placeholder:text-muted-foreground"
+          className="typeset px-4 py-2 pb-26 text-sm outline-none **:data-slate-placeholder:text-muted-foreground"
           placeholder={gt("Write something…")}
         />
       </ScrollArea>
