@@ -2,7 +2,7 @@ import { computeDiff, withGetFragmentExcludeDiff } from "@platejs/diff";
 import type { DiffOperation } from "@platejs/diff";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Result, panic } from "better-result";
+import { Result } from "better-result";
 import { T, useGT } from "gt-tanstack-start";
 import { produce } from "immer";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
@@ -73,7 +73,9 @@ const DiffPlugin = toPlatePlugin(
       aboveNodes:
         () =>
         ({ children, editor, element }) => {
-          if (element.diff !== true) return children;
+          if (element.diff !== true) {
+            return children;
+          }
 
           // SAFETY: computeDiff put DiffProps on every node it marked.
           // oxlint-disable-next-line typescript/no-unsafe-type-assertion
@@ -155,59 +157,39 @@ export const NoteFloatingBar = ({ children }: PropsWithChildren) => (
 
 type NoteDiffStatsProps = {
   counts: WordDiffCounts;
-  noteId: string;
 };
 
-const zeros = (value: number) => "0".repeat(String(value).length);
+const formatCount = (value: number) => (value > 9999 ? "9999+" : String(value).padStart(4, "0"));
 
-export const NoteDiffStats = ({ counts, noteId }: NoteDiffStatsProps) => {
-  const { data: earliestVersionId } = useSuspenseQuery({
-    ...noteQueries.versions(noteId),
-    select: (data) => data.entries.at(-1)?.id ?? panic("Note has no versions"),
-  });
-  const { data: earliest } = useSuspenseQuery(noteQueries.version(noteId, earliestVersionId));
-  const { data: content } = useSuspenseQuery({
-    ...noteQueries.byId(noteId),
-    select: (note) => note.content,
-  });
-  const widest = useMemo(
-    () => diffWordCounts(markdownToText(earliest.content), markdownToText(content)),
-    [content, earliest.content],
-  );
-
-  return (
-    <div className="grid px-2 text-xs tabular-nums">
-      <div aria-hidden className="invisible col-start-1 row-start-1 flex gap-2">
-        <span>+{zeros(widest.added)}</span>
-        <span>~{zeros(widest.replaced)}</span>
-        <span>−{zeros(widest.removed)}</span>
-      </div>
-      <div className="col-start-1 row-start-1 flex justify-center gap-2">
-        <span
-          className={cn(
-            "text-f-green-600 dark:text-f-green-400",
-            counts.added === 0 && "opacity-50",
-          )}
-        >
-          +{counts.added}
-        </span>
-        <span
-          className={cn(
-            "text-f-blue-600 dark:text-f-blue-400",
-            counts.replaced === 0 && "opacity-50",
-          )}
-        >
-          ~{counts.replaced}
-        </span>
-        <span
-          className={cn("text-f-red-600 dark:text-f-red-400", counts.removed === 0 && "opacity-50")}
-        >
-          −{counts.removed}
-        </span>
-      </div>
+export const NoteDiffStats = ({ counts }: NoteDiffStatsProps) => (
+  <div className="grid px-2 text-xs tabular-nums">
+    <div aria-hidden className="invisible col-start-1 row-start-1 flex gap-2">
+      <span>+9999+</span>
+      <span>~9999+</span>
+      <span>−9999+</span>
     </div>
-  );
-};
+    <div className="col-start-1 row-start-1 flex justify-center gap-2">
+      <span
+        className={cn("text-f-green-600 dark:text-f-green-400", counts.added === 0 && "opacity-50")}
+      >
+        +{formatCount(counts.added)}
+      </span>
+      <span
+        className={cn(
+          "text-f-blue-600 dark:text-f-blue-400",
+          counts.replaced === 0 && "opacity-50",
+        )}
+      >
+        ~{formatCount(counts.replaced)}
+      </span>
+      <span
+        className={cn("text-f-red-600 dark:text-f-red-400", counts.removed === 0 && "opacity-50")}
+      >
+        −{formatCount(counts.removed)}
+      </span>
+    </div>
+  </div>
+);
 
 type NoteDiffBarProps = PropsWithChildren<{
   counts: WordDiffCounts;
@@ -274,7 +256,7 @@ const NoteDiffBar = ({ children, counts, noteId, selectedVersionId }: NoteDiffBa
           <T>Newer version</T>
         </span>
       </NoteVersionNavButton>
-      <NoteDiffStats counts={counts} noteId={noteId} />
+      <NoteDiffStats counts={counts} />
       {children}
     </NoteFloatingBar>
   );

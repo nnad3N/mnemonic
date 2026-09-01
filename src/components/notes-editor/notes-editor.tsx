@@ -254,7 +254,7 @@ const NoteEditor = ({ noteId }: NoteEditorProps) => {
           <span className="px-1">
             <T>Assistant updated this note</T>
           </span>
-          {remoteCounts && <NoteDiffStats counts={remoteCounts} noteId={noteId} />}
+          {remoteCounts && <NoteDiffStats counts={remoteCounts} />}
           <Button
             onClick={() => {
               allowReview();
