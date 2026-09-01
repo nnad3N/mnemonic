@@ -15,7 +15,7 @@ import {
   Trash2Icon,
   XIcon,
 } from "lucide-react";
-import { Suspense } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { sidebarQueries } from "@/routes/-sidebar/sidebar.functions";
@@ -80,10 +79,28 @@ export const NotesTabs = ({ onClose, threadId }: NotesTabsProps) => {
       createNote({ data: { threadId: noteThreadId, title: gt("Untitled") } }),
     onSuccess: async (created) => openNote(created.id),
   });
+  const tabsViewportRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const viewport = tabsViewportRef.current;
+    if (!viewport) return;
+
+    const onWheel = (event: WheelEvent) => {
+      if (event.deltaY === 0) return;
+      if (viewport.scrollWidth <= viewport.clientWidth) return;
+
+      event.preventDefault();
+      viewport.scrollLeft += event.deltaY * 0.4;
+    };
+
+    viewport.addEventListener("wheel", onWheel, { passive: false });
+
+    return () => viewport.removeEventListener("wheel", onWheel);
+  }, []);
 
   return (
     <div className="flex h-12 shrink-0 items-center gap-1 border-b border-foreground/3 pr-2 md:h-10 dark:border-white/5">
-      <ScrollArea className="min-w-0 flex-1">
+      <div className="no-scrollbar min-w-0 flex-1 overflow-x-auto" ref={tabsViewportRef}>
         <div className="flex w-max items-center">
           {openNoteIds.map((noteId) => (
             <NoteTab
@@ -97,7 +114,7 @@ export const NotesTabs = ({ onClose, threadId }: NotesTabsProps) => {
             />
           ))}
         </div>
-      </ScrollArea>
+      </div>
       {threadId && (
         <Button
           disabled={create.isPending}
