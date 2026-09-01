@@ -12,7 +12,7 @@ import { toFileText } from "@/lib/get-file.server";
 import { mentionKeyFormat } from "@/lib/mention-key";
 import { runCode } from "@/lib/sandbox/run-code.server";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
-import { loadMentionedFile } from "@/mastra/tools/file-tool-helpers.server";
+import { extractSchema, loadMentionedFile } from "@/mastra/tools/file-tool-helpers.server";
 import { toToolInputSchema } from "@/mastra/tools/tool-input-schema.server";
 
 const jsonValueSchema = v.union([
@@ -65,6 +65,7 @@ const inputSchema = v.variant("mode", [
         `Mention key of the file, in the shape ${mentionKeyFormat(["file", "attachment"])}. Loaded as \`env.file\` with ${sandboxFileFields}; \`contents\` is empty for images.`,
       ),
     ),
+    extract: extractSchema,
   }),
 ]);
 
@@ -93,8 +94,8 @@ export type SandboxFile = {
   mimeType: string;
 };
 
-const toSandboxFile = async (file: FetchedFile) => {
-  const text = ImageMimeType.is(file.mimeType) ? Result.ok("") : await toFileText(file);
+const toSandboxFile = async (file: FetchedFile, extract?: boolean) => {
+  const text = ImageMimeType.is(file.mimeType) ? Result.ok("") : await toFileText(file, extract);
 
   if (Result.isError(text)) {
     return Result.err(text.error);
@@ -116,7 +117,7 @@ export const computeTool = createTool({
   description: [
     "Computes with JavaScript in a sandbox: arithmetic, statistics, unit conversions and parsing of text, CSV or JSON.",
     "Export the result with `export default`; console output is in `logs`.",
-    'Always use mode "file" to work over a file: `env.file.contents` exists only in that mode. Text formats arrive as the raw file source to parse yourself; PDFs, Office documents and archives arrive as extracted text. Never inline file contents into `code` or `args`.',
+    'Always use mode "file" to work over a file, never inline file contents into `code` or `args`. `env.file.contents` exists only in that mode: source for text formats, converted text otherwise.',
     `Available libraries: ${docsLibraries
       .map((library) => `\`${docs[library].library.importHint}\``)
       .join(" and ")}.`,
@@ -134,7 +135,7 @@ export const computeTool = createTool({
         return { type: "error", message: loaded.error.message } satisfies ComputeError;
       }
 
-      const sandboxFile = await toSandboxFile(loaded.value);
+      const sandboxFile = await toSandboxFile(loaded.value, input.extract);
 
       if (Result.isError(sandboxFile)) {
         return { type: "error", message: sandboxFile.error.message } satisfies ComputeError;

@@ -8,7 +8,7 @@ import { ImageMimeType } from "@/lib/file-validation";
 import { toFileText } from "@/lib/get-file.server";
 import { mentionKeyFormat } from "@/lib/mention-key";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
-import { loadMentionedFile } from "@/mastra/tools/file-tool-helpers.server";
+import { extractSchema, loadMentionedFile } from "@/mastra/tools/file-tool-helpers.server";
 import { toToolInputSchema } from "@/mastra/tools/tool-input-schema.server";
 
 const inputSchema = v.object({
@@ -19,6 +19,7 @@ const inputSchema = v.object({
       `Mention key of the file, in the shape ${mentionKeyFormat(["file", "attachment"])}.`,
     ),
   ),
+  extract: extractSchema,
 });
 
 const outputSchema = v.variant("type", [
@@ -47,8 +48,8 @@ export const readTextTool = createTool({
   outputSchema: toStandardJsonSchema(outputSchema),
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
   description:
-    "Reads one file. Text formats come back as the raw file source; PDFs, Office documents and archives are converted to extracted text; images have no text to extract.",
-  execute: async ({ fileKey }, context): Promise<ReadTextOutput> => {
+    "Reads one file. Text formats come back as their source; other formats are converted to text; images have none to extract.",
+  execute: async ({ fileKey, extract }, context): Promise<ReadTextOutput> => {
     const file = await loadMentionedFile({ fileKey, requestContext: context.requestContext });
 
     if (Result.isError(file)) {
@@ -59,7 +60,7 @@ export const readTextTool = createTool({
       return { type: "error", message: "The file is an image; it has no text to extract." };
     }
 
-    const text = await toFileText(file.value);
+    const text = await toFileText(file.value, extract);
 
     if (Result.isError(text)) {
       return { type: "error", message: text.error.message };

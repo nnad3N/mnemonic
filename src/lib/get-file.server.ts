@@ -26,8 +26,11 @@ export type GetFileInput = {
   topicId: SafeId<"topic">;
 };
 
-export const toFileText = async (file: FetchedFile): Promise<Result<string, GetFileError>> => {
-  if (RawTextMimeType.is(file.mimeType)) {
+export const toFileText = async (
+  file: FetchedFile,
+  extract?: boolean,
+): Promise<Result<string, GetFileError>> => {
+  if (!extract && RawTextMimeType.is(file.mimeType)) {
     return Result.ok(new TextDecoder().decode(file.bytes));
   }
 
