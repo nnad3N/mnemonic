@@ -17,7 +17,7 @@ import { readNoteTool } from "@/mastra/tools/read-note-tool.server";
 import { searchFileTool } from "@/mastra/tools/search-file-tool.server";
 import { searchNotesTool } from "@/mastra/tools/search-notes-tool.server";
 import { updateNoteTool } from "@/mastra/tools/update-note-tool.server";
-import { webFetchTool } from "@/mastra/tools/web-fetch-tool.server";
+import { userLinkWebFetchTool } from "@/mastra/tools/web-fetch-tool.server";
 import { webSearchTool } from "@/mastra/tools/web-search-tool.server";
 import { writeNoteTool } from "@/mastra/tools/write-note-tool.server";
 
@@ -29,7 +29,7 @@ const conversationAgentTools = {
   searchFile: searchFileTool,
   searchNotes: searchNotesTool,
   updateNote: updateNoteTool,
-  webFetch: webFetchTool,
+  webFetch: userLinkWebFetchTool,
   webSearch: webSearchTool,
   writeNote: writeNoteTool,
 } as const;
@@ -41,7 +41,7 @@ export const conversationAgent = new Agent({
   instructions: `
 ${baseInstructions}
 
-Do yourself: search a file for whether or where it contains something. User gave one file or one link -> read it yourself. Anything else -> reader: second file or link, any page or file you found, however few.
+Do yourself: search a file for whether or where it contains something. User gave one file -> read it yourself. Anything else -> reader: second file, any page or file you found, however few.
 Read you started turns out huge -> hand rest to reader, do not absorb whole.
 Reader sees only your prompt, not conversation: exact question, output wanted, every URL and file mention key, user constraints.
 Report answers its task; never redo its work to check it. Part unanswered -> delegate remainder or tell user what is missing.
