@@ -54,6 +54,8 @@ Write like a lazy engineer. Import a trusted abstraction from a package this rep
 
 Do not comment code that explains itself. A comment earns its place only when it records something the code cannot: a workaround and the quirk it works around, an ordering that is load-bearing, a constraint that lives outside the file. Never restate a name, a signature, or the lines below it, and never write a doc comment just because a function is exported. State the fact plainly and stop; do not argue for the code. Comments move when the code moves.
 
+Brace a `return` that yields a value. The only one-line return is the bare `return;`.
+
 When writing code always follow [`CODING_STANDARDS.md`](CODING_STANDARDS.md). They describe in detail how you should structure and write code.
 
 ## Glossary

@@ -4,6 +4,7 @@ How to write code in Mnemonic. Generic TypeScript lives in the `typescript-best-
 
 ## Contents
 
+- [Returns](#returns)
 - [Async](#async)
 - [React](#react)
 - [TanStack Query](#tanstack-query)
@@ -18,6 +19,20 @@ How to write code in Mnemonic. Generic TypeScript lives in the `typescript-best-
 - [Internationalization](#internationalization)
 - [Database and Temporal](#database-and-temporal)
 - [SafeId](#safeid)
+
+---
+
+## Returns
+
+Brace a `return` that yields a value. The only one-line return is the bare `return;`.
+
+```ts
+if (!open) return;
+
+if (readOnly) {
+  return null;
+}
+```
 
 ---
 
