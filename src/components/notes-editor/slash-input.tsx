@@ -1,3 +1,5 @@
+import { insertEquation, insertInlineEquation } from "@platejs/math";
+import { TablePlugin } from "@platejs/table/react";
 import { T, useGT } from "gt-tanstack-start";
 import {
   Heading1Icon,
@@ -9,7 +11,10 @@ import {
   MinusIcon,
   PilcrowIcon,
   QuoteIcon,
+  RadicalIcon,
   SquareCodeIcon,
+  SquareRadicalIcon,
+  TableIcon,
 } from "lucide-react";
 import type { TComboboxInputElement } from "platejs";
 import { KEYS } from "platejs";
@@ -60,6 +65,32 @@ export const NoteSlashInputElement = (props: PlateElementProps<TComboboxInputEle
 
   const items = [
     ...blockItems,
+    {
+      icon: <TableIcon />,
+      label: gt("Table"),
+      value: KEYS.table,
+      onSelect: (editor: PlateEditor) => {
+        editor
+          .getTransforms(TablePlugin)
+          .insert.table({ colCount: 3, header: true, rowCount: 3 }, { select: true });
+      },
+    },
+    {
+      icon: <SquareRadicalIcon />,
+      label: gt("Equation"),
+      value: KEYS.equation,
+      onSelect: (editor: PlateEditor) => {
+        insertEquation(editor, { select: true });
+      },
+    },
+    {
+      icon: <RadicalIcon />,
+      label: gt("Inline equation"),
+      value: KEYS.inlineEquation,
+      onSelect: (editor: PlateEditor) => {
+        insertInlineEquation(editor, "", { select: true });
+      },
+    },
     {
       icon: <MinusIcon />,
       label: gt("Divider"),

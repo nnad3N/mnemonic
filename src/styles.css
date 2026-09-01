@@ -5,6 +5,7 @@
 @import "tailwindcss";
 @import "./typeset.css";
 @import "katex/dist/katex.min.css";
+@import "highlight.js/styles/github.css";
 @import "streamdown/styles.css";
 @import "@fontsource/geist-sans/latin.css";
 @import "@fontsource-variable/geist-mono";
@@ -12,6 +13,105 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
+
+.hljs {
+  color: var(--foreground);
+  background: transparent;
+}
+.hljs-comment,
+.hljs-code,
+.hljs-formula {
+  color: var(--f-base-300);
+}
+.hljs-operator,
+.hljs-punctuation {
+  color: var(--f-base-600);
+}
+.hljs-keyword,
+.hljs-doctag,
+.hljs-meta .hljs-keyword,
+.hljs-name,
+.hljs-selector-tag,
+.hljs-selector-pseudo {
+  color: var(--f-green);
+}
+.hljs-title,
+.hljs-title.function_ {
+  color: var(--f-orange);
+}
+.hljs-literal,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-type,
+.hljs-title.class_,
+.hljs-title.class_.inherited__ {
+  color: var(--f-yellow);
+}
+.hljs-string,
+.hljs-regexp,
+.hljs-meta .hljs-string,
+.hljs-quote,
+.hljs-link {
+  color: var(--f-cyan);
+}
+.hljs-attr,
+.hljs-attribute,
+.hljs-variable,
+.hljs-property,
+.hljs-params,
+.hljs-selector-attr,
+.hljs-selector-class,
+.hljs-selector-id {
+  color: var(--f-blue);
+}
+.hljs-number {
+  color: var(--f-purple);
+}
+.hljs-built_in,
+.hljs-meta,
+.hljs-template-tag,
+.hljs-template-variable,
+.hljs-variable.language_ {
+  color: var(--f-magenta);
+}
+.hljs-section {
+  color: var(--f-blue);
+  font-weight: bold;
+}
+.hljs-subst,
+.hljs-emphasis,
+.hljs-strong {
+  color: var(--foreground);
+}
+.hljs-emphasis {
+  font-style: italic;
+}
+.hljs-strong {
+  font-weight: bold;
+}
+.hljs-addition {
+  color: var(--f-green);
+  background-color: var(--f-green-50);
+}
+.hljs-deletion {
+  color: var(--f-red);
+  background-color: var(--f-red-50);
+}
+.dark .hljs-comment,
+.dark .hljs-code,
+.dark .hljs-formula {
+  color: var(--f-base-700);
+}
+.dark .hljs-operator,
+.dark .hljs-punctuation {
+  color: var(--f-base-500);
+}
+.dark .hljs-addition {
+  background-color: var(--f-green-950);
+}
+.dark .hljs-deletion {
+  background-color: var(--f-red-950);
+}
 
 /*
  * Streamdown code/mermaid action bars use `position: sticky` so they can float

@@ -1,19 +1,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { T, useGT } from "gt-tanstack-start";
 import { produce } from "immer";
-import { ALargeSmallIcon, BoldIcon, IndentIcon, ListIcon } from "lucide-react";
 import { Plate, PlateContent, useEditorContainerRef } from "platejs/react";
 import type { PlateEditor } from "platejs/react";
 import type { PropsWithChildren, ReactNode } from "react";
 import { useId } from "react";
 import { useDebouncedCallback } from "use-debounce";
 
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   noteQueries,
@@ -22,12 +15,11 @@ import {
 
 import { NoteFontSizeButton } from "./font-size-button";
 import {
-  NoteClearFormattingButton,
   NoteHistoryButtons,
-  NoteIndentButtons,
-  NoteLinkButton,
-  NoteListButtons,
+  NoteListsMenu,
   NoteMarkButtons,
+  NoteMoreFormatMenu,
+  NoteTableMenu,
   NoteToolbarSeparator,
   NoteTurnIntoButton,
 } from "./toolbar-buttons";
@@ -95,139 +87,20 @@ const NoteTitleInput = ({ noteId, title }: NoteTitleInputProps) => {
 };
 
 const NotesEditorToolbar = () => (
-  <div className="@container/toolbar shrink-0 border-b border-foreground/3 dark:border-white/5">
-    <ScrollArea>
-      <div className="flex min-w-max items-center gap-0.5 px-2 py-1">
-        <NoteHistoryButtons />
-        <NoteToolbarSeparator />
-        <NoteTurnIntoButton />
-        <NoteToolbarSeparator />
-        <NoteFontSizeGroup />
-        <NoteToolbarSeparator />
-        <NoteMarkGroup />
-        <NoteToolbarSeparator />
-        <NoteListGroup />
-        <NoteToolbarSeparator />
-        <NoteIndentGroup />
-      </div>
-    </ScrollArea>
-  </div>
-);
-
-const NoteMarkGroupButtons = () => (
-  <>
+  <div className="flex shrink-0 items-center gap-0.5 border-b border-foreground/3 px-2 py-1 dark:border-white/5">
+    <NoteHistoryButtons />
+    <NoteToolbarSeparator />
+    <NoteTurnIntoButton />
+    <NoteToolbarSeparator />
+    <NoteFontSizeButton />
+    <NoteToolbarSeparator />
     <NoteMarkButtons />
-    <NoteLinkButton />
-  </>
-);
-
-const NoteIndentGroupButtons = () => (
-  <>
-    <NoteIndentButtons />
-    <NoteClearFormattingButton />
-  </>
-);
-
-const NoteFontSizeGroup = () => {
-  const gt = useGT();
-
-  return (
-    <>
-      <div className="hidden @xl/toolbar:flex">
-        <NoteFontSizeButton />
-      </div>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          className="@xl/toolbar:hidden"
-          render={<Button size="icon-sm" variant="ghost" />}
-        >
-          <ALargeSmallIcon />
-          <span className="sr-only">{gt("Font size")}</span>
-        </DropdownMenuTrigger>
-        <NoteGroupMenuContent>
-          <NoteFontSizeButton />
-        </NoteGroupMenuContent>
-      </DropdownMenu>
-    </>
-  );
-};
-
-const NoteMarkGroup = () => {
-  const gt = useGT();
-
-  return (
-    <>
-      <div className="hidden items-center gap-0.5 @2xl/toolbar:flex">
-        <NoteMarkGroupButtons />
-      </div>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          className="@2xl/toolbar:hidden"
-          render={<Button size="icon-sm" variant="ghost" />}
-        >
-          <BoldIcon />
-          <span className="sr-only">{gt("Text formatting")}</span>
-        </DropdownMenuTrigger>
-        <NoteGroupMenuContent>
-          <NoteMarkGroupButtons />
-        </NoteGroupMenuContent>
-      </DropdownMenu>
-    </>
-  );
-};
-
-const NoteListGroup = () => {
-  const gt = useGT();
-
-  return (
-    <>
-      <div className="hidden items-center gap-0.5 @3xl/toolbar:flex">
-        <NoteListButtons />
-      </div>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          className="@3xl/toolbar:hidden"
-          render={<Button size="icon-sm" variant="ghost" />}
-        >
-          <ListIcon />
-          <span className="sr-only">{gt("Lists")}</span>
-        </DropdownMenuTrigger>
-        <NoteGroupMenuContent>
-          <NoteListButtons />
-        </NoteGroupMenuContent>
-      </DropdownMenu>
-    </>
-  );
-};
-
-const NoteIndentGroup = () => {
-  const gt = useGT();
-
-  return (
-    <>
-      <div className="hidden items-center gap-0.5 @min-[50rem]/toolbar:flex">
-        <NoteIndentGroupButtons />
-      </div>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          className="@min-[50rem]/toolbar:hidden"
-          render={<Button size="icon-sm" variant="ghost" />}
-        >
-          <IndentIcon />
-          <span className="sr-only">{gt("Indentation")}</span>
-        </DropdownMenuTrigger>
-        <NoteGroupMenuContent>
-          <NoteIndentGroupButtons />
-        </NoteGroupMenuContent>
-      </DropdownMenu>
-    </>
-  );
-};
-
-const NoteGroupMenuContent = ({ children }: PropsWithChildren) => (
-  <DropdownMenuContent className="w-auto min-w-0" finalFocus={false}>
-    {children}
-  </DropdownMenuContent>
+    <NoteMoreFormatMenu />
+    <NoteToolbarSeparator />
+    <NoteListsMenu />
+    <NoteToolbarSeparator />
+    <NoteTableMenu />
+  </div>
 );
 
 type NotePlateProps = {
