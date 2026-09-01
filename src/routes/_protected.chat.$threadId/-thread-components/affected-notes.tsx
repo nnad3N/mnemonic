@@ -14,11 +14,12 @@ import type { ThreadUIMessagePart } from "@/routes/_protected.chat.$threadId/-th
 
 type AffectedNote = {
   noteId: string;
-  versionId: string;
+  versionIds: string[];
 };
 
+// A note written twice in one run gets a second version only when the user edited it in between.
 const extractAffectedNotes = (parts: ThreadUIMessagePart[]): AffectedNote[] => {
-  const byVersionId = new Map<string, AffectedNote>();
+  const byNoteId = new Map<string, AffectedNote>();
 
   for (const part of parts) {
     if (part.type !== "tool-writeNote" && part.type !== "tool-updateNote") {
@@ -29,25 +30,33 @@ const extractAffectedNotes = (parts: ThreadUIMessagePart[]): AffectedNote[] => {
       continue;
     }
 
-    byVersionId.set(part.output.versionId, {
-      noteId: part.output.noteId,
-      versionId: part.output.versionId,
-    });
+    const affected = byNoteId.get(part.output.noteId);
+
+    if (!affected) {
+      byNoteId.set(part.output.noteId, {
+        noteId: part.output.noteId,
+        versionIds: [part.output.versionId],
+      });
+      continue;
+    }
+
+    if (!affected.versionIds.includes(part.output.versionId)) {
+      affected.versionIds.push(part.output.versionId);
+    }
   }
 
-  return [...byVersionId.values()];
+  return [...byNoteId.values()];
 };
 
 type AffectedNotesRowProps = {
-  noteId: string;
   stats: AffectedNoteStats;
 };
 
-const AffectedNotesRow = ({ noteId, stats }: AffectedNotesRowProps) => (
+const AffectedNotesRow = ({ stats }: AffectedNotesRowProps) => (
   <li>
     <Link
       className="flex items-center gap-2 rounded-lg px-2 py-1 transition-colors hover:bg-accent"
-      search={setNoteSearchOpen(noteId, stats.baseVersionId ?? undefined)}
+      search={setNoteSearchOpen(stats.noteId, stats.baseVersionId ?? undefined)}
       to="."
     >
       <FileTextIcon className="size-3.5 shrink-0 text-muted-foreground" />
@@ -65,7 +74,7 @@ export const AffectedNotes = ({ parts }: AffectedNotesProps) => {
   const gt = useGT();
   const notes = extractAffectedNotes(parts);
   const { data: stats } = useQuery({
-    ...noteQueries.affected(notes.map((note) => note.versionId)),
+    ...noteQueries.affected(notes.flatMap((note) => note.versionIds)),
     enabled: notes.length > 0,
   });
 
@@ -73,18 +82,10 @@ export const AffectedNotes = ({ parts }: AffectedNotesProps) => {
     return null;
   }
 
-  const statsByVersionId = new Map(stats.map((item) => [item.versionId, item]));
-  // A version the run wrote can be gone by the time an old message renders, pruned by the
+  const statsByNoteId = new Map(stats.map((item) => [item.noteId, item]));
+  // Every version the run wrote can be gone by the time an old message renders, pruned by the
   // version limit.
-  const rows = notes.flatMap((note) => {
-    const versionStats = statsByVersionId.get(note.versionId);
-
-    if (!versionStats) {
-      return [];
-    }
-
-    return [{ noteId: note.noteId, stats: versionStats }];
-  });
+  const rows = notes.flatMap((note) => statsByNoteId.get(note.noteId) ?? []);
 
   if (rows.length === 0) {
     return null;
@@ -111,7 +112,7 @@ export const AffectedNotes = ({ parts }: AffectedNotesProps) => {
       </div>
       <ul className="flex flex-col px-1 pb-1">
         {rows.map((row) => (
-          <AffectedNotesRow key={row.stats.versionId} noteId={row.noteId} stats={row.stats} />
+          <AffectedNotesRow key={row.noteId} stats={row} />
         ))}
       </ul>
     </div>

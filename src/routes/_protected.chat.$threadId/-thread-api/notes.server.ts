@@ -1,6 +1,6 @@
 import { matchError, panic, Result, TaggedError } from "better-result";
 import type { Result as ResultType } from "better-result";
-import { and, desc, eq, gt, inArray, isNotNull, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNotNull, lt, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 import { note, noteVersion } from "@/db/schema.server";
@@ -263,8 +263,8 @@ export const getNoteFn = Kit.gen(async function* (
 type AffectedNoteStats = {
   baseVersionId: string | null;
   counts: WordDiffCounts;
+  noteId: string;
   title: string;
-  versionId: string;
 };
 
 type ListAffectedNotesInput = {
@@ -301,8 +301,8 @@ export const listAffectedNotesFn = Kit.gen(async function* (
         baseContent: previous.content,
         baseVersionId: previous.id,
         content: noteVersion.content,
+        noteId: noteVersion.noteId,
         title: note.title,
-        versionId: noteVersion.id,
       })
       .from(noteVersion)
       .innerJoin(note, eq(note.id, noteVersion.noteId))
@@ -316,15 +316,30 @@ export const listAffectedNotesFn = Kit.gen(async function* (
           ),
           eq(note.userId, input.userId),
         ),
-      );
+      )
+      .orderBy(asc(noteVersion.seq));
   });
 
+  // One row per note: its first version in the run fixes the diff base, its last one the content.
+  const byNoteId = new Map<string, (typeof rows)[number]>();
+
+  for (const row of rows) {
+    const affected = byNoteId.get(row.noteId);
+
+    if (affected) {
+      affected.content = row.content;
+      continue;
+    }
+
+    byNoteId.set(row.noteId, row);
+  }
+
   return Result.ok<AffectedNoteStats[]>(
-    rows.map((row) => ({
+    [...byNoteId.values()].map((row) => ({
       baseVersionId: row.baseVersionId,
       counts: diffWordCounts(markdownToText(row.baseContent ?? ""), markdownToText(row.content)),
+      noteId: row.noteId,
       title: row.title,
-      versionId: row.versionId,
     })),
   );
 });
