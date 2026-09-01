@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { useDebouncedCallback } from "use-debounce";
 
 import { Button } from "@/components/ui/button";
-import { WordsAdded, WordsChanged, WordsRemoved } from "@/components/word-diff";
+import { WordDiffStats } from "@/components/word-diff";
 import { ServerFnError } from "@/lib/errors/server-fn-error";
 import { hashText } from "@/lib/hash";
 import { markdownToText } from "@/lib/markdown";
@@ -151,29 +151,8 @@ const stripDiffValue = (value: Value): Value =>
   });
 
 export const NoteFloatingBar = ({ children }: PropsWithChildren) => (
-  <div className="absolute bottom-3 left-1/2 z-10 flex h-10 max-w-[calc(100%-1.5rem)] -translate-x-1/2 items-center gap-1 rounded-full border border-foreground/3 bg-background/50 px-2 text-sm backdrop-blur dark:border-white/5">
+  <div className="absolute bottom-3 left-3 z-10 flex h-10 max-w-[calc(100%-1.5rem)] items-center gap-1 rounded-full border border-foreground/3 bg-background/50 px-2 text-sm backdrop-blur dark:border-white/5">
     {children}
-  </div>
-);
-
-type NoteDiffStatsProps = {
-  counts: WordDiffCounts;
-};
-
-const formatCount = (value: number) => (value > 9999 ? "9999+" : String(value).padStart(4, "0"));
-
-export const NoteDiffStats = ({ counts }: NoteDiffStatsProps) => (
-  <div className="grid px-2 text-xs tabular-nums">
-    <div aria-hidden className="invisible col-start-1 row-start-1 flex gap-2">
-      <span>+9999+</span>
-      <span>~9999+</span>
-      <span>−9999+</span>
-    </div>
-    <div className="col-start-1 row-start-1 flex justify-center gap-2">
-      <WordsAdded dimmed={counts.added === 0}>{formatCount(counts.added)}</WordsAdded>
-      <WordsChanged dimmed={counts.replaced === 0}>{formatCount(counts.replaced)}</WordsChanged>
-      <WordsRemoved dimmed={counts.removed === 0}>{formatCount(counts.removed)}</WordsRemoved>
-    </div>
   </div>
 );
 
@@ -242,7 +221,9 @@ const NoteDiffBar = ({ children, counts, noteId, selectedVersionId }: NoteDiffBa
           <T>Newer version</T>
         </span>
       </NoteVersionNavButton>
-      <NoteDiffStats counts={counts} />
+      <div className="pr-2.5 pl-1">
+        <WordDiffStats counts={counts} />
+      </div>
       {children}
     </NoteFloatingBar>
   );

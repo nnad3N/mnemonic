@@ -5,7 +5,7 @@ import { FileTextIcon } from "lucide-react";
 
 import { setNoteSearchOpen, setNotesSearchOpen } from "@/components/notes-editor/use-open-note";
 import { Button } from "@/components/ui/button";
-import { WordsAdded, WordsChanged, WordsRemoved } from "@/components/word-diff";
+import { WordDiffStats } from "@/components/word-diff";
 import {
   noteQueries,
   type AffectedNoteStats,
@@ -52,11 +52,7 @@ const AffectedNotesRow = ({ noteId, stats }: AffectedNotesRowProps) => (
     >
       <FileTextIcon className="size-3.5 shrink-0 text-muted-foreground" />
       <span className="min-w-0 flex-1 truncate">{stats.title}</span>
-      <div className="flex shrink-0 gap-1.5 text-xs tabular-nums">
-        <WordsAdded dimmed={stats.counts.added === 0}>{stats.counts.added}</WordsAdded>
-        <WordsChanged dimmed={stats.counts.replaced === 0}>{stats.counts.replaced}</WordsChanged>
-        <WordsRemoved dimmed={stats.counts.removed === 0}>{stats.counts.removed}</WordsRemoved>
-      </div>
+      <WordDiffStats counts={stats.counts} />
     </Link>
   </li>
 );

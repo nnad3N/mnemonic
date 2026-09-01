@@ -10,6 +10,7 @@ import { useStore } from "zustand/react";
 
 import { Button } from "@/components/ui/button";
 import { SidebarInset } from "@/components/ui/sidebar";
+import { WordDiffStats } from "@/components/word-diff";
 import { ServerFnError } from "@/lib/errors/server-fn-error";
 import { hashText } from "@/lib/hash";
 import { markdownToText } from "@/lib/markdown";
@@ -23,12 +24,7 @@ import {
 
 import { NoteBaselineContext } from "./note-baseline-context";
 import { NotePlate } from "./note-chrome";
-import {
-  NoteDiffStats,
-  NoteFloatingBar,
-  NoteHistoryEditor,
-  NoteReviewEditor,
-} from "./note-diff-editor";
+import { NoteFloatingBar, NoteHistoryEditor, NoteReviewEditor } from "./note-diff-editor";
 import { NoteTimeline } from "./note-timeline";
 import {
   createNoteBaselineStore,
@@ -254,7 +250,7 @@ const NoteEditor = ({ noteId }: NoteEditorProps) => {
           <span className="px-1">
             <T>Assistant updated this note</T>
           </span>
-          {remoteCounts && <NoteDiffStats counts={remoteCounts} />}
+          {remoteCounts && <WordDiffStats className="px-2" counts={remoteCounts} />}
           <Button
             onClick={() => {
               allowReview();
