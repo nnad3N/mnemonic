@@ -7,12 +7,12 @@ import * as Kit from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit.server";
 import { createSafeId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
+import { createAgentNoteFn } from "@/mastra/tools/create-note-tool.server";
 import { NoteToolError } from "@/mastra/tools/note-tool-helpers.server";
 import { readAgentNoteFn } from "@/mastra/tools/read-note-tool.server";
 import { searchAgentNotesFn } from "@/mastra/tools/search-notes-tool.server";
 import type { SearchLanguage } from "@/mastra/tools/search-notes-tool.server";
 import { replaceNoteText, updateAgentNoteFn } from "@/mastra/tools/update-note-tool.server";
-import { createAgentNoteFn } from "@/mastra/tools/write-note-tool.server";
 import {
   addNoteToTopicFn,
   createNoteFn,

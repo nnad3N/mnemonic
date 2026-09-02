@@ -11,6 +11,7 @@ import { readerAgent } from "@/mastra/agents/reader-agent.server";
 import { workerAgent } from "@/mastra/agents/worker-agent.server";
 import { getThreadModel } from "@/mastra/config.server";
 import { TOPIC_AGENT_ID } from "@/mastra/models.server";
+import { hoistToolResultMediaProcessor } from "@/mastra/processors/hoist-tool-result-media.server";
 import { pinSubagentSteps } from "@/mastra/processors/soft-stop.server";
 import { stripFilePartsProcessor } from "@/mastra/processors/strip-file-parts.server";
 import { stripGeminiReasoningProcessor } from "@/mastra/processors/strip-gemini-reasoning.server";
@@ -18,13 +19,15 @@ import type { MnemonicRequestContext } from "@/mastra/request-context.server";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
 import { computeDocsTool } from "@/mastra/tools/compute-docs-tool.server";
 import { computeTool } from "@/mastra/tools/compute-tool.server";
+import { createNoteTool } from "@/mastra/tools/create-note-tool.server";
 import { createFileGraphRagTool } from "@/mastra/tools/file-graph-rag-tool.server";
 import { createFileVectorSearchTool } from "@/mastra/tools/file-vector-search-tool.server";
+import { readFileTool } from "@/mastra/tools/read-file-tool.server";
 import { readNoteTool } from "@/mastra/tools/read-note-tool.server";
 import { searchNotesTool } from "@/mastra/tools/search-notes-tool.server";
 import { updateNoteTool } from "@/mastra/tools/update-note-tool.server";
+import { userLinkWebFetchTool } from "@/mastra/tools/web-fetch-tool.server";
 import { webSearchTool } from "@/mastra/tools/web-search-tool.server";
-import { writeNoteTool } from "@/mastra/tools/write-note-tool.server";
 
 const providerKeyCtx = Kit.createContext(dbKit);
 
@@ -46,11 +49,13 @@ const getTopicAgentTools = async ({ requestContext }: GetTopicAgentToolsInput) =
     computeDocs: computeDocsTool,
     fileGraphRag: createFileGraphRagTool(apiKey),
     fileVectorSearch: createFileVectorSearchTool(apiKey),
+    readFile: readFileTool,
     readNote: readNoteTool,
     searchNotes: searchNotesTool,
     updateNote: updateNoteTool,
+    webFetch: userLinkWebFetchTool,
     webSearch: webSearchTool,
-    writeNote: writeNoteTool,
+    createNote: createNoteTool,
   };
 };
 
@@ -66,7 +71,8 @@ ${baseInstructions}
 Conflict -> topic files over web, web over recall.
 
 ## Delegating
-Do yourself: search topic files by meaning or by connections for pointed questions; no need to run every file tool. Every read goes to a subagent. Sources you located -> reader. Question that must find its own sources -> worker.
+Do yourself: search topic files by meaning or by connections for pointed questions; no need to run every file tool. User gave one link -> fetch it yourself. Reads go to subagents; they find and extract, you work from their reports. Sources you located -> reader. Question that must find its own sources -> worker.
+Reading file whole is last resort. Only when task literally needs entire file and no extract serves: summarize whole book, structure of whole document. Passage, fact, chapter -> search or subagent, not whole file.
 Never delegate ambiguous task. Resolve scope with user first.
 Subagent sees only your prompt, not conversation: exact question, output wanted, every URL and file mention key, user constraints.
 Question has separate parts -> split it, one delegation per part, no overlap between them, all in same turn. One part -> one delegation for whole task.
@@ -77,7 +83,11 @@ Report answers its task; never redo its work to check it. Part unanswered -> del
     delegation: { onDelegationStart: pinSubagentSteps },
   },
   durable: true,
-  inputProcessors: [stripFilePartsProcessor, stripGeminiReasoningProcessor],
+  inputProcessors: [
+    stripFilePartsProcessor,
+    hoistToolResultMediaProcessor,
+    stripGeminiReasoningProcessor,
+  ],
   memory: getAgentMemory("resource"),
   requestContextSchema: mnemonicRequestContextSchema,
   model: getThreadModel,

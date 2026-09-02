@@ -135,10 +135,10 @@ const TOOL_LABELS = {
     error: "Could not update the note",
     pending: "Updating the note",
   },
-  writeNote: {
-    done: "Wrote a note",
-    error: "Could not write the note",
-    pending: "Writing a note",
+  createNote: {
+    done: "Created a note",
+    error: "Could not create the note",
+    pending: "Creating a note",
   },
   readFile: {
     done: "Read the file",

@@ -53,23 +53,23 @@ const inputSchema = v.object({
   content: v.string(),
 });
 
-export const writeNoteOutputSchema = v.object({
+export const createNoteOutputSchema = v.object({
   type: v.literal("created"),
   noteId: v.string(),
   versionId: v.string(),
 });
 
-type WriteNoteOutput = v.InferOutput<typeof writeNoteOutputSchema>;
+type CreateNoteOutput = v.InferOutput<typeof createNoteOutputSchema>;
 
 const noteToolCtx = Kit.createContext(dbKit, memoryKit);
 
-export const writeNoteTool = createTool({
-  id: "write-note",
+export const createNoteTool = createTool({
+  id: "create-note",
   description: "Creates a note in the current conversation from markdown content.",
   inputSchema: toStandardJsonSchema(inputSchema),
-  outputSchema: toStandardJsonSchema(writeNoteOutputSchema),
+  outputSchema: toStandardJsonSchema(createNoteOutputSchema),
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
-  execute: async ({ content, title }, context): Promise<WriteNoteOutput> => {
+  execute: async ({ content, title }, context): Promise<CreateNoteOutput> => {
     const result = await createAgentNoteFn(noteToolCtx, {
       content,
       threadId: context.requestContext.get("threadId"),

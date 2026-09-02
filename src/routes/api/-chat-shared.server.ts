@@ -14,8 +14,8 @@ import * as Kit from "@/lib/kit";
 import type { SafeId } from "@/lib/safe-id";
 import { getMnemonicAgent, MnemonicAgentIds } from "@/mastra/agents/id.server";
 import type { MnemonicToolName } from "@/mastra/mnemonic-tool-types.server";
+import { createNoteOutputSchema } from "@/mastra/tools/create-note-tool.server";
 import { updateNoteOutputSchema } from "@/mastra/tools/update-note-tool.server";
-import { writeNoteOutputSchema } from "@/mastra/tools/write-note-tool.server";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 
 class ReconcileRunsError extends TaggedError("ReconcileRunsError")<{
@@ -84,9 +84,9 @@ export const reconcileRuns = Kit.gen(async function* (ctx: ReconcileRunsCtx, run
 });
 
 const UPDATE_NOTE = "updateNote" satisfies MnemonicToolName;
-const WRITE_NOTE = "writeNote" satisfies MnemonicToolName;
+const CREATE_NOTE = "createNote" satisfies MnemonicToolName;
 
-type NoteToolCall = typeof UPDATE_NOTE | typeof WRITE_NOTE;
+type NoteToolCall = typeof UPDATE_NOTE | typeof CREATE_NOTE;
 
 const trackSavedNote = (
   chunk: InferUIMessageChunk<ThreadUIMessage>,
@@ -97,8 +97,8 @@ const trackSavedNote = (
       noteToolCalls.set(chunk.toolCallId, UPDATE_NOTE);
     }
 
-    if (chunk.toolName === WRITE_NOTE) {
-      noteToolCalls.set(chunk.toolCallId, WRITE_NOTE);
+    if (chunk.toolName === CREATE_NOTE) {
+      noteToolCalls.set(chunk.toolCallId, CREATE_NOTE);
     }
 
     return;
@@ -116,8 +116,8 @@ const trackSavedNote = (
 
   noteToolCalls.delete(chunk.toolCallId);
 
-  if (call === WRITE_NOTE) {
-    const output = v.safeParse(writeNoteOutputSchema, chunk.output);
+  if (call === CREATE_NOTE) {
+    const output = v.safeParse(createNoteOutputSchema, chunk.output);
 
     if (!output.success) {
       return;

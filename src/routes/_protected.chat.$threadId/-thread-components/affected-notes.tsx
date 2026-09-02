@@ -22,7 +22,7 @@ const extractAffectedNotes = (parts: ThreadUIMessagePart[]): AffectedNote[] => {
   const byNoteId = new Map<string, AffectedNote>();
 
   for (const part of parts) {
-    if (part.type !== "tool-writeNote" && part.type !== "tool-updateNote") {
+    if (part.type !== "tool-createNote" && part.type !== "tool-updateNote") {
       continue;
     }
 

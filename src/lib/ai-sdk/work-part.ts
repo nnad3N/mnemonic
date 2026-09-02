@@ -113,7 +113,7 @@ export const TOOL_WORK_ACTIVITY_KIND = {
   searchNotes: "research",
   readFile: "default",
   readNote: "default",
-  writeNote: "default",
+  createNote: "default",
   updateNote: "default",
   compute: "default",
   computeDocs: "default",

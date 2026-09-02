@@ -78,7 +78,7 @@ const isRecoverableFailure = (part: ToolUIPart<ThreadUITools>): boolean => {
     case "tool-recall":
     case "tool-searchNotes":
     case "tool-webSearch":
-    case "tool-writeNote":
+    case "tool-createNote":
       return false;
   }
 };
@@ -202,14 +202,14 @@ const renderToolLabel = (toolName: MnemonicToolName, status: ToolPartStatus): Re
         case "error":
           return <T>Could not search the web</T>;
       }
-    case "writeNote":
+    case "createNote":
       switch (status) {
         case "pending":
-          return <T>Writing a note</T>;
+          return <T>Creating a note</T>;
         case "done":
-          return <T>Wrote a note</T>;
+          return <T>Created a note</T>;
         case "error":
-          return <T>Could not write the note</T>;
+          return <T>Could not create the note</T>;
       }
     case "updateNote":
       switch (status) {
