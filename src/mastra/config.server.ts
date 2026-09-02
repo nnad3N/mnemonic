@@ -11,6 +11,7 @@ import { DEFAULT_MODEL_OPTION } from "@/lib/model-option";
 import type { ChatModel } from "@/mastra/models.server";
 import {
   EMBEDDING_MODEL,
+  FILE_DESCRIPTION_MODEL,
   MEMORY_EMBEDDING_DIMENSION,
   models,
   OBSERVATIONAL_MEMORY_MODEL,
@@ -114,6 +115,9 @@ export const getObservationalMemoryModel = (apiKey: string) =>
 
 export const getThreadTitleModel = (apiKey: string) =>
   createOpenrouterProvider(apiKey)(THREAD_TITLE_MODEL);
+
+export const getFileDescriptionModel = (apiKey: string) =>
+  createOpenrouterProvider(apiKey)(FILE_DESCRIPTION_MODEL);
 
 type ObservationalMemoryRetrieval = NonNullable<ObservationalMemoryOptions["retrieval"]>;
 

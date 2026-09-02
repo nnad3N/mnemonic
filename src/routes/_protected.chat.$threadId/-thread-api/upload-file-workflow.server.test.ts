@@ -18,6 +18,7 @@ import {
   FileProcessingError,
   processFileWorkflow,
   processForRagFn,
+  sampleForDescription,
   validateFileFn,
 } from "./upload-file-workflow.server";
 
@@ -36,16 +37,19 @@ const topicId = createSafeId<"topic">();
 const fakeS3 = createFakeS3();
 const ctx = Kit.createContext(dbKit, fakeS3.kit, vectorKit);
 
-const getFileStatus = async (fileId: string) => {
+const getFileRow = async (fileId: string) => {
   const result = await db.run((database) =>
     database.query.file.findFirst({
       where: { id: toSafeId<"file">(fileId) },
-      columns: { status: true },
+      columns: { description: true, status: true },
+      with: { pages: { columns: { content: true, page: true } } },
     }),
   );
 
-  return expectOk(result)?.status;
+  return expectOk(result);
 };
+
+const getFileStatus = async (fileId: string) => (await getFileRow(fileId))?.status;
 
 const vectorsForFile = async (fileId: string) => {
   const results = await mastraVector.query({
@@ -138,6 +142,30 @@ describe("validateFileFn", () => {
       s3Key,
     });
     expect(await getFileStatus(fileId)).toBe("processing");
+  });
+});
+
+describe("sampleForDescription", () => {
+  it("takes leading pages whole and stops at the first that does not fit", () => {
+    const filler = "x".repeat(6000);
+
+    expect(
+      sampleForDescription([
+        { page: 1, content: "first" },
+        { page: 2, content: filler },
+        { page: 3, content: "third" },
+      ]),
+    ).toBe("first\n");
+  });
+
+  it("falls back to whole sentences when the first page alone exceeds the budget", () => {
+    const sentence = "A sentence that ends here. ";
+    const content = sentence.repeat(400);
+
+    const sample = sampleForDescription([{ page: 1, content }]);
+
+    expect(sample.length).toBeLessThanOrEqual(6000);
+    expect(sample.endsWith(sentence)).toBe(true);
   });
 });
 
@@ -252,8 +280,14 @@ describe("processForRagFn", () => {
       fileId,
       chunkIndex: 0,
       displayName: "rag-sample.xml",
+      page: 1,
     });
     expect(String(vectors.at(0)?.metadata?.text ?? "")).toContain(RAG_SAMPLE_PHRASE);
+
+    const row = await getFileRow(fileId);
+    expect(row?.description).toEqual(expect.any(String));
+    expect(row?.pages.map((page) => page.page)).toEqual([1]);
+    expect(row?.pages.at(0)?.content).toContain(RAG_SAMPLE_PHRASE);
   });
 });
 

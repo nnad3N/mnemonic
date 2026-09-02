@@ -71,10 +71,17 @@ const isRecoverableFailure = (part: ToolUIPart<ThreadUITools>): boolean => {
         case "success":
           return false;
       }
+    case "tool-searchFiles":
+      switch (part.output.type) {
+        case "error":
+          return true;
+        case "matches":
+          return false;
+      }
     case "tool-agent-reader":
     case "tool-agent-worker":
-    case "tool-fileGraphRag":
     case "tool-fileVectorSearch":
+    case "tool-listFiles":
     case "tool-recall":
     case "tool-searchNotes":
     case "tool-webSearch":
@@ -121,15 +128,6 @@ const renderToolLabel = (toolName: MnemonicToolName, status: ToolPartStatus): Re
         case "error":
           return <T>Could not read library documentation</T>;
       }
-    case "fileGraphRag":
-      switch (status) {
-        case "pending":
-          return <T>Searching file connections</T>;
-        case "done":
-          return <T>Searched file connections</T>;
-        case "error":
-          return <T>Could not search file connections</T>;
-      }
     case "fileVectorSearch":
       switch (status) {
         case "pending":
@@ -138,6 +136,15 @@ const renderToolLabel = (toolName: MnemonicToolName, status: ToolPartStatus): Re
           return <T>Searched files</T>;
         case "error":
           return <T>Could not search files</T>;
+      }
+    case "listFiles":
+      switch (status) {
+        case "pending":
+          return <T>Listing files</T>;
+        case "done":
+          return <T>Listed files</T>;
+        case "error":
+          return <T>Could not list files</T>;
       }
     case "readFile":
       switch (status) {
@@ -174,6 +181,15 @@ const renderToolLabel = (toolName: MnemonicToolName, status: ToolPartStatus): Re
           return <T>Searched the file</T>;
         case "error":
           return <T>Could not search the file</T>;
+      }
+    case "searchFiles":
+      switch (status) {
+        case "pending":
+          return <T>Searching file text</T>;
+        case "done":
+          return <T>Searched file text</T>;
+        case "error":
+          return <T>Could not search file text</T>;
       }
     case "searchNotes":
       switch (status) {

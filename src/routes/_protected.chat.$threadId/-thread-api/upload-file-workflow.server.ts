@@ -2,12 +2,12 @@ import { extractBytes } from "@kreuzberg/node";
 import { createStep, createWorkflow } from "@mastra/core/workflows";
 import { MDocument } from "@mastra/rag";
 import { toStandardJsonSchema } from "@valibot/to-json-schema";
-import { embedMany } from "ai";
+import { embedMany, generateText } from "ai";
 import { Result, TaggedError } from "better-result";
 import { and, eq, inArray } from "drizzle-orm";
 import * as v from "valibot";
 
-import { file } from "@/db/schema.server";
+import { file, filePage } from "@/db/schema.server";
 import { dbKit } from "@/lib/db-kit.server";
 import type { DbKit } from "@/lib/db-kit.server";
 import { ImageMimeType } from "@/lib/file-validation";
@@ -17,13 +17,20 @@ import { resolveProviderKey } from "@/lib/middleware/resolve-provider-key.server
 import { s3Kit } from "@/lib/s3-kit.server";
 import type { S3Kit } from "@/lib/s3-kit.server";
 import { safeId, toSafeId } from "@/lib/safe-id";
+import { sanitizeGeneratedText } from "@/lib/sanitize-generated-text";
 import { vectorKit } from "@/lib/vector-kit.server";
 import type { VectorKit } from "@/lib/vector-kit.server";
 import {
   FILE_EMBEDDINGS_INDEX,
   FILE_EMBEDDINGS_INDEX_CONFIG,
+  getRagDescriptionModel,
   getRagEmbeddingModel,
 } from "@/mastra/rag-config.server";
+
+const DESCRIPTION_SAMPLE_CHARS = 6000;
+const DESCRIPTION_INSTRUCTIONS =
+  "Describe document for an agent choosing which file in a topic to search. One or two sentences: document type, subject, what sets it apart (entities, period, scope). Plain text, no preamble.";
+const MAX_DESCRIPTION_LENGTH = 400;
 
 const workflowInputSchema = v.object({
   fileId: v.pipe(v.string(), v.nanoid()),
@@ -137,6 +144,52 @@ const workflowOutputSchema = v.object({
   fileId: v.pipe(v.string(), v.nanoid()),
 });
 
+type ExtractedPage = {
+  page: number;
+  content: string;
+};
+
+const chunkPage = async ({ page, content }: ExtractedPage) => {
+  const chunked = await MDocument.fromText(content).chunk({
+    strategy: "recursive",
+    maxSize: 512,
+    overlap: 50,
+  });
+
+  return chunked.map((chunk) => ({ page, text: chunk.text }));
+};
+
+export const sampleForDescription = (pages: ExtractedPage[]) => {
+  let sample = "";
+  const first = pages.at(0);
+
+  if (first && first.content.length > DESCRIPTION_SAMPLE_CHARS) {
+    const sentences = new Intl.Segmenter(undefined, { granularity: "sentence" }).segment(
+      first.content,
+    );
+
+    for (const { segment } of sentences) {
+      if (sample.length + segment.length > DESCRIPTION_SAMPLE_CHARS) {
+        break;
+      }
+
+      sample += segment;
+    }
+
+    return sample;
+  }
+
+  for (const { content } of pages) {
+    if (sample.length + content.length > DESCRIPTION_SAMPLE_CHARS) {
+      break;
+    }
+
+    sample += `${content}\n`;
+  }
+
+  return sample;
+};
+
 export const processForRagFn = Kit.gen(async function* (
   ctx: ProcessFileCtx,
   input: v.InferOutput<typeof validatedFileSchema> & { abortSignal?: AbortSignal },
@@ -153,15 +206,27 @@ export const processForRagFn = Kit.gen(async function* (
     ctx.s3.getObject(input.s3Key),
     resolveProviderKey(ctx, input.userId),
   ]);
-  const chunks = yield* await Result.tryPromise(async () => {
-    const extraction = await extractBytes(Buffer.from(object), input.mimeType);
-    const doc = MDocument.fromText(extraction.content);
-
-    return doc.chunk({
-      strategy: "recursive",
-      maxSize: 512,
-      overlap: 50,
+  const { pages, chunks } = yield* await Result.tryPromise(async () => {
+    const extraction = await extractBytes(Buffer.from(object), input.mimeType, {
+      pages: { extractPages: true },
     });
+    const extractedPages =
+      extraction.pages
+        ?.map((page) => ({ page: page.pageNumber, content: page.content }))
+        .filter((page) => page.content.trim().length > 0) ?? [];
+
+    if (extractedPages.length === 0) {
+      const whole = { page: 1, content: extraction.content };
+
+      return { pages: [whole], chunks: await chunkPage(whole) };
+    }
+
+    const chunks = await Promise.all(extractedPages.map(chunkPage));
+
+    return {
+      pages: extractedPages,
+      chunks: chunks.flat(),
+    };
   });
 
   if (chunks.length === 0) {
@@ -172,13 +237,31 @@ export const processForRagFn = Kit.gen(async function* (
     return Result.ok({ fileId: input.fileId });
   }
 
-  const { embeddings } = yield* await Result.tryPromise(async () =>
-    embedMany({
-      abortSignal: input.abortSignal,
-      model: getRagEmbeddingModel(key.key),
-      values: chunks.map((chunk) => chunk.text),
-    }),
-  );
+  const [{ embeddings }, description] = yield* await Kit.promiseAll([
+    Result.tryPromise(async () =>
+      embedMany({
+        abortSignal: input.abortSignal,
+        model: getRagEmbeddingModel(key.key),
+        values: chunks.map((chunk) => chunk.text),
+      }),
+    ),
+    Result.tryPromise(
+      async ({ signal }) => {
+        const result = await generateText({
+          abortSignal: signal,
+          instructions: DESCRIPTION_INSTRUCTIONS,
+          model: getRagDescriptionModel(key.key),
+          prompt: `${input.displayName}\n\n${sampleForDescription(pages)}`,
+        });
+
+        return sanitizeGeneratedText({ maxLength: MAX_DESCRIPTION_LENGTH, value: result.text });
+      },
+      {
+        retry: { times: 3, delayMs: 500, backoff: "exponential" },
+        signal: input.abortSignal,
+      },
+    ),
+  ]);
 
   yield* await ctx.vector.createIndex(FILE_EMBEDDINGS_INDEX_CONFIG);
 
@@ -190,14 +273,20 @@ export const processForRagFn = Kit.gen(async function* (
       fileId: input.fileId,
       chunkIndex: index,
       displayName: input.displayName,
+      page: chunk.page,
       text: chunk.text,
     })),
     vectors: embeddings,
   });
 
-  yield* await ctx.db.run((db) =>
-    db.update(file).set({ status: "ready" }).where(eq(file.id, input.fileId)),
-  );
+  yield* await ctx.db.transaction(async (tx) => {
+    await tx
+      .insert(filePage)
+      .values(
+        pages.map((page) => ({ fileId: input.fileId, page: page.page, content: page.content })),
+      );
+    await tx.update(file).set({ description, status: "ready" }).where(eq(file.id, input.fileId));
+  });
 
   return Result.ok({ fileId: input.fileId });
 });

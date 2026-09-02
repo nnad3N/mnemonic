@@ -16,10 +16,11 @@ import { stripGeminiReasoningProcessor } from "@/mastra/processors/strip-gemini-
 import type { MnemonicRequestContext } from "@/mastra/request-context.server";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
 import { mastraStore } from "@/mastra/storage.server";
-import { createFileGraphRagTool } from "@/mastra/tools/file-graph-rag-tool.server";
 import { createFileVectorSearchTool } from "@/mastra/tools/file-vector-search-tool.server";
+import { listFilesTool } from "@/mastra/tools/list-files-tool.server";
 import { readTextTool } from "@/mastra/tools/read-text-tool.server";
 import { readVisualsTool } from "@/mastra/tools/read-visuals-tool.server";
+import { searchFilesTool } from "@/mastra/tools/search-files-tool.server";
 import { webFetchTool } from "@/mastra/tools/web-fetch-tool.server";
 import { webSearchTool } from "@/mastra/tools/web-search-tool.server";
 
@@ -46,9 +47,10 @@ const getWorkerCodeMode = async ({ requestContext }: GetWorkerCodeModeInput) => 
   return createCodeMode(
     {
       tools: {
-        fileGraphRag: createFileGraphRagTool(apiKey),
         fileVectorSearch: createFileVectorSearchTool(apiKey),
+        listFiles: listFilesTool,
         readText: readTextTool,
+        searchFiles: searchFilesTool,
         webFetch: webFetchTool,
         webSearch: webSearchTool,
       },
@@ -60,7 +62,7 @@ const getWorkerCodeMode = async ({ requestContext }: GetWorkerCodeModeInput) => 
 const workerInstructions = `
 You carry out a research task over current topic's files and live web, and report to the assistant that delegated it. That assistant is your only reader; never address end user.
 
-Topic files: search by meaning or by connections across files; read text whole when task needs. Images, charts, layout, scans -> view the file.
+Topic files: list them to see what topic holds; search for passages; read text whole when task needs. Images, charts, layout, scans -> view the file.
 Web: search to discover pages, fetch to read known URL. Few distinct queries that cover different parts of the task; never similar searches in a row, and never more than a few. Relevant -> stop searching and read; verification is reading, not more search. Noisy or empty -> stop and report what is missing.
 One program gathers from several sources and shapes data (filter, compare, count) so only what task needs comes back; not one call per source.
 Cover every part of task. Stop when answered, or when clearly cannot.

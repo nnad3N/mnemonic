@@ -6,8 +6,8 @@ import { VECTOR_STORE_NAME } from "../storage.server";
 
 export const createFileVectorSearchTool = (apiKey: string) =>
   createVectorQueryTool({
-    description: "Semantic search over extracted text from uploads in the current topic.",
-    enableFilter: true,
+    description:
+      "Cosine similarity over embedded 512-character chunks of the current topic's files; each hit carries the file name and page.",
     id: "file-vector-search",
     indexName: FILE_EMBEDDINGS_INDEX,
     model: getRagEmbeddingModel(apiKey),

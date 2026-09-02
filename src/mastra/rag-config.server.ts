@@ -1,7 +1,7 @@
-import { MockEmbeddingModelV3 } from "ai/test";
+import { MockEmbeddingModelV3, MockLanguageModelV3 } from "ai/test";
 
 import type { VectorApi } from "@/lib/vector-kit.server";
-import { getEmbeddingModel } from "@/mastra/config.server";
+import { getEmbeddingModel, getFileDescriptionModel } from "@/mastra/config.server";
 
 /** Physical index name; includes the embedder id so model changes reindex into a new index. */
 export const FILE_EMBEDDINGS_INDEX = "file_embeddings_v001";
@@ -35,4 +35,22 @@ export const getRagEmbeddingModel = (apiKey: string) => {
     });
   }
   return getEmbeddingModel(apiKey);
+};
+
+export const getRagDescriptionModel = (apiKey: string) => {
+  if (process.env.VITEST === "true") {
+    return new MockLanguageModelV3({
+      doGenerate: async () =>
+        Promise.resolve({
+          content: [{ type: "text", text: "A sample document about the mnemonic RAG pipeline." }],
+          finishReason: { unified: "stop", raw: undefined },
+          usage: {
+            inputTokens: { total: 0, noCache: 0, cacheRead: 0, cacheWrite: 0 },
+            outputTokens: { total: 0, text: 0, reasoning: 0 },
+          },
+          warnings: [],
+        }),
+    });
+  }
+  return getFileDescriptionModel(apiKey);
 };

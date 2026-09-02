@@ -125,7 +125,7 @@ export const searchFileTool = createTool({
   outputSchema: toStandardJsonSchema(outputSchema),
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
   description:
-    "Finds passages in one file that mention the query, with page and line locators. Matches words, not meaning.",
+    "Fuzzy substring search over one file's text: each query term matches within an edit distance of up to 2, case and diacritics folded, with page and line locators.",
   execute: async (
     { fileKey, query, limit = DEFAULT_LIMIT },
     context,

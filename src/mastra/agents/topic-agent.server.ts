@@ -20,10 +20,11 @@ import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
 import { computeDocsTool } from "@/mastra/tools/compute-docs-tool.server";
 import { computeTool } from "@/mastra/tools/compute-tool.server";
 import { createNoteTool } from "@/mastra/tools/create-note-tool.server";
-import { createFileGraphRagTool } from "@/mastra/tools/file-graph-rag-tool.server";
 import { createFileVectorSearchTool } from "@/mastra/tools/file-vector-search-tool.server";
+import { listFilesTool } from "@/mastra/tools/list-files-tool.server";
 import { readFileTool } from "@/mastra/tools/read-file-tool.server";
 import { readNoteTool } from "@/mastra/tools/read-note-tool.server";
+import { searchFilesTool } from "@/mastra/tools/search-files-tool.server";
 import { searchNotesTool } from "@/mastra/tools/search-notes-tool.server";
 import { updateNoteTool } from "@/mastra/tools/update-note-tool.server";
 import { userLinkWebFetchTool } from "@/mastra/tools/web-fetch-tool.server";
@@ -47,10 +48,11 @@ const getTopicAgentTools = async ({ requestContext }: GetTopicAgentToolsInput) =
   return {
     compute: computeTool,
     computeDocs: computeDocsTool,
-    fileGraphRag: createFileGraphRagTool(apiKey),
     fileVectorSearch: createFileVectorSearchTool(apiKey),
+    listFiles: listFilesTool,
     readFile: readFileTool,
     readNote: readNoteTool,
+    searchFiles: searchFilesTool,
     searchNotes: searchNotesTool,
     updateNote: updateNoteTool,
     webFetch: userLinkWebFetchTool,
@@ -71,7 +73,7 @@ ${baseInstructions}
 Conflict -> topic files over web, web over recall.
 
 ## Topic files
-Question over topic files: search by meaning for the passages and by connections for what they link to. One query of each per distinct part of the question. Together they map which file and pages matter; then compute over that file for the evidence.
+List files to see what topic holds. Question over topic files: search, one query per distinct part of the question. Hits map which file and pages matter; then compute over that file for the evidence.
 Reading file whole is last resort. Only when task literally needs entire file and no extract serves: summarize whole book, structure of whole document. Passage, fact, chapter -> search then compute, not whole file.
 
 ## Delegating

@@ -12,14 +12,15 @@ const omPart = (type: ThreadDataUIPart["type"], cycleId: string): ThreadUIMessag
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- grouping only reads the cycle id.
   ({ type, data: { cycleId } }) as ThreadUIMessagePart;
 
-const toolPart = (toolName: MnemonicToolName, toolCallId?: string): ThreadUIMessagePart => ({
-  type: `tool-${toolName}`,
-  toolCallId: toolCallId ?? `${toolName}-1`,
-  state: "output-available",
-  // @ts-expect-error -- test helper only needs tool parts.
-  input: {},
-  output: {},
-});
+const toolPart = (toolName: MnemonicToolName, toolCallId?: string): ThreadUIMessagePart =>
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- grouping only reads the tool name.
+  ({
+    type: `tool-${toolName}`,
+    toolCallId: toolCallId ?? `${toolName}-1`,
+    state: "output-available",
+    input: {},
+    output: {},
+  }) as ThreadUIMessagePart;
 
 describe("groupAssistantParts", () => {
   it("groups intermediates before text into one run", () => {

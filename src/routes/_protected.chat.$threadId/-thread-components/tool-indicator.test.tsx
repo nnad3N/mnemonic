@@ -115,15 +115,15 @@ const TOOL_LABELS = {
     error: "Could not read library documentation",
     pending: "Reading library documentation",
   },
-  fileGraphRag: {
-    done: "Searched file connections",
-    error: "Could not search file connections",
-    pending: "Searching file connections",
-  },
   fileVectorSearch: {
     done: "Searched files",
     error: "Could not search files",
     pending: "Searching files",
+  },
+  listFiles: {
+    done: "Listed files",
+    error: "Could not list files",
+    pending: "Listing files",
   },
   readNote: {
     done: "Read the note",
@@ -154,6 +154,11 @@ const TOOL_LABELS = {
     done: "Searched the file",
     error: "Could not search the file",
     pending: "Searching the file",
+  },
+  searchFiles: {
+    done: "Searched file text",
+    error: "Could not search file text",
+    pending: "Searching file text",
   },
   searchNotes: {
     done: "Searched notes",

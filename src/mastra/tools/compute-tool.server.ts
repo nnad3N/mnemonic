@@ -156,7 +156,7 @@ export const computeTool = createTool({
   outputSchema: toStandardJsonSchema(outputSchema),
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
   description: [
-    "Computes with JavaScript in a sandbox: arithmetic, statistics, unit conversions, parsing of text, CSV or JSON, and full-text search over a file with a minisearch index.",
+    "Computes with JavaScript in a sandbox: arithmetic, statistics, unit conversions, parsing of text, CSV or JSON, and BM25 search over a file with an in-memory minisearch index (prefix and fuzzy matching).",
     "Export the result with `export default`; console output is in `logs`.",
     "Always pass `file` to work over a file, never inline file contents into `code` or `args`. `env.file.contents` is the source for text formats, converted text otherwise.",
     `Available libraries: ${docsLibraries

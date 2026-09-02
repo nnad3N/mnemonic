@@ -7,6 +7,7 @@ import {
   integer,
   jsonb,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -21,6 +22,8 @@ import type { MnemonicAgentId } from "@/mastra/agents/id.server";
 import type { WorkTiming } from "@/routes/_protected.chat.$threadId/-thread-types";
 
 export type FileStatus = "uploading" | "processing" | "ready" | "failed";
+
+const tsvector = customType<{ data: string }>({ dataType: () => "tsvector" });
 
 export const topic = pgTable("topic", {
   id: text("id")
@@ -61,6 +64,7 @@ export const file = pgTable(
     mimeType: text("mime_type").notNull(),
     sizeBytes: integer("size_bytes").notNull(),
     sha256: text("sha256").notNull(),
+    description: text("description"),
 
     s3Key: text("s3_key").notNull(),
 
@@ -73,6 +77,30 @@ export const file = pgTable(
       .defaultNow(),
   },
   (table) => [uniqueIndex("file_topic_sha256_unique").on(table.topicId, table.sha256)],
+);
+
+export const filePage = pgTable(
+  "file_page",
+  {
+    fileId: text("file_id")
+      .$type<SafeId<"file">>()
+      .notNull()
+      .references(() => file.id, { onDelete: "cascade" }),
+    /** Position in the file, 1-based, not the number printed on the page. */
+    page: integer("page").notNull(),
+    content: text("content").notNull(),
+    searchVectorEnglish: tsvector("search_vector_english").generatedAlwaysAs(
+      (): SQL => sql`to_tsvector('english', ${filePage.content})`,
+    ),
+    searchVectorSimple: tsvector("search_vector_simple").generatedAlwaysAs(
+      (): SQL => sql`to_tsvector('simple', ${filePage.content})`,
+    ),
+  },
+  (table) => [
+    primaryKey({ columns: [table.fileId, table.page] }),
+    index("file_page_search_english_idx").using("gin", table.searchVectorEnglish),
+    index("file_page_search_simple_idx").using("gin", table.searchVectorSimple),
+  ],
 );
 
 export const byok = pgTable(
@@ -191,8 +219,6 @@ export const note = pgTable(
   ],
 );
 
-const tsvector = customType<{ data: string }>({ dataType: () => "tsvector" });
-
 export const noteVersion = pgTable(
   "note_version",
   {
@@ -233,12 +259,19 @@ export const noteVersion = pgTable(
 );
 
 export const appRelations = defineRelationsPart(
-  { file, byok, note, noteVersion, threadRun, threadSettings, topic, user },
+  { file, filePage, byok, note, noteVersion, threadRun, threadSettings, topic, user },
   (r) => ({
     file: {
+      pages: r.many.filePage(),
       topic: r.one.topic({
         from: r.file.topicId,
         to: r.topic.id,
+      }),
+    },
+    filePage: {
+      file: r.one.file({
+        from: r.filePage.fileId,
+        to: r.file.id,
       }),
     },
     byok: {

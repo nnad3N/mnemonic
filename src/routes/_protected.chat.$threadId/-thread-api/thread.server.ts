@@ -15,6 +15,7 @@ import { getResourceId } from "@/lib/middleware/resolve-thread.server";
 import type { S3Kit } from "@/lib/s3-kit.server";
 import { createSafeId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
+import { sanitizeGeneratedText } from "@/lib/sanitize-generated-text";
 import type { VectorKit } from "@/lib/vector-kit.server";
 import { getThreadTitleModel } from "@/mastra/config.server";
 import { FILE_EMBEDDINGS_INDEX, FILE_EMBEDDINGS_INDEX_CONFIG } from "@/mastra/rag-config.server";
@@ -241,21 +242,6 @@ Rules:
 const MAX_TITLE_LENGTH = 255;
 const TITLE_GENERATION_TIMEOUT_MS = 10_000;
 
-export const sanitizeTitle = (value: string) => {
-  const title = value
-    .replaceAll(/^["'`]+|["'`]+$/g, "")
-    .replaceAll(/\s+/g, " ")
-    .trim()
-    .slice(0, MAX_TITLE_LENGTH)
-    .trim();
-
-  if (title.length > 0) {
-    return title;
-  }
-
-  return null;
-};
-
 type CreateThreadTitleCtx = Kits<[MemoryKit]>;
 
 type CreateThreadTitleInput = {
@@ -300,7 +286,7 @@ export const createThreadTitleFn = Kit.gen(async function* (
     },
   );
 
-  const title = sanitizeTitle(text);
+  const title = sanitizeGeneratedText({ maxLength: MAX_TITLE_LENGTH, value: text });
 
   if (!title) {
     return Result.ok(null);

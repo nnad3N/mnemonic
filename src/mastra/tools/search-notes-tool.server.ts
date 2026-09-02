@@ -2,11 +2,16 @@ import { createTool } from "@mastra/core/tools";
 import { toStandardJsonSchema } from "@valibot/to-json-schema";
 import { Result } from "better-result";
 import { and, desc, eq, gt, notExists, or, sql } from "drizzle-orm";
-import type { SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import * as v from "valibot";
 
+import {
+  HEADLINE_OPTIONS,
+  languageSchema,
+  SEARCH_CONFIG_BY_LANGUAGE,
+} from "@/db/full-text-search.server";
+import type { SearchLanguage } from "@/db/full-text-search.server";
 import { note, noteVersion } from "@/db/schema.server";
 import { dbKit } from "@/lib/db-kit.server";
 import type { DbKit } from "@/lib/db-kit.server";
@@ -20,22 +25,10 @@ import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
 
 const DEFAULT_LIMIT = 10;
 
-/** Markers would read as syntax in a markdown snippet, so the fragments come back unmarked. */
-const HEADLINE_OPTIONS = 'MaxFragments=3, MinWords=8, MaxWords=25, StartSel="", StopSel=""';
-
-const languageSchema = v.picklist(["english", "other"]);
-
-export type SearchLanguage = v.InferOutput<typeof languageSchema>;
-
-/**
- * English is the only stemmer worth having here, so every other language searches the unstemmed
- * vector: exact word forms only, but nothing lost to English stemming or to a word that happens
- * to sit on the English stop list.
- */
-const SEARCH_BY_LANGUAGE = {
-  english: { config: sql`'english'`, vector: noteVersion.searchVectorEnglish },
-  other: { config: sql`'simple'`, vector: noteVersion.searchVectorSimple },
-} satisfies Record<SearchLanguage, { config: SQL; vector: PgColumn }>;
+const SEARCH_VECTOR_BY_LANGUAGE = {
+  english: noteVersion.searchVectorEnglish,
+  other: noteVersion.searchVectorSimple,
+} satisfies Record<SearchLanguage, PgColumn>;
 
 type SearchNotesCtx = Kits<[DbKit]>;
 
@@ -52,7 +45,8 @@ export const searchAgentNotesFn = Kit.gen(async function* (
   ctx: SearchNotesCtx,
   input: SearchNotesInput,
 ) {
-  const { config, vector: contentVector } = SEARCH_BY_LANGUAGE[input.language];
+  const config = SEARCH_CONFIG_BY_LANGUAGE[input.language];
+  const contentVector = SEARCH_VECTOR_BY_LANGUAGE[input.language];
   const tsQuery = sql`websearch_to_tsquery(${config}, ${input.query})`;
   const titleVector = sql`to_tsvector(${config}, ${note.title})`;
   const olderVersion = alias(noteVersion, "older_version");
@@ -140,7 +134,7 @@ const noteToolCtx = Kit.createContext(dbKit);
 export const searchNotesTool = createTool({
   id: "search-notes",
   description:
-    "Finds notes whose title or text matches the query, with a snippet around the hits. Covers this thread's notes, plus the topic's notes when the thread is in a topic. Matches words, not meaning.",
+    "Postgres full-text search over note titles and text: tsvector matching, stemmed for English, ranked with ts_rank_cd, one ts_headline snippet per note. Covers this thread's notes, plus the topic's notes when the thread is in a topic.",
   inputExamples: [{ input: { language: "english", query: '"cash flow" OR runway -draft' } }],
   inputSchema: toStandardJsonSchema(inputSchema),
   outputSchema: toStandardJsonSchema(outputSchema),

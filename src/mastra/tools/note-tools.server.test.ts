@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import type { SearchLanguage } from "@/db/full-text-search.server";
 import { noteVersion, threadRun } from "@/db/schema.server";
 import { dbKit } from "@/lib/db-kit.server";
 import * as Kit from "@/lib/kit";
@@ -11,7 +12,6 @@ import { createAgentNoteFn } from "@/mastra/tools/create-note-tool.server";
 import { NoteToolError } from "@/mastra/tools/note-tool-helpers.server";
 import { readAgentNoteFn } from "@/mastra/tools/read-note-tool.server";
 import { searchAgentNotesFn } from "@/mastra/tools/search-notes-tool.server";
-import type { SearchLanguage } from "@/mastra/tools/search-notes-tool.server";
 import { replaceNoteText, updateAgentNoteFn } from "@/mastra/tools/update-note-tool.server";
 import {
   addNoteToTopicFn,
