@@ -21,7 +21,7 @@ type ModelInputs = {
 };
 
 const modelInputs = {
-  "google/gemini-3.7-flash": { acceptsPdf: true },
+  "google/gemini-3.8-flash": { acceptsPdf: true },
   "google/gemma-4-26b-a4b-it": { acceptsPdf: false },
   "moonshotai/kimi-k3": { acceptsPdf: false },
   "xiaomi/mimo-v2.5": { acceptsPdf: false },
@@ -43,10 +43,10 @@ export const models: Record<ModelOption, AgentModel> = {
     model: "z-ai/glm-5.3-flash",
   },
   analysis: {
-    model: "google/gemini-3.7-flash",
+    model: "google/gemini-3.8-flash",
     openrouter: {
       reasoning: {
-        effort: "high",
+        effort: "medium",
       },
     },
   },
