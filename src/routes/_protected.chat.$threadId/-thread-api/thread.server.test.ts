@@ -9,7 +9,7 @@ import { createSafeId, toSafeId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
 import { createVectorKit, type VectorApi, VectorError, vectorKit } from "@/lib/vector-kit.server";
 import { EMBEDDING_DIMENSION } from "@/mastra/rag-config.server";
-import { FILE_EMBEDDINGS_INDEX } from "@/mastra/rag-config.server";
+import { FILE_EMBEDDINGS_INDEX, FILE_EMBEDDINGS_INDEX_CONFIG } from "@/mastra/rag-config.server";
 import { mastraVector } from "@/mastra/storage.server";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 import { clearDatabase } from "@/test/clear-database";
@@ -156,13 +156,7 @@ describe("deleteTopicFn", () => {
   beforeEach(async () => {
     fakeS3.reset();
     await Promise.all([
-      vector
-        .createIndex({
-          dimension: EMBEDDING_DIMENSION,
-          indexConfig: { type: "flat" },
-          indexName: FILE_EMBEDDINGS_INDEX,
-        })
-        .then(expectOk),
+      vector.createIndex(FILE_EMBEDDINGS_INDEX_CONFIG).then(expectOk),
       seedUser({ id: userId }),
     ]);
     await seedTopic({ userId, id: topicId });

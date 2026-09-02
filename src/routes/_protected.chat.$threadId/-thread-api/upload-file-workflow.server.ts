@@ -20,8 +20,8 @@ import { safeId, toSafeId } from "@/lib/safe-id";
 import { vectorKit } from "@/lib/vector-kit.server";
 import type { VectorKit } from "@/lib/vector-kit.server";
 import {
-  EMBEDDING_DIMENSION,
   FILE_EMBEDDINGS_INDEX,
+  FILE_EMBEDDINGS_INDEX_CONFIG,
   getRagEmbeddingModel,
 } from "@/mastra/rag-config.server";
 
@@ -180,13 +180,7 @@ export const processForRagFn = Kit.gen(async function* (
     }),
   );
 
-  // flat = exact scan: pgvector caps ANN indexes (ivfflat/hnsw) at 2000 dimensions,
-  // below the embedder's 4096. Fine for one user's files, and recall is perfect.
-  yield* await ctx.vector.createIndex({
-    dimension: EMBEDDING_DIMENSION,
-    indexConfig: { type: "flat" },
-    indexName: FILE_EMBEDDINGS_INDEX,
-  });
+  yield* await ctx.vector.createIndex(FILE_EMBEDDINGS_INDEX_CONFIG);
 
   yield* await ctx.vector.upsert({
     ids: chunks.map((_, index) => `${input.fileId}:${index}`),

@@ -17,7 +17,7 @@ import { createSafeId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
 import type { VectorKit } from "@/lib/vector-kit.server";
 import { getThreadTitleModel } from "@/mastra/config.server";
-import { FILE_EMBEDDINGS_INDEX } from "@/mastra/rag-config.server";
+import { FILE_EMBEDDINGS_INDEX, FILE_EMBEDDINGS_INDEX_CONFIG } from "@/mastra/rag-config.server";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 
 type CreateTopicCtx = Kits<[DbKit, MemoryKit]>;
@@ -80,6 +80,8 @@ export const deleteTopicFn = Kit.gen(async function* (
       perPage: false,
     }),
   ]);
+  // The index is only created on first successful embed; a delete before that would hit a missing table.
+  yield* await ctx.vector.createIndex(FILE_EMBEDDINGS_INDEX_CONFIG);
   yield* await Kit.promiseAll([
     ctx.s3.deleteObjects({
       keys: files.map((row) => row.s3Key),

@@ -8,7 +8,7 @@ import { createSafeId, toSafeId } from "@/lib/safe-id";
 import { createVectorKit, VectorError, vectorKit } from "@/lib/vector-kit.server";
 import type { VectorApi } from "@/lib/vector-kit.server";
 import { EMBEDDING_DIMENSION } from "@/mastra/rag-config.server";
-import { FILE_EMBEDDINGS_INDEX } from "@/mastra/rag-config.server";
+import { FILE_EMBEDDINGS_INDEX, FILE_EMBEDDINGS_INDEX_CONFIG } from "@/mastra/rag-config.server";
 import { mastraVector } from "@/mastra/storage.server";
 import { clearDatabase } from "@/test/clear-database";
 import { createFakeS3 } from "@/test/fake-s3";
@@ -81,13 +81,7 @@ const createFailingVectorKit = () => {
 beforeEach(async () => {
   fakeS3.reset();
   await Promise.all([
-    vector
-      .createIndex({
-        dimension: EMBEDDING_DIMENSION,
-        indexConfig: { type: "flat" },
-        indexName: FILE_EMBEDDINGS_INDEX,
-      })
-      .then(expectOk),
+    vector.createIndex(FILE_EMBEDDINGS_INDEX_CONFIG).then(expectOk),
     seedUser({ id: userId }),
   ]);
   await seedTopic({ userId, id: topicId });
