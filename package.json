@@ -24,8 +24,8 @@
     "db:pull": "drizzle-kit pull",
     "db:studio": "drizzle-kit studio",
     "mastra:dev": "mastra dev",
-    "sandbox:modules": "rolldown ./src/lib/sandbox/modules/mathjs-entry.ts --platform browser --format esm --minify -o ./src/lib/sandbox/modules/mathjs.txt && rolldown ./src/lib/sandbox/modules/papaparse-entry.ts --platform browser --format esm --minify -o ./src/lib/sandbox/modules/papaparse.txt",
-    "sandbox:docs": "nub ./src/lib/docs/scripts/generate.ts"
+    "sandbox:modules": "rolldown ./src/lib/sandbox/modules/mathjs-entry.ts --platform browser --format esm --minify -o ./src/lib/sandbox/modules/mathjs.txt && rolldown ./src/lib/sandbox/modules/papaparse-entry.ts --platform browser --format esm --minify -o ./src/lib/sandbox/modules/papaparse.txt && rolldown ./src/lib/sandbox/modules/minisearch-entry.ts --platform browser --format esm --minify -o ./src/lib/sandbox/modules/minisearch.txt",
+    "sandbox:docs": "nub ./src/lib/docs/scripts/generate.server.ts"
   },
   "dependencies": {
     "@ai-sdk/provider-utils": "5.0.25",
@@ -101,6 +101,7 @@
     "lowlight": "^3.3.0",
     "lucide-react": "^1.31.0",
     "markdown-it": "^15.0.1",
+    "minisearch": "^7.2.0",
     "nanoid": "^6.0.1",
     "next-themes": "^0.4.6",
     "nitro": "npm:nitro-nightly@3.0.1-20260715-190547-7af4fee3",

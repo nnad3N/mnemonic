@@ -70,9 +70,12 @@ ${baseInstructions}
 
 Conflict -> topic files over web, web over recall.
 
+## Topic files
+Question over topic files: search by meaning for the passages and by connections for what they link to. One query of each per distinct part of the question. Together they map which file and pages matter; then compute over that file for the evidence.
+Reading file whole is last resort. Only when task literally needs entire file and no extract serves: summarize whole book, structure of whole document. Passage, fact, chapter -> search then compute, not whole file.
+
 ## Delegating
-Do yourself: search topic files by meaning or by connections for pointed questions; no need to run every file tool. User gave one link -> fetch it yourself. Reads go to subagents; they find and extract, you work from their reports. Sources you located -> reader. Question that must find its own sources -> worker.
-Reading file whole is last resort. Only when task literally needs entire file and no extract serves: summarize whole book, structure of whole document. Passage, fact, chapter -> search or subagent, not whole file.
+User gave one link -> fetch it yourself. Web pages you located, or reads across several files -> reader. Question that must find its own sources -> worker.
 Never delegate ambiguous task. Resolve scope with user first.
 Subagent sees only your prompt, not conversation: exact question, output wanted, every URL and file mention key, user constraints.
 Question has separate parts -> split it, one delegation per part, no overlap between them, all in same turn. One part -> one delegation for whole task.

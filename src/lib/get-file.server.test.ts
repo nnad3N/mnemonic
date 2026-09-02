@@ -20,10 +20,10 @@ const csvFile = () => {
 
 describe("toFileText", () => {
   it("hands back the bytes of an already-text file rather than extracting them", async () => {
-    expect(expectOk(await toFileText(csvFile()))).toBe(CSV);
+    expect(expectOk(await toFileText(csvFile(), {}))).toBe(CSV);
   });
 
   it("extracts an already-text file when asked to", async () => {
-    expect(expectOk(await toFileText(csvFile(), true))).not.toBe(CSV);
+    expect(expectOk(await toFileText(csvFile(), { extract: true }))).not.toBe(CSV);
   });
 });

@@ -19,6 +19,14 @@ const inputSchema = v.object({
     ),
   ),
   extract: extractSchema,
+  pages: v.optional(
+    v.pipe(
+      v.boolean(),
+      v.description(
+        "Marks page boundaries in the text with `<!-- PAGE n -->`, where n is the position in the file, 1-based, not the number printed on the page. Paginated formats only, such as PDF.",
+      ),
+    ),
+  ),
 });
 
 const outputSchema = v.variant("type", [
@@ -48,7 +56,7 @@ export const readTextTool = createTool({
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
   description:
     "Reads one file. Text formats come back as their source; other formats are converted to text; images have none to extract.",
-  execute: async ({ fileKey, extract }, context): Promise<ReadTextOutput> => {
+  execute: async ({ fileKey, extract, pages }, context): Promise<ReadTextOutput> => {
     const file = await loadMentionedFile({ fileKey, requestContext: context.requestContext });
 
     if (Result.isError(file)) {
@@ -59,7 +67,7 @@ export const readTextTool = createTool({
       return { type: "error", message: "The file is an image; it has no text to extract." };
     }
 
-    const text = await toFileText(file.value, extract);
+    const text = await toFileText(file.value, { extract, pages });
 
     if (Result.isError(text)) {
       return { type: "error", message: text.error.message };

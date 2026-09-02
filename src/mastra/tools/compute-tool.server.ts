@@ -1,3 +1,4 @@
+import { extractBytes } from "@kreuzberg/node";
 import { createTool } from "@mastra/core/tools";
 import { toStandardJsonSchema } from "@valibot/to-json-schema";
 import { matchError, Result } from "better-result";
@@ -8,7 +9,7 @@ import { docsLibraries } from "@/lib/docs/docs-types";
 import { ToolError } from "@/lib/errors/tool-error";
 import { ImageMimeType } from "@/lib/file-validation";
 import type { FetchedFile } from "@/lib/get-file.server";
-import { toFileText } from "@/lib/get-file.server";
+import { GetFileError, toFileText } from "@/lib/get-file.server";
 import { mentionKeyFormat } from "@/lib/mention-key";
 import { runCode } from "@/lib/sandbox/run-code.server";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
@@ -48,7 +49,14 @@ const sandboxFileFields = Object.keys({
   filename: true,
   size: true,
   mimeType: true,
-} satisfies Record<keyof SandboxFile, true>)
+} satisfies Record<Exclude<keyof SandboxFile, "pages">, true>)
+  .map((field) => `\`${field}\``)
+  .join(", ");
+
+const sandboxPageFields = Object.keys({
+  page: true,
+  text: true,
+} satisfies Record<keyof SandboxPage, true>)
   .map((field) => `\`${field}\``)
   .join(", ");
 
@@ -66,6 +74,14 @@ const inputSchema = v.object({
           ),
         ),
         extract: extractSchema,
+        pages: v.optional(
+          v.pipe(
+            v.boolean(),
+            v.description(
+              `Also loads \`env.file.pages\`, one entry per page with ${sandboxPageFields}. \`page\` is the position in the file, 1-based, not the number printed on the page. Paginated formats only, such as PDF.`,
+            ),
+          ),
+        ),
       }),
       v.description(
         `The file to work over, loaded as \`env.file\` with ${sandboxFileFields}; \`contents\` is empty for images. Omit when the code needs no file.`,
@@ -92,26 +108,46 @@ const outputSchema = v.variant("type", [successOutputSchema, errorOutputSchema])
 type ComputeSuccess = v.InferOutput<typeof successOutputSchema>;
 type ComputeError = v.InferOutput<typeof errorOutputSchema>;
 
+type SandboxPage = {
+  page: number;
+  text: string;
+};
+
 export type SandboxFile = {
   contents: string;
   filename: string;
   size: number;
   mimeType: string;
+  pages?: SandboxPage[];
 };
 
-const toSandboxFile = async (file: FetchedFile, extract?: boolean) => {
-  const text = ImageMimeType.is(file.mimeType) ? Result.ok("") : await toFileText(file, extract);
+const toSandboxFile = async (
+  file: FetchedFile,
+  options: { extract?: boolean; pages?: boolean },
+): Promise<Result<SandboxFile, GetFileError>> => {
+  const base = { filename: file.displayName, size: file.sizeBytes, mimeType: file.mimeType };
 
-  if (Result.isError(text)) {
-    return Result.err(text.error);
+  if (ImageMimeType.is(file.mimeType)) {
+    return Result.ok({ ...base, contents: "" });
   }
 
-  return Result.ok({
-    contents: text.value,
-    filename: file.displayName,
-    size: file.sizeBytes,
-    mimeType: file.mimeType,
+  if (!options.pages) {
+    const text = await toFileText(file, { extract: options.extract });
+
+    return Result.map(text, (contents) => ({ ...base, contents }));
+  }
+
+  const extraction = await Result.tryPromise({
+    try: async () =>
+      extractBytes(Buffer.from(file.bytes), file.mimeType, { pages: { extractPages: true } }),
+    catch: () => new GetFileError({ message: "File could not be loaded." }),
   });
+
+  return Result.map(extraction, (result) => ({
+    ...base,
+    contents: result.content,
+    pages: (result.pages ?? []).map((page) => ({ page: page.pageNumber, text: page.content })),
+  }));
 };
 
 export const computeTool = createTool({
@@ -120,7 +156,7 @@ export const computeTool = createTool({
   outputSchema: toStandardJsonSchema(outputSchema),
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
   description: [
-    "Computes with JavaScript in a sandbox: arithmetic, statistics, unit conversions and parsing of text, CSV or JSON.",
+    "Computes with JavaScript in a sandbox: arithmetic, statistics, unit conversions, parsing of text, CSV or JSON, and full-text search over a file with a minisearch index.",
     "Export the result with `export default`; console output is in `logs`.",
     "Always pass `file` to work over a file, never inline file contents into `code` or `args`. `env.file.contents` is the source for text formats, converted text otherwise.",
     `Available libraries: ${docsLibraries
@@ -140,7 +176,7 @@ export const computeTool = createTool({
         return { type: "error", message: loaded.error.message } satisfies ComputeError;
       }
 
-      const sandboxFile = await toSandboxFile(loaded.value, input.file.extract);
+      const sandboxFile = await toSandboxFile(loaded.value, input.file);
 
       if (Result.isError(sandboxFile)) {
         return { type: "error", message: sandboxFile.error.message } satisfies ComputeError;

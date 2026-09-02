@@ -7,6 +7,7 @@ import type { JSONValue } from "ai";
 import { Result, TaggedError } from "better-result";
 
 import mathjsBundle from "./modules/mathjs.txt?raw";
+import minisearchBundle from "./modules/minisearch.txt?raw";
 import papaparseBundle from "./modules/papaparse.txt?raw";
 
 const EXECUTION_TIMEOUT_MS = 10_000;
@@ -71,6 +72,9 @@ const createExecuteSandboxOptions = (
   nodeModules: {
     mathjs: {
       "index.js": mathjsBundle,
+    },
+    minisearch: {
+      "index.js": minisearchBundle,
     },
     papaparse: {
       "index.js": papaparseBundle,

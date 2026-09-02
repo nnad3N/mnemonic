@@ -8,7 +8,7 @@ import { VECTOR_STORE_NAME } from "../storage.server";
 export const createFileGraphRagTool = (apiKey: string) =>
   createGraphRAGTool({
     description:
-      "Graph-based retrieval over extracted text from uploads in the current topic, connecting related passages across files.",
+      "Graph retrieval over extracted text from uploads in the current topic: passages related to the query plus the passages they connect to, in the same file or others.",
     enableFilter: true,
     graphOptions: {
       dimension: EMBEDDING_DIMENSION,

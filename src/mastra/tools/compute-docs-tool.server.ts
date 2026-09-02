@@ -84,7 +84,7 @@ export const computeDocsTool = createTool({
   inputSchema: toStandardJsonSchema(inputSchema),
   outputSchema: toStandardJsonSchema(outputSchema),
   description: [
-    "Bundled API reference for mathjs and papaparse, the libraries importable inside the code sandbox.",
+    `Bundled API reference for ${new Intl.ListFormat("en").format(docsLibraries)}, the libraries importable inside the code sandbox.`,
     "For mathjs, `expressionExamples` are written in the mathjs expression language used by `math.evaluate(...)`, not in JavaScript.",
   ].join(" "),
   // oxlint-disable-next-line typescript/require-await

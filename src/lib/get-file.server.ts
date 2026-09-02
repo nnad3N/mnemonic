@@ -26,9 +26,14 @@ export type GetFileInput = {
   topicId: SafeId<"topic">;
 };
 
+type ToFileTextOptions = {
+  extract?: boolean;
+  pages?: boolean;
+};
+
 export const toFileText = async (
   file: FetchedFile,
-  extract?: boolean,
+  { extract, pages }: ToFileTextOptions,
 ): Promise<Result<string, GetFileError>> => {
   if (!extract && RawTextMimeType.is(file.mimeType)) {
     return Result.ok(new TextDecoder().decode(file.bytes));
@@ -36,7 +41,11 @@ export const toFileText = async (
 
   return Result.tryPromise({
     try: async () => {
-      const extraction = await extractBytes(file.bytes, file.mimeType);
+      const extraction = await extractBytes(
+        file.bytes,
+        file.mimeType,
+        pages ? { pages: { insertPageMarkers: true } } : undefined,
+      );
       return extraction.content;
     },
     catch: () =>

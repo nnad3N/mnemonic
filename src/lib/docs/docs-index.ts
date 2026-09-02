@@ -3,6 +3,7 @@ import * as v from "valibot";
 import type { DocsLibraryName, DocsMember } from "@/lib/docs/docs-types";
 import { docsLibrarySchema } from "@/lib/docs/docs-types";
 import mathjsGenerated from "@/lib/docs/generated/mathjs.json" with { type: "json" };
+import minisearchGenerated from "@/lib/docs/generated/minisearch.json" with { type: "json" };
 import papaparseGenerated from "@/lib/docs/generated/papaparse.json" with { type: "json" };
 import { buildSearchIndex, searchIndex } from "@/lib/docs/search";
 
@@ -15,6 +16,7 @@ const load = (generated: unknown) => {
 
 export const docs = {
   mathjs: load(mathjsGenerated),
+  minisearch: load(minisearchGenerated),
   papaparse: load(papaparseGenerated),
 } as const;
 
