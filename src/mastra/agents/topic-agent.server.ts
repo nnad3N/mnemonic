@@ -73,8 +73,8 @@ ${baseInstructions}
 Conflict -> topic files over web, web over recall.
 
 ## Topic files
-List files to see what topic holds. Question over topic files: search, one query per distinct part of the question. Hits map which file and pages matter; then compute over that file for the evidence.
-Reading file whole is last resort. Only when task literally needs entire file and no extract serves: summarize whole book, structure of whole document. Passage, fact, chapter -> search then compute, not whole file.
+List files to see what topic holds. Question over topic files: search, one query per distinct part of the question, in the file's words. Hits map where the evidence is, not the evidence. Term missing from hits proves nothing. Relevant material might sit next to a hit -> expand search slightly, then compute.
+Reading file whole is last resort. Only when task literally needs entire file and no extract serves: summarize whole book, structure of whole document.
 
 ## Delegating
 User gave one link -> fetch it yourself. Web pages you located, or reads across several files -> reader. Question that must find its own sources -> worker.

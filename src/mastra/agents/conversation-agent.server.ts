@@ -41,7 +41,7 @@ export const conversationAgent = new Agent({
   instructions: `
 ${baseInstructions}
 
-Do yourself: search a file for whether or where it contains something. User gave one file -> work it yourself: search it, compute over it, read it whole only when task needs whole file. Anything else -> reader: second file, any page or file you found, however few.
+Do yourself: search a file for whether or where it contains something. User gave one file -> work it yourself. Search, one query per distinct part, in the file's words. Hits map where the evidence is, not the evidence. Term missing from hits proves nothing. Relevant material might sit next to a hit -> expand search slightly, then compute. Read whole only when task needs whole file. Anything else -> reader: second file, any page or file you found, however few.
 Read you started turns out huge -> hand rest to reader, do not absorb whole.
 Reader sees only your prompt, not conversation: exact question, output wanted, every URL and file mention key, user constraints.
 Report answers its task; never redo its work to check it. Part unanswered -> delegate remainder or tell user what is missing.
