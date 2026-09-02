@@ -14,6 +14,7 @@ import {
   topicAccessMiddleware,
 } from "@/lib/middleware/assert-thread-access.middleware";
 import { s3Kit } from "@/lib/s3-kit.server";
+import type { SafeId } from "@/lib/safe-id";
 import { mastra } from "@/mastra/instance.server";
 
 import { FILE_PROCESSING_TTL_SECONDS, getPresignedUrlFn, markFileFailed } from "./files.server";
@@ -51,60 +52,86 @@ export const getPresignedUrl = createServerFn({ method: "POST" })
     ),
   );
 
+type ProcessFileContext = {
+  file: { id: SafeId<"file"> };
+  topicId: SafeId<"topic">;
+  user: { id: SafeId<"user"> };
+};
+
+const runProcessFile = async (context: ProcessFileContext) => {
+  const workflowResult = await Result.tryPromise(async () => {
+    const workflow = mastra.getWorkflow("process-file");
+    const run = await workflow.createRun();
+    const abortSignal = AbortSignal.timeout(FILE_PROCESSING_TTL_SECONDS * 1000);
+
+    abortSignal.addEventListener(
+      "abort",
+      () => {
+        void run.cancel();
+      },
+      { once: true },
+    );
+
+    return run.start({
+      inputData: {
+        fileId: context.file.id,
+        topicId: context.topicId,
+        userId: context.user.id,
+      },
+    });
+  });
+
+  if (Result.isError(workflowResult)) {
+    await markFileFailed(uploadFileCtx, context.file.id, context.user.id);
+
+    throw toServerFnError.serverError("File processing could not be started");
+  }
+
+  const result = workflowResult.value;
+
+  if (result.status === "failed") {
+    // The workflow's onError already marks the file failed; this covers that hook's own DB write failing.
+    await markFileFailed(uploadFileCtx, context.file.id, context.user.id);
+
+    throw new ServerFnError({
+      message: "File processing failed",
+      status: "server-error",
+      cause: result.error,
+    });
+  }
+
+  if (result.status !== "success") {
+    await markFileFailed(uploadFileCtx, context.file.id, context.user.id);
+
+    throw new ServerFnError({
+      message: "File processing did not complete",
+      status: "server-error",
+    });
+  }
+
+  return { fileId: context.file.id };
+};
+
 export const processFile = createServerFn({ method: "POST" })
   .middleware([fileAccessMiddleware])
+  .handler(async ({ context }) => runProcessFile(context));
+
+export const retryFile = createServerFn({ method: "POST" })
+  .middleware([fileAccessMiddleware])
   .handler(async ({ context }) => {
-    const workflowResult = await Result.tryPromise(async () => {
-      const workflow = mastra.getWorkflow("process-file");
-      const run = await workflow.createRun();
-      const abortSignal = AbortSignal.timeout(FILE_PROCESSING_TTL_SECONDS * 1000);
-
-      abortSignal.addEventListener(
-        "abort",
-        () => {
-          void run.cancel();
-        },
-        { once: true },
-      );
-
-      return run.start({
-        inputData: {
-          fileId: context.file.id,
-          topicId: context.topicId,
-          userId: context.user.id,
-        },
-      });
-    });
-
-    if (Result.isError(workflowResult)) {
-      await markFileFailed(uploadFileCtx, context.file.id, context.user.id);
-
-      throw toServerFnError.serverError("File processing could not be started");
+    if (context.file.status !== "failed") {
+      throw toServerFnError.badRequest("Only a failed file can be retried");
     }
 
-    const result = workflowResult.value;
+    const reset = await Kit.get(dbKit).run((db) =>
+      db.update(file).set({ status: "uploading" }).where(eq(file.id, context.file.id)),
+    );
 
-    if (result.status === "failed") {
-      // The workflow's onError already marks the file failed; this covers that hook's own DB write failing.
-      await markFileFailed(uploadFileCtx, context.file.id, context.user.id);
-
-      throw new ServerFnError({
-        message: "File processing failed",
-        status: "server-error",
-        cause: result.error,
-      });
+    if (Result.isError(reset)) {
+      throw toServerFnError.serverError("Failed to reset file for processing");
     }
 
-    if (result.status !== "success") {
-      await markFileFailed(uploadFileCtx, context.file.id, context.user.id);
-
-      throw new ServerFnError({
-        message: "File processing did not complete",
-        status: "server-error",
-      });
-    }
-
-    return { fileId: context.file.id };
+    return runProcessFile(context);
   });
 
 const findFilesBySha256InputSchema = v.object({

@@ -24,6 +24,8 @@ const createOpenrouterProvider = (apiKey: string) =>
     appName: "Mnemonic",
   });
 
+const EMBEDDING_BATCH_SIZE = 96;
+
 /**
  * Mastra only accepts embedding models tagged `v2` or `v3`, while the AI SDK v7 OpenRouter
  * provider emits `v4`. The interfaces are otherwise identical except for the `deprecated`
@@ -44,7 +46,8 @@ const createEmbeddingModel = (apiKey: string, dimensions?: number) => {
         warnings: warnings.filter((warning) => warning.type !== "deprecated"),
       };
     },
-    maxEmbeddingsPerCall: openrouterEmbedding.maxEmbeddingsPerCall,
+    // OpenRouter reports no batch limit, which makes the AI SDK embed a whole document in one request.
+    maxEmbeddingsPerCall: EMBEDDING_BATCH_SIZE,
     modelId: openrouterEmbedding.modelId,
     provider: openrouterEmbedding.provider,
     specificationVersion: "v3" as const,

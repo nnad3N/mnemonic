@@ -11,7 +11,7 @@ import { toSafeId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
 
 export const FILE_UPLOAD_TTL_SECONDS = 60;
-export const FILE_PROCESSING_TTL_SECONDS = 60;
+export const FILE_PROCESSING_TTL_SECONDS = 300;
 
 type UploadFileCtx = Kits<[DbKit, S3Kit]>;
 
