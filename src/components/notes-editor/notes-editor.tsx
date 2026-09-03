@@ -67,11 +67,7 @@ export const NotesEditor = ({ onClose }: NotesEditorProps) => {
               </div>
             )}
           </div>
-          {timelineOpen && activeNoteId && (
-            <Suspense>
-              <NoteTimeline noteId={activeNoteId} />
-            </Suspense>
-          )}
+          <NoteTimeline noteId={activeNoteId} open={timelineOpen} />
         </div>
       </PlateController>
     </SidebarInset>

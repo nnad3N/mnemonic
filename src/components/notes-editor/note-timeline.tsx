@@ -2,8 +2,8 @@ import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-q
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { T, useGT, useLocale } from "gt-tanstack-start";
 import { RotateCcwIcon, XIcon } from "lucide-react";
-import { useState } from "react";
-import type { PropsWithChildren } from "react";
+import { Suspense, useState } from "react";
+import type { ComponentProps, PropsWithChildren } from "react";
 import { toast } from "sonner";
 
 import {
@@ -24,6 +24,9 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-media-query";
+import { SIDEBAR_WIDTH_MOBILE } from "@/lib/layout-consts";
 import { cn } from "@/lib/utils";
 import {
   noteQueries,
@@ -52,11 +55,95 @@ const groupTimelineBlocks = (entries: NoteTimelineEntry[]): NoteTimelineEntry[][
   return blocks;
 };
 
+type TimelineHeaderProps = ComponentProps<"div">;
+
+const TimelineHeader = ({ className, ...props }: TimelineHeaderProps) => (
+  <div
+    className={cn("flex shrink-0 items-center justify-between gap-2 py-2 pr-2 pl-3", className)}
+    {...props}
+  />
+);
+
 type NoteTimelineProps = {
+  noteId: string | undefined;
+  open: boolean;
+};
+
+export const NoteTimeline = ({ noteId, open }: NoteTimelineProps) => {
+  const isMobile = useIsMobile();
+  const navigate = useNavigate();
+
+  if (isMobile) {
+    return (
+      <Sheet
+        onOpenChange={async () => navigate({ search: closeNoteTimeline, to: "." })}
+        open={open && Boolean(noteId)}
+      >
+        <SheetContent
+          className="bg-sidebar text-sidebar-foreground"
+          showCloseButton={false}
+          side="right"
+          style={{ width: SIDEBAR_WIDTH_MOBILE }}
+        >
+          {/* Portaled out of the shell, so it does not inherit the root safe-area padding. */}
+          <div className="flex h-full w-full flex-col pt-(--safe-top) pr-(--safe-right) pb-(--safe-bottom)">
+            <TimelineHeader>
+              <SheetTitle>
+                <T>Timeline</T>
+              </SheetTitle>
+              <SheetClose render={<Button size="icon-sm" variant="ghost" />}>
+                <XIcon />
+                <span className="sr-only">
+                  <T>Close timeline</T>
+                </span>
+              </SheetClose>
+            </TimelineHeader>
+            {noteId && (
+              <Suspense>
+                <NoteTimelineList noteId={noteId} />
+              </Suspense>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  if (!open || !noteId) {
+    return null;
+  }
+
+  return (
+    <div
+      className="flex h-full w-max shrink-0 flex-col border-l border-foreground/3 max-md:hidden dark:border-white/5"
+      id={NOTE_TIMELINE_ID}
+    >
+      <TimelineHeader className="border-b border-foreground/3 text-sm font-medium dark:border-white/5">
+        <T>Timeline</T>
+        <Button
+          nativeButton={false}
+          render={<Link search={closeNoteTimeline} to="." />}
+          size="icon-sm"
+          variant="ghost"
+        >
+          <XIcon />
+          <span className="sr-only">
+            <T>Close timeline</T>
+          </span>
+        </Button>
+      </TimelineHeader>
+      <Suspense>
+        <NoteTimelineList noteId={noteId} />
+      </Suspense>
+    </div>
+  );
+};
+
+type NoteTimelineListProps = {
   noteId: string;
 };
 
-export const NoteTimeline = ({ noteId }: NoteTimelineProps) => {
+const NoteTimelineList = ({ noteId }: NoteTimelineListProps) => {
   const selectedDiffId = useSearch({
     from: "/_protected",
     select: (search) => search.note?.diff,
@@ -70,39 +157,20 @@ export const NoteTimeline = ({ noteId }: NoteTimelineProps) => {
   });
 
   return (
-    <div
-      className="flex h-full w-max shrink-0 flex-col border-l border-foreground/3 dark:border-white/5"
-      id={NOTE_TIMELINE_ID}
-    >
-      <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-foreground/3 pr-2 pl-3 text-sm font-medium md:h-10 dark:border-white/5">
-        <T>Timeline</T>
-        <Button
-          nativeButton={false}
-          render={<Link search={closeNoteTimeline} to="." />}
-          size="icon-sm"
-          variant="ghost"
-        >
-          <XIcon />
-          <span className="sr-only">
-            <T>Close timeline</T>
-          </span>
-        </Button>
+    <ScrollArea className="min-h-0 flex-1">
+      <div className="relative flex flex-col">
+        <span className="absolute inset-y-5.5 left-4 z-10 w-px -translate-x-1/2 bg-f-base-500 dark:bg-f-base-600" />
+        {data.blocks.map((block) => (
+          <TimelineBlock
+            block={block}
+            key={block.at(0)?.id}
+            newestVersionId={data.newestVersionId}
+            noteId={noteId}
+            selectedDiffId={selectedDiffId}
+          />
+        ))}
       </div>
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="relative flex flex-col">
-          <span className="absolute inset-y-5.5 left-4 z-10 w-px -translate-x-1/2 bg-f-base-500 dark:bg-f-base-600" />
-          {data.blocks.map((block) => (
-            <TimelineBlock
-              block={block}
-              key={block.at(0)?.id}
-              newestVersionId={data.newestVersionId}
-              noteId={noteId}
-              selectedDiffId={selectedDiffId}
-            />
-          ))}
-        </div>
-      </ScrollArea>
-    </div>
+    </ScrollArea>
   );
 };
 
