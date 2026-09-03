@@ -129,6 +129,8 @@ export const observationalMemoryOptions = (
   activateOnProviderChange: true,
   model,
   observation: {
+    bufferTokens: 0.5,
+    messageTokens: 60_000,
     observeAttachments: false,
   },
   reflection: {

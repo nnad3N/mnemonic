@@ -24,7 +24,6 @@ const modelInputs = {
   "google/gemini-3.8-flash": { acceptsPdf: true },
   "google/gemma-4-26b-a4b-it": { acceptsPdf: false },
   "moonshotai/kimi-k3": { acceptsPdf: false },
-  "xiaomi/mimo-v2.5": { acceptsPdf: false },
   "z-ai/glm-5.3-flash": { acceptsPdf: false },
 } satisfies Record<string, ModelInputs>;
 
@@ -56,7 +55,7 @@ export const models: Record<ModelOption, AgentModel> = {
 };
 
 export const SUBAGENT_MODEL: ChatModel = "z-ai/glm-5.3-flash";
-export const OBSERVATIONAL_MEMORY_MODEL: ChatModel = "xiaomi/mimo-v2.5";
+export const OBSERVATIONAL_MEMORY_MODEL: ChatModel = "z-ai/glm-5.3-flash";
 export const THREAD_TITLE_MODEL: ChatModel = "google/gemma-4-26b-a4b-it";
 export const FILE_DESCRIPTION_MODEL: ChatModel = "google/gemma-4-26b-a4b-it";
 
