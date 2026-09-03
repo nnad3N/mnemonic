@@ -51,7 +51,9 @@ export const NoteFontSizeButton = ({ className }: NoteFontSizeButtonProps) => {
 
     const block = editor.api.block();
 
-    if (!block) return DEFAULT_FONT_SIZE;
+    if (!block) {
+      return DEFAULT_FONT_SIZE;
+    }
 
     return headingFontSize(block[0].type);
   }, []);

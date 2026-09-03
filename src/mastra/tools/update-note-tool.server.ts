@@ -177,8 +177,8 @@ const inputSchema = v.object({
 export const updateNoteOutputSchema = v.variant("type", [
   v.object({
     type: v.literal("updated"),
-    noteId: v.string(),
-    versionId: v.string(),
+    noteId: v.pipe(v.string(), v.nanoid()),
+    versionId: v.pipe(v.string(), v.nanoid()),
   }),
   v.object({
     type: v.literal("error"),

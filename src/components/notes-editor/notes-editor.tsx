@@ -226,7 +226,9 @@ const NoteEditor = ({ noteId }: NoteEditorProps) => {
   });
 
   const remoteCounts = useMemo(() => {
-    if (!note.pendingReviewBaseVersionId) return null;
+    if (!note.pendingReviewBaseVersionId) {
+      return null;
+    }
 
     return diffWordCounts(markdownToText(plateToMarkdown(editor)), markdownToText(note.content));
   }, [editor, note.content, note.pendingReviewBaseVersionId]);

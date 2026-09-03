@@ -1,6 +1,6 @@
 import { getTranslationsSnapshot, initializeGT } from "gt-tanstack-start";
 
-import loadTranslations from "@/loadTranslations";
+import loadTranslations from "@/load-translations";
 
 import gtConfig from "../../gt.config.json";
 

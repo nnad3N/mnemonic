@@ -101,7 +101,9 @@ const NoteEquationPopover = ({
 }: NoteEquationPopoverProps) => {
   const readOnly = useReadOnly();
 
-  if (readOnly) return null;
+  if (readOnly) {
+    return null;
+  }
 
   return (
     <PopoverContent align="start" className="w-80 p-2" finalFocus={false} initialFocus={false}>

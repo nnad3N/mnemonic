@@ -39,19 +39,24 @@ type FileRowProps = {
   topicId: string;
 };
 
-const formatFileSize = (locale: string, sizeBytes: number) =>
-  new Intl.NumberFormat(locale, {
+const KILOBYTE = 1000;
+const MEGABYTE = KILOBYTE * KILOBYTE;
+
+const formatFileSize = (locale: string, sizeBytes: number) => {
+  const inMegabytes = sizeBytes >= MEGABYTE;
+
+  return new Intl.NumberFormat(locale, {
     maximumFractionDigits: 1,
     style: "unit",
-    unit: "kilobyte",
-    unitDisplay: "narrow",
-  }).format(sizeBytes / 1024);
+    unit: inMegabytes ? "megabyte" : "kilobyte",
+  }).format(sizeBytes / (inMegabytes ? MEGABYTE : KILOBYTE));
+};
 
 const formatFileDate = (locale: string, createdAt: Date) =>
   new Intl.DateTimeFormat(locale, {
     dateStyle: "medium",
     timeStyle: "short",
-  }).format(new Date(createdAt));
+  }).format(createdAt);
 
 export const FileRow = ({ file, topicId }: FileRowProps) => {
   const gt = useGT();

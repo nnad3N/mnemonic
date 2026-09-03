@@ -126,7 +126,9 @@ const isDiffDelete = (node: Descendant) => {
 /** The edited diff still holds the base version's deleted text; the target text is what remains. */
 const stripDiffMarks = (nodes: Descendant[]): Descendant[] =>
   nodes.flatMap((node): Descendant[] => {
-    if (isDiffDelete(node)) return [];
+    if (isDiffDelete(node)) {
+      return [];
+    }
 
     if (!ElementApi.isElement(node)) {
       const { diff: _diff, diffOperation: _diffOperation, ...clean } = node;
@@ -142,7 +144,9 @@ const stripDiffMarks = (nodes: Descendant[]): Descendant[] =>
 
 const stripDiffValue = (value: Value): Value =>
   value.flatMap((element): Value => {
-    if (isDiffDelete(element)) return [];
+    if (isDiffDelete(element)) {
+      return [];
+    }
 
     const { diff: _diff, diffOperation: _diffOperation, ...clean } = element;
     const children = stripDiffMarks(element.children);
@@ -256,7 +260,7 @@ export const NoteReviewEditor = ({ baseVersionId, noteId }: NoteReviewEditorProp
   // stamp as its concurrency token, and a moved stamp routes through the merge effect below.
   const snapshot = useRef({
     targetContent: note.content,
-    updatedAt: new Date(note.versionUpdatedAt).getTime(),
+    updatedAt: note.versionUpdatedAt.getTime(),
   });
 
   const save = useMutation({
@@ -274,7 +278,7 @@ export const NoteReviewEditor = ({ baseVersionId, noteId }: NoteReviewEditorProp
 
       snapshot.current = {
         targetContent: content,
-        updatedAt: new Date(saved.updatedAt).getTime(),
+        updatedAt: saved.updatedAt.getTime(),
       };
 
       return { content, saved };
@@ -302,7 +306,7 @@ export const NoteReviewEditor = ({ baseVersionId, noteId }: NoteReviewEditorProp
   // The agent wrote while the review was open: rebase the reviewed text onto the agent's new
   // version, overlapping edits resolving to the agent's side.
   useEffect(() => {
-    const remoteStamp = new Date(note.versionUpdatedAt).getTime();
+    const remoteStamp = note.versionUpdatedAt.getTime();
 
     if (remoteStamp <= snapshot.current.updatedAt) return;
 

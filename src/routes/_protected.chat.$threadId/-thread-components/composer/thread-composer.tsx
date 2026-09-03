@@ -184,7 +184,9 @@ const ComposerPlaceholder = ({ children }: ComposerPlaceholderProps) => {
   // would otherwise show the placeholder underneath what is being typed.
   const isComposing = useEditorComposing();
 
-  if (!isEditorEmpty || isComposing) return null;
+  if (!isEditorEmpty || isComposing) {
+    return null;
+  }
 
   return (
     <span

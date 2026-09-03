@@ -55,8 +55,8 @@ const inputSchema = v.object({
 
 export const createNoteOutputSchema = v.object({
   type: v.literal("created"),
-  noteId: v.string(),
-  versionId: v.string(),
+  noteId: v.pipe(v.string(), v.nanoid()),
+  versionId: v.pipe(v.string(), v.nanoid()),
 });
 
 type CreateNoteOutput = v.InferOutput<typeof createNoteOutputSchema>;

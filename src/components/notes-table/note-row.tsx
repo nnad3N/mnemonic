@@ -73,7 +73,7 @@ export const NoteRow = ({ canMoveToTopic, note, scope }: NoteRowProps) => {
       </TableCell>
       <TableCell className="text-muted-foreground">
         {new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(
-          new Date(note.updatedAt),
+          note.updatedAt,
         )}
       </TableCell>
       <TableCell>

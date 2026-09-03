@@ -29,7 +29,9 @@ const PRESET_DAYS = {
 
 /** Inclusive instant bounds for a range, or null when no range is selected. */
 const resolveDateRange = (range: SidebarSearch["range"]) => {
-  if (range === undefined) return null;
+  if (range === undefined) {
+    return null;
+  }
 
   const timeZone = Temporal.Now.timeZoneId();
   const today = Temporal.Now.plainDateISO(timeZone);
@@ -56,7 +58,9 @@ const resolveDateRange = (range: SidebarSearch["range"]) => {
 type InstantRange = NonNullable<ReturnType<typeof resolveDateRange>>;
 
 const isWithinRange = (updatedAt: string, bounds: InstantRange | null) => {
-  if (!bounds) return true;
+  if (!bounds) {
+    return true;
+  }
 
   const instant = Temporal.Instant.from(updatedAt);
 
