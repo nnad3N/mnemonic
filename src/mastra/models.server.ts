@@ -61,9 +61,5 @@ export const FILE_DESCRIPTION_MODEL: ChatModel = "google/gemma-4-26b-a4b-it";
 
 export const EMBEDDING_MODEL = "qwen/qwen3-embedding-8b";
 
-/**
- * Requested from the model via Matryoshka truncation for Mastra's memory indexes only:
- * Mastra creates them with the ivfflat default, and pgvector caps ANN indexes at 2000
- * dimensions. Our own file index is flat (exact scan) and takes the native 4096.
- */
-export const MEMORY_EMBEDDING_DIMENSION = 1536;
+// Matryoshka truncation from the native 4096: pgvector caps ANN indexes at 2000 dimensions,
+export const EMBEDDING_DIMENSION = 1024;

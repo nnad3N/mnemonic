@@ -10,9 +10,9 @@ import { resolveProviderKeyById } from "@/lib/middleware/resolve-provider-key.se
 import { DEFAULT_MODEL_OPTION } from "@/lib/model-option";
 import type { ChatModel } from "@/mastra/models.server";
 import {
+  EMBEDDING_DIMENSION,
   EMBEDDING_MODEL,
   FILE_DESCRIPTION_MODEL,
-  MEMORY_EMBEDDING_DIMENSION,
   models,
   OBSERVATIONAL_MEMORY_MODEL,
   THREAD_TITLE_MODEL,
@@ -32,11 +32,10 @@ const EMBEDDING_BATCH_SIZE = 96;
  * provider emits `v4`. The interfaces are otherwise identical except for the `deprecated`
  * warning variant, which `v3` cannot represent. Drop this once Mastra supports v4 embedders.
  */
-const createEmbeddingModel = (apiKey: string, dimensions?: number) => {
-  const openrouterEmbedding = createOpenrouterProvider(apiKey).textEmbeddingModel(
-    EMBEDDING_MODEL,
-    dimensions === undefined ? {} : { extraBody: { dimensions } },
-  );
+export const getEmbeddingModel = (apiKey: string) => {
+  const openrouterEmbedding = createOpenrouterProvider(apiKey).textEmbeddingModel(EMBEDDING_MODEL, {
+    extraBody: { dimensions: EMBEDDING_DIMENSION },
+  });
 
   return {
     doEmbed: async (options: Parameters<typeof openrouterEmbedding.doEmbed>[0]) => {
@@ -55,11 +54,6 @@ const createEmbeddingModel = (apiKey: string, dimensions?: number) => {
     supportsParallelCalls: openrouterEmbedding.supportsParallelCalls,
   };
 };
-
-export const getEmbeddingModel = (apiKey: string) => createEmbeddingModel(apiKey);
-
-export const getMemoryEmbeddingModel = (apiKey: string) =>
-  createEmbeddingModel(apiKey, MEMORY_EMBEDDING_DIMENSION);
 
 const providerKeyCtx = Kit.createContext(dbKit);
 

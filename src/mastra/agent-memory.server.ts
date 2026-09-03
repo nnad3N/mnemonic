@@ -6,7 +6,7 @@ import { dbKit } from "@/lib/db-kit.server";
 import * as Kit from "@/lib/kit";
 import { resolveProviderKeyById } from "@/lib/middleware/resolve-provider-key.server";
 import {
-  getMemoryEmbeddingModel,
+  getEmbeddingModel,
   getObservationalMemoryModel,
   observationalMemoryOptions,
 } from "@/mastra/config.server";
@@ -36,7 +36,7 @@ export const getAgentMemory =
     const apiKey = result.value.key;
 
     return new Memory({
-      embedder: getMemoryEmbeddingModel(apiKey),
+      embedder: getEmbeddingModel(apiKey),
       options: {
         observationalMemory: observationalMemoryOptions(
           { scope, vector: true },

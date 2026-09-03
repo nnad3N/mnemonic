@@ -5,7 +5,7 @@ import { dbKit } from "@/lib/db-kit.server";
 import * as Kit from "@/lib/kit";
 import { createSafeId, toSafeId } from "@/lib/safe-id";
 import { vectorKit } from "@/lib/vector-kit.server";
-import { EMBEDDING_DIMENSION } from "@/mastra/rag-config.server";
+import { EMBEDDING_DIMENSION } from "@/mastra/models.server";
 import { FILE_EMBEDDINGS_INDEX } from "@/mastra/rag-config.server";
 import { mastraVector } from "@/mastra/storage.server";
 import { clearDatabase } from "@/test/clear-database";

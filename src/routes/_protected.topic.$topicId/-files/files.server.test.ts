@@ -7,7 +7,7 @@ import { S3Error } from "@/lib/s3-kit.server";
 import { createSafeId, toSafeId } from "@/lib/safe-id";
 import { createVectorKit, VectorError, vectorKit } from "@/lib/vector-kit.server";
 import type { VectorApi } from "@/lib/vector-kit.server";
-import { EMBEDDING_DIMENSION } from "@/mastra/rag-config.server";
+import { EMBEDDING_DIMENSION } from "@/mastra/models.server";
 import { FILE_EMBEDDINGS_INDEX, FILE_EMBEDDINGS_INDEX_CONFIG } from "@/mastra/rag-config.server";
 import { mastraVector } from "@/mastra/storage.server";
 import { clearDatabase } from "@/test/clear-database";

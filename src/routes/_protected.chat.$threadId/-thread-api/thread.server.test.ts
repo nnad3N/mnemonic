@@ -8,7 +8,7 @@ import { createMemoryKit, type MemoryApi, MemoryError, memoryKit } from "@/lib/m
 import { createSafeId, toSafeId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
 import { createVectorKit, type VectorApi, VectorError, vectorKit } from "@/lib/vector-kit.server";
-import { EMBEDDING_DIMENSION } from "@/mastra/rag-config.server";
+import { EMBEDDING_DIMENSION } from "@/mastra/models.server";
 import { FILE_EMBEDDINGS_INDEX, FILE_EMBEDDINGS_INDEX_CONFIG } from "@/mastra/rag-config.server";
 import { mastraVector } from "@/mastra/storage.server";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
