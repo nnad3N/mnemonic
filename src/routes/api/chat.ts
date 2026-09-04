@@ -29,7 +29,7 @@ import type { WorkTiming } from "@/routes/_protected.chat.$threadId/-thread-type
 
 import { toThreadUIStream } from "./-chat-shared.server";
 
-export const uiMessageSchema = v.object({
+const uiMessageSchema = v.object({
   id: v.pipe(v.string(), v.nanoid()),
   role: v.picklist(["system", "user", "assistant"]),
   parts: v.array(v.any()),
