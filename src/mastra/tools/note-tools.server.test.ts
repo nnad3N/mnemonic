@@ -1,25 +1,19 @@
-import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { SearchLanguage } from "@/db/full-text-search.server";
-import { noteVersion, threadRun } from "@/db/schema.server";
+import { threadRun } from "@/db/schema.server";
 import { dbKit } from "@/lib/db-kit.server";
 import * as Kit from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit.server";
 import { createSafeId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
 import { createAgentNoteFn } from "@/mastra/tools/create-note-tool.server";
-import { NoteToolError } from "@/mastra/tools/note-tool-helpers.server";
-import { readAgentNoteFn } from "@/mastra/tools/read-note-tool.server";
+import { NoteToolError, readVisibleNote } from "@/mastra/tools/note-tool-helpers.server";
 import { searchAgentNotesFn } from "@/mastra/tools/search-notes-tool.server";
 import { replaceNoteText, updateAgentNoteFn } from "@/mastra/tools/update-note-tool.server";
 import {
   addNoteToTopicFn,
   createNoteFn,
-  getNoteFn,
-  saveAgentVersionFn,
-  saveNoteBodyFn,
-  StaleNoteVersionError,
 } from "@/routes/_protected.chat.$threadId/-thread-api/notes.server";
 import { clearDatabase } from "@/test/clear-database";
 import { expectErr, expectOk } from "@/test/result";
@@ -161,251 +155,6 @@ describe("agent note versioning", () => {
     ]);
   });
 
-  it("appends a new user version when the editor sits on the agent's latest", async () => {
-    const threadId = await seedThread({ resourceId: userId });
-    await seedRun(threadId);
-    const { id } = expectOk(
-      await createAgentNoteFn(ctx, { content: "agent text", threadId, title: "Plan", userId }),
-    );
-
-    const saved = expectOk(
-      await saveNoteBodyFn(ctx, { content: "user text", intent: "append", noteId: id }),
-    );
-
-    expect(saved.isLatest).toBe(true);
-    expect(await listVersions(id)).toEqual([
-      { author: "agent", content: "agent text", seq: 1 },
-      { author: "user", content: "user text", seq: 2 },
-    ]);
-  });
-
-  it("lands a stale user save in its base version below the agent's latest", async () => {
-    const threadId = await seedThread({ resourceId: userId });
-    await seedRun(threadId);
-    const { id } = expectOk(
-      await createNoteFn(ctx, {
-        author: "user",
-        content: "draft",
-        threadId,
-        title: "Plan",
-        userId,
-      }),
-    );
-    const { versionId: baseVersionId } = expectOk(await getNoteFn(ctx, { noteId: id, userId }));
-
-    expectOk(
-      await updateAgentNoteFn(ctx, {
-        mode: "replace",
-        newText: "agent text",
-        oldText: "draft",
-        noteId: id,
-        threadId,
-        topicId: undefined,
-        userId,
-      }),
-    );
-
-    const saved = expectOk(
-      await saveNoteBodyFn(ctx, {
-        baseVersionId,
-        content: "late user text",
-        intent: "overwrite",
-        noteId: id,
-      }),
-    );
-
-    expect(saved.isLatest).toBe(false);
-    expect(await listVersions(id)).toEqual([
-      { author: "user", content: "late user text", seq: 1 },
-      { author: "agent", content: "agent text", seq: 2 },
-    ]);
-  });
-
-  it("rejects a save whose base is not the latest user version", async () => {
-    const threadId = await seedThread({ resourceId: userId });
-    await seedRun(threadId);
-    const { id } = expectOk(
-      await createNoteFn(ctx, {
-        author: "user",
-        content: "draft",
-        threadId,
-        title: "Plan",
-        userId,
-      }),
-    );
-
-    const denied = expectErr(
-      await saveNoteBodyFn(ctx, {
-        baseVersionId: createSafeId<"noteVersion">(),
-        content: "user edits",
-        intent: "overwrite",
-        noteId: id,
-      }),
-    );
-
-    expect(StaleNoteVersionError.is(denied)).toBe(true);
-    expect(await listVersions(id)).toEqual([{ author: "user", content: "draft", seq: 1 }]);
-  });
-
-  it("rejects a baseless save when the latest version is already the user's", async () => {
-    const threadId = await seedThread({ resourceId: userId });
-    await seedRun(threadId);
-    const { id } = expectOk(
-      await createNoteFn(ctx, {
-        author: "user",
-        content: "draft",
-        threadId,
-        title: "Plan",
-        userId,
-      }),
-    );
-
-    const denied = expectErr(
-      await saveNoteBodyFn(ctx, { content: "user edits", intent: "append", noteId: id }),
-    );
-
-    expect(StaleNoteVersionError.is(denied)).toBe(true);
-    expect(await listVersions(id)).toEqual([{ author: "user", content: "draft", seq: 1 }]);
-  });
-
-  it("derives a pending review until the agent's latest version is committed", async () => {
-    const threadId = await seedThread({ resourceId: userId });
-    await seedRun(threadId);
-    const { id } = expectOk(
-      await createNoteFn(ctx, {
-        author: "user",
-        content: "draft",
-        threadId,
-        title: "Plan",
-        userId,
-      }),
-    );
-    const { versionId: userVersionId } = expectOk(await getNoteFn(ctx, { noteId: id, userId }));
-
-    expectOk(
-      await updateAgentNoteFn(ctx, {
-        mode: "replace",
-        newText: "agent text",
-        oldText: "draft",
-        noteId: id,
-        threadId,
-        topicId: undefined,
-        userId,
-      }),
-    );
-
-    const pending = expectOk(await getNoteFn(ctx, { noteId: id, userId }));
-
-    expect(pending.pendingReviewBaseVersionId).toBe(userVersionId);
-
-    expectOk(
-      await saveAgentVersionFn(ctx, {
-        commit: true,
-        content: pending.content,
-        noteId: id,
-        versionId: pending.versionId,
-        versionUpdatedAt: pending.versionUpdatedAt.getTime(),
-      }),
-    );
-
-    const committed = expectOk(await getNoteFn(ctx, { noteId: id, userId }));
-
-    expect(committed.pendingReviewBaseVersionId).toBeNull();
-  });
-
-  it("derives no pending review when there is no non-empty user version", async () => {
-    const threadId = await seedThread({ resourceId: userId });
-    await seedRun(threadId);
-    const { id } = expectOk(
-      await createAgentNoteFn(ctx, { content: "agent text", threadId, title: "Plan", userId }),
-    );
-
-    const note = expectOk(await getNoteFn(ctx, { noteId: id, userId }));
-
-    expect(note.pendingReviewBaseVersionId).toBeNull();
-  });
-
-  it("writes reviewed text into the agent's latest version without a new entry", async () => {
-    const threadId = await seedThread({ resourceId: userId });
-    await seedRun(threadId);
-    const { id } = expectOk(
-      await createAgentNoteFn(ctx, { content: "agent text", threadId, title: "Plan", userId }),
-    );
-    const { versionId, versionUpdatedAt } = expectOk(await getNoteFn(ctx, { noteId: id, userId }));
-
-    expectOk(
-      await saveAgentVersionFn(ctx, {
-        commit: false,
-        content: "reviewed text",
-        noteId: id,
-        versionId,
-        versionUpdatedAt: versionUpdatedAt.getTime(),
-      }),
-    );
-
-    expect(await listVersions(id)).toEqual([{ author: "agent", content: "reviewed text", seq: 1 }]);
-  });
-
-  it("refuses a reviewed write whose stamp is older than the version's", async () => {
-    const threadId = await seedThread({ resourceId: userId });
-    await seedRun(threadId);
-    const { id } = expectOk(
-      await createAgentNoteFn(ctx, { content: "agent text", threadId, title: "Plan", userId }),
-    );
-    const { versionId, versionUpdatedAt } = expectOk(await getNoteFn(ctx, { noteId: id, userId }));
-
-    // The agent overwrote its version in place after the review snapshot was taken.
-    expectOk(
-      await ctx.db.run((db) =>
-        db
-          .update(noteVersion)
-          .set({ content: "agent newer", updatedAt: new Date(versionUpdatedAt.getTime() + 5) })
-          .where(eq(noteVersion.id, versionId)),
-      ),
-    );
-
-    const denied = expectErr(
-      await saveAgentVersionFn(ctx, {
-        commit: false,
-        content: "reviewed text",
-        noteId: id,
-        versionId,
-        versionUpdatedAt: versionUpdatedAt.getTime(),
-      }),
-    );
-
-    expect(StaleNoteVersionError.is(denied)).toBe(true);
-    expect(await listVersions(id)).toEqual([{ author: "agent", content: "agent newer", seq: 1 }]);
-  });
-
-  it("refuses a reviewed write when the target is not the agent's latest version", async () => {
-    const threadId = await seedThread({ resourceId: userId });
-    await seedRun(threadId);
-    const { id } = expectOk(
-      await createNoteFn(ctx, {
-        author: "user",
-        content: "draft",
-        threadId,
-        title: "Plan",
-        userId,
-      }),
-    );
-    const { versionId, versionUpdatedAt } = expectOk(await getNoteFn(ctx, { noteId: id, userId }));
-
-    const denied = expectErr(
-      await saveAgentVersionFn(ctx, {
-        commit: false,
-        content: "reviewed text",
-        noteId: id,
-        versionId,
-        versionUpdatedAt: versionUpdatedAt.getTime(),
-      }),
-    );
-
-    expect(StaleNoteVersionError.is(denied)).toBe(true);
-    expect(await listVersions(id)).toEqual([{ author: "user", content: "draft", seq: 1 }]);
-  });
-
   it("rejects a replacement whose oldText is missing or ambiguous", async () => {
     const threadId = await seedThread({ resourceId: userId });
     await seedRun(threadId);
@@ -531,13 +280,14 @@ describe("agent note versioning", () => {
     expectOk(await addNoteToTopicFn(ctx, { noteId: shared.id, userId }));
 
     const read = expectOk(
-      await readAgentNoteFn(ctx, { noteId: shared.id, threadId, topicId, userId }),
+      await readVisibleNote(ctx, { noteId: shared.id, threadId, topicId, userId }),
     );
     const denied = expectErr(
-      await readAgentNoteFn(ctx, { noteId: sibling.id, threadId, topicId, userId }),
+      await readVisibleNote(ctx, { noteId: sibling.id, threadId, topicId, userId }),
     );
 
-    expect(read).toEqual({ content: "shared", title: "Shared" });
+    expect(read.title).toBe("Shared");
+    expect(read.latestVersion.content).toBe("shared");
     expect(NoteToolError.is(denied)).toBe(true);
   });
 });

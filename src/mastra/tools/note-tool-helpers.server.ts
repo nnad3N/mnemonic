@@ -1,5 +1,5 @@
 import { Result, TaggedError } from "better-result";
-import { eq } from "drizzle-orm";
+import { eq, or, sql } from "drizzle-orm";
 
 import { note, noteVersion, threadRun } from "@/db/schema.server";
 import type { DbKit } from "@/lib/db-kit.server";
@@ -13,34 +13,54 @@ export class NoteToolError extends TaggedError("NoteToolError")<{
   message: string;
 }> {}
 
-type ReadNoteInScopeInput = {
+type NoteScopeFilterInput = {
+  threadId: string;
+  topicId: SafeId<"topic"> | undefined;
+};
+
+/** Notes a thread may touch: its own, plus the ones shared into its topic. */
+export const noteScopeFilter = (table: typeof note, input: NoteScopeFilterInput) =>
+  sql`(${or(
+    eq(table.threadId, input.threadId),
+    input.topicId ? eq(table.topicId, input.topicId) : undefined,
+  )})`;
+
+type ReadVisibleNoteInput = {
   noteId: SafeId<"note">;
   threadId: string;
   topicId: SafeId<"topic"> | undefined;
   userId: SafeId<"user">;
 };
 
-/** A note the agent may touch: one written in this thread, or one shared into the topic. */
-export const readNoteInScope = Kit.gen(async function* (
+export const readVisibleNote = Kit.gen(async function* (
   ctx: Kits<[DbKit]>,
-  input: ReadNoteInScopeInput,
+  input: ReadVisibleNoteInput,
 ) {
   const noteRow = yield* await ctx.db.run((db) =>
     db.query.note.findFirst({
-      where: { id: input.noteId, userId: input.userId },
-      columns: { id: true, threadId: true, title: true, topicId: true },
+      where: {
+        id: input.noteId,
+        userId: input.userId,
+        RAW: (table) => noteScopeFilter(table, input),
+      },
+      columns: { id: true, title: true },
+      with: {
+        versions: {
+          columns: { content: true, id: true },
+          limit: 1,
+          orderBy: { seq: "desc" },
+        },
+      },
     }),
   );
 
-  if (noteRow?.threadId === input.threadId) {
-    return Result.ok({ id: noteRow.id, title: noteRow.title });
+  const latestVersion = noteRow?.versions.at(0);
+
+  if (!noteRow || !latestVersion) {
+    return Result.err(new NoteToolError({ message: "Note not found" }));
   }
 
-  if (input.topicId && noteRow?.topicId === input.topicId) {
-    return Result.ok({ id: noteRow.id, title: noteRow.title });
-  }
-
-  return Result.err(new NoteToolError({ message: "Note not found" }));
+  return Result.ok({ id: noteRow.id, latestVersion, title: noteRow.title });
 });
 
 type WriteAgentVersionInput = {

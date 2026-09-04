@@ -22,6 +22,7 @@ import { getMentionKey } from "@/lib/mention-key";
 import { rawId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
+import { noteScopeFilter } from "@/mastra/tools/note-tool-helpers.server";
 
 const DEFAULT_LIMIT = 10;
 
@@ -72,10 +73,7 @@ export const searchAgentNotesFn = Kit.gen(async function* (
       .where(
         and(
           eq(note.userId, input.userId),
-          or(
-            eq(note.threadId, input.threadId),
-            input.topicId ? eq(note.topicId, input.topicId) : undefined,
-          ),
+          noteScopeFilter(note, input),
           isLatestVersion,
           or(sql`${contentVector} @@ ${tsQuery}`, sql`${titleVector} @@ ${tsQuery}`),
         ),

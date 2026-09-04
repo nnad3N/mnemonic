@@ -14,10 +14,9 @@ import type { SafeId } from "@/lib/safe-id";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
 import {
   NoteToolError,
-  readNoteInScope,
+  readVisibleNote,
   writeAgentNoteVersion,
 } from "@/mastra/tools/note-tool-helpers.server";
-import { readLatestVersion } from "@/routes/_protected.chat.$threadId/-thread-api/notes.server";
 
 type UpdateNoteCtx = Kits<[DbKit]>;
 
@@ -109,8 +108,9 @@ export const updateAgentNoteFn = Kit.gen(async function* (
   ctx: UpdateNoteCtx,
   input: UpdateNoteInput,
 ) {
+  const visible = yield* await readVisibleNote(ctx, input);
+
   if (input.mode === "overwrite") {
-    yield* await readNoteInScope(ctx, input);
     const written = yield* await writeAgentNoteVersion(ctx, {
       content: input.newText,
       noteId: input.noteId,
@@ -120,16 +120,7 @@ export const updateAgentNoteFn = Kit.gen(async function* (
     return Result.ok(written);
   }
 
-  const [latest] = yield* await Kit.promiseAll([
-    readLatestVersion(ctx, input),
-    readNoteInScope(ctx, input),
-  ]);
-
-  if (!latest) {
-    return Result.err(new NoteToolError({ message: "Note not found" }));
-  }
-
-  const replaced = replaceNoteText(latest.content, input.oldText, input.newText);
+  const replaced = replaceNoteText(visible.latestVersion.content, input.oldText, input.newText);
 
   if (replaced.type === "not-found") {
     return Result.err(new NoteToolError({ message: "oldText was not found in the note" }));

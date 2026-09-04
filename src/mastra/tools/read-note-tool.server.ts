@@ -3,37 +3,13 @@ import { toStandardJsonSchema } from "@valibot/to-json-schema";
 import { matchError, Result } from "better-result";
 import * as v from "valibot";
 
-import { dbKit, type DbKit } from "@/lib/db-kit.server";
+import { dbKit } from "@/lib/db-kit.server";
 import { ToolError } from "@/lib/errors/tool-error";
 import * as Kit from "@/lib/kit";
-import type { Kits } from "@/lib/kit";
 import { mentionKeyFormat, parseMentionKey } from "@/lib/mention-key";
-import { toSafeId, type SafeId } from "@/lib/safe-id";
+import { toSafeId } from "@/lib/safe-id";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
-import { NoteToolError, readNoteInScope } from "@/mastra/tools/note-tool-helpers.server";
-import { readLatestVersion } from "@/routes/_protected.chat.$threadId/-thread-api/notes.server";
-
-type ReadNoteCtx = Kits<[DbKit]>;
-
-type ReadNoteInput = {
-  noteId: SafeId<"note">;
-  threadId: string;
-  topicId: SafeId<"topic"> | undefined;
-  userId: SafeId<"user">;
-};
-
-export const readAgentNoteFn = Kit.gen(async function* (ctx: ReadNoteCtx, input: ReadNoteInput) {
-  const [latest, noteRow] = yield* await Kit.promiseAll([
-    readLatestVersion(ctx, input),
-    readNoteInScope(ctx, input),
-  ]);
-
-  if (!latest) {
-    return Result.err(new NoteToolError({ message: "Note not found" }));
-  }
-
-  return Result.ok({ content: latest.content, title: noteRow.title });
-});
+import { readVisibleNote } from "@/mastra/tools/note-tool-helpers.server";
 
 const inputSchema = v.object({
   noteKey: v.pipe(
@@ -72,7 +48,7 @@ export const readNoteTool = createTool({
       return { type: "error", message: `Not a note mention key: ${noteKey}` };
     }
 
-    const result = await readAgentNoteFn(noteToolCtx, {
+    const result = await readVisibleNote(noteToolCtx, {
       // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with the userId filter.
       noteId: toSafeId<"note">(mention.value),
       threadId: requestContext.get("threadId"),
@@ -89,6 +65,6 @@ export const readNoteTool = createTool({
       });
     }
 
-    return { type: "note", content: result.value.content, title: result.value.title };
+    return { type: "note", content: result.value.latestVersion.content, title: result.value.title };
   },
 });

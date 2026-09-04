@@ -58,7 +58,7 @@ const readNote = Kit.gen(async function* (ctx: NoteCtx, input: ReadNoteInput) {
   return Result.ok({ id: note.id, scope: toNoteScope(note), title: note.title });
 });
 
-export const readLatestVersion = Kit.gen(async function* (
+const readLatestVersion = Kit.gen(async function* (
   ctx: NoteCtx,
   input: { noteId: SafeId<"note"> },
 ) {
@@ -79,6 +79,12 @@ export const readLatestVersion = Kit.gen(async function* (
   );
 
   return Result.ok(latestVersion);
+});
+
+/** The version the note falls back to: the user's own, or an agent's the user has reviewed. */
+const settledVersionWhere = (noteId: SafeId<"note">) => ({
+  noteId,
+  OR: [{ author: "user" as const }, { reviewedAt: { isNotNull: true as const } }],
 });
 
 type CreateNoteInput = {
@@ -224,10 +230,7 @@ export const getNoteFn = Kit.gen(async function* (
     readLatestVersion(ctx, input),
     ctx.db.run((db) =>
       db.query.noteVersion.findFirst({
-        where: {
-          noteId: input.noteId,
-          OR: [{ author: "user" }, { reviewedAt: { isNotNull: true } }],
-        },
+        where: settledVersionWhere(input.noteId),
         columns: { content: true, id: true },
         orderBy: { seq: "desc" },
       }),
@@ -508,10 +511,7 @@ export const declineAgentVersionsFn = Kit.gen(async function* (
 ) {
   const restored = yield* await ctx.db.transaction(async (tx) => {
     const latestSettledVersion = await tx.query.noteVersion.findFirst({
-      where: {
-        noteId: input.noteId,
-        OR: [{ author: "user" }, { reviewedAt: { isNotNull: true } }],
-      },
+      where: settledVersionWhere(input.noteId),
       columns: {
         author: true,
         content: true,
