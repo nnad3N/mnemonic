@@ -18,7 +18,6 @@ type NoteScopeFilterInput = {
   topicId: SafeId<"topic"> | undefined;
 };
 
-/** Notes a thread may touch: its own, plus the ones shared into its topic. */
 export const noteScopeFilter = (table: typeof note, input: NoteScopeFilterInput) =>
   sql`(${or(
     eq(table.threadId, input.threadId),

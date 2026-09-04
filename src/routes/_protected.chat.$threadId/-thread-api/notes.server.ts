@@ -81,7 +81,6 @@ const readLatestVersion = Kit.gen(async function* (
   return Result.ok(latestVersion);
 });
 
-/** The version the note falls back to: the user's own, or an agent's the user has reviewed. */
 const settledVersionWhere = (noteId: SafeId<"note">) => ({
   noteId,
   OR: [{ author: "user" as const }, { reviewedAt: { isNotNull: true as const } }],
@@ -250,7 +249,6 @@ export const getNoteFn = Kit.gen(async function* (
     reviewPending && latestSettledVersion?.content ? latestSettledVersion.id : null;
 
   return Result.ok({
-    // The latest user version saves write into; null while the note sits on an agent version.
     baseVersionId: latest.author === "user" ? latest.id : null,
     content: latest.content,
     contentHash: latest.contentHash,
