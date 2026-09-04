@@ -28,11 +28,9 @@ import { WebFetchPart } from "@/routes/_protected.chat.$threadId/-thread-compone
 import { WebSearchPart } from "@/routes/_protected.chat.$threadId/-thread-components/web-search-part";
 import type { ThreadUIMessagePart } from "@/routes/_protected.chat.$threadId/-thread-types";
 
-const MENTION_URL_PREFIX = "mention:";
-
 const renameNoteMentions = (node: Root | RootContent) => {
-  if (node.type === "link" && node.url.startsWith(MENTION_URL_PREFIX)) {
-    const mention = parseMentionKey(decodeURIComponent(node.url.slice(MENTION_URL_PREFIX.length)));
+  if (node.type === "link") {
+    const mention = parseMentionKey(node.url);
 
     if (mention.type === "note") {
       node.data = { hName: "note-mention", hProperties: { noteid: mention.value } };

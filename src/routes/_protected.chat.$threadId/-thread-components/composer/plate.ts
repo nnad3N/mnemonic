@@ -4,6 +4,8 @@ import { BaseMentionPlugin } from "@platejs/mention";
 import { MentionInputPlugin, MentionPlugin } from "@platejs/mention/react";
 import remarkGfm from "remark-gfm";
 
+import { toMentionUrl } from "@/lib/mention-key";
+
 import type { ThreadInputLocation } from "../../../-chat-store";
 import { ThreadLinkElement, ThreadLinkElementStatic } from "./link-node";
 import {
@@ -30,7 +32,7 @@ const sharedPlugins = [
             type: "link",
             children: [{ type: "text", value: node.value }],
             // oxlint-disable-next-line anti-slop/no-runtime-typeof
-            url: `mention:${typeof node.key === "string" ? node.key : node.value}`,
+            url: toMentionUrl(typeof node.key === "string" ? node.key : node.value),
           }),
         },
         a: {
