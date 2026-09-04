@@ -1,26 +1,17 @@
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { useMatch, useSearch } from "@tanstack/react-router";
-import { T, useGT } from "gt-tanstack-start";
-import { produce } from "immer";
+import { T } from "gt-tanstack-start";
 import { PlateController, usePlateEditor } from "platejs/react";
 import { Suspense, useMemo, useState } from "react";
-import { toast } from "sonner";
-import { useDebouncedCallback } from "use-debounce";
 import { useStore } from "zustand/react";
 
 import { Button } from "@/components/ui/button";
 import { SidebarInset } from "@/components/ui/sidebar";
 import { WordDiffStats } from "@/components/word-diff";
-import { ServerFnError } from "@/lib/errors/server-fn-error";
-import { hashText } from "@/lib/hash";
 import { markdownToText } from "@/lib/markdown";
 import { markdownToPlate, plateToMarkdown } from "@/lib/plate";
 import { diffWordCounts } from "@/lib/word-diff";
-import {
-  STALE_NOTE_VERSION_STATUS,
-  noteQueries,
-  saveNoteBody,
-} from "@/routes/_protected.chat.$threadId/-thread-api/notes.functions";
+import { noteQueries } from "@/routes/_protected.chat.$threadId/-thread-api/notes.functions";
 
 import { NoteBaselineContext } from "./note-baseline-context";
 import { NotePlate } from "./note-chrome";
@@ -34,9 +25,7 @@ import {
 } from "./notes-store";
 import { NotesTabs } from "./notes-tabs";
 import { notesEditorPlugins } from "./plugins";
-
-const BODY_SAVE_DEBOUNCE_MS = 300;
-const BODY_SAVE_MAX_WAIT_MS = 1000;
+import { useNoteBodySave } from "./use-note-body-save";
 
 type NotesEditorProps = {
   onClose: () => void;
@@ -79,12 +68,12 @@ type NoteViewProps = {
 };
 
 const createNoteSession = (
-  note: { contentHash: string; lastAuthor: "agent" | "user"; versionId: string },
+  note: { baseVersionId: string | null; contentHash: string },
   seq: number,
 ) => ({
   seq,
   store: createNoteBaselineStore({
-    baseVersionId: note.lastAuthor === "user" ? note.versionId : null,
+    baseVersionId: note.baseVersionId,
     contentHash: note.contentHash,
   }),
 });
@@ -143,86 +132,18 @@ type NoteEditorProps = {
 };
 
 const NoteEditor = ({ noteId }: NoteEditorProps) => {
-  const gt = useGT();
-  const queryClient = useQueryClient();
-  const noteQuery = noteQueries.byId(noteId);
-  const { data: note } = useSuspenseQuery(noteQuery);
-  const store = useNoteBaselineStore();
-  const { allowReview, confirmSaved, markEdited, seedBaseline } = store.getState();
+  const { data: note } = useSuspenseQuery(noteQueries.byId(noteId));
+  const allowReview = useStore(useNoteBaselineStore(), (state) => state.allowReview);
   const editor = usePlateEditor({
     plugins: notesEditorPlugins,
     value: (plate) => markdownToPlate(plate, note.content),
   });
-  const saveMutationKey = [...noteQuery.queryKey, "body"] as const;
-
-  const save = useMutation({
-    mutationKey: saveMutationKey,
-    mutationFn: async () => {
-      // The count includes this call, so above one means an earlier save is still in flight.
-      if (queryClient.isMutating({ mutationKey: saveMutationKey }) > 1) return;
-
-      const baseline = store.getState();
-      const editSeq = baseline.editSeq;
-      const content = plateToMarkdown(editor);
-      const contentHash = await hashText(content);
-
-      if (contentHash === baseline.contentHash) {
-        confirmSaved(editSeq, { baseVersionId: baseline.baseVersionId, contentHash });
-
-        return;
-      }
-
-      const saved = await saveNoteBody({
-        data: baseline.baseVersionId
-          ? { baseVersionId: baseline.baseVersionId, content, intent: "overwrite", noteId }
-          : { content, intent: "append", noteId },
-      });
-
-      confirmSaved(editSeq, { baseVersionId: saved.versionId, contentHash: saved.contentHash });
-
-      if (saved.isLatest) {
-        queryClient.setQueryData(noteQuery.queryKey, (previous) =>
-          produce(previous, (draft) => {
-            if (!draft) return;
-
-            draft.content = content;
-            draft.contentHash = saved.contentHash;
-            draft.lastAuthor = "user";
-            draft.pendingReviewBaseVersionId = null;
-            draft.versionId = saved.versionId;
-          }),
-        );
-      }
-
-      void queryClient.invalidateQueries({ queryKey: noteQueries.versionLists(noteId) });
-
-      return saved;
+  const { flushSave, scheduleSave } = useNoteBodySave({
+    noteId,
+    onStale: (fresh) => {
+      editor.tf.setValue(markdownToPlate(editor, fresh.content));
     },
-    onError: async (error) => {
-      if (ServerFnError.is(error) && error.status === STALE_NOTE_VERSION_STATUS) {
-        // Another tab moved the chain; that tab's state wins and this editor reseeds onto it.
-        await queryClient.invalidateQueries({ queryKey: noteQuery.queryKey });
-
-        const fresh = queryClient.getQueryData(noteQuery.queryKey);
-
-        if (!fresh) return;
-
-        editor.tf.setValue(markdownToPlate(editor, fresh.content));
-        seedBaseline({
-          baseVersionId: fresh.lastAuthor === "user" ? fresh.versionId : null,
-          contentHash: fresh.contentHash,
-        });
-
-        return;
-      }
-
-      toast.error(gt("Failed to save the note"));
-    },
-  });
-  const runSave = save.mutate;
-  const saveDebounced = useDebouncedCallback(runSave, BODY_SAVE_DEBOUNCE_MS, {
-    flushOnExit: true,
-    maxWait: BODY_SAVE_MAX_WAIT_MS,
+    serialize: () => plateToMarkdown(editor),
   });
 
   const remoteCounts = useMemo(() => {
@@ -234,15 +155,7 @@ const NoteEditor = ({ noteId }: NoteEditorProps) => {
   }, [editor, note.content, note.pendingReviewBaseVersionId]);
 
   return (
-    <NotePlate
-      editor={editor}
-      noteId={noteId}
-      onValueChange={() => {
-        markEdited(note.pendingReviewBaseVersionId ? note.versionId : null);
-        saveDebounced();
-      }}
-      title={note.title}
-    >
+    <NotePlate editor={editor} noteId={noteId} onValueChange={scheduleSave} title={note.title}>
       {note.pendingReviewBaseVersionId && (
         <NoteFloatingBar>
           <span className="px-1">
@@ -252,7 +165,7 @@ const NoteEditor = ({ noteId }: NoteEditorProps) => {
           <Button
             onClick={() => {
               allowReview();
-              saveDebounced.flush();
+              flushSave();
             }}
             size="xs"
           >

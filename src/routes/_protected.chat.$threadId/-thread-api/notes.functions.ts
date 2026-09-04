@@ -127,6 +127,8 @@ export const getNote = createServerFn({ method: "GET" })
     ),
   );
 
+export type NoteDetail = Awaited<ReturnType<typeof getNote>>;
+
 const listAffectedNotesInputSchema = v.object({
   versionIds: v.pipe(v.array(v.pipe(v.string(), v.nanoid())), v.maxLength(50)),
 });

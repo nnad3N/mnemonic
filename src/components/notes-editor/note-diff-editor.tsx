@@ -14,11 +14,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { PropsWithChildren } from "react";
 import { toast } from "sonner";
 import { useDebouncedCallback } from "use-debounce";
+import { useStore } from "zustand/react";
 
 import { Button } from "@/components/ui/button";
 import { WordDiffStats } from "@/components/word-diff";
 import { ServerFnError } from "@/lib/errors/server-fn-error";
-import { hashText } from "@/lib/hash";
 import { markdownToText } from "@/lib/markdown";
 import { markdownToPlate, plateToMarkdown } from "@/lib/plate";
 import { rebaseText } from "@/lib/text-rebase";
@@ -30,12 +30,12 @@ import {
   declineAgentVersions,
   noteQueries,
   saveAgentVersion,
-  saveNoteBody,
 } from "@/routes/_protected.chat.$threadId/-thread-api/notes.functions";
 
 import { NotePlate } from "./note-chrome";
 import { useNoteBaselineStore } from "./notes-store";
 import { notesEditorPlugins } from "./plugins";
+import { useNoteBodySave } from "./use-note-body-save";
 import { clearNoteDiff, setNoteDiffOpen } from "./use-open-note";
 
 const diffOperationClasses = {
@@ -250,8 +250,7 @@ export const NoteReviewEditor = ({ baseVersionId, noteId }: NoteReviewEditorProp
   const noteQuery = noteQueries.byId(noteId);
   const { data: note } = useSuspenseQuery(noteQuery);
   const { data: base } = useSuspenseQuery(noteQueries.version(noteId, baseVersionId));
-  const store = useNoteBaselineStore();
-  const { seedBaseline } = store.getState();
+  const seedBaseline = useStore(useNoteBaselineStore(), (state) => state.seedBaseline);
   // Seeded once: after that the edits live in this editor, and saves flow back into the
   // agent's version rather than the editor reseeding from the cache.
   const [diffValue] = useState(() => computeNoteDiffValue(base.content, note.content));
@@ -337,6 +336,7 @@ export const NoteReviewEditor = ({ baseVersionId, noteId }: NoteReviewEditorProp
       produce(previous, (draft) => {
         if (!draft) return;
 
+        draft.baseVersionId = null;
         draft.content = content;
         draft.contentHash = saved.contentHash;
         draft.pendingReviewBaseVersionId = null;
@@ -355,16 +355,16 @@ export const NoteReviewEditor = ({ baseVersionId, noteId }: NoteReviewEditorProp
         produce(previous, (draft) => {
           if (!draft) return;
 
+          draft.baseVersionId = restored.baseVersionId;
           draft.content = restored.content;
           draft.contentHash = restored.contentHash;
-          draft.lastAuthor = restored.author;
           draft.pendingReviewBaseVersionId = null;
           draft.versionId = restored.versionId;
           draft.versionUpdatedAt = restored.updatedAt;
         }),
       );
       seedBaseline({
-        baseVersionId: restored.author === "user" ? restored.versionId : null,
+        baseVersionId: restored.baseVersionId,
         contentHash: restored.contentHash,
       });
       void queryClient.invalidateQueries({ queryKey: noteQueries.versionLists(noteId) });
@@ -414,74 +414,13 @@ type NoteHistoryEditorProps = {
 };
 
 export const NoteHistoryEditor = ({ baseVersionId, noteId }: NoteHistoryEditorProps) => {
-  const gt = useGT();
-  const queryClient = useQueryClient();
-  const noteQuery = noteQueries.byId(noteId);
-  const { data: note } = useSuspenseQuery(noteQuery);
+  const { data: note } = useSuspenseQuery(noteQueries.byId(noteId));
   const { data: base } = useSuspenseQuery(noteQueries.version(noteId, baseVersionId));
   const [diffValue] = useState(() => computeNoteDiffValue(base.content, note.content));
   const editor = usePlateEditor({ plugins: diffPlugins, value: diffValue });
-  const store = useNoteBaselineStore();
-  const { confirmSaved, markEdited, seedBaseline } = store.getState();
-
-  const save = useMutation({
-    mutationFn: async () => {
-      const baseline = store.getState();
-      const editSeq = baseline.editSeq;
-      const content = plateToMarkdown(editor, stripDiffValue(editor.children));
-      const contentHash = await hashText(content);
-
-      if (contentHash === baseline.contentHash) {
-        confirmSaved(editSeq, { baseVersionId: baseline.baseVersionId, contentHash });
-
-        return;
-      }
-
-      const saved = await saveNoteBody({
-        data: baseline.baseVersionId
-          ? { baseVersionId: baseline.baseVersionId, content, intent: "overwrite", noteId }
-          : { content, intent: "append", noteId },
-      });
-
-      confirmSaved(editSeq, { baseVersionId: saved.versionId, contentHash: saved.contentHash });
-
-      if (saved.isLatest) {
-        queryClient.setQueryData(noteQuery.queryKey, (previous) =>
-          produce(previous, (draft) => {
-            if (!draft) return;
-
-            draft.content = content;
-            draft.contentHash = saved.contentHash;
-            draft.lastAuthor = "user";
-            draft.pendingReviewBaseVersionId = null;
-            draft.versionId = saved.versionId;
-          }),
-        );
-      }
-      void queryClient.invalidateQueries({ queryKey: noteQueries.versionLists(noteId) });
-    },
-    onError: async (error) => {
-      if (ServerFnError.is(error) && error.status === STALE_NOTE_VERSION_STATUS) {
-        await queryClient.invalidateQueries({ queryKey: noteQuery.queryKey });
-
-        const fresh = queryClient.getQueryData(noteQuery.queryKey);
-
-        if (!fresh) return;
-
-        seedBaseline({
-          baseVersionId: fresh.lastAuthor === "user" ? fresh.versionId : null,
-          contentHash: fresh.contentHash,
-        });
-
-        return;
-      }
-
-      toast.error(gt("Failed to save the note"));
-    },
-  });
-  const saveDebounced = useDebouncedCallback(save.mutate, DIFF_SAVE_DEBOUNCE_MS, {
-    flushOnExit: true,
-    maxWait: DIFF_SAVE_MAX_WAIT_MS,
+  const { scheduleSave } = useNoteBodySave({
+    noteId,
+    serialize: () => plateToMarkdown(editor, stripDiffValue(editor.children)),
   });
 
   const counts = useMemo(
@@ -490,15 +429,7 @@ export const NoteHistoryEditor = ({ baseVersionId, noteId }: NoteHistoryEditorPr
   );
 
   return (
-    <NotePlate
-      editor={editor}
-      noteId={noteId}
-      onValueChange={() => {
-        markEdited(note.pendingReviewBaseVersionId ? note.versionId : null);
-        saveDebounced();
-      }}
-      title={note.title}
-    >
+    <NotePlate editor={editor} noteId={noteId} onValueChange={scheduleSave} title={note.title}>
       <NoteDiffBar counts={counts} noteId={noteId} selectedVersionId={baseVersionId}>
         <Button nativeButton={false} render={<Link search={clearNoteDiff} to="." />} size="xs">
           <T>Close</T>

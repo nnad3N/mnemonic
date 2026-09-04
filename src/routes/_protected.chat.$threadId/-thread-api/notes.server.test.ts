@@ -172,11 +172,15 @@ describe("agent version review", () => {
         userId,
       }),
     );
-    const { versionId: userVersionId } = expectOk(await getNoteFn(ctx, { noteId: id, userId }));
+    const { baseVersionId, versionId: userVersionId } = expectOk(
+      await getNoteFn(ctx, { noteId: id, userId }),
+    );
     await appendAgentVersion(id, "agent text");
 
     const pending = expectOk(await getNoteFn(ctx, { noteId: id, userId }));
 
+    expect(baseVersionId).toBe(userVersionId);
+    expect(pending.baseVersionId).toBeNull();
     expect(pending.pendingReviewBaseVersionId).toBe(userVersionId);
 
     expectOk(

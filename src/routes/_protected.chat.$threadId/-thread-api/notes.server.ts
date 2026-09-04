@@ -250,10 +250,11 @@ export const getNoteFn = Kit.gen(async function* (
     reviewPending && latestSettledVersion?.content ? latestSettledVersion.id : null;
 
   return Result.ok({
+    // The latest user version saves write into; null while the note sits on an agent version.
+    baseVersionId: latest.author === "user" ? latest.id : null,
     content: latest.content,
     contentHash: latest.contentHash,
     id: note.id,
-    lastAuthor: latest.author,
     pendingReviewBaseVersionId,
     scope: note.scope,
     threadTopicId,
@@ -541,7 +542,7 @@ export const declineAgentVersionsFn = Kit.gen(async function* (
     ]);
 
     return {
-      author: latestSettledVersion.author,
+      baseVersionId: latestSettledVersion.author === "user" ? latestSettledVersion.id : null,
       content: latestSettledVersion.content,
       contentHash: latestSettledVersion.contentHash,
       updatedAt: latestSettledVersion.updatedAt,
