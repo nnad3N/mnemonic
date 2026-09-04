@@ -6,10 +6,9 @@ import { dbKit } from "@/lib/db-kit.server";
 import * as Kit from "@/lib/kit";
 import { createRagKit } from "@/lib/rag-kit.server";
 import { createSafeId, toSafeId } from "@/lib/safe-id";
+import type { SafeId } from "@/lib/safe-id";
 import { vectorKit } from "@/lib/vector-kit.server";
 import { EMBEDDING_DIMENSION } from "@/mastra/models.server";
-import { FILE_EMBEDDINGS_INDEX } from "@/mastra/rag-config.server";
-import { mastraVector } from "@/mastra/storage.server";
 import { clearDatabase } from "@/test/clear-database";
 import { createFakeS3 } from "@/test/fake-s3";
 import ragSampleXml from "@/test/fixtures/rag-sample.xml?raw";
@@ -58,16 +57,8 @@ const getFileRow = async (fileId: string) => {
 
 const getFileStatus = async (fileId: string) => (await getFileRow(fileId))?.status;
 
-const vectorsForFile = async (fileId: string) => {
-  const results = await mastraVector.query({
-    indexName: FILE_EMBEDDINGS_INDEX,
-    queryVector: unitVector,
-    topK: 100,
-    filter: { fileId },
-  });
-
-  return results;
-};
+const vectorsForFile = async (fileId: SafeId<"file">) =>
+  expectOk(await Kit.get(vectorKit).search({ scope: { fileId }, topK: 100, vector: unitVector }));
 
 beforeEach(async () => {
   fakeS3.reset();
@@ -286,7 +277,6 @@ describe("processForRagFn", () => {
       topicId,
       fileId,
       chunkIndex: 0,
-      displayName: "rag-sample.xml",
       page: 1,
     });
     expect(String(vectors.at(0)?.metadata?.text ?? "")).toContain(RAG_SAMPLE_PHRASE);

@@ -5,11 +5,10 @@ import { dbKit } from "@/lib/db-kit.server";
 import * as Kit from "@/lib/kit";
 import { S3Error } from "@/lib/s3-kit.server";
 import { createSafeId, toSafeId } from "@/lib/safe-id";
+import type { SafeId } from "@/lib/safe-id";
 import { createVectorKit, VectorError, vectorKit } from "@/lib/vector-kit.server";
 import type { VectorApi } from "@/lib/vector-kit.server";
 import { EMBEDDING_DIMENSION } from "@/mastra/models.server";
-import { FILE_EMBEDDINGS_INDEX, FILE_EMBEDDINGS_INDEX_CONFIG } from "@/mastra/rag-config.server";
-import { mastraVector } from "@/mastra/storage.server";
 import {
   FILE_PROCESSING_TTL_SECONDS,
   FILE_UPLOAD_TTL_SECONDS,
@@ -55,32 +54,28 @@ const fileStatus = async (fileId: string) => {
 
 const secondsAgo = (seconds: number) => new Date(Date.now() - seconds * 1000);
 
-const upsertFileVector = async (fileId: string) => {
+const upsertFileVector = async (fileId: SafeId<"file">) => {
   expectOk(
-    await vector.upsert({
-      ids: [`${fileId}:0`],
-      indexName: FILE_EMBEDDINGS_INDEX,
-      metadata: [{ fileId, text: "chunk" }],
+    await vector.indexFile({
+      chunks: [{ page: 1, text: "chunk" }],
+      fileId,
+      topicId,
       vectors: [unitVector],
     }),
   );
 };
 
-const vectorIdsForFile = async (fileId: string) => {
-  const results = await mastraVector.query({
-    indexName: FILE_EMBEDDINGS_INDEX,
-    queryVector: unitVector,
-    topK: 100,
-    filter: { fileId },
-  });
+const vectorIdsForFile = async (fileId: SafeId<"file">) => {
+  const results = expectOk(
+    await vector.search({ scope: { fileId }, topK: 100, vector: unitVector }),
+  );
 
   return results.map((result) => result.id);
 };
 
 const createFailingVectorKit = () => {
   const api: VectorApi = {
-    createIndex: async () => Promise.resolve(Result.ok()),
-    deleteVectors: async () =>
+    forget: async () =>
       Promise.resolve(
         Result.err(
           new VectorError({
@@ -89,7 +84,8 @@ const createFailingVectorKit = () => {
           }),
         ),
       ),
-    upsert: async () => Promise.resolve(Result.ok()),
+    indexFile: async () => Promise.resolve(Result.ok()),
+    search: async () => Promise.resolve(Result.ok([])),
   };
 
   return createVectorKit(api);
@@ -97,10 +93,7 @@ const createFailingVectorKit = () => {
 
 beforeEach(async () => {
   fakeS3.reset();
-  await Promise.all([
-    vector.createIndex(FILE_EMBEDDINGS_INDEX_CONFIG).then(expectOk),
-    seedUser({ id: userId }),
-  ]);
+  await seedUser({ id: userId });
   await seedTopic({ userId, id: topicId });
 });
 

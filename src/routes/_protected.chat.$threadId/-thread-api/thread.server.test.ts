@@ -9,8 +9,6 @@ import { createSafeId, toSafeId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
 import { createVectorKit, type VectorApi, VectorError, vectorKit } from "@/lib/vector-kit.server";
 import { EMBEDDING_DIMENSION } from "@/mastra/models.server";
-import { FILE_EMBEDDINGS_INDEX, FILE_EMBEDDINGS_INDEX_CONFIG } from "@/mastra/rag-config.server";
-import { mastraVector } from "@/mastra/storage.server";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 import { clearDatabase } from "@/test/clear-database";
 import { createFakeS3 } from "@/test/fake-s3";
@@ -34,24 +32,21 @@ const fakeS3 = createFakeS3();
 /** Non-zero unit vector — cosine similarity of the zero vector is undefined and filters out. */
 const unitVector = Array.from({ length: EMBEDDING_DIMENSION }, (_, index) => (index === 0 ? 1 : 0));
 
-const upsertTopicVector = async (vectorTopicId: string, fileId: string) => {
+const upsertTopicVector = async (vectorTopicId: SafeId<"topic">, fileId: SafeId<"file">) => {
   expectOk(
-    await vector.upsert({
-      ids: [`${fileId}:0`],
-      indexName: FILE_EMBEDDINGS_INDEX,
-      metadata: [{ fileId, topicId: vectorTopicId, text: "chunk" }],
+    await vector.indexFile({
+      chunks: [{ page: 1, text: "chunk" }],
+      fileId,
+      topicId: vectorTopicId,
       vectors: [unitVector],
     }),
   );
 };
 
-const vectorIdsForTopic = async (vectorTopicId: string) => {
-  const results = await mastraVector.query({
-    indexName: FILE_EMBEDDINGS_INDEX,
-    queryVector: unitVector,
-    topK: 100,
-    filter: { topicId: vectorTopicId },
-  });
+const vectorIdsForTopic = async (vectorTopicId: SafeId<"topic">) => {
+  const results = expectOk(
+    await vector.search({ scope: { topicId: vectorTopicId }, topK: 100, vector: unitVector }),
+  );
 
   return results.map((result) => result.id);
 };
@@ -111,8 +106,7 @@ const threadIdsForResource = async (resourceId: string) => {
 
 const createFailingVectorKit = () => {
   const api: VectorApi = {
-    createIndex: async () => Promise.resolve(Result.ok()),
-    deleteVectors: async () =>
+    forget: async () =>
       Promise.resolve(
         Result.err(
           new VectorError({
@@ -121,7 +115,8 @@ const createFailingVectorKit = () => {
           }),
         ),
       ),
-    upsert: async () => Promise.resolve(Result.ok()),
+    indexFile: async () => Promise.resolve(Result.ok()),
+    search: async () => Promise.resolve(Result.ok([])),
   };
 
   return createVectorKit(api);
@@ -154,10 +149,7 @@ const createFailingMemoryKit = () => {
 describe("deleteTopicFn", () => {
   beforeEach(async () => {
     fakeS3.reset();
-    await Promise.all([
-      vector.createIndex(FILE_EMBEDDINGS_INDEX_CONFIG).then(expectOk),
-      seedUser({ id: userId }),
-    ]);
+    await seedUser({ id: userId });
     await seedTopic({ userId, id: topicId });
   });
 

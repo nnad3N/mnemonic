@@ -21,7 +21,6 @@ import { safeId, toSafeId } from "@/lib/safe-id";
 import { sanitizeGeneratedText } from "@/lib/sanitize-generated-text";
 import { vectorKit } from "@/lib/vector-kit.server";
 import type { VectorKit } from "@/lib/vector-kit.server";
-import { FILE_EMBEDDINGS_INDEX, FILE_EMBEDDINGS_INDEX_CONFIG } from "@/mastra/rag-config.server";
 
 const DESCRIPTION_SAMPLE_CHARS = 6000;
 const DESCRIPTION_INSTRUCTIONS =
@@ -251,19 +250,10 @@ export const processForRagFn = Kit.gen(async function* (
     value: described,
   });
 
-  yield* await ctx.vector.createIndex(FILE_EMBEDDINGS_INDEX_CONFIG);
-
-  yield* await ctx.vector.upsert({
-    ids: chunks.map((_, index) => `${input.fileId}:${index}`),
-    indexName: FILE_EMBEDDINGS_INDEX,
-    metadata: chunks.map((chunk, index) => ({
-      topicId: input.topicId,
-      fileId: input.fileId,
-      chunkIndex: index,
-      displayName: input.displayName,
-      page: chunk.page,
-      text: chunk.text,
-    })),
+  yield* await ctx.vector.indexFile({
+    chunks,
+    fileId: input.fileId,
+    topicId: input.topicId,
     vectors: embeddings,
   });
 

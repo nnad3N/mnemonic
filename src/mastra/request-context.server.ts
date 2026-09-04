@@ -14,6 +14,8 @@ export const mnemonicRequestContextSchema = v.object({
   userId: safeId<"user">(),
   modelOption: v.picklist(ModelOptions.values),
   threadId: v.pipe(v.string(), v.nanoid()),
+  // Mastra's `createVectorQueryTool` reads `filter` off the request context and applies it to
+  // every query; that is what scopes file vector search to the topic.
   filter: v.optional(
     v.object({
       topicId: v.optional(safeId<"topic">()),
