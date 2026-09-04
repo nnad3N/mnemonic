@@ -1,12 +1,11 @@
 import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { matchError, Result } from "better-result";
-import { and, desc, eq, inArray, lt, or } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { file } from "@/db/schema.server";
 import type { FileStatus } from "@/db/schema.server";
-import { ilike } from "@/db/sql.server";
 import { dbKit } from "@/lib/db-kit.server";
 import { toServerFnError } from "@/lib/errors/server-fn-error";
 import type { ServerFnError } from "@/lib/errors/server-fn-error";
@@ -16,16 +15,11 @@ import {
   topicAccessMiddleware,
 } from "@/lib/middleware/assert-thread-access.middleware";
 import { s3Kit } from "@/lib/s3-kit.server";
-import { rawId } from "@/lib/safe-id";
-import type { SafeId } from "@/lib/safe-id";
 import { vectorKit } from "@/lib/vector-kit.server";
-import {
-  FILE_PROCESSING_TTL_SECONDS,
-  FILE_UPLOAD_TTL_SECONDS,
-} from "@/routes/_protected.chat.$threadId/-thread-api/files.server";
 
-import { deleteFileFn } from "./files.server";
+import { deleteFileFn, listFilesFn, listPendingFilesFn } from "./files.server";
 
+const filesCtx = Kit.createContext(dbKit);
 const deleteFileCtx = Kit.createContext(dbKit, s3Kit, vectorKit);
 
 export const deleteFile = createServerFn({ method: "POST" })
@@ -69,98 +63,37 @@ export const getFileDownloadUrl = createServerFn({ method: "GET" })
 
 export const getPendingFiles = createServerFn({ method: "GET" })
   .middleware([topicAccessMiddleware])
-  .handler(async ({ context }) => {
-    const now = Temporal.Now.instant();
-    const uploadCutoff = new Date(
-      now.subtract({ seconds: FILE_UPLOAD_TTL_SECONDS }).epochMilliseconds,
-    );
-    const processingCutoff = new Date(
-      now.subtract({ seconds: FILE_PROCESSING_TTL_SECONDS }).epochMilliseconds,
-    );
-
-    const result = await Kit.get(dbKit).run(async (db) => {
-      await db
-        .update(file)
-        .set({ status: "failed" })
-        .where(
-          and(
-            eq(file.topicId, context.topic.id),
-            or(
-              and(eq(file.status, "uploading"), lt(file.updatedAt, uploadCutoff)),
-              and(eq(file.status, "processing"), lt(file.updatedAt, processingCutoff)),
-            ),
-          ),
-        );
-
-      return db
-        .select({
-          id: file.id,
-        })
-        .from(file)
-        .where(
-          and(
-            eq(file.topicId, context.topic.id),
-            inArray(file.status, ["uploading", "processing"]),
-          ),
-        );
-    });
-
-    if (Result.isError(result)) {
-      throw toServerFnError.serverError("Failed to list pending files");
-    }
-
-    return result.value.map((pendingFile) => ({
-      id: rawId(pendingFile.id),
-    }));
-  });
+  .handler(async ({ context }) =>
+    Kit.run(async () =>
+      listPendingFilesFn(filesCtx, { topicId: context.topic.id }),
+    ).throws<ServerFnError>(() => toServerFnError.serverError("Failed to list pending files")),
+  );
 
 const listFilesInputSchema = v.object({
   page: v.pipe(v.number(), v.integer(), v.minValue(1)),
   pageSize: v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100)),
-  search: v.optional(v.string(), ""),
+  search: v.optional(
+    v.pipe(
+      v.string(),
+      v.trim(),
+      v.transform((value) => (value.length > 0 ? value : undefined)),
+    ),
+  ),
 });
-
-const buildWhereClause = (topicId: SafeId<"topic">, search: string) => {
-  const trimmedSearch = search.trim();
-
-  if (trimmedSearch.length === 0) {
-    return eq(file.topicId, topicId);
-  }
-
-  return and(eq(file.topicId, topicId), ilike(file.displayName, trimmedSearch));
-};
 
 export const listFiles = createServerFn({ method: "GET" })
   .validator(listFilesInputSchema)
   .middleware([topicAccessMiddleware])
-  .handler(async ({ context, data }) => {
-    const whereClause = buildWhereClause(context.topic.id, data.search);
-    const offset = (data.page - 1) * data.pageSize;
-
-    return Kit.run(async () =>
-      Kit.get(dbKit).run(async (db) => {
-        const [items, totalCount] = await Promise.all([
-          db
-            .select({
-              createdAt: file.createdAt,
-              displayName: file.displayName,
-              id: file.id,
-              mimeType: file.mimeType,
-              sizeBytes: file.sizeBytes,
-              status: file.status,
-            })
-            .from(file)
-            .where(whereClause)
-            .orderBy(desc(file.createdAt))
-            .limit(data.pageSize)
-            .offset(offset),
-          db.$count(file, whereClause),
-        ]);
-
-        return { items, totalCount };
+  .handler(async ({ context, data }) =>
+    Kit.run(async () =>
+      listFilesFn(filesCtx, {
+        page: data.page,
+        pageSize: data.pageSize,
+        search: data.search,
+        topicId: context.topic.id,
       }),
-    ).throws(() => toServerFnError.serverError("Failed to list files"));
-  });
+    ).throws<ServerFnError>(() => toServerFnError.serverError("Failed to list files")),
+  );
 
 export type FileItem = {
   createdAt: Date;
@@ -185,14 +118,14 @@ export type FilesQueryParams = {
 
 export const fileQueries = {
   all: () => ["file"] as const,
-  lists: (topicId: string) => [...fileQueries.all(), "list", topicId] as const,
+  byTopic: (topicId: string) => [...fileQueries.all(), "list", topicId] as const,
   list: ({ page, pageSize, search, topicId }: FilesQueryParams) =>
     queryOptions({
       queryFn: async () =>
         listFiles({
           data: { page, pageSize, search, topicId },
         }),
-      queryKey: [...fileQueries.lists(topicId), { page, pageSize, search }] as const,
+      queryKey: [...fileQueries.byTopic(topicId), { page, pageSize, search }] as const,
       placeholderData: keepPreviousData,
     }),
   pending: (topicId: string) =>

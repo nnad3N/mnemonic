@@ -56,7 +56,7 @@ export const createByokFn = Kit.gen(async function* (ctx: ByokCtx, input: Create
 
   yield* await ctx.db.run((db) =>
     db.insert(byok).values({
-      activatedAt: existing === undefined ? new Date() : null,
+      activatedAt: existing ? null : new Date(),
       id,
       keyPreview: keyPreviewFromSecret(input.key),
       name: input.name,
@@ -107,7 +107,7 @@ export const deleteByokFn = Kit.gen(async function* (ctx: ByokCtx, input: Delete
     return Result.err(toServerFnError.notFound("API key not found"));
   }
 
-  if (row.activatedAt !== null) {
+  if (row.activatedAt) {
     const other = yield* await ctx.db.run((db) =>
       db
         .select({ id: byok.id })
@@ -145,7 +145,7 @@ export const activateByokFn = Kit.gen(async function* (ctx: ByokCtx, input: Acti
     return Result.err(toServerFnError.notFound("API key not found"));
   }
 
-  if (row.activatedAt !== null) {
+  if (row.activatedAt) {
     return Result.ok();
   }
 

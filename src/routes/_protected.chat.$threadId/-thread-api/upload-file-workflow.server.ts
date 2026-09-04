@@ -1,26 +1,31 @@
-import { extractBytes } from "@kreuzberg/node";
 import { createStep, createWorkflow } from "@mastra/core/workflows";
 import { MDocument } from "@mastra/rag";
 import { toStandardJsonSchema } from "@valibot/to-json-schema";
-import { embedMany } from "ai";
 import { Result, TaggedError } from "better-result";
 import { and, eq, inArray } from "drizzle-orm";
 import * as v from "valibot";
 
-import { file } from "@/db/schema.server";
+import { file, fileContent } from "@/db/schema.server";
 import { dbKit } from "@/lib/db-kit.server";
 import type { DbKit } from "@/lib/db-kit.server";
 import { ImageMimeType } from "@/lib/file-validation";
+import { extractFileContent } from "@/lib/get-file.server";
 import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
 import { resolveProviderKey } from "@/lib/middleware/resolve-provider-key.server";
+import { ragKit } from "@/lib/rag-kit.server";
+import type { RagKit } from "@/lib/rag-kit.server";
 import { s3Kit } from "@/lib/s3-kit.server";
 import type { S3Kit } from "@/lib/s3-kit.server";
 import { safeId, toSafeId } from "@/lib/safe-id";
+import { sanitizeGeneratedText } from "@/lib/sanitize-generated-text";
 import { vectorKit } from "@/lib/vector-kit.server";
 import type { VectorKit } from "@/lib/vector-kit.server";
-import { getFileEmbeddingModel } from "@/mastra/file-rag-config.server";
-import { FILE_EMBEDDING_DIMENSION } from "@/mastra/file-rag-config.server";
+
+const DESCRIPTION_SAMPLE_CHARS = 6000;
+const DESCRIPTION_INSTRUCTIONS =
+  "Describe document for an agent choosing which file in a topic to search. One or two sentences: document type, subject, what sets it apart (entities, period, scope). Plain text, no preamble.";
+const MAX_DESCRIPTION_LENGTH = 400;
 
 const workflowInputSchema = v.object({
   fileId: v.pipe(v.string(), v.nanoid()),
@@ -46,7 +51,7 @@ export class FileProcessingError extends TaggedError("FileProcessingError")<{
   reason: FileProcessingErrorReason;
 }> {}
 
-type ProcessFileCtx = Kits<[DbKit, S3Kit, VectorKit]>;
+type ProcessFileCtx = Kits<[DbKit, S3Kit, VectorKit, RagKit]>;
 
 export const validateFileFn = Kit.gen(async function* (
   ctx: ProcessFileCtx,
@@ -120,7 +125,7 @@ export const validateFileFn = Kit.gen(async function* (
   });
 });
 
-const processFileCtx = Kit.createContext(dbKit, s3Kit, vectorKit);
+const processFileCtx = Kit.createContext(dbKit, s3Kit, vectorKit, ragKit);
 
 const validateFileStep = createStep({
   id: "validate-file",
@@ -134,6 +139,52 @@ const workflowOutputSchema = v.object({
   fileId: v.pipe(v.string(), v.nanoid()),
 });
 
+type ExtractedContent = {
+  content: string;
+  page?: number;
+};
+
+const chunkContent = async ({ page, content }: ExtractedContent) => {
+  const chunked = await MDocument.fromText(content).chunk({
+    strategy: "recursive",
+    maxSize: 512,
+    overlap: 50,
+  });
+
+  return chunked.map((chunk) => ({ page, text: chunk.text }));
+};
+
+export const sampleForDescription = (contents: { content: string }[]) => {
+  let sample = "";
+  const first = contents.at(0);
+
+  if (first && first.content.length > DESCRIPTION_SAMPLE_CHARS) {
+    const sentences = new Intl.Segmenter(undefined, { granularity: "sentence" }).segment(
+      first.content,
+    );
+
+    for (const { segment } of sentences) {
+      if (sample.length + segment.length > DESCRIPTION_SAMPLE_CHARS) {
+        break;
+      }
+
+      sample += segment;
+    }
+
+    return sample;
+  }
+
+  for (const { content } of contents) {
+    if (sample.length + content.length > DESCRIPTION_SAMPLE_CHARS) {
+      break;
+    }
+
+    sample += `${content}\n`;
+  }
+
+  return sample;
+};
+
 export const processForRagFn = Kit.gen(async function* (
   ctx: ProcessFileCtx,
   input: v.InferOutput<typeof validatedFileSchema> & { abortSignal?: AbortSignal },
@@ -146,20 +197,16 @@ export const processForRagFn = Kit.gen(async function* (
     return Result.ok({ fileId: input.fileId });
   }
 
-  const [object, key] = yield* await Kit.promiseAll([
+  const [object, providerKey] = yield* await Kit.promiseAll([
     ctx.s3.getObject(input.s3Key),
     resolveProviderKey(ctx, input.userId),
   ]);
-  const chunks = yield* await Result.tryPromise(async () => {
-    const extraction = await extractBytes(Buffer.from(object), input.mimeType);
-    const doc = MDocument.fromText(extraction.content);
-
-    return doc.chunk({
-      strategy: "recursive",
-      maxSize: 512,
-      overlap: 50,
-    });
-  });
+  const extracted = yield* await extractFileContent({ bytes: object, mimeType: input.mimeType });
+  const contents: ExtractedContent[] =
+    extracted.type === "pages"
+      ? extracted.pages.filter((page) => page.content.trim().length > 0)
+      : [{ content: extracted.content }];
+  const chunks = await Promise.all(contents.map(chunkContent)).then((chunked) => chunked.flat());
 
   if (chunks.length === 0) {
     yield* await ctx.db.run((db) =>
@@ -169,33 +216,42 @@ export const processForRagFn = Kit.gen(async function* (
     return Result.ok({ fileId: input.fileId });
   }
 
-  const { embeddings } = yield* await Result.tryPromise(async () =>
-    embedMany({
+  const [embeddings, described] = yield* await Kit.promiseAll([
+    ctx.rag.embed({
       abortSignal: input.abortSignal,
-      model: getFileEmbeddingModel(key.key),
+      providerKey,
       values: chunks.map((chunk) => chunk.text),
     }),
-  );
-
-  yield* await ctx.vector.createIndex({
-    dimension: FILE_EMBEDDING_DIMENSION,
+    ctx.rag.describe({
+      abortSignal: input.abortSignal,
+      instructions: DESCRIPTION_INSTRUCTIONS,
+      prompt: `${input.displayName}\n\n${sampleForDescription(contents)}`,
+      providerKey,
+    }),
+  ]);
+  const description = sanitizeGeneratedText({
+    maxLength: MAX_DESCRIPTION_LENGTH,
+    value: described,
   });
 
-  yield* await ctx.vector.upsert({
-    ids: chunks.map((_, index) => `${input.fileId}:${index}`),
-    metadata: chunks.map((chunk, index) => ({
-      topicId: input.topicId,
-      fileId: input.fileId,
-      chunkIndex: index,
-      displayName: input.displayName,
-      text: chunk.text,
-    })),
+  yield* await ctx.vector.indexFile({
+    chunks,
+    fileId: input.fileId,
+    topicId: input.topicId,
     vectors: embeddings,
   });
 
-  yield* await ctx.db.run((db) =>
-    db.update(file).set({ status: "ready" }).where(eq(file.id, input.fileId)),
-  );
+  yield* await ctx.db.transaction(async (tx) => {
+    await tx.insert(fileContent).values(
+      contents.map(({ content, page }, index) => ({
+        content,
+        fileId: input.fileId,
+        page,
+        seq: index + 1,
+      })),
+    );
+    await tx.update(file).set({ description, status: "ready" }).where(eq(file.id, input.fileId));
+  });
 
   return Result.ok({ fileId: input.fileId });
 });

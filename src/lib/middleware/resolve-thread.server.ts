@@ -12,6 +12,11 @@ class ThreadNotFoundError extends TaggedError("ThreadNotFoundError")<{
   message: string;
 }> {}
 
+export const getResourceId = (input: {
+  topicId: SafeId<"topic"> | undefined;
+  userId: SafeId<"user">;
+}): string => input.topicId ?? input.userId;
+
 type ResolveThreadInput = {
   threadId: string;
   userId: SafeId<"user">;
@@ -19,10 +24,6 @@ type ResolveThreadInput = {
 
 type ResolveThreadCtx = Kits<[DbKit, MemoryKit]>;
 
-/**
- * A thread's `resourceId` is either its owner or the topic it belongs to, so a thread the user
- * does not own is only reachable through a topic they do.
- */
 export const resolveThread = Kit.gen(async function* (
   ctx: ResolveThreadCtx,
   input: ResolveThreadInput,
@@ -36,6 +37,7 @@ export const resolveThread = Kit.gen(async function* (
   if (thread.resourceId === input.userId) {
     return Result.ok({
       agentId: getMnemonicAgentId({ topicId: undefined }),
+      resourceId: getResourceId({ topicId: undefined, userId: input.userId }),
       thread,
       topicId: undefined,
     });
@@ -58,6 +60,7 @@ export const resolveThread = Kit.gen(async function* (
 
   return Result.ok({
     agentId: getMnemonicAgentId({ topicId: topic.id }),
+    resourceId: getResourceId({ topicId: topic.id, userId: input.userId }),
     thread,
     topicId: topic.id,
   });

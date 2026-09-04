@@ -62,6 +62,19 @@ describe("runCode", () => {
     expect(result.output).toEqual([{ a: "1", b: "2" }]);
   });
 
+  it("can import the bundled minisearch module", async () => {
+    const result = expectOk(
+      await runCode(`
+        import MiniSearch from "minisearch";
+        const index = new MiniSearch({ fields: ["text"] });
+        index.addAll([{ id: 1, text: "Puritan sermon" }, { id: 2, text: "frontier thesis" }]);
+        export default index.search("puritans", { fuzzy: 0.2 }).map((hit) => hit.id);
+      `),
+    );
+
+    expect(result.output).toEqual([1]);
+  });
+
   it("injects structured args onto env.args", async () => {
     const args = {
       text: "hello",

@@ -1,7 +1,14 @@
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { T, useGT, useLocale } from "gt-tanstack-start";
-import { DownloadIcon, EllipsisVerticalIcon, FileIcon, PencilIcon, Trash2Icon } from "lucide-react";
+import {
+  DownloadIcon,
+  EllipsisVerticalIcon,
+  FileIcon,
+  PencilIcon,
+  RotateCcwIcon,
+  Trash2Icon,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import * as v from "valibot";
@@ -19,6 +26,8 @@ import { TableCell, TableRow } from "@/components/ui/table";
 import type { FileStatus } from "@/db/schema.server";
 import type { GT } from "@/lib/gt";
 import { cn } from "@/lib/utils";
+import { retryFile } from "@/routes/_protected.chat.$threadId/-thread-api/files.functions";
+import { mentionQueries } from "@/routes/_protected.chat.$threadId/-thread-api/mentions.functions";
 import { getFileDownloadUrl } from "@/routes/_protected.topic.$topicId/-files/files.functions";
 import type { FileItem } from "@/routes/_protected.topic.$topicId/-files/files.functions";
 import { fileQueries, renameFile } from "@/routes/_protected.topic.$topicId/-files/files.functions";
@@ -30,25 +39,54 @@ type FileRowProps = {
   topicId: string;
 };
 
-const formatFileSize = (locale: string, sizeBytes: number) =>
-  new Intl.NumberFormat(locale, {
+const KILOBYTE = 1000;
+const MEGABYTE = KILOBYTE * KILOBYTE;
+
+const formatFileSize = (locale: string, sizeBytes: number) => {
+  const inMegabytes = sizeBytes >= MEGABYTE;
+
+  return new Intl.NumberFormat(locale, {
     maximumFractionDigits: 1,
     style: "unit",
-    unit: "kilobyte",
-    unitDisplay: "narrow",
-  }).format(sizeBytes / 1024);
+    unit: inMegabytes ? "megabyte" : "kilobyte",
+  }).format(sizeBytes / (inMegabytes ? MEGABYTE : KILOBYTE));
+};
 
 const formatFileDate = (locale: string, createdAt: Date) =>
   new Intl.DateTimeFormat(locale, {
     dateStyle: "medium",
     timeStyle: "short",
-  }).format(new Date(createdAt));
+  }).format(createdAt);
 
 export const FileRow = ({ file, topicId }: FileRowProps) => {
   const gt = useGT();
   const locale = useLocale();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
+  const queryClient = useQueryClient();
+
+  const retryMutation = useMutation({
+    mutationFn: async () =>
+      retryFile({
+        data: { fileId: file.id },
+      }),
+    onError: () => {
+      toast.error(gt("Could not process file"));
+    },
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: fileQueries.byTopic(topicId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: mentionQueries.byId({ type: "file", id: file.id }).queryKey,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: mentionQueries.listBase(),
+        }),
+      ]);
+    },
+  });
 
   const downloadMutation = useMutation({
     mutationFn: async () =>
@@ -131,6 +169,15 @@ export const FileRow = ({ file, topicId }: FileRowProps) => {
                 <T>Download</T>
               </DropdownMenuItem>
               <DropdownMenuItem
+                disabled={file.status !== "failed" || retryMutation.isPending}
+                onClick={() => {
+                  retryMutation.mutate();
+                }}
+              >
+                <RotateCcwIcon />
+                <T>Retry</T>
+              </DropdownMenuItem>
+              <DropdownMenuItem
                 onClick={() => {
                   setDeleteOpen(true);
                 }}
@@ -175,7 +222,7 @@ const RenameFileField = ({ file, stopRenaming, topicId }: RenameFileFieldProps) 
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: fileQueries.lists(topicId),
+        queryKey: fileQueries.byTopic(topicId),
       });
       stopRenaming();
     },

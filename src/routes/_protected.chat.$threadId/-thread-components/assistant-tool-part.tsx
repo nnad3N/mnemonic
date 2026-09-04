@@ -43,6 +43,20 @@ const isRecoverableFailure = (part: ToolUIPart<ThreadUITools>): boolean => {
         case "parsed":
           return false;
       }
+    case "tool-readNote":
+      switch (part.output.type) {
+        case "error":
+          return true;
+        case "note":
+          return false;
+      }
+    case "tool-updateNote":
+      switch (part.output.type) {
+        case "error":
+          return true;
+        case "updated":
+          return false;
+      }
     case "tool-searchFile":
       switch (part.output.type) {
         case "error":
@@ -57,12 +71,21 @@ const isRecoverableFailure = (part: ToolUIPart<ThreadUITools>): boolean => {
         case "success":
           return false;
       }
+    case "tool-searchFiles":
+      switch (part.output.type) {
+        case "error":
+          return true;
+        case "matches":
+          return false;
+      }
     case "tool-agent-reader":
     case "tool-agent-worker":
-    case "tool-fileGraphRag":
     case "tool-fileVectorSearch":
+    case "tool-listFiles":
     case "tool-recall":
+    case "tool-searchNotes":
     case "tool-webSearch":
+    case "tool-createNote":
       return false;
   }
 };
@@ -105,15 +128,6 @@ const renderToolLabel = (toolName: MnemonicToolName, status: ToolPartStatus): Re
         case "error":
           return <T>Could not read library documentation</T>;
       }
-    case "fileGraphRag":
-      switch (status) {
-        case "pending":
-          return <T>Searching file connections</T>;
-        case "done":
-          return <T>Searched file connections</T>;
-        case "error":
-          return <T>Could not search file connections</T>;
-      }
     case "fileVectorSearch":
       switch (status) {
         case "pending":
@@ -123,6 +137,15 @@ const renderToolLabel = (toolName: MnemonicToolName, status: ToolPartStatus): Re
         case "error":
           return <T>Could not search files</T>;
       }
+    case "listFiles":
+      switch (status) {
+        case "pending":
+          return <T>Listing files</T>;
+        case "done":
+          return <T>Listed files</T>;
+        case "error":
+          return <T>Could not list files</T>;
+      }
     case "readFile":
       switch (status) {
         case "pending":
@@ -131,6 +154,15 @@ const renderToolLabel = (toolName: MnemonicToolName, status: ToolPartStatus): Re
           return <T>Read the file</T>;
         case "error":
           return <T>Could not read the file</T>;
+      }
+    case "readNote":
+      switch (status) {
+        case "pending":
+          return <T>Reading the note</T>;
+        case "done":
+          return <T>Read the note</T>;
+        case "error":
+          return <T>Could not read the note</T>;
       }
     case "recall":
       switch (status) {
@@ -150,6 +182,24 @@ const renderToolLabel = (toolName: MnemonicToolName, status: ToolPartStatus): Re
         case "error":
           return <T>Could not search the file</T>;
       }
+    case "searchFiles":
+      switch (status) {
+        case "pending":
+          return <T>Searching file text</T>;
+        case "done":
+          return <T>Searched file text</T>;
+        case "error":
+          return <T>Could not search file text</T>;
+      }
+    case "searchNotes":
+      switch (status) {
+        case "pending":
+          return <T>Searching notes</T>;
+        case "done":
+          return <T>Searched notes</T>;
+        case "error":
+          return <T>Could not search notes</T>;
+      }
     case "webFetch":
       switch (status) {
         case "pending":
@@ -167,6 +217,24 @@ const renderToolLabel = (toolName: MnemonicToolName, status: ToolPartStatus): Re
           return <T>Searched the web</T>;
         case "error":
           return <T>Could not search the web</T>;
+      }
+    case "createNote":
+      switch (status) {
+        case "pending":
+          return <T>Creating a note</T>;
+        case "done":
+          return <T>Created a note</T>;
+        case "error":
+          return <T>Could not create the note</T>;
+      }
+    case "updateNote":
+      switch (status) {
+        case "pending":
+          return <T>Updating the note</T>;
+        case "done":
+          return <T>Updated the note</T>;
+        case "error":
+          return <T>Could not update the note</T>;
       }
   }
 };

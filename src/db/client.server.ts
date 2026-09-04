@@ -1,5 +1,4 @@
-import { createClient } from "@libsql/client";
-import { drizzle } from "drizzle-orm/libsql";
+import { drizzle } from "drizzle-orm/node-postgres";
 
 import { env } from "@/env";
 
@@ -10,15 +9,7 @@ import { appRelations } from "./schema.server.ts";
 
 export const schema = { ...appSchema, ...authSchema };
 
-const BUSY_TIMEOUT_MS = 5000;
-
-const client = createClient({
-  url: env.DATABASE_URL,
-  authToken: env.DATABASE_AUTH_TOKEN,
-  timeout: BUSY_TIMEOUT_MS,
-});
-
 export const drizzleDb = drizzle({
-  client,
+  connection: env.DATABASE_URL,
   relations: { ...appRelations, ...authRelations },
 });

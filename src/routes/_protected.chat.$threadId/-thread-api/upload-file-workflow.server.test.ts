@@ -1,13 +1,14 @@
 import { noopLogger } from "@mastra/core/logger";
+import { Result } from "better-result";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { dbKit } from "@/lib/db-kit.server";
 import * as Kit from "@/lib/kit";
+import { createRagKit } from "@/lib/rag-kit.server";
 import { createSafeId, toSafeId } from "@/lib/safe-id";
+import type { SafeId } from "@/lib/safe-id";
 import { vectorKit } from "@/lib/vector-kit.server";
-import { FILE_EMBEDDINGS_INDEX } from "@/mastra/file-rag-config.server";
-import { FILE_EMBEDDING_DIMENSION } from "@/mastra/file-rag-config.server";
-import { libsqlVector } from "@/mastra/storage.server";
+import { EMBEDDING_DIMENSION } from "@/mastra/models.server";
 import { clearDatabase } from "@/test/clear-database";
 import { createFakeS3 } from "@/test/fake-s3";
 import ragSampleXml from "@/test/fixtures/rag-sample.xml?raw";
@@ -18,6 +19,7 @@ import {
   FileProcessingError,
   processFileWorkflow,
   processForRagFn,
+  sampleForDescription,
   validateFileFn,
 } from "./upload-file-workflow.server";
 
@@ -27,38 +29,36 @@ const XML_MIME = "application/xml";
 const RAG_SAMPLE_PHRASE = "Mnemonic RAG sample paragraph";
 
 /** Non-zero unit vector — cosine similarity of the zero vector is undefined and filters out. */
-const unitVector = Array.from({ length: FILE_EMBEDDING_DIMENSION }, (_, index) =>
-  index === 0 ? 1 : 0,
-);
+const unitVector = Array.from({ length: EMBEDDING_DIMENSION }, (_, index) => (index === 0 ? 1 : 0));
 
 const db = Kit.get(dbKit);
 
 const userId = createSafeId<"user">();
 const topicId = createSafeId<"topic">();
 const fakeS3 = createFakeS3();
-const ctx = Kit.createContext(dbKit, fakeS3.kit, vectorKit);
+const fakeRag = createRagKit({
+  describe: async () =>
+    Promise.resolve(Result.ok("A sample document about the mnemonic RAG pipeline.")),
+  embed: async ({ values }) => Promise.resolve(Result.ok(values.map(() => unitVector))),
+});
+const ctx = Kit.createContext(dbKit, fakeS3.kit, vectorKit, fakeRag);
 
-const getFileStatus = async (fileId: string) => {
+const getFileRow = async (fileId: string) => {
   const result = await db.run((database) =>
     database.query.file.findFirst({
       where: { id: toSafeId<"file">(fileId) },
-      columns: { status: true },
+      columns: { description: true, status: true },
+      with: { contents: { columns: { content: true, page: true, seq: true } } },
     }),
   );
 
-  return expectOk(result)?.status;
+  return expectOk(result);
 };
 
-const vectorsForFile = async (fileId: string) => {
-  const results = await libsqlVector.query({
-    indexName: FILE_EMBEDDINGS_INDEX,
-    queryVector: unitVector,
-    topK: 100,
-    filter: { fileId },
-  });
+const getFileStatus = async (fileId: string) => (await getFileRow(fileId))?.status;
 
-  return results;
-};
+const vectorsForFile = async (fileId: SafeId<"file">) =>
+  expectOk(await Kit.get(vectorKit).search({ scope: { fileId }, topK: 100, vector: unitVector }));
 
 beforeEach(async () => {
   fakeS3.reset();
@@ -140,6 +140,26 @@ describe("validateFileFn", () => {
       s3Key,
     });
     expect(await getFileStatus(fileId)).toBe("processing");
+  });
+});
+
+describe("sampleForDescription", () => {
+  it("takes leading pages whole and stops at the first that does not fit", () => {
+    const filler = "x".repeat(6000);
+
+    expect(
+      sampleForDescription([{ content: "first" }, { content: filler }, { content: "third" }]),
+    ).toBe("first\n");
+  });
+
+  it("falls back to whole sentences when the first page alone exceeds the budget", () => {
+    const sentence = "A sentence that ends here. ";
+    const content = sentence.repeat(400);
+
+    const sample = sampleForDescription([{ content }]);
+
+    expect(sample.length).toBeLessThanOrEqual(6000);
+    expect(sample.endsWith(sentence)).toBe(true);
   });
 });
 
@@ -253,9 +273,15 @@ describe("processForRagFn", () => {
       topicId,
       fileId,
       chunkIndex: 0,
-      displayName: "rag-sample.xml",
     });
+    expect(vectors.at(0)?.metadata).not.toHaveProperty("page");
     expect(String(vectors.at(0)?.metadata?.text ?? "")).toContain(RAG_SAMPLE_PHRASE);
+
+    const row = await getFileRow(fileId);
+    expect(row?.description).toEqual(expect.any(String));
+    expect(row?.contents).toEqual([
+      { content: expect.stringContaining(RAG_SAMPLE_PHRASE), page: null, seq: 1 },
+    ]);
   });
 });
 

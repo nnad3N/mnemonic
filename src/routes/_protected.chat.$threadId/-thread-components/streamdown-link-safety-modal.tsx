@@ -78,15 +78,14 @@ export const useExternalLinkSafety = () => {
     setPendingUrl(url);
   };
 
-  const externalLinkModal =
-    pendingUrl === null ? null : (
-      <StreamdownLinkSafety
-        isOpen
-        onClose={() => setPendingUrl(null)}
-        onConfirm={() => window.open(pendingUrl, "_blank", "noreferrer")}
-        url={pendingUrl}
-      />
-    );
+  const externalLinkModal = pendingUrl ? (
+    <StreamdownLinkSafety
+      isOpen
+      onClose={() => setPendingUrl(null)}
+      onConfirm={() => window.open(pendingUrl, "_blank", "noreferrer")}
+      url={pendingUrl}
+    />
+  ) : null;
 
   return { externalLinkModal, requestExternalLink };
 };

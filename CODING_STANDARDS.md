@@ -4,11 +4,13 @@ How to write code in Mnemonic. Generic TypeScript lives in the `typescript-best-
 
 ## Contents
 
+- [Returns](#returns)
 - [Async](#async)
 - [React](#react)
 - [TanStack Query](#tanstack-query)
 - [Error handling](#error-handling)
 - [Kit](#kit)
+- [Types](#types)
 - [Code organization](#code-organization)
 - [TanStack Router](#tanstack-router)
 - [Server and client](#server-and-client)
@@ -18,6 +20,20 @@ How to write code in Mnemonic. Generic TypeScript lives in the `typescript-best-
 - [Internationalization](#internationalization)
 - [Database and Temporal](#database-and-temporal)
 - [SafeId](#safeid)
+
+---
+
+## Returns
+
+Brace a `return` that yields a value. The only one-line return is the bare `return;`.
+
+```ts
+if (!open) return;
+
+if (readOnly) {
+  return null;
+}
+```
 
 ---
 
@@ -41,7 +57,7 @@ onSubmit={async (event) => {
 
 Prefer arrow function components. Implicit-return `() => (...)` when the body is only JSX. Components that call hooks use a block body.
 
-Define a named `ComponentNameProps` type for each component. Do not inline the props object type in the parameter list.
+Define a named `ComponentNameProps` type for each component, directly above the component it belongs to. Nothing else goes between them. Do not inline the props object type in the parameter list.
 
 Pass `ref` as a prop. Do not use `React.forwardRef`.
 
@@ -331,6 +347,22 @@ export const searchItems = createServerFn({ method: "GET" })
       }),
     ),
   );
+```
+
+---
+
+## Types
+
+Each function declares its own options or input type as a plain object type that spells out every field. Two functions whose options overlap each get their own complete type; the overlap is written twice. Do not build one function's type out of another's with `&`, `Pick`, or `Omit`. That couples two signatures for a saved line and hides what the function accepts behind a name the reader has to chase.
+
+```ts
+// Bad
+type ExtractOptions = { extract?: boolean };
+type ExtractFileTextOptions = ExtractOptions & { pages?: boolean };
+
+// Good
+type ExtractFileTextOptions = { extract?: boolean; pages?: boolean };
+type ExtractFileContentOptions = { extract?: boolean };
 ```
 
 ---

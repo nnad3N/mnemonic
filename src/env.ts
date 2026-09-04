@@ -68,7 +68,6 @@ export const env = createEnv({
   server: {
     ALLOWED_EMAILS: v.optional(v.pipe(v.string(), v.nonEmpty())),
     BETTER_AUTH_URL: v.pipe(v.string(), v.url()),
-    DATABASE_AUTH_TOKEN: v.optional(v.pipe(v.string(), v.nonEmpty())),
     DATABASE_URL: v.pipe(v.string(), v.nonEmpty()),
     ENCRYPTION_KEYS: encryptionKeysSchema,
     FIRECRAWL_API_URL: v.pipe(v.string(), v.url()),

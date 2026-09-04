@@ -1,0 +1,353 @@
+{
+  "library": "minisearch",
+  "version": "7.2.0",
+  "importHint": "import MiniSearch from \"minisearch\"",
+  "members": [
+    {
+      "name": "add",
+      "kind": "function",
+      "summary": "Adds a document to the index",
+      "signatures": ["add(document: T): void;"],
+      "description": "Adds a document to the index\n@param document The document to be indexed",
+      "seealso": []
+    },
+    {
+      "name": "addAll",
+      "kind": "function",
+      "summary": "Adds all the given documents to the index",
+      "signatures": ["addAll(documents: readonly T[]): void;"],
+      "description": "Adds all the given documents to the index\n@param documents An array of documents to be indexed",
+      "seealso": []
+    },
+    {
+      "name": "addAllAsync",
+      "kind": "function",
+      "summary": "Adds all the given documents to the index asynchronously.",
+      "signatures": [
+        "addAllAsync(documents: readonly T[], options?: {\n        chunkSize?: number;\n    }): Promise<void>;"
+      ],
+      "description": "Adds all the given documents to the index asynchronously. Returns a promise that resolves (to `undefined`) when the indexing is done. This method is useful when index many documents, to avoid blocking the main thread. The indexing is performed asynchronously and in chunks.\n@param documents An array of documents to be indexed\n@param options Configuration options\n@return A promise resolving to `undefined` when the indexing is done",
+      "seealso": []
+    },
+    {
+      "name": "AsPlainObject",
+      "kind": "interface",
+      "summary": "",
+      "signatures": [
+        "type AsPlainObject = {\n    documentCount: number;\n    nextId: number;\n    documentIds: {\n        [shortId: string]: any;\n    };\n    fieldIds: {\n        [fieldName: string]: number;\n    };\n    fieldLength: {\n        [shortId: string]: number[];\n    };\n    averageFieldLength: number[];\n    storedFields: {\n        [shortId: string]: any;\n    };\n    dirtCount?: number;\n    index: [string, {\n        [fieldId: string]: SerializedIndexEntry;\n    }][];\n    serializationVersion: number;\n};"
+      ],
+      "description": "@ignore",
+      "seealso": []
+    },
+    {
+      "name": "autoSuggest",
+      "kind": "function",
+      "summary": "Provide suggestions for the given search query The result is a list of suggested modified search queries, derived from the given search query, each with a relevance score, sorted by descending score.",
+      "signatures": ["autoSuggest(queryString: string, options?: SearchOptions): Suggestion[];"],
+      "description": "Provide suggestions for the given search query The result is a list of suggested modified search queries, derived from the given search query, each with a relevance score, sorted by descending score. By default, it uses the same options used for search, except that by default it performs prefix search on the last term of the query, and combine terms with `'AND'` (requiring all query terms to match). Custom options can be passed as a second argument. Defaults can be changed upon calling the {@link MiniSearch} constructor, by passing a `autoSuggestOptions` option. ### Basic usage: \n```javascript\n// Get suggestions for 'neuro':\nminiSearch.autoSuggest('neuro')\n// => [ { suggestion: 'neuromancer', terms: [ 'neuromancer' ], score: 0.46240 } ]\n```\n ### Multiple words: \n```javascript\n// Get suggestions for 'zen ar':\nminiSearch.autoSuggest('zen ar')\n// => [\n//  { suggestion: 'zen archery art', terms: [ 'zen', 'archery', 'art' ], score: 1.73332 },\n//  { suggestion: 'zen art', terms: [ 'zen', 'art' ], score: 1.21313 }\n// ]\n```\n ### Fuzzy suggestions: \n```javascript\n// Correct spelling mistakes using fuzzy search:\nminiSearch.autoSuggest('neromancer', { fuzzy: 0.2 })\n// => [ { suggestion: 'neuromancer', terms: [ 'neuromancer' ], score: 1.03998 } ]\n```\n ### Filtering: \n```javascript\n// Get suggestions for 'zen ar', but only within the 'fiction' category\n// (assuming that 'category' is a stored field):\nminiSearch.autoSuggest('zen ar', {\n  filter: (result) => result.category === 'fiction'\n})\n// => [\n//  { suggestion: 'zen archery art', terms: [ 'zen', 'archery', 'art' ], score: 1.73332 },\n//  { suggestion: 'zen art', terms: [ 'zen', 'art' ], score: 1.21313 }\n// ]\n```\n@param queryString Query string to be expanded into suggestions\n@param options Search options. The supported options and default values are the same as for the {@link MiniSearch#search} method, except that by default prefix search is performed on the last term in the query, and terms are combined with `'AND'`.\n@return A sorted array of suggestions sorted by relevance score.",
+      "seealso": []
+    },
+    {
+      "name": "AutoVacuumOptions",
+      "kind": "interface",
+      "summary": "Options to control auto vacuum behavior.",
+      "signatures": ["type AutoVacuumOptions = VacuumOptions & VacuumConditions;"],
+      "description": "Options to control auto vacuum behavior. When discarding a document with {@link MiniSearch#discard}, a vacuuming operation is automatically started if the `dirtCount` and `dirtFactor` are above the `minDirtCount` and `minDirtFactor` thresholds defined by this configuration. See {@link  * VacuumConditions} for details on these. Also, `batchSize` and `batchWait` can be specified, controlling batching behavior (see {@link VacuumOptions}).",
+      "seealso": []
+    },
+    {
+      "name": "BM25Params",
+      "kind": "interface",
+      "summary": "Parameters of the BM25+ scoring algorithm.",
+      "signatures": [
+        "type BM25Params = {\n    /** Term frequency saturation point.\n     *\n     * Recommended values are between `1.2` and `2`. Higher values increase the\n     * difference in score between documents with higher and lower term\n     * frequencies. Setting this to `0` or a negative value is invalid. Defaults\n     * to `1.2`\n     */\n    k: number;\n    /**\n     * Length normalization impact.\n     *\n     * Recommended values are around `0.75`. Higher values increase the weight\n     * that field length has on scoring. Setting this to `0` (not recommended)\n     * means that the field length has no effect on scoring. Negative values are\n     * invalid. Defaults to `0.7`.\n     */\n    b: number;\n    /**\n     * BM25+ frequency normalization lower bound (usually called δ).\n     *\n     * Recommended values are between `0.5` and `1`. Increasing this parameter\n     * increases the minimum relevance of one occurrence of a search term\n     * regardless of its (possibly very long) field length. Negative values are\n     * invalid. Defaults to `0.5`.\n     */\n    d: number;\n};"
+      ],
+      "description": "Parameters of the BM25+ scoring algorithm. Customizing these is almost never necessary, and finetuning them requires an understanding of the BM25 scoring model. Some information about BM25 (and BM25+) can be found at these links: - https://en.wikipedia.org/wiki/Okapi_BM25 - https://opensourceconnections.com/blog/2015/10/16/bm25-the-next-generation-of-lucene-relevation/",
+      "seealso": []
+    },
+    {
+      "name": "CombinationOperator",
+      "kind": "interface",
+      "summary": "",
+      "signatures": [
+        "type CombinationOperator = LowercaseCombinationOperator | Uppercase<LowercaseCombinationOperator> | Capitalize<LowercaseCombinationOperator>;"
+      ],
+      "description": "",
+      "seealso": []
+    },
+    {
+      "name": "dirtCount",
+      "kind": "constant",
+      "summary": "The number of documents discarded since the most recent vacuuming",
+      "signatures": ["get dirtCount(): number;"],
+      "description": "The number of documents discarded since the most recent vacuuming",
+      "seealso": []
+    },
+    {
+      "name": "dirtFactor",
+      "kind": "constant",
+      "summary": "A number between 0 and 1 giving an indication about the proportion of documents that are discarded, and can therefore be cleaned up by vacuuming.",
+      "signatures": ["get dirtFactor(): number;"],
+      "description": "A number between 0 and 1 giving an indication about the proportion of documents that are discarded, and can therefore be cleaned up by vacuuming. A value close to 0 means that the index is relatively clean, while a higher value means that the index is relatively dirty, and vacuuming could release memory.",
+      "seealso": []
+    },
+    {
+      "name": "discard",
+      "kind": "function",
+      "summary": "Discards the document with the given ID, so it won't appear in search results It has the same visible effect of {@link MiniSearch.remove} (both cause the document to stop appearing in searches), but a different effect on the internal data structures: - {@link MiniSearch#remove} requires passing the full document to be removed as argument, and removes it from the inverted index immediately.",
+      "signatures": ["discard(id: any): void;"],
+      "description": "Discards the document with the given ID, so it won't appear in search results It has the same visible effect of {@link MiniSearch.remove} (both cause the document to stop appearing in searches), but a different effect on the internal data structures: - {@link MiniSearch#remove} requires passing the full document to be removed as argument, and removes it from the inverted index immediately. - {@link MiniSearch#discard} instead only needs the document ID, and works by marking the current version of the document as discarded, so it is immediately ignored by searches. This is faster and more convenient than {@link MiniSearch#remove}, but the index is not immediately modified. To take care of that, vacuuming is performed after a certain number of documents are discarded, cleaning up the index and allowing memory to be released. After discarding a document, it is possible to re-add a new version, and only the new version will appear in searches. In other words, discarding and re-adding a document works exactly like removing and re-adding it. The {@link MiniSearch.replace} method can also be used to replace a document with a new version. #### Details about vacuuming Repetite calls to this method would leave obsolete document references in the index, invisible to searches. Two mechanisms take care of cleaning up: clean up during search, and vacuuming. - Upon search, whenever a discarded ID is found (and ignored for the results), references to the discarded document are removed from the inverted index entries for the search terms. This ensures that subsequent searches for the same terms do not need to skip these obsolete references again. - In addition, vacuuming is performed automatically by default (see the `autoVacuum` field in {@link Options}) after a certain number of documents are discarded. Vacuuming traverses all terms in the index, cleaning up all references to discarded documents. Vacuuming can also be triggered manually by calling {@link MiniSearch#vacuum}.\n@param id The ID of the document to be discarded",
+      "seealso": []
+    },
+    {
+      "name": "discardAll",
+      "kind": "function",
+      "summary": "Discards the documents with the given IDs, so they won't appear in search results It is equivalent to calling {@link MiniSearch#discard} for all the given IDs, but with the optimization of triggering at most one automatic vacuuming at the end.",
+      "signatures": ["discardAll(ids: readonly any[]): void;"],
+      "description": "Discards the documents with the given IDs, so they won't appear in search results It is equivalent to calling {@link MiniSearch#discard} for all the given IDs, but with the optimization of triggering at most one automatic vacuuming at the end. Note: to remove all documents from the index, it is faster and more convenient to call {@link MiniSearch.removeAll} with no argument, instead of passing all IDs to this method.",
+      "seealso": []
+    },
+    {
+      "name": "documentCount",
+      "kind": "constant",
+      "summary": "Total number of documents available to search",
+      "signatures": ["get documentCount(): number;"],
+      "description": "Total number of documents available to search",
+      "seealso": []
+    },
+    {
+      "name": "getDefault",
+      "kind": "function",
+      "summary": "Returns the default value of an option.",
+      "signatures": ["static getDefault(optionName: string): any;"],
+      "description": "Returns the default value of an option. It will throw an error if no option with the given name exists.\n@param optionName Name of the option\n@return The default value of the given option ### Usage: \n```javascript\n// Get default tokenizer\nMiniSearch.getDefault('tokenize')\n\n// Get default term processor\nMiniSearch.getDefault('processTerm')\n\n// Unknown options will throw an error\nMiniSearch.getDefault('notExisting')\n// => throws 'MiniSearch: unknown option \"notExisting\"'\n```",
+      "seealso": []
+    },
+    {
+      "name": "getStoredFields",
+      "kind": "function",
+      "summary": "Returns the stored fields (as configured in the `storeFields` constructor option) for the given document ID.",
+      "signatures": ["getStoredFields(id: any): Record<string, unknown> | undefined;"],
+      "description": "Returns the stored fields (as configured in the `storeFields` constructor option) for the given document ID. Returns `undefined` if the document is not present in the index.\n@param id The document ID",
+      "seealso": []
+    },
+    {
+      "name": "has",
+      "kind": "function",
+      "summary": "Returns `true` if a document with the given ID is present in the index and available for search, `false` otherwise",
+      "signatures": ["has(id: any): boolean;"],
+      "description": "Returns `true` if a document with the given ID is present in the index and available for search, `false` otherwise\n@param id The document ID",
+      "seealso": []
+    },
+    {
+      "name": "isVacuuming",
+      "kind": "constant",
+      "summary": "Is `true` if a vacuuming operation is ongoing, `false` otherwise",
+      "signatures": ["get isVacuuming(): boolean;"],
+      "description": "Is `true` if a vacuuming operation is ongoing, `false` otherwise",
+      "seealso": []
+    },
+    {
+      "name": "loadJS",
+      "kind": "function",
+      "summary": "",
+      "signatures": [
+        "static loadJS<T = any>(js: AsPlainObject, options: Options<T>): MiniSearch<T>;"
+      ],
+      "description": "@ignore",
+      "seealso": []
+    },
+    {
+      "name": "loadJSAsync",
+      "kind": "function",
+      "summary": "",
+      "signatures": [
+        "static loadJSAsync<T = any>(js: AsPlainObject, options: Options<T>): Promise<MiniSearch<T>>;"
+      ],
+      "description": "@ignore",
+      "seealso": []
+    },
+    {
+      "name": "loadJSON",
+      "kind": "function",
+      "summary": "Deserializes a JSON index (serialized with `JSON.stringify(miniSearch)`) and instantiates a MiniSearch instance.",
+      "signatures": ["static loadJSON<T = any>(json: string, options: Options<T>): MiniSearch<T>;"],
+      "description": "Deserializes a JSON index (serialized with `JSON.stringify(miniSearch)`) and instantiates a MiniSearch instance. It should be given the same options originally used when serializing the index. ### Usage: \n```javascript\n// If the index was serialized with:\nlet miniSearch = new MiniSearch({ fields: ['title', 'text'] })\nminiSearch.addAll(documents)\n\nconst json = JSON.stringify(miniSearch)\n// It can later be deserialized like this:\nminiSearch = MiniSearch.loadJSON(json, { fields: ['title', 'text'] })\n```\n@param json JSON-serialized index\n@param options configuration options, same as the constructor\n@return An instance of MiniSearch deserialized from the given JSON.",
+      "seealso": []
+    },
+    {
+      "name": "loadJSONAsync",
+      "kind": "function",
+      "summary": "Async equivalent of {@link MiniSearch.loadJSON} This function is an alternative to {@link MiniSearch.loadJSON} that returns a promise, and loads the index in batches, leaving pauses between them to avoid blocking the main thread.",
+      "signatures": [
+        "static loadJSONAsync<T = any>(json: string, options: Options<T>): Promise<MiniSearch<T>>;"
+      ],
+      "description": "Async equivalent of {@link MiniSearch.loadJSON} This function is an alternative to {@link MiniSearch.loadJSON} that returns a promise, and loads the index in batches, leaving pauses between them to avoid blocking the main thread. It tends to be slower than the synchronous version, but does not block the main thread, so it can be a better choice when deserializing very large indexes.\n@param json JSON-serialized index\n@param options configuration options, same as the constructor\n@return A Promise that will resolve to an instance of MiniSearch deserialized from the given JSON.",
+      "seealso": []
+    },
+    {
+      "name": "LowercaseCombinationOperator",
+      "kind": "interface",
+      "summary": "",
+      "signatures": ["type LowercaseCombinationOperator = 'or' | 'and' | 'and_not';"],
+      "description": "",
+      "seealso": []
+    },
+    {
+      "name": "MatchInfo",
+      "kind": "interface",
+      "summary": "Match information for a search result.",
+      "signatures": ["type MatchInfo = {\n    [term: string]: string[];\n};"],
+      "description": "Match information for a search result. It is a key-value object where keys are terms that matched, and values are the list of fields that the term was found in.",
+      "seealso": []
+    },
+    {
+      "name": "MiniSearch",
+      "kind": "function",
+      "summary": "",
+      "signatures": ["constructor(options: Options<T>);"],
+      "description": "@param options Configuration options ### Examples: \n```javascript\n// Create a search engine that indexes the 'title' and 'text' fields of your\n// documents:\nconst miniSearch = new MiniSearch({ fields: ['title', 'text'] })\n```\n ### ID Field: \n```javascript\n// Your documents are assumed to include a unique 'id' field, but if you want\n// to use a different field for document identification, you can set the\n// 'idField' option:\nconst miniSearch = new MiniSearch({ idField: 'key', fields: ['title', 'text'] })\n```\n ### Options and defaults: \n```javascript\n// The full set of options (here with their default value) is:\nconst miniSearch = new MiniSearch({\n// idField: field that uniquely identifies a document\nidField: 'id',\n\n// extractField: function used to get the value of a field in a document.\n// By default, it assumes the document is a flat object with field names as\n// property keys and field values as string property values, but custom logic\n// can be implemented by setting this option to a custom extractor function.\nextractField: (document, fieldName) => document[fieldName],\n\n// tokenize: function used to split fields into individual terms. By\n// default, it is also used to tokenize search queries, unless a specific\n// `tokenize` search option is supplied. When tokenizing an indexed field,\n// the field name is passed as the second argument.\ntokenize: (string, _fieldName) => string.split(SPACE_OR_PUNCTUATION),\n\n// processTerm: function used to process each tokenized term before\n// indexing. It can be used for stemming and normalization. Return a falsy\n// value in order to discard a term. By default, it is also used to process\n// search queries, unless a specific `processTerm` option is supplied as a\n// search option. When processing a term from a indexed field, the field\n// name is passed as the second argument.\nprocessTerm: (term, _fieldName) => term.toLowerCase(),\n\n// searchOptions: default search options, see the `search` method for\n// details\nsearchOptions: undefined,\n\n// fields: document fields to be indexed. Mandatory, but not set by default\nfields: undefined\n\n// storeFields: document fields to be stored and returned as part of the\n// search results.\nstoreFields: []\n})\n```",
+      "seealso": []
+    },
+    {
+      "name": "Options",
+      "kind": "interface",
+      "summary": "Configuration options passed to the {@link MiniSearch} constructor",
+      "signatures": [
+        "type Options<T = any> = {\n    /**\n     * Names of the document fields to be indexed.\n     */\n    fields: string[];\n    /**\n     * Name of the ID field, uniquely identifying a document.\n     */\n    idField?: string;\n    /**\n     * Names of fields to store, so that search results would include them. By\n     * default none, so results would only contain the id field.\n     */\n    storeFields?: string[];\n    /**\n     * Function used to extract the value of each field in documents. By default,\n     * the documents are assumed to be plain objects with field names as keys,\n     * but by specifying a custom `extractField` function one can completely\n     * customize how the fields are extracted.\n     *\n     * The function takes as arguments the document, and the name of the field to\n     * extract from it. It should return the field value as a string.\n     *\n     * @remarks\n     * The returned string is fed into the `tokenize` function to split it up\n     * into tokens.\n     */\n    extractField?: (document: T, fieldName: string) => any;\n    /**\n     * Function used to turn field values into strings for indexing\n     *\n     * The function takes as arguments the field value, and the name of the field\n     * to stringify, so that its logic can be customized on specific fields. By\n     * default, it simply calls `toString()` on the field value (which in many\n     * cases is already a string).\n     *\n     * ### Example:\n     *\n     * ```javascript\n     * // Custom stringifier that formats dates as \"Tuesday, September 16, 2025\"\n     * const miniSearch = new MiniSearch({\n     *   fields: ['title', 'date'],\n     *   stringifyField: ((fieldValue, _fieldName) => {\n     *     if (fieldValue instanceof Date) {\n     *       return fieldValue.toLocaleDateString('en-US', {\n     *         weekday: 'long',\n     *         year: 'numeric',\n     *         month: 'long',\n     *         day: 'numeric'\n     *       })\n     *     } else {\n     *      return fieldValue.toString()\n     *     }\n     *   }\n     * })\n     * ```\n     */\n    stringifyField?: (fieldValue: any, fieldName: string) => string;\n    /**\n     * Function used to split a field value into individual terms to be indexed.\n     * The default tokenizer separates terms by space or punctuation, but a\n     * custom tokenizer can be provided for custom logic.\n     *\n     * The function takes as arguments string to tokenize, and the name of the\n     * field it comes from. It should return the terms as an array of strings.\n     * When used for tokenizing a search query instead of a document field, the\n     * `fieldName` is undefined.\n     *\n     * @remarks\n     * This function is called after `extractField` extracts a truthy value from a\n     * field. This function is then expected to split the extracted `text` document\n     * into tokens (more commonly referred to as \"terms\" in this context). The resulting\n     * split might be simple, like for example on word boundaries, or it might be more\n     * complex, taking into account certain encoding, or parsing needs, or even just\n     * special cases. Think about how one might need to go about indexing the term\n     * \"short-term\". You would likely want to treat this case specially, and return two\n     * terms instead, `[ \"short\", \"term\" ]`.\n     *\n     * Or, you could let such a case be handled by the `processTerm` function,\n     * which is designed to turn each token/term into whole terms or sub-terms. In any\n     * case, the purpose of this function is to split apart the provided `text` document\n     * into parts that can be processed by the `processTerm` function.\n     */\n    tokenize?: (text: string, fieldName?: string) => string[];\n    /**\n     * Function used to process a term before indexing or search. This can be\n     * used for normalization (such as stemming). By default, terms are\n     * downcased, and otherwise no other normalization is performed.\n     *\n     * The function takes as arguments a term to process, and the name of the\n     * field it comes from. It should return the processed term as a string, or a\n     * falsy value to reject the term entirely.\n     *\n     * It can also return an array of strings, in which case each string in the\n     * returned array is indexed as a separate term.\n     *\n     * @remarks\n     * During the document indexing phase, the first step is to call the `extractField`\n     * function to fetch the requested value/field from the document. This is then\n     * passed off to the `tokenizer`, which will break apart each value into \"terms\".\n     * These terms are then individually passed through the `processTerm` function\n     * to compute each term individually. A term might for example be something\n     * like \"lbs\", in which case one would likely want to return\n     * `[ \"lbs\", \"lb\", \"pound\", \"pounds\" ]`. You may also return a single string value,\n     * or a falsy value if you would like to skip indexing entirely for a specific term.\n     *\n     * Truthy return value(s) are then fed to the indexer as positive matches for this\n     * document. In our example above, all four of the `[ \"lbs\", \"lb\", \"pound\", \"pounds\" ]`\n     * terms would be added to the indexing engine, matching against the current document\n     * being computed.\n     *\n     * *Note: Whatever values are returned from this function will receive no further\n     * processing before being indexed. This means for example, if you include whitespace\n     * at the beginning or end of a word, it will also be indexed that way, with the\n     * included whitespace.*\n     */\n    processTerm?: (term: string, fieldName?: string) => string | string[] | null | undefined | false;\n    /**\n     * Function called to log messages. Arguments are a log level ('debug',\n     * 'info', 'warn', or 'error'), a log message, and an optional string code\n     * that identifies the reason for the log.\n     *\n     * The default implementation uses `console`, if defined.\n     */\n    logger?: (level: LogLevel, message: string, code?: string) => void;\n    /**\n     * If `true` (the default), vacuuming is performed automatically as soon as\n     * {@link MiniSearch#discard} is called a certain number of times, cleaning up\n     * obsolete references from the index. If `false`, no automatic vacuuming is\n     * performed. Custom settings controlling auto vacuuming thresholds, as well\n     * as batching behavior, can be passed as an object (see the {@link\n     * AutoVacuumOptions} type).\n     */\n    autoVacuum?: boolean | AutoVacuumOptions;\n    /**\n     * Default search options (see the {@link SearchOptions} type and the {@link\n     * MiniSearch#search} method for details)\n     */\n    searchOptions?: SearchOptions;\n    /**\n     * Default auto suggest options (see the {@link SearchOptions} type and the\n     * {@link MiniSearch#autoSuggest} method for details)\n     */\n    autoSuggestOptions?: SearchOptions;\n};"
+      ],
+      "description": "Configuration options passed to the {@link MiniSearch} constructor\n@typeParam T  The type of documents being indexed.",
+      "seealso": []
+    },
+    {
+      "name": "Query",
+      "kind": "interface",
+      "summary": "Search query expression, either a query string or an expression tree combining several queries with a combination of AND or OR.",
+      "signatures": ["type Query = QueryCombination | string | Wildcard;"],
+      "description": "Search query expression, either a query string or an expression tree combining several queries with a combination of AND or OR.",
+      "seealso": []
+    },
+    {
+      "name": "QueryCombination",
+      "kind": "interface",
+      "summary": "",
+      "signatures": ["type QueryCombination = SearchOptions & {\n    queries: Query[];\n};"],
+      "description": "",
+      "seealso": []
+    },
+    {
+      "name": "remove",
+      "kind": "function",
+      "summary": "Removes the given document from the index.",
+      "signatures": ["remove(document: T): void;"],
+      "description": "Removes the given document from the index. The document to remove must NOT have changed between indexing and removal, otherwise the index will be corrupted. This method requires passing the full document to be removed (not just the ID), and immediately removes the document from the inverted index, allowing memory to be released. A convenient alternative is {@link  * MiniSearch#discard}, which needs only the document ID, and has the same visible effect, but delays cleaning up the index until the next vacuuming.\n@param document The document to be removed",
+      "seealso": []
+    },
+    {
+      "name": "removeAll",
+      "kind": "function",
+      "summary": "Removes all the given documents from the index.",
+      "signatures": ["removeAll(documents?: readonly T[]): void;"],
+      "description": "Removes all the given documents from the index. If called with no arguments, it removes _all_ documents from the index.\n@param documents The documents to be removed. If this argument is omitted, all documents are removed. Note that, for removing all documents, it is more efficient to call this method with no arguments than to pass all documents.",
+      "seealso": []
+    },
+    {
+      "name": "replace",
+      "kind": "function",
+      "summary": "It replaces an existing document with the given updated version It works by discarding the current version and adding the updated one, so it is functionally equivalent to calling {@link MiniSearch#discard} followed by {@link MiniSearch#add}.",
+      "signatures": ["replace(updatedDocument: T): void;"],
+      "description": "It replaces an existing document with the given updated version It works by discarding the current version and adding the updated one, so it is functionally equivalent to calling {@link MiniSearch#discard} followed by {@link MiniSearch#add}. The ID of the updated document should be the same as the original one. Since it uses {@link MiniSearch#discard} internally, this method relies on vacuuming to clean up obsolete document references from the index, allowing memory to be released (see {@link MiniSearch#discard}).\n@param updatedDocument The updated document to replace the old version with",
+      "seealso": []
+    },
+    {
+      "name": "search",
+      "kind": "function",
+      "summary": "Search for documents matching the given search query.",
+      "signatures": ["search(query: Query, searchOptions?: SearchOptions): SearchResult[];"],
+      "description": "Search for documents matching the given search query. The result is a list of scored document IDs matching the query, sorted by descending score, and each including data about which terms were matched and in which fields. ### Basic usage: \n```javascript\n// Search for \"zen art motorcycle\" with default options: terms have to match\n// exactly, and individual terms are joined with OR\nminiSearch.search('zen art motorcycle')\n// => [ { id: 2, score: 2.77258, match: { ... } }, { id: 4, score: 1.38629, match: { ... } } ]\n```\n ### Restrict search to specific fields: \n```javascript\n// Search only in the 'title' field\nminiSearch.search('zen', { fields: ['title'] })\n```\n ### Field boosting: \n```javascript\n// Boost a field\nminiSearch.search('zen', { boost: { title: 2 } })\n```\n ### Prefix search: \n```javascript\n// Search for \"moto\" with prefix search (it will match documents\n// containing terms that start with \"moto\" or \"neuro\")\nminiSearch.search('moto neuro', { prefix: true })\n```\n ### Fuzzy search: \n```javascript\n// Search for \"ismael\" with fuzzy search (it will match documents containing\n// terms similar to \"ismael\", with a maximum edit distance of 0.2 term.length\n// (rounded to nearest integer)\nminiSearch.search('ismael', { fuzzy: 0.2 })\n```\n ### Combining strategies: \n```javascript\n// Mix of exact match, prefix search, and fuzzy search\nminiSearch.search('ismael mob', {\n prefix: true,\n fuzzy: 0.2\n})\n```\n ### Advanced prefix and fuzzy search: \n```javascript\n// Perform fuzzy and prefix search depending on the search term. Here\n// performing prefix and fuzzy search only on terms longer than 3 characters\nminiSearch.search('ismael mob', {\n prefix: term => term.length > 3\n fuzzy: term => term.length > 3 ? 0.2 : null\n})\n```\n ### Combine with AND: \n```javascript\n// Combine search terms with AND (to match only documents that contain both\n// \"motorcycle\" and \"art\")\nminiSearch.search('motorcycle art', { combineWith: 'AND' })\n```\n ### Combine with AND_NOT: There is also an AND_NOT combinator, that finds documents that match the first term, but do not match any of the other terms. This combinator is rarely useful with simple queries, and is meant to be used with advanced query combinations (see later for more details). ### Filtering results: \n```javascript\n// Filter only results in the 'fiction' category (assuming that 'category'\n// is a stored field)\nminiSearch.search('motorcycle art', {\n  filter: (result) => result.category === 'fiction'\n})\n```\n ### Wildcard query Searching for an empty string (assuming the default tokenizer) returns no results. Sometimes though, one needs to match all documents, like in a \"wildcard\" search. This is possible by passing the special value {@link MiniSearch.wildcard} as the query: \n```javascript\n// Return search results for all documents\nminiSearch.search(MiniSearch.wildcard)\n```\n Note that search options such as `filter` and `boostDocument` are still applied, influencing which results are returned, and their order: \n```javascript\n// Return search results for all documents in the 'fiction' category\nminiSearch.search(MiniSearch.wildcard, {\n  filter: (result) => result.category === 'fiction'\n})\n```\n ### Advanced combination of queries: It is possible to combine different subqueries with OR, AND, and AND_NOT, and even with different search options, by passing a query expression tree object as the first argument, instead of a string. \n```javascript\n// Search for documents that contain \"zen\" and (\"motorcycle\" or \"archery\")\nminiSearch.search({\n  combineWith: 'AND',\n  queries: [\n    'zen',\n    {\n      combineWith: 'OR',\n      queries: ['motorcycle', 'archery']\n    }\n  ]\n})\n\n// Search for documents that contain (\"apple\" or \"pear\") but not \"juice\" and\n// not \"tree\"\nminiSearch.search({\n  combineWith: 'AND_NOT',\n  queries: [\n    {\n      combineWith: 'OR',\n      queries: ['apple', 'pear']\n    },\n    'juice',\n    'tree'\n  ]\n})\n```\n Each node in the expression tree can be either a string, or an object that supports all {@link SearchOptions} fields, plus a `queries` array field for subqueries. Note that, while this can become complicated to do by hand for complex or deeply nested queries, it provides a formalized expression tree API for external libraries that implement a parser for custom query languages.\n@param query Search query\n@param searchOptions Search options. Each option, if not given, defaults to the corresponding value of `searchOptions` given to the constructor, or to the library default.",
+      "seealso": []
+    },
+    {
+      "name": "SearchOptions",
+      "kind": "interface",
+      "summary": "Search options to customize the search behavior.",
+      "signatures": [
+        "type SearchOptions = {\n    /**\n     * Names of the fields to search in. If omitted, all fields are searched.\n     */\n    fields?: string[];\n    /**\n     * Function used to filter search results, for example on the basis of stored\n     * fields. It takes as argument each search result and should return a boolean\n     * to indicate if the result should be kept or not.\n     */\n    filter?: (result: SearchResult) => boolean;\n    /**\n     * Key-value object of field names to boosting values. By default, fields are\n     * assigned a boosting factor of 1. If one assigns to a field a boosting value\n     * of 2, a result that matches the query in that field is assigned a score\n     * twice as high as a result matching the query in another field, all else\n     * being equal.\n     */\n    boost?: {\n        [fieldName: string]: number;\n    };\n    /**\n     * Function to calculate a boost factor for each term.\n     *\n     * This function, if provided, is called for each query term (as split by\n     * `tokenize` and processed by `processTerm`). The arguments passed to the\n     * function are the query term, the positional index of the term in the query,\n     * and the array of all query terms. It is expected to return a numeric boost\n     * factor for the term. A factor lower than 1 reduces the importance of the\n     * term, a factor greater than 1 increases it. A factor of exactly 1 is\n     * neutral, and does not affect the term's importance.\n     */\n    boostTerm?: (term: string, i: number, terms: string[]) => number;\n    /**\n     * Relative weights to assign to prefix search results and fuzzy search\n     * results. Exact matches are assigned a weight of 1.\n     */\n    weights?: {\n        fuzzy: number;\n        prefix: number;\n    };\n    /**\n     * Function to calculate a boost factor for documents. It takes as arguments\n     * the document ID, and a term that matches the search in that document, and\n     * the value of the stored fields for the document (if any).  It should return\n     * a boosting factor: a number higher than 1 increases the computed score, a\n     * number lower than 1 decreases the score, and a falsy value skips the search\n     * result completely.\n     */\n    boostDocument?: (documentId: any, term: string, storedFields?: Record<string, unknown>) => number;\n    /**\n     * Controls whether to perform prefix search. It can be a simple boolean, or a\n     * function.\n     *\n     * If a boolean is passed, prefix search is performed if true.\n     *\n     * If a function is passed, it is called upon search with a search term, the\n     * positional index of that search term in the tokenized search query, and the\n     * tokenized search query. The function should return a boolean to indicate\n     * whether to perform prefix search for that search term.\n     */\n    prefix?: boolean | ((term: string, index: number, terms: string[]) => boolean);\n    /**\n     * Controls whether to perform fuzzy search. It can be a simple boolean, or a\n     * number, or a function.\n     *\n     * If a boolean is given, fuzzy search with a default fuzziness parameter is\n     * performed if true.\n     *\n     * If a number higher or equal to 1 is given, fuzzy search is performed, with\n     * a maximum edit distance (Levenshtein) equal to the number.\n     *\n     * If a number between 0 and 1 is given, fuzzy search is performed within a\n     * maximum edit distance corresponding to that fraction of the term length,\n     * approximated to the nearest integer. For example, 0.2 would mean an edit\n     * distance of 20% of the term length, so 1 character in a 5-characters term.\n     * The calculated fuzziness value is limited by the `maxFuzzy` option, to\n     * prevent slowdown for very long queries.\n     *\n     * If a function is passed, the function is called upon search with a search\n     * term, a positional index of that term in the tokenized search query, and\n     * the tokenized search query. It should return a boolean or a number, with\n     * the meaning documented above.\n     */\n    fuzzy?: boolean | number | ((term: string, index: number, terms: string[]) => boolean | number);\n    /**\n     * Controls the maximum fuzziness when using a fractional fuzzy value. This is\n     * set to 6 by default. Very high edit distances usually don't produce\n     * meaningful results, but can excessively impact search performance.\n     */\n    maxFuzzy?: number;\n    /**\n     * The operand to combine partial results for each term. By default it is\n     * \"OR\", so results matching _any_ of the search terms are returned by a\n     * search. If \"AND\" is given, only results matching _all_ the search terms are\n     * returned by a search.\n     */\n    combineWith?: CombinationOperator;\n    /**\n     * Function to tokenize the search query. By default, the same tokenizer used\n     * for indexing is used also for search.\n     *\n     * @remarks This function is called after `extractField` extracts a truthy\n     * value from a field. This function is then expected to split the extracted\n     * `text` document into tokens (more commonly referred to as \"terms\" in this\n     * context). The resulting split might be simple, like for example on word\n     * boundaries, or it might be more complex, taking into account certain\n     * encoding, or parsing needs, or even just special cases. Think about how one\n     * might need to go about indexing the term \"short-term\". You would likely\n     * want to treat this case specially, and return two terms instead, `[\n     * \"short\", \"term\" ]`.\n     *\n     * Or, you could let such a case be handled by the `processTerm` function,\n     * which is designed to turn each token/term into whole terms or sub-terms. In\n     * any case, the purpose of this function is to split apart the provided\n     * `text` document into parts that can be processed by the `processTerm`\n     * function.\n     */\n    tokenize?: (text: string) => string[];\n    /**\n     * Function to process or normalize terms in the search query. By default, the\n     * same term processor used for indexing is used also for search.\n     *\n     * @remarks\n     * During the document indexing phase, the first step is to call the\n     * `extractField` function to fetch the requested value/field from the\n     * document. This is then passed off to the `tokenize` function, which will\n     * break apart each value into \"terms\". These terms are then individually\n     * passed through this function to compute each term individually. A term\n     * might for example be something like \"lbs\", in which case one would likely\n     * want to return `[ \"lbs\", \"lb\", \"pound\", \"pounds\" ]`. You may also return\n     * just a single string, or a falsy value if you would like to skip indexing\n     * entirely for a specific term.\n     *\n     * Truthy return value(s) are then fed to the indexer as positive matches for\n     * this document. In our example above, all four of the `[ \"lbs\", \"lb\",\n     * \"pound\", \"pounds\" ]` terms would be added to the indexing engine, matching\n     * against the current document being computed.\n     *\n     * *Note: Whatever values are returned from this function will receive no\n     * further processing before being indexed. This means for example, if you\n     * include whitespace at the beginning or end of a word, it will also be\n     * indexed that way, with the included whitespace.*\n     */\n    processTerm?: (term: string) => string | string[] | null | undefined | false;\n    /**\n     * BM25+ algorithm parameters. Customizing these is almost never necessary,\n     * and finetuning them requires an understanding of the BM25 scoring model. In\n     * most cases, it is best to omit this option to use defaults, and instead use\n     * boosting to tweak scoring for specific use cases.\n     */\n    bm25?: BM25Params;\n};"
+      ],
+      "description": "Search options to customize the search behavior.",
+      "seealso": []
+    },
+    {
+      "name": "SearchResult",
+      "kind": "interface",
+      "summary": "Type of the search results.",
+      "signatures": [
+        "type SearchResult = {\n    /**\n     * The document ID\n     */\n    id: any;\n    /**\n     * List of document terms that matched. For example, if a prefix search for\n     * `\"moto\"` matches `\"motorcycle\"`, `terms` will contain `\"motorcycle\"`.\n     */\n    terms: string[];\n    /**\n     * List of query terms that matched. For example, if a prefix search for\n     * `\"moto\"` matches `\"motorcycle\"`, `queryTerms` will contain `\"moto\"`.\n     */\n    queryTerms: string[];\n    /**\n     * Score of the search results\n     */\n    score: number;\n    /**\n     * Match information, see {@link MatchInfo}\n     */\n    match: MatchInfo;\n    /**\n     * Stored fields\n     */\n    [key: string]: any;\n};"
+      ],
+      "description": "Type of the search results. Each search result indicates the document ID, the terms that matched, the match information, the score, and all the stored fields.",
+      "seealso": []
+    },
+    {
+      "name": "Suggestion",
+      "kind": "interface",
+      "summary": "The type of auto-suggestions",
+      "signatures": [
+        "type Suggestion = {\n    /**\n     * The suggestion\n     */\n    suggestion: string;\n    /**\n     * Suggestion as an array of terms\n     */\n    terms: string[];\n    /**\n     * Score for the suggestion\n     */\n    score: number;\n};"
+      ],
+      "description": "The type of auto-suggestions",
+      "seealso": []
+    },
+    {
+      "name": "termCount",
+      "kind": "constant",
+      "summary": "Number of terms in the index",
+      "signatures": ["get termCount(): number;"],
+      "description": "Number of terms in the index",
+      "seealso": []
+    },
+    {
+      "name": "toJSON",
+      "kind": "function",
+      "summary": "Allows serialization of the index to JSON, to possibly store it and later deserialize it with {@link MiniSearch.loadJSON}.",
+      "signatures": ["toJSON(): AsPlainObject;"],
+      "description": "Allows serialization of the index to JSON, to possibly store it and later deserialize it with {@link MiniSearch.loadJSON}. Normally one does not directly call this method, but rather call the standard JavaScript `JSON.stringify()` passing the {@link MiniSearch} instance, and JavaScript will internally call this method. Upon deserialization, one must pass to {@link MiniSearch.loadJSON} the same options used to create the original instance that was serialized. ### Usage: \n```javascript\n// Serialize the index:\nlet miniSearch = new MiniSearch({ fields: ['title', 'text'] })\nminiSearch.addAll(documents)\nconst json = JSON.stringify(miniSearch)\n\n// Later, to deserialize it:\nminiSearch = MiniSearch.loadJSON(json, { fields: ['title', 'text'] })\n```\n@return A plain-object serializable representation of the search index.",
+      "seealso": []
+    },
+    {
+      "name": "vacuum",
+      "kind": "function",
+      "summary": "Triggers a manual vacuuming, cleaning up references to discarded documents from the inverted index Vacuuming is only useful for applications that use the {@link  * MiniSearch#discard} or {@link MiniSearch#replace} methods.",
+      "signatures": ["vacuum(options?: VacuumOptions): Promise<void>;"],
+      "description": "Triggers a manual vacuuming, cleaning up references to discarded documents from the inverted index Vacuuming is only useful for applications that use the {@link  * MiniSearch#discard} or {@link MiniSearch#replace} methods. By default, vacuuming is performed automatically when needed (controlled by the `autoVacuum` field in {@link Options}), so there is usually no need to call this method, unless one wants to make sure to perform vacuuming at a specific moment. Vacuuming traverses all terms in the inverted index in batches, and cleans up references to discarded documents from the posting list, allowing memory to be released. The method takes an optional object as argument with the following keys: - `batchSize`: the size of each batch (1000 by default) - `batchWait`: the number of milliseconds to wait between batches (10 by default) On large indexes, vacuuming could have a non-negligible cost: batching avoids blocking the thread for long, diluting this cost so that it is not negatively affecting the application. Nonetheless, this method should only be called when necessary, and relying on automatic vacuuming is usually better. It returns a promise that resolves (to undefined) when the clean up is completed. If vacuuming is already ongoing at the time this method is called, a new one is enqueued immediately after the ongoing one, and a corresponding promise is returned. However, no more than one vacuuming is enqueued on top of the ongoing one, even if this method is called more times (enqueuing multiple ones would be useless).\n@param options Configuration options for the batch size and delay. See {@link VacuumOptions}.",
+      "seealso": []
+    },
+    {
+      "name": "VacuumConditions",
+      "kind": "interface",
+      "summary": "Sets minimum thresholds for `dirtCount` and `dirtFactor` that trigger an automatic vacuuming.",
+      "signatures": [
+        "type VacuumConditions = {\n    /**\n     * Minimum `dirtCount` (number of discarded documents since the last vacuuming)\n     * under which auto vacuum is not triggered. It defaults to 20.\n     */\n    minDirtCount?: number;\n    /**\n     * Minimum `dirtFactor` (proportion of discarded documents over the total)\n     * under which auto vacuum is not triggered. It defaults to 0.1.\n     */\n    minDirtFactor?: number;\n};"
+      ],
+      "description": "Sets minimum thresholds for `dirtCount` and `dirtFactor` that trigger an automatic vacuuming.",
+      "seealso": []
+    },
+    {
+      "name": "VacuumOptions",
+      "kind": "interface",
+      "summary": "Options to control vacuuming behavior.",
+      "signatures": [
+        "type VacuumOptions = {\n    /**\n     * Size of each vacuuming batch (the number of terms in the index that will be\n     * traversed in each batch). Defaults to 1000.\n     */\n    batchSize?: number;\n    /**\n     * Wait time between each vacuuming batch in milliseconds. Defaults to 10.\n     */\n    batchWait?: number;\n};"
+      ],
+      "description": "Options to control vacuuming behavior. Vacuuming cleans up document references made obsolete by {@link  * MiniSearch.discard} from the index. On large indexes, vacuuming is potentially costly, because it has to traverse the whole inverted index. Therefore, in order to dilute this cost so it does not negatively affects the application, vacuuming is performed in batches, with a delay between each batch. These options are used to configure the batch size and the delay between batches.",
+      "seealso": []
+    },
+    {
+      "name": "Wildcard",
+      "kind": "interface",
+      "summary": "Wildcard query, used to match all terms",
+      "signatures": ["type Wildcard = typeof MiniSearch.wildcard;"],
+      "description": "Wildcard query, used to match all terms",
+      "seealso": []
+    }
+  ]
+}

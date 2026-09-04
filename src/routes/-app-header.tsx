@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, useMatch } from "@tanstack/react-router";
+import { Link, useMatch, useNavigate, useSearch } from "@tanstack/react-router";
 import { T } from "gt-tanstack-start";
-import type { PropsWithChildren } from "react";
+import { produce } from "immer";
+import { PanelRightIcon } from "lucide-react";
+import type { PropsWithChildren, ReactNode } from "react";
 
 import {
   Breadcrumb,
@@ -11,6 +13,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { sidebarQueries } from "@/routes/-sidebar/sidebar.functions";
@@ -21,6 +24,8 @@ export const AppHeader = () => {
   const chat = useMatch({ from: "/_protected/chat/$threadId", shouldThrow: false });
   const settings = useMatch({ from: "/_protected/settings", shouldThrow: false });
   const topicFiles = useMatch({ from: "/_protected/topic/$topicId/files", shouldThrow: false });
+  const topicNotes = useMatch({ from: "/_protected/topic/$topicId/notes", shouldThrow: false });
+  const threadNotes = useMatch({ from: "/_protected/chat/$threadId_/notes", shouldThrow: false });
   const admin = useMatch({ from: "/_protected/settings_/admin/", shouldThrow: false });
   const adminUserByok = useMatch({
     from: "/_protected/settings_/admin/$userId/byok",
@@ -54,16 +59,49 @@ export const AppHeader = () => {
         </Crumbs>
       )}
       {adminUserByok && <AdminByokCrumbs userId={adminUserByok.params.userId} />}
-      {topicFiles && <TopicFilesCrumbs topicId={topicFiles.params.topicId} />}
+      {topicFiles && <TopicCrumbs page={<T>Files</T>} topicId={topicFiles.params.topicId} />}
+      {topicNotes && <TopicCrumbs page={<T>Notes</T>} topicId={topicNotes.params.topicId} />}
+      {threadNotes && <ThreadHeader page={<T>Notes</T>} threadId={threadNotes.params.threadId} />}
+      <NotesTrigger />
     </header>
   );
 };
 
-type TopicFilesCrumbsProps = {
+const NotesTrigger = () => {
+  const navigate = useNavigate();
+  const notesOpen = useSearch({ from: "/_protected", select: (search) => search.notes === true });
+
+  if (notesOpen) return;
+
+  return (
+    <Button
+      className="ml-auto shrink-0"
+      onClick={async () =>
+        navigate({
+          search: (prev) =>
+            produce(prev, (draft) => {
+              draft.notes = true;
+            }),
+          to: ".",
+        })
+      }
+      size="icon-sm"
+      variant="ghost"
+    >
+      <PanelRightIcon />
+      <span className="sr-only">
+        <T>Open notes</T>
+      </span>
+    </Button>
+  );
+};
+
+type TopicCrumbsProps = {
+  page: ReactNode;
   topicId: string;
 };
 
-const TopicFilesCrumbs = ({ topicId }: TopicFilesCrumbsProps) => {
+const TopicCrumbs = ({ page, topicId }: TopicCrumbsProps) => {
   const topic = useQuery({
     ...sidebarQueries.topics(),
     select: (listed) => listed.find((topic) => topic.id === topicId),
@@ -85,9 +123,7 @@ const TopicFilesCrumbs = ({ topicId }: TopicFilesCrumbsProps) => {
           </>
         )}
         <BreadcrumbItem className="min-w-0">
-          <BreadcrumbPage className="px-1.5 max-md:truncate">
-            <T>Files</T>
-          </BreadcrumbPage>
+          <BreadcrumbPage className="px-1.5 max-md:truncate">{page}</BreadcrumbPage>
         </BreadcrumbItem>
       </BreadcrumbList>
     </Breadcrumb>

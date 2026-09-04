@@ -14,6 +14,7 @@ import * as Kit from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit.server";
 import { topicAccessMiddleware } from "@/lib/middleware/assert-thread-access.middleware";
 import { authMiddleware } from "@/lib/middleware/auth.middleware";
+import { getResourceId } from "@/lib/middleware/resolve-thread.server";
 
 import { listSidebarConversationsFn, toSidebarThread } from "./sidebar.server";
 export type { SidebarThread } from "./sidebar.server";
@@ -29,6 +30,7 @@ export const listSidebarConversations = createServerFn({ method: "GET" })
       }),
     ).throws<ServerFnError>((error) =>
       matchError(error, {
+        DatabaseError: () => toServerFnError.serverError("Failed to list conversations"),
         MemoryError: () => toServerFnError.serverError("Failed to list conversations"),
       }),
     ),
@@ -57,7 +59,7 @@ export const listSidebarTopicThreads = createServerFn({ method: "GET" })
   .middleware([topicAccessMiddleware])
   .handler(async ({ context }) => {
     const result = await Kit.get(memoryKit).listThreads({
-      filter: { resourceId: context.topic.id },
+      filter: { resourceId: getResourceId({ topicId: context.topic.id, userId: context.user.id }) },
       orderBy: { direction: "DESC", field: "updatedAt" },
       page: 0,
       perPage: false,
@@ -74,7 +76,7 @@ export const getOrCreateLatestConversation = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .handler(async ({ context }) => {
     const listed = await Kit.get(memoryKit).listThreads({
-      filter: { resourceId: context.user.id },
+      filter: { resourceId: getResourceId({ topicId: undefined, userId: context.user.id }) },
       orderBy: { direction: "DESC", field: "updatedAt" },
       page: 0,
       perPage: 1,
@@ -94,7 +96,7 @@ export const getOrCreateLatestConversation = createServerFn({ method: "GET" })
     const created = await Kit.get(memoryKit).saveThread({
       thread: {
         id: nanoid(),
-        resourceId: context.user.id,
+        resourceId: getResourceId({ topicId: undefined, userId: context.user.id }),
         title: "New conversation",
         createdAt: now,
         updatedAt: now,

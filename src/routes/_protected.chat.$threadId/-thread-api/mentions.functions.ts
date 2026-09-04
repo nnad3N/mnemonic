@@ -13,38 +13,8 @@ import { authMiddleware } from "@/lib/middleware/auth.middleware";
 import { getMentionByIdFn, getMentionsFn } from "./mentions.server";
 import type { MentionQueryType } from "./mentions.server";
 
-const getMentionsInputSchema = v.object({
-  resourceId: v.pipe(v.string(), v.nonEmpty()),
-  query: v.optional(v.string(), ""),
-});
-
-const getMentionByIdInputSchema = v.object({
-  id: v.pipe(v.string(), v.nanoid()),
-  type: v.picklist(["file", "thread", "topic"]),
-});
-
-const mentionsCtx = Kit.createContext(dbKit, memoryKit);
-
-export const getMentions = createServerFn({ method: "GET" })
-  .validator(getMentionsInputSchema)
-  .middleware([authMiddleware])
-  .handler(async ({ context, data }) =>
-    Kit.run(async () =>
-      getMentionsFn(mentionsCtx, {
-        query: data.query,
-        resourceId: data.resourceId,
-        userId: context.user.id,
-      }),
-    ).throws<ServerFnError>((error) =>
-      matchError(error, {
-        DatabaseError: () => toServerFnError.serverError("Failed to load mentions"),
-        MemoryError: () => toServerFnError.serverError("Failed to load conversation mentions"),
-      }),
-    ),
-  );
-
 export type MentionsQueryParams = {
-  resourceId: string;
+  threadId: string;
   query?: string;
 };
 
@@ -55,13 +25,14 @@ type GetMentionByIdParams = {
 
 export const mentionQueries = {
   all: () => ["mention"] as const,
-  lists: (resourceId: string) => [...mentionQueries.all(), "list", resourceId] as const,
-  list: ({ resourceId, query = "" }: MentionsQueryParams) =>
+  listBase: () => [...mentionQueries.all(), "list"] as const,
+  byThread: (threadId: string) => [...mentionQueries.listBase(), threadId] as const,
+  list: ({ threadId, query }: MentionsQueryParams) =>
     queryOptions({
-      queryKey: [...mentionQueries.lists(resourceId), { query }] as const,
+      queryKey: [...mentionQueries.byThread(threadId), { query }] as const,
       queryFn: async () =>
         getMentions({
-          data: { query, resourceId },
+          data: { query, threadId },
         }),
       placeholderData: keepPreviousData,
     }),
@@ -77,6 +48,43 @@ export const mentionQueries = {
     }),
 };
 
+const getMentionsInputSchema = v.object({
+  threadId: v.pipe(v.string(), v.nanoid()),
+  query: v.optional(
+    v.pipe(
+      v.string(),
+      v.trim(),
+      v.transform((value) => (value.length > 0 ? value : undefined)),
+    ),
+  ),
+});
+
+const getMentionByIdInputSchema = v.object({
+  id: v.pipe(v.string(), v.nanoid()),
+  type: v.picklist(["file", "note", "thread", "topic"]),
+});
+
+const mentionsCtx = Kit.createContext(dbKit, memoryKit);
+
+export const getMentions = createServerFn({ method: "GET" })
+  .validator(getMentionsInputSchema)
+  .middleware([authMiddleware])
+  .handler(async ({ context, data }) =>
+    Kit.run(async () =>
+      getMentionsFn(mentionsCtx, {
+        query: data.query,
+        threadId: data.threadId,
+        userId: context.user.id,
+      }),
+    ).throws<ServerFnError>((error) =>
+      matchError(error, {
+        DatabaseError: () => toServerFnError.serverError("Failed to load mentions"),
+        MemoryError: () => toServerFnError.serverError("Failed to load conversation mentions"),
+        ThreadNotFoundError: () => toServerFnError.notFound(),
+      }),
+    ),
+  );
+
 export const getMentionById = createServerFn({ method: "GET" })
   .validator(getMentionByIdInputSchema)
   .middleware([authMiddleware])
@@ -91,6 +99,8 @@ export const getMentionById = createServerFn({ method: "GET" })
       matchError(error, {
         DatabaseError: () => toServerFnError.serverError("Failed to load mention"),
         MemoryError: () => toServerFnError.serverError("Failed to load conversation mention"),
+        ServerFnError: (error) => error,
+        ThreadNotFoundError: () => toServerFnError.notFound(),
       }),
     ),
   );

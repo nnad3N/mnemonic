@@ -7,14 +7,13 @@ import * as v from "valibot";
 import { ToolError } from "@/lib/errors/tool-error";
 import { ImageMimeType, PDF_MIME_TYPE } from "@/lib/file-validation";
 import { mentionKeyFormat } from "@/lib/mention-key";
-import { getAgentModelConfig, modelAcceptsPdf, ModelAgentIds } from "@/mastra/models.server";
+import { getAgentModel, modelAcceptsPdf, ModelAgentIds } from "@/mastra/models.server";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
 import {
   extractFile,
   loadMentionedFile,
   visualSchema,
 } from "@/mastra/tools/file-tool-helpers.server";
-import { toToolInputSchema } from "@/mastra/tools/tool-input-schema.server";
 
 const inputSchema = v.object({
   fileKey: v.pipe(
@@ -88,7 +87,7 @@ const toModelOutput = (output: ReadFileOutput): ToolResultOutput => {
 
 export const readFileTool = createTool({
   id: "read-file",
-  inputSchema: toToolInputSchema(inputSchema),
+  inputSchema: toStandardJsonSchema(inputSchema),
   outputSchema: toStandardJsonSchema(outputSchema),
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
   description:
@@ -100,7 +99,7 @@ export const readFileTool = createTool({
       panic(`Unknown agent ${agentId} for read-file`);
     }
 
-    const modelCapability = context.requestContext.get("modelCapability");
+    const modelOption = context.requestContext.get("modelOption");
 
     const file = await loadMentionedFile({ fileKey, requestContext: context.requestContext });
 
@@ -110,10 +109,10 @@ export const readFileTool = createTool({
 
     const { bytes, displayName, mimeType } = file.value;
 
+    const agentModel = getAgentModel(agentId, modelOption).model;
+
     const viewable =
-      ImageMimeType.is(mimeType) ||
-      (mimeType === PDF_MIME_TYPE &&
-        modelAcceptsPdf(getAgentModelConfig(agentId, modelCapability).model));
+      ImageMimeType.is(mimeType) || (mimeType === PDF_MIME_TYPE && modelAcceptsPdf(agentModel));
 
     if (viewable) {
       return {

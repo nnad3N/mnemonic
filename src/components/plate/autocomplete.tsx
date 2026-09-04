@@ -5,7 +5,6 @@ import type { PointRef, TElement } from "platejs";
 import { useComposedRef, useEditorRef } from "platejs/react";
 import * as React from "react";
 
-import type { MentionValue } from "@/lib/mention-key";
 import { cn } from "@/lib/utils";
 
 type AutocompleteContextValue = {
@@ -21,23 +20,23 @@ const AutocompleteContext = React.createContext<AutocompleteContextValue>(
   null as unknown as AutocompleteContextValue,
 );
 
-type AutocompleteProps = {
+type AutocompleteProps<TItem> = {
   children: React.ReactNode;
   element: TElement;
   trigger: string;
   value?: string;
   setValue?: (value: string) => void;
-  items: MentionValue[];
+  items: readonly TItem[];
 };
 
-const Autocomplete = ({
+const Autocomplete = <TItem,>({
   children,
   element,
   setValue: setValueProp,
   trigger,
   value: valueProp,
   items,
-}: AutocompleteProps) => {
+}: AutocompleteProps<TItem>) => {
   const editor = useEditorRef();
   const inputRef = React.useRef<HTMLInputElement>(null);
   const cursorState = useHTMLInputCursorState(inputRef);
@@ -224,11 +223,12 @@ const AutocompleteContent = ({
   );
 };
 
-const AutocompleteList = ({
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters
+const AutocompleteList = <TItem,>({
   className,
   ...props
 }: Omit<AutocompletePrimitive.List.Props, "children"> & {
-  children: (item: MentionValue, index: number) => React.ReactNode;
+  children: (item: TItem, index: number) => React.ReactNode;
 }) => {
   return (
     <AutocompletePrimitive.List

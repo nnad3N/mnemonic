@@ -21,4 +21,8 @@ export default defineConfig({
   resolve: {
     tsconfigPaths: true,
   },
+  ssr: {
+    // @platejs/math side-imports katex CSS; keep it in Vite's SSR graph so .css is transformed.
+    noExternal: ["@platejs/math"],
+  },
 });

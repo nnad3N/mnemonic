@@ -2,7 +2,13 @@ import { TaggedError } from "better-result";
 
 export class ServerFnError extends TaggedError("ServerFnError")<{
   message: string;
-  status: "not-found" | "unauthorized" | "server-error" | "bad-request" | "forbidden";
+  status:
+    | "not-found"
+    | "unauthorized"
+    | "server-error"
+    | "bad-request"
+    | "forbidden"
+    | (string & {});
   cause?: unknown;
 }> {}
 
@@ -31,5 +37,10 @@ export const toServerFnError = {
     new ServerFnError({
       message,
       status: "forbidden",
+    }),
+  custom: (status: string, message: string) =>
+    new ServerFnError({
+      message,
+      status,
     }),
 };

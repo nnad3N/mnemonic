@@ -2,20 +2,24 @@ import { toAISdkMessages } from "@mastra/ai-sdk/ui";
 import type { TsrSerializable } from "@tanstack/router-core";
 import { generateText } from "ai";
 import { Result } from "better-result";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, or } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
-import { file, threadRun, threadSettings, threadReply, topic } from "@/db/schema.server";
+import { file, note, threadRun, threadSettings, threadReply, topic } from "@/db/schema.server";
 import type { DbKit } from "@/lib/db-kit.server";
 import { toServerFnError } from "@/lib/errors/server-fn-error";
 import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
 import type { MemoryKit } from "@/lib/memory-kit.server";
+import type { ProviderKey } from "@/lib/middleware/resolve-provider-key.server";
+import { getResourceId } from "@/lib/middleware/resolve-thread.server";
 import type { S3Kit } from "@/lib/s3-kit.server";
-import { createSafeId, toSafeId } from "@/lib/safe-id";
+import { createSafeId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
+import { sanitizeGeneratedText } from "@/lib/sanitize-generated-text";
 import type { VectorKit } from "@/lib/vector-kit.server";
-import { getThreadTitleModel } from "@/mastra/config.server";
+import { getModel } from "@/mastra/config.server";
+import { THREAD_TITLE_MODEL } from "@/mastra/models.server";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 
 type CreateTopicCtx = Kits<[DbKit, MemoryKit]>;
@@ -44,7 +48,7 @@ export const createTopicFn = Kit.gen(async function* (
   const thread = yield* await ctx.memory.saveThread({
     thread: {
       id: nanoid(),
-      resourceId: topicId,
+      resourceId: getResourceId({ topicId, userId: input.userId }),
       title: input.conversationTitle,
       createdAt: now,
       updatedAt: now,
@@ -58,6 +62,7 @@ type DeleteThreadCtx = Kits<[DbKit, S3Kit, MemoryKit, VectorKit]>;
 
 type DeleteTopicInput = {
   topicId: SafeId<"topic">;
+  userId: SafeId<"user">;
 };
 
 export const deleteTopicFn = Kit.gen(async function* (
@@ -72,7 +77,7 @@ export const deleteTopicFn = Kit.gen(async function* (
       }),
     ),
     ctx.memory.listThreads({
-      filter: { resourceId: input.topicId },
+      filter: { resourceId: getResourceId({ topicId: input.topicId, userId: input.userId }) },
       page: 0,
       perPage: false,
     }),
@@ -81,10 +86,10 @@ export const deleteTopicFn = Kit.gen(async function* (
     ctx.s3.deleteObjects({
       keys: files.map((row) => row.s3Key),
     }),
-    ctx.vector.deleteVectors({
-      filter: { topicId: input.topicId },
+    ctx.vector.forget({ topicId: input.topicId }),
+    ctx.memory.clearResourceObservations({
+      resourceId: getResourceId({ topicId: input.topicId, userId: input.userId }),
     }),
-    ctx.memory.clearResourceObservations({ resourceId: input.topicId }),
     ...threads.map(async (thread) => ctx.memory.deleteThread({ threadId: thread.id })),
   ]);
   // Keep durable rows until external deletes succeed so a failed S3/vector/memory
@@ -110,6 +115,15 @@ export const deleteTopicFn = Kit.gen(async function* (
           threads.map((thread) => thread.id),
         ),
       ),
+      tx.delete(note).where(
+        or(
+          eq(note.topicId, input.topicId),
+          inArray(
+            note.threadId,
+            threads.map((thread) => thread.id),
+          ),
+        ),
+      ),
       tx.delete(topic).where(eq(topic.id, input.topicId)),
     ]),
   );
@@ -133,6 +147,7 @@ export const deleteConversationFn = Kit.gen(async function* (
 
   yield* await ctx.db.transaction(async (tx) =>
     Promise.all([
+      tx.delete(note).where(eq(note.threadId, input.threadId)),
       tx.delete(threadSettings).where(eq(threadSettings.threadId, input.threadId)),
       tx.delete(threadRun).where(eq(threadRun.threadId, input.threadId)),
       tx.delete(threadReply).where(eq(threadReply.threadId, input.threadId)),
@@ -145,9 +160,8 @@ export const deleteConversationFn = Kit.gen(async function* (
 type GetThreadCtx = Kits<[DbKit, MemoryKit]>;
 
 type GetThreadInput = {
-  resourceId: string;
   threadId: string;
-  userId: SafeId<"user">;
+  topicId: SafeId<"topic"> | undefined;
 };
 
 // Collapse Mastra's split assistants so the UI always sees user → assistant → user.
@@ -172,22 +186,12 @@ export const mergeConsecutiveAssistantMessages = <TMessage extends ThreadUIMessa
 };
 
 export const getThreadFn = Kit.gen(async function* (ctx: GetThreadCtx, input: GetThreadInput) {
-  const [{ messages }, topic, replies] = yield* await Kit.promiseAll([
+  const [{ messages }, replies] = yield* await Kit.promiseAll([
     ctx.memory.listMessages({
       threadId: input.threadId,
       page: 0,
       perPage: false,
     }),
-    ctx.db.run((db) =>
-      db.query.topic.findFirst({
-        columns: { id: true },
-        where: {
-          // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId check.
-          id: toSafeId<"topic">(input.resourceId),
-          userId: input.userId,
-        },
-      }),
-    ),
     ctx.db.run((db) =>
       db
         .select({ userMessageId: threadReply.userMessageId, workTimings: threadReply.workTimings })
@@ -216,8 +220,7 @@ export const getThreadFn = Kit.gen(async function* (ctx: GetThreadCtx, input: Ge
 
   return Result.ok({
     messages: merged,
-    resourceId: input.resourceId,
-    topicId: topic?.id,
+    topicId: input.topicId,
   });
 });
 
@@ -235,25 +238,10 @@ Rules:
 const MAX_TITLE_LENGTH = 255;
 const TITLE_GENERATION_TIMEOUT_MS = 10_000;
 
-export const sanitizeTitle = (value: string) => {
-  const title = value
-    .replaceAll(/^["'`]+|["'`]+$/g, "")
-    .replaceAll(/\s+/g, " ")
-    .trim()
-    .slice(0, MAX_TITLE_LENGTH)
-    .trim();
-
-  if (title.length > 0) {
-    return title;
-  }
-
-  return null;
-};
-
 type CreateThreadTitleCtx = Kits<[MemoryKit]>;
 
 type CreateThreadTitleInput = {
-  apiKey: string;
+  providerKey: ProviderKey;
   // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type
   metadata: Record<string, unknown>;
   text: string;
@@ -269,15 +257,10 @@ export const createThreadTitleFn = Kit.gen(async function* (
       try: async () => {
         const result = await generateText({
           abortSignal: AbortSignal.timeout(TITLE_GENERATION_TIMEOUT_MS),
-          model: getThreadTitleModel(input.apiKey),
+          model: getModel(input.providerKey)(THREAD_TITLE_MODEL, {
+            reasoning: { effort: "none" },
+          }),
           prompt: input.text,
-          providerOptions: {
-            openrouter: {
-              reasoning: {
-                effort: "none",
-              },
-            },
-          },
           instructions: TITLE_INSTRUCTIONS,
         });
 
@@ -294,7 +277,7 @@ export const createThreadTitleFn = Kit.gen(async function* (
     },
   );
 
-  const title = sanitizeTitle(text);
+  const title = sanitizeGeneratedText({ maxLength: MAX_TITLE_LENGTH, value: text });
 
   if (!title) {
     return Result.ok(null);

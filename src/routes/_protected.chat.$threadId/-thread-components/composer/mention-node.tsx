@@ -1,6 +1,6 @@
 import { getMentionOnSelectItem } from "@platejs/mention";
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { useParams } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { Link, useParams } from "@tanstack/react-router";
 import { T } from "gt-tanstack-start";
 import type { TComboboxInputElement, TMentionElement } from "platejs";
 import type { PlateElementProps } from "platejs/react";
@@ -11,6 +11,7 @@ import { useMemo, useState } from "react";
 import { useDebounce } from "use-debounce";
 import { useShallow } from "zustand/shallow";
 
+import { setNoteSearchOpen, useOpenNote } from "@/components/notes-editor/use-open-note";
 import {
   Autocomplete,
   AutocompleteContent,
@@ -24,7 +25,6 @@ import { getMentionKey, parseMentionKey } from "@/lib/mention-key";
 import { cn } from "@/lib/utils";
 
 import { useComposer } from "../../-hooks/use-composer";
-import { threadQueries } from "../../-hooks/use-thread-chat";
 import { mentionQueries } from "../../-thread-api/mentions.functions";
 import type { MentionQueryType } from "../../-thread-api/mentions.server";
 import type { ThreadAttachment } from "../../../-chat-store";
@@ -60,19 +60,19 @@ export const ThreadMentionElement = (props: PlateElementProps<TMentionElement>) 
     return <ThreadLocalMentionElement {...props} mentionId={mentionId} mentionType={type} />;
   }
 
-  return <ThreadDatabaseMentionElement {...props} mentionId={mentionId} mentionType={type} />;
+  return <ThreadRemoteMentionElement {...props} mentionId={mentionId} mentionType={type} />;
 };
 
-type ThreadDatabaseMentionElementProps = PlateElementProps<TMentionElement> & {
+type ThreadRemoteMentionElementProps = PlateElementProps<TMentionElement> & {
   mentionId: string;
   mentionType: MentionQueryType;
 };
 
-const ThreadDatabaseMentionElement = ({
+const ThreadRemoteMentionElement = ({
   mentionId,
   mentionType,
   ...props
-}: ThreadDatabaseMentionElementProps) => {
+}: ThreadRemoteMentionElementProps) => {
   const mention = useQuery(
     mentionQueries.byId({
       id: mentionId,
@@ -87,10 +87,6 @@ const ThreadDatabaseMentionElement = ({
 
     if (!mention.isSuccess) {
       return "failed";
-    }
-
-    if (!mention.data) {
-      return undefined;
     }
 
     const status = mention.data.status;
@@ -135,7 +131,7 @@ const ThreadLocalMentionElement = ({
     }
 
     if (mentionType !== "attachment" || !attachment) {
-      return undefined;
+      return;
     }
 
     return "ready";
@@ -231,7 +227,19 @@ export const ThreadMentionElementStatic = (props: SlateElementProps<TMentionElem
       variant="cyan"
       render={(renderProps) => <SlateElement {...props} {...renderProps} />}
     >
-      <MentionContent>
+      <MentionContent
+        render={
+          mention.type === "note" ? (
+            <Link
+              onClick={(event) => {
+                event.stopPropagation();
+              }}
+              search={setNoteSearchOpen(mention.value)}
+              to="."
+            />
+          ) : undefined
+        }
+      >
         <MentionIcon variant={mention.type} />
         <MentionLabel>{props.element.value}</MentionLabel>
         {props.children}
@@ -248,16 +256,13 @@ export const ThreadMentionInputElement = (props: PlateElementProps<TComboboxInpu
     from: "/_protected/chat/$threadId",
     select: (params) => params.threadId,
   });
-  const resourceId = useSuspenseQuery({
-    ...threadQueries.chat(threadId),
-    select: (data) => data.resourceId,
-  }).data;
   const attachments = useChatStore((state) => state.attachments.get(threadId));
+  const openNote = useOpenNote();
   const { registerPortal } = useComposer();
   const [search, setSearch] = useState("");
   const [debouncedSearch] = useDebounce(search, 100);
   const mentions = useQuery({
-    ...mentionQueries.list({ query: debouncedSearch, resourceId }),
+    ...mentionQueries.list({ query: debouncedSearch, threadId }),
     select: (data) =>
       data
         .filter((mention) => mention.type !== "thread" || mention.id !== threadId)
@@ -304,11 +309,16 @@ export const ThreadMentionInputElement = (props: PlateElementProps<TComboboxInpu
             {mentions.isLoading ? <T>Loading…</T> : <T>No results</T>}
           </AutocompleteEmpty>
           <AutocompleteList>
-            {(item) => (
+            {(item: MentionValue) => (
               <AutocompleteItem
                 key={item.key}
-                onClick={() => {
+                onClick={async () => {
                   onSelectItem(editor, item);
+                  const mention = parseMentionKey(item.key);
+
+                  if (mention.type === "note") {
+                    await openNote(mention.value);
+                  }
                 }}
                 value={item}
               >

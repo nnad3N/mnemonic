@@ -46,11 +46,11 @@ export const FilesSync = ({ topicId }: FilesSyncProps) => {
 
     if (removedFileIds.length > 0) {
       void queryClient.invalidateQueries({
-        queryKey: mentionQueries.lists(topicId),
+        queryKey: mentionQueries.listBase(),
       });
 
       void queryClient.invalidateQueries({
-        queryKey: fileQueries.lists(topicId),
+        queryKey: fileQueries.byTopic(topicId),
       });
     }
   }, [queryClient, topicId, pendingFiles]);

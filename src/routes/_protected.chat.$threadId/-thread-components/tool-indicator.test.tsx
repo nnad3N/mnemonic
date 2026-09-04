@@ -115,15 +115,30 @@ const TOOL_LABELS = {
     error: "Could not read library documentation",
     pending: "Reading library documentation",
   },
-  fileGraphRag: {
-    done: "Searched file connections",
-    error: "Could not search file connections",
-    pending: "Searching file connections",
-  },
   fileVectorSearch: {
     done: "Searched files",
     error: "Could not search files",
     pending: "Searching files",
+  },
+  listFiles: {
+    done: "Listed files",
+    error: "Could not list files",
+    pending: "Listing files",
+  },
+  readNote: {
+    done: "Read the note",
+    error: "Could not read the note",
+    pending: "Reading the note",
+  },
+  updateNote: {
+    done: "Updated the note",
+    error: "Could not update the note",
+    pending: "Updating the note",
+  },
+  createNote: {
+    done: "Created a note",
+    error: "Could not create the note",
+    pending: "Creating a note",
   },
   readFile: {
     done: "Read the file",
@@ -139,6 +154,16 @@ const TOOL_LABELS = {
     done: "Searched the file",
     error: "Could not search the file",
     pending: "Searching the file",
+  },
+  searchFiles: {
+    done: "Searched file text",
+    error: "Could not search file text",
+    pending: "Searching file text",
+  },
+  searchNotes: {
+    done: "Searched notes",
+    error: "Could not search notes",
+    pending: "Searching notes",
   },
   webFetch: {
     done: "Fetched the web page",

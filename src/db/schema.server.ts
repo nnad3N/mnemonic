@@ -1,18 +1,31 @@
-import { defineRelationsPart, isNotNull } from "drizzle-orm";
-import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { defineRelationsPart, isNotNull, sql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
+import {
+  check,
+  customType,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 import { nanoid } from "nanoid";
 
 import { user } from "@/db/auth-schema.server";
-import { now } from "@/db/sql.server";
-import type { ModelCapability } from "@/lib/model-capability";
-import { DEFAULT_MODEL_CAPABILITY } from "@/lib/model-capability";
+import type { ModelOption } from "@/lib/model-option";
+import { DEFAULT_MODEL_OPTION } from "@/lib/model-option";
 import type { SafeId } from "@/lib/safe-id";
 import type { MnemonicAgentId } from "@/mastra/agents/id.server";
 import type { WorkTiming } from "@/routes/_protected.chat.$threadId/-thread-types";
 
 export type FileStatus = "uploading" | "processing" | "ready" | "failed";
 
-export const topic = sqliteTable("topic", {
+const tsvector = customType<{ data: string }>({ dataType: () => "tsvector" });
+
+export const topic = pgTable("topic", {
   id: text("id")
     .$type<SafeId<"topic">>()
     .primaryKey()
@@ -24,14 +37,14 @@ export const topic = sqliteTable("topic", {
 
   title: text("title").notNull(),
 
-  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
-  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .$onUpdate(() => new Date())
-    .default(now),
+    .defaultNow(),
 });
 
-export const file = sqliteTable(
+export const file = pgTable(
   "file",
   {
     id: text("id")
@@ -51,21 +64,50 @@ export const file = sqliteTable(
     mimeType: text("mime_type").notNull(),
     sizeBytes: integer("size_bytes").notNull(),
     sha256: text("sha256").notNull(),
+    description: text("description"),
 
     s3Key: text("s3_key").notNull(),
 
     status: text("status").$type<FileStatus>().notNull().default("uploading"),
 
-    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
-    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .$onUpdate(() => new Date())
-      .default(now),
+      .defaultNow(),
   },
   (table) => [uniqueIndex("file_topic_sha256_unique").on(table.topicId, table.sha256)],
 );
 
-export const byok = sqliteTable(
+export const fileContent = pgTable(
+  "file_content",
+  {
+    fileId: text("file_id")
+      .$type<SafeId<"file">>()
+      .notNull()
+      .references(() => file.id, { onDelete: "cascade" }),
+    /** 1-based position among the file's contents. */
+    seq: integer("seq").notNull(),
+    /** Position in the file, 1-based, not the number printed on the page. Null when the format has no pages. */
+    page: integer("page"),
+    content: text("content").notNull(),
+    searchVectorEnglish: tsvector("search_vector_english").generatedAlwaysAs(
+      (): SQL => sql`to_tsvector('english', ${fileContent.content})`,
+    ),
+    searchVectorSimple: tsvector("search_vector_simple").generatedAlwaysAs(
+      (): SQL => sql`to_tsvector('simple', ${fileContent.content})`,
+    ),
+  },
+  (table) => [
+    primaryKey({ columns: [table.fileId, table.seq] }),
+    index("file_content_search_english_idx").using("gin", table.searchVectorEnglish),
+    index("file_content_search_simple_idx").using("gin", table.searchVectorSimple),
+  ],
+);
+
+export type Provider = "openrouter";
+
+export const byok = pgTable(
   "byok",
   {
     id: text("id")
@@ -77,18 +119,18 @@ export const byok = sqliteTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
 
-    name: text("name").notNull().default("OpenRouter"),
+    name: text("name").notNull(),
+    provider: text("provider").$type<Provider>().notNull().default("openrouter"),
 
-    /** Encrypted with `encryptSecret`; never returned to the client. */
     value: text("value").notNull(),
     keyPreview: text("key_preview").notNull(),
-    activatedAt: integer("activated_at", { mode: "timestamp_ms" }),
+    activatedAt: timestamp("activated_at", { withTimezone: true }),
 
-    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
-    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .$onUpdate(() => new Date())
-      .default(now),
+      .defaultNow(),
   },
   (table) => [
     index("byok_userId_idx").on(table.userId),
@@ -96,28 +138,25 @@ export const byok = sqliteTable(
   ],
 );
 
-export const threadSettings = sqliteTable("thread_settings", {
+export const threadSettings = pgTable("thread_settings", {
   threadId: text("thread_id").primaryKey(),
   userId: text("user_id")
     .$type<SafeId<"user">>()
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
 
-  modelCapability: text("model_capability")
-    .$type<ModelCapability>()
-    .notNull()
-    .default(DEFAULT_MODEL_CAPABILITY),
+  modelOption: text("model_option").$type<ModelOption>().notNull().default(DEFAULT_MODEL_OPTION),
 
-  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
-  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .$onUpdate(() => new Date())
-    .default(now),
+    .defaultNow(),
 });
 
 export type ThreadRunStatus = "aborted" | "running" | "finished" | "errored" | "interrupted";
 
-export const threadRun = sqliteTable(
+export const threadRun = pgTable(
   "thread_run",
   {
     threadId: text("thread_id").primaryKey(),
@@ -131,30 +170,113 @@ export const threadRun = sqliteTable(
 
     status: text("status").$type<ThreadRunStatus>().notNull().default("running"),
 
-    startedAt: integer("started_at", { mode: "timestamp_ms" }).notNull().default(now),
-    finishedAt: integer("finished_at", { mode: "timestamp_ms" }),
+    versionedNoteIds: jsonb("versioned_note_ids").$type<SafeId<"note">[]>().notNull().default([]),
+
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
   },
   (table) => [index("thread_run_user_id_idx").on(table.userId)],
 );
 
-/** What mnemonic records about a reply, keyed by the user message whose run produced it. */
-export const threadReply = sqliteTable(
+export const threadReply = pgTable(
   "thread_reply",
   {
     userMessageId: text("user_message_id").primaryKey(),
     threadId: text("thread_id").notNull(),
-    workTimings: text("work_timings", { mode: "json" }).$type<WorkTiming[]>().notNull(),
+    workTimings: jsonb("work_timings").$type<WorkTiming[]>().notNull(),
   },
   (table) => [index("thread_reply_thread_id_idx").on(table.threadId)],
 );
 
+export type NoteVersionAuthor = "user" | "agent";
+
+export const note = pgTable(
+  "note",
+  {
+    id: text("id")
+      .$type<SafeId<"note">>()
+      .primaryKey()
+      .$defaultFn(() => nanoid()),
+    userId: text("user_id")
+      .$type<SafeId<"user">>()
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict" }),
+    topicId: text("topic_id")
+      .$type<SafeId<"topic">>()
+      .references(() => topic.id, { onDelete: "restrict" }),
+    threadId: text("thread_id"),
+
+    title: text("title").notNull(),
+
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .$onUpdate(() => new Date())
+      .defaultNow(),
+  },
+  (table) => [
+    index("note_thread_id_idx").on(table.threadId),
+    index("note_topic_id_idx").on(table.topicId),
+    check(
+      "note_scope_not_null",
+      sql`${table.threadId} is not null or ${table.topicId} is not null`,
+    ),
+  ],
+);
+
+export const noteVersion = pgTable(
+  "note_version",
+  {
+    id: text("id")
+      .$type<SafeId<"noteVersion">>()
+      .primaryKey()
+      .$defaultFn(() => nanoid()),
+    noteId: text("note_id")
+      .$type<SafeId<"note">>()
+      .notNull()
+      .references(() => note.id, { onDelete: "cascade" }),
+
+    seq: integer("seq").notNull(),
+    content: text("content").notNull(),
+    contentHash: text("content_hash").notNull(),
+    // Every version carries both although search only ever reads the latest; a stored generated
+    // column costs no upkeep on the write paths, and each of them writes a version.
+    searchVectorEnglish: tsvector("search_vector_english").generatedAlwaysAs(
+      (): SQL => sql`to_tsvector('english', ${noteVersion.content})`,
+    ),
+    searchVectorSimple: tsvector("search_vector_simple").generatedAlwaysAs(
+      (): SQL => sql`to_tsvector('simple', ${noteVersion.content})`,
+    ),
+    author: text("author").$type<NoteVersionAuthor>().notNull(),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .$onUpdate(() => new Date())
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("note_version_note_seq_unique").on(table.noteId, table.seq),
+    index("note_version_search_english_idx").using("gin", table.searchVectorEnglish),
+    index("note_version_search_simple_idx").using("gin", table.searchVectorSimple),
+  ],
+);
+
 export const appRelations = defineRelationsPart(
-  { file, byok, threadRun, threadSettings, topic, user },
+  { file, fileContent, byok, note, noteVersion, threadRun, threadSettings, topic, user },
   (r) => ({
     file: {
+      contents: r.many.fileContent(),
       topic: r.one.topic({
         from: r.file.topicId,
         to: r.topic.id,
+      }),
+    },
+    fileContent: {
+      file: r.one.file({
+        from: r.fileContent.fileId,
+        to: r.file.id,
       }),
     },
     byok: {
@@ -163,8 +285,26 @@ export const appRelations = defineRelationsPart(
         to: r.user.id,
       }),
     },
+    note: {
+      topic: r.one.topic({
+        from: r.note.topicId,
+        to: r.topic.id,
+      }),
+      user: r.one.user({
+        from: r.note.userId,
+        to: r.user.id,
+      }),
+      versions: r.many.noteVersion(),
+    },
+    noteVersion: {
+      note: r.one.note({
+        from: r.noteVersion.noteId,
+        to: r.note.id,
+      }),
+    },
     topic: {
       files: r.many.file(),
+      notes: r.many.note(),
       user: r.one.user({
         from: r.topic.userId,
         to: r.user.id,
@@ -172,6 +312,7 @@ export const appRelations = defineRelationsPart(
     },
     user: {
       byoks: r.many.byok(),
+      notes: r.many.note(),
       threadRuns: r.many.threadRun(),
       threadSettings: r.many.threadSettings(),
     },

@@ -5,7 +5,9 @@ import type { DbKit } from "@/lib/db-kit.server";
 import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
 import type { MemoryKit } from "@/lib/memory-kit.server";
+import { getResourceId } from "@/lib/middleware/resolve-thread.server";
 import type { SafeId } from "@/lib/safe-id";
+import { deleteConversationFn } from "@/routes/_protected.chat.$threadId/-thread-api/thread.server";
 
 export type SidebarThread = {
   id: string;
@@ -42,7 +44,7 @@ export const listSidebarConversationsFn = Kit.gen(async function* (
   input: ListSidebarConversationsInput,
 ) {
   const oldestThreads = yield* await ctx.memory.listThreads({
-    filter: { resourceId: input.userId },
+    filter: { resourceId: getResourceId({ topicId: undefined, userId: input.userId }) },
     orderBy: { direction: "ASC", field: "updatedAt" },
     page: 0,
     perPage: false,
@@ -50,15 +52,11 @@ export const listSidebarConversationsFn = Kit.gen(async function* (
 
   const expiredThreads = getExpiredThreads(oldestThreads.threads);
   yield* await Kit.promiseAll(
-    expiredThreads.map(async (thread) =>
-      ctx.memory.deleteThread({
-        threadId: thread.id,
-      }),
-    ),
+    expiredThreads.map(async (thread) => deleteConversationFn(ctx, { threadId: thread.id })),
   );
 
   const conversations = yield* await ctx.memory.listThreads({
-    filter: { resourceId: input.userId },
+    filter: { resourceId: getResourceId({ topicId: undefined, userId: input.userId }) },
     orderBy: { direction: "DESC", field: "updatedAt" },
     page: 0,
     perPage: false,

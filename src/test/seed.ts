@@ -53,6 +53,7 @@ export const seedByok = async (input: {
   const result = await db.run((db) =>
     db.insert(byok).values({
       id,
+      name: "OpenRouter",
       userId: input.userId,
       value: value.value,
       keyPreview: `…${key.slice(-4)}`,

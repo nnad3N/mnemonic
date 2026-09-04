@@ -81,6 +81,15 @@ export const loadMentionedFile = async ({
   return Result.err(new GetFileError({ message: `"${fileKey}" is not a usable file reference.` }));
 };
 
+export const extractSchema = v.optional(
+  v.pipe(
+    v.boolean(),
+    v.description(
+      "Converts to readable text instead of source. No effect on formats that are always converted, such as PDF or DOCX.",
+    ),
+  ),
+);
+
 export const visualSchema = v.object({
   data: v.pipe(v.string(), v.nonEmpty(), v.description("Base64.")),
   mimeType: v.pipe(v.string(), v.nonEmpty()),

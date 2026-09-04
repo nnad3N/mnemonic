@@ -244,7 +244,7 @@ const deleteObjects = async (input: DeleteObjectsInput) => {
   const [, errors] = Result.partition(batchResults);
   const firstError = errors.at(0);
 
-  if (firstError !== undefined) {
+  if (firstError) {
     return Result.err(firstError);
   }
 

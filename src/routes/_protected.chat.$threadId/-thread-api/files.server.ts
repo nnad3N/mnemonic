@@ -2,8 +2,9 @@ import { Result } from "better-result";
 import { and, eq, inArray } from "drizzle-orm";
 
 import { file } from "@/db/schema.server";
+import type { FileStatus } from "@/db/schema.server";
 import type { DbKit } from "@/lib/db-kit.server";
-import { ServerFnError } from "@/lib/errors/server-fn-error";
+import { ServerFnError, toServerFnError } from "@/lib/errors/server-fn-error";
 import { validateUploadFile } from "@/lib/file-validation";
 import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
@@ -11,8 +12,10 @@ import type { S3Kit } from "@/lib/s3-kit.server";
 import { toSafeId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
 
+import type { processFileWorkflow } from "./upload-file-workflow.server";
+
 export const FILE_UPLOAD_TTL_SECONDS = 60;
-export const FILE_PROCESSING_TTL_SECONDS = 60;
+export const FILE_PROCESSING_TTL_SECONDS = 300;
 
 type UploadFileCtx = Kits<[DbKit, S3Kit]>;
 
@@ -38,9 +41,9 @@ type GetPresignedUrlInput = {
   displayName: string;
   fileId: string;
   mimeType: string;
-  resourceId: string;
   sha256: string;
   sizeBytes: number;
+  topicId: SafeId<"topic">;
   userId: SafeId<"user">;
 };
 
@@ -53,34 +56,12 @@ export const getPresignedUrlFn = Kit.gen(async function* (
     sizeBytes: input.sizeBytes,
   });
 
-  const ownedTopic = yield* await ctx.db.run(async (db) =>
-    db.query.topic.findFirst({
-      columns: { id: true },
-      where: {
-        // oxlint-disable-next-line eslint-js/no-restricted-syntax -- ownership check.
-        id: toSafeId<"topic">(input.resourceId),
-        userId: input.userId,
-      },
-    }),
-  );
-
-  if (!ownedTopic) {
-    return Result.err(
-      new ServerFnError({
-        message: "File uploads are only supported in topic threads",
-        status: "bad-request",
-      }),
-    );
-  }
-
-  const topicId = ownedTopic.id;
-
   const pendingUpload = yield* await ctx.db.transaction(async (tx) => {
     const existing = await tx.query.file.findFirst({
       columns: { id: true, s3Key: true, status: true },
       where: {
         sha256: input.sha256,
-        topicId,
+        topicId: input.topicId,
       },
     });
 
@@ -94,12 +75,12 @@ export const getPresignedUrlFn = Kit.gen(async function* (
 
     // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId write.
     const fileId = toSafeId<"file">(input.fileId);
-    const s3Key = `${input.userId}/${topicId}/${input.fileId}`;
+    const s3Key = `${input.userId}/${input.topicId}/${input.fileId}`;
 
     await tx.insert(file).values({
       id: fileId,
       userId: input.userId,
-      topicId,
+      topicId: input.topicId,
       displayName: input.displayName,
       mimeType: input.mimeType,
       s3Key,
@@ -134,4 +115,74 @@ export const getPresignedUrlFn = Kit.gen(async function* (
     type: "upload" as const,
     presignedUrl: presignedUrl.value,
   });
+});
+
+type ProcessFileInput = {
+  fileId: SafeId<"file">;
+  topicId: SafeId<"topic">;
+  userId: SafeId<"user">;
+  workflow: typeof processFileWorkflow;
+};
+
+export const processFileFn = Kit.gen(async function* (
+  ctx: Kits<[DbKit]>,
+  { workflow, ...input }: ProcessFileInput,
+) {
+  const started = await Result.tryPromise(async () => {
+    const run = await workflow.createRun();
+    const abortSignal = AbortSignal.timeout(FILE_PROCESSING_TTL_SECONDS * 1000);
+
+    abortSignal.addEventListener(
+      "abort",
+      () => {
+        void run.cancel();
+      },
+      { once: true },
+    );
+
+    return run.start({ inputData: input });
+  });
+
+  if (Result.isError(started)) {
+    yield* await markFileFailed(ctx, input.fileId, input.userId);
+
+    return Result.err(toServerFnError.serverError("File processing could not be started"));
+  }
+
+  if (started.value.status === "failed") {
+    // The workflow's onError already marks the file failed; this covers that hook's own DB write failing.
+    yield* await markFileFailed(ctx, input.fileId, input.userId);
+
+    return Result.err(
+      new ServerFnError({
+        message: "File processing failed",
+        status: "server-error",
+        cause: started.value.error,
+      }),
+    );
+  }
+
+  if (started.value.status !== "success") {
+    yield* await markFileFailed(ctx, input.fileId, input.userId);
+
+    return Result.err(toServerFnError.serverError("File processing did not complete"));
+  }
+
+  return Result.ok({ fileId: input.fileId });
+});
+
+type RetryFileInput = ProcessFileInput & {
+  status: FileStatus;
+};
+
+export const retryFileFn = Kit.gen(async function* (ctx: Kits<[DbKit]>, input: RetryFileInput) {
+  if (input.status !== "failed") {
+    return Result.err(toServerFnError.badRequest("Only a failed file can be retried"));
+  }
+
+  yield* await ctx.db.run((db) =>
+    db.update(file).set({ status: "uploading" }).where(eq(file.id, input.fileId)),
+  );
+
+  return processFileFn(ctx, input);
 });

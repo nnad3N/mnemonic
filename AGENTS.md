@@ -52,7 +52,9 @@ Fight for the smallest model that makes the correct behavior obvious without com
 
 Write like a lazy engineer. Import a trusted abstraction from a package this repo already uses before inventing a local copy. Reuse a function that already lives here when it fits. Every new function is maintenance and review load. Before adding code, name why adding it is a bad idea.
 
-Comments describe how a thing is used, workarounds, and move when the code moves. To be used mostly to describe functions, not to annotate every line of behavior.
+Do not comment code that explains itself. A comment earns its place only when it records something the code cannot: a workaround and the quirk it works around, an ordering that is load-bearing, a constraint that lives outside the file. Never restate a name, a signature, or the lines below it, and never write a doc comment just because a function is exported. State the fact plainly and stop; do not argue for the code. Comments move when the code moves.
+
+Brace a `return` that yields a value. The only one-line return is the bare `return;`.
 
 When writing code always follow [`CODING_STANDARDS.md`](CODING_STANDARDS.md). They describe in detail how you should structure and write code.
 

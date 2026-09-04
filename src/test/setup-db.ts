@@ -1,31 +1,33 @@
-import { mkdirSync, readFileSync, realpathSync, rmSync } from "node:fs";
+import { Client } from "pg";
+import { afterAll, inject } from "vitest";
 
-import { createClient } from "@libsql/client";
-import { afterAll } from "vitest";
+import { TEST_ENV } from "./env";
 
-import { SCHEMA_SQL_PATH, TEST_DB_DIR, TEST_ENV } from "./env";
+const adminUrl = inject("pgUrl");
 
-const projectRoot = realpathSync(`${import.meta.dirname}/../..`);
-const dbDir = `${projectRoot}/${TEST_DB_DIR}`;
-const schemaSql = readFileSync(`${projectRoot}/${SCHEMA_SQL_PATH}`, "utf8");
+const workerDbName = `test_${crypto.randomUUID().replaceAll("-", "")}`;
 
-mkdirSync(dbDir, { recursive: true });
+const admin = new Client({ connectionString: adminUrl });
+await admin.connect();
+await admin.query(`CREATE DATABASE "${workerDbName}"`);
+await admin.end();
 
-const dbPath = `${dbDir}/${crypto.randomUUID()}.db`;
-const databaseUrl = `file:${dbPath}`;
+const databaseUrl = new URL(adminUrl);
+databaseUrl.pathname = `/${workerDbName}`;
 
-const bootstrapClient = createClient({ url: databaseUrl });
-await bootstrapClient.executeMultiple(schemaSql);
-bootstrapClient.close();
+const bootstrap = new Client({ connectionString: databaseUrl.href });
+await bootstrap.connect();
+await bootstrap.query(inject("schemaSql"));
+await bootstrap.end();
 
 for (const [key, value] of Object.entries(TEST_ENV)) {
   process.env[key] = value;
 }
 
-process.env.DATABASE_URL = databaseUrl;
+process.env.DATABASE_URL = databaseUrl.href;
 
-afterAll(() => {
-  rmSync(dbPath, { force: true });
-  rmSync(`${dbPath}-wal`, { force: true });
-  rmSync(`${dbPath}-shm`, { force: true });
+afterAll(async () => {
+  const { drizzleDb } = await import("@/db/client.server");
+  const { mastraStore, mastraVector } = await import("@/mastra/storage.server");
+  await Promise.all([drizzleDb.$client.end(), mastraStore.close(), mastraVector.disconnect()]);
 });
