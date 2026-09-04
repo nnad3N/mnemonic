@@ -197,7 +197,7 @@ export const processForRagFn = Kit.gen(async function* (
     return Result.ok({ fileId: input.fileId });
   }
 
-  const [object, key] = yield* await Kit.promiseAll([
+  const [object, providerKey] = yield* await Kit.promiseAll([
     ctx.s3.getObject(input.s3Key),
     resolveProviderKey(ctx, input.userId),
   ]);
@@ -235,14 +235,14 @@ export const processForRagFn = Kit.gen(async function* (
   const [embeddings, described] = yield* await Kit.promiseAll([
     ctx.rag.embed({
       abortSignal: input.abortSignal,
-      apiKey: key.key,
+      providerKey,
       values: chunks.map((chunk) => chunk.text),
     }),
     ctx.rag.describe({
       abortSignal: input.abortSignal,
-      apiKey: key.key,
       instructions: DESCRIPTION_INSTRUCTIONS,
       prompt: `${input.displayName}\n\n${sampleForDescription(pages)}`,
+      providerKey,
     }),
   ]);
   const description = sanitizeGeneratedText({

@@ -7,23 +7,19 @@ import * as v from "valibot";
 import { dbKit } from "@/lib/db-kit.server";
 import * as Kit from "@/lib/kit";
 import { resolveProviderKeyById } from "@/lib/middleware/resolve-provider-key.server";
+import type { ProviderKey } from "@/lib/middleware/resolve-provider-key.server";
 import { DEFAULT_MODEL_OPTION } from "@/lib/model-option";
-import type { ChatModel } from "@/mastra/models.server";
-import {
-  EMBEDDING_DIMENSION,
-  EMBEDDING_MODEL,
-  FILE_DESCRIPTION_MODEL,
-  models,
-  OBSERVATIONAL_MEMORY_MODEL,
-  THREAD_TITLE_MODEL,
-} from "@/mastra/models.server";
+import type { ModelAgentId } from "@/mastra/models.server";
+import { EMBEDDING_DIMENSION, EMBEDDING_MODEL, getAgentModel } from "@/mastra/models.server";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
 
-const createOpenrouterProvider = (apiKey: string) =>
-  createOpenRouter({
-    apiKey,
-    appName: "Mnemonic",
-  });
+export const getModel = (providerKey: ProviderKey) => {
+  switch (providerKey.provider) {
+    // oxlint-disable-next-line typescript/no-unnecessary-condition
+    case "openrouter":
+      return createOpenRouter({ apiKey: providerKey.key, appName: "Mnemonic" });
+  }
+};
 
 const EMBEDDING_BATCH_SIZE = 96;
 
@@ -32,8 +28,8 @@ const EMBEDDING_BATCH_SIZE = 96;
  * provider emits `v4`. The interfaces are otherwise identical except for the `deprecated`
  * warning variant, which `v3` cannot represent. Drop this once Mastra supports v4 embedders.
  */
-export const getEmbeddingModel = (apiKey: string) => {
-  const openrouterEmbedding = createOpenrouterProvider(apiKey).textEmbeddingModel(EMBEDDING_MODEL, {
+export const getEmbeddingModel = (providerKey: ProviderKey) => {
+  const openrouterEmbedding = getModel(providerKey).textEmbeddingModel(EMBEDDING_MODEL, {
     extraBody: { dimensions: EMBEDDING_DIMENSION },
   });
 
@@ -80,38 +76,19 @@ const getRequestProvider = async (input: ModelResolverInput) => {
     throw result.error;
   }
 
-  return {
-    modelOption: parsed.output.modelOption,
-    openrouter: createOpenrouterProvider(result.value.key),
-  };
+  return { modelOption: parsed.output.modelOption, providerKey: result.value };
 };
 
-export const getThreadModel = async (input: ModelResolverInput) => {
+export const resolveAgentModel = (agentId: ModelAgentId) => async (input: ModelResolverInput) => {
   const resolved = await getRequestProvider(input);
+  const config = getAgentModel(agentId, resolved?.modelOption ?? DEFAULT_MODEL_OPTION);
 
   if (!resolved) {
-    return models[DEFAULT_MODEL_OPTION].model;
+    return config.model;
   }
 
-  const config = models[resolved.modelOption];
-
-  return resolved.openrouter(config.model, config.openrouter);
+  return getModel(resolved.providerKey)(config.model, config.openrouter);
 };
-
-export const getStaticModel = (model: ChatModel) => async (input: ModelResolverInput) => {
-  const resolved = await getRequestProvider(input);
-
-  return resolved?.openrouter(model) ?? model;
-};
-
-export const getObservationalMemoryModel = (apiKey: string) =>
-  createOpenrouterProvider(apiKey)(OBSERVATIONAL_MEMORY_MODEL);
-
-export const getThreadTitleModel = (apiKey: string) =>
-  createOpenrouterProvider(apiKey)(THREAD_TITLE_MODEL);
-
-export const getFileDescriptionModel = (apiKey: string) =>
-  createOpenrouterProvider(apiKey)(FILE_DESCRIPTION_MODEL);
 
 type ObservationalMemoryRetrieval = NonNullable<ObservationalMemoryOptions["retrieval"]>;
 

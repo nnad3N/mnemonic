@@ -3,7 +3,7 @@ import { Agent } from "@mastra/core/agent";
 import { getAgentMemory } from "@/mastra/agent-memory.server";
 import { baseInstructions } from "@/mastra/agents/base-instructions.server";
 import { readerAgent } from "@/mastra/agents/reader-agent.server";
-import { getThreadModel } from "@/mastra/config.server";
+import { resolveAgentModel } from "@/mastra/config.server";
 import { CONVERSATION_AGENT_ID } from "@/mastra/models.server";
 import { hoistToolResultMediaProcessor } from "@/mastra/processors/hoist-tool-result-media.server";
 import { pinSubagentSteps } from "@/mastra/processors/soft-stop.server";
@@ -58,7 +58,7 @@ Report answers its task; never redo its work to check it. Part unanswered -> del
   ],
   memory: getAgentMemory("thread"),
   requestContextSchema: mnemonicRequestContextSchema,
-  model: getThreadModel,
+  model: resolveAgentModel(CONVERSATION_AGENT_ID),
   name: "Conversation",
   tools: conversationAgentTools,
 });

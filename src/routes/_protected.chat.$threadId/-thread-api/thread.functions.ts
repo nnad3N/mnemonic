@@ -208,7 +208,7 @@ export const createThreadTitle = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) =>
     Kit.run(async () =>
       createThreadTitleFn(createThreadTitleCtx, {
-        apiKey: context.apiKey,
+        providerKey: context.providerKey,
         metadata: context.thread.metadata ?? {},
         text: data.text,
         threadId: context.thread.id,

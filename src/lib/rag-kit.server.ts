@@ -3,7 +3,9 @@ import { Result, TaggedError } from "better-result";
 import type { Result as ResultType } from "better-result";
 
 import * as Kit from "@/lib/kit";
-import { getEmbeddingModel, getFileDescriptionModel } from "@/mastra/config.server";
+import type { ProviderKey } from "@/lib/middleware/resolve-provider-key.server";
+import { getModel, getEmbeddingModel } from "@/mastra/config.server";
+import { FILE_DESCRIPTION_MODEL } from "@/mastra/models.server";
 
 export class RagError extends TaggedError("RagError")<{
   cause: unknown;
@@ -12,15 +14,15 @@ export class RagError extends TaggedError("RagError")<{
 
 type EmbedInput = {
   abortSignal?: AbortSignal;
-  apiKey: string;
+  providerKey: ProviderKey;
   values: string[];
 };
 
 type DescribeInput = {
   abortSignal?: AbortSignal;
-  apiKey: string;
   instructions: string;
   prompt: string;
+  providerKey: ProviderKey;
 };
 
 export type RagApi = {
@@ -38,7 +40,7 @@ export const ragKit = createRagKit({
           const result = await generateText({
             abortSignal: signal,
             instructions: input.instructions,
-            model: getFileDescriptionModel(input.apiKey),
+            model: getModel(input.providerKey)(FILE_DESCRIPTION_MODEL),
             prompt: input.prompt,
           });
 
@@ -56,7 +58,7 @@ export const ragKit = createRagKit({
       try: async () => {
         const { embeddings } = await embedMany({
           abortSignal: input.abortSignal,
-          model: getEmbeddingModel(input.apiKey),
+          model: getEmbeddingModel(input.providerKey),
           values: input.values,
         });
 

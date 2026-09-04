@@ -11,13 +11,15 @@ import { toServerFnError } from "@/lib/errors/server-fn-error";
 import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
 import type { MemoryKit } from "@/lib/memory-kit.server";
+import type { ProviderKey } from "@/lib/middleware/resolve-provider-key.server";
 import { getResourceId } from "@/lib/middleware/resolve-thread.server";
 import type { S3Kit } from "@/lib/s3-kit.server";
 import { createSafeId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
 import { sanitizeGeneratedText } from "@/lib/sanitize-generated-text";
 import type { VectorKit } from "@/lib/vector-kit.server";
-import { getThreadTitleModel } from "@/mastra/config.server";
+import { getModel } from "@/mastra/config.server";
+import { THREAD_TITLE_MODEL } from "@/mastra/models.server";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 
 type CreateTopicCtx = Kits<[DbKit, MemoryKit]>;
@@ -239,7 +241,7 @@ const TITLE_GENERATION_TIMEOUT_MS = 10_000;
 type CreateThreadTitleCtx = Kits<[MemoryKit]>;
 
 type CreateThreadTitleInput = {
-  apiKey: string;
+  providerKey: ProviderKey;
   // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type
   metadata: Record<string, unknown>;
   text: string;
@@ -255,15 +257,10 @@ export const createThreadTitleFn = Kit.gen(async function* (
       try: async () => {
         const result = await generateText({
           abortSignal: AbortSignal.timeout(TITLE_GENERATION_TIMEOUT_MS),
-          model: getThreadTitleModel(input.apiKey),
+          model: getModel(input.providerKey)(THREAD_TITLE_MODEL, {
+            reasoning: { effort: "none" },
+          }),
           prompt: input.text,
-          providerOptions: {
-            openrouter: {
-              reasoning: {
-                effort: "none",
-              },
-            },
-          },
           instructions: TITLE_INSTRUCTIONS,
         });
 

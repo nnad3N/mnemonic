@@ -6,14 +6,15 @@ import { dbKit } from "@/lib/db-kit.server";
 import * as Kit from "@/lib/kit";
 import { resolveProviderKeyById } from "@/lib/middleware/resolve-provider-key.server";
 import {
+  getModel,
   getEmbeddingModel,
-  getObservationalMemoryModel,
   observationalMemoryOptions,
 } from "@/mastra/config.server";
+import { OBSERVATIONAL_MEMORY_MODEL } from "@/mastra/models.server";
 import type { MnemonicRequestContext } from "@/mastra/request-context.server";
 import { mastraStore, mastraVector } from "@/mastra/storage.server";
 
-type ObservationalMemoryScope = "thread" | "resource";
+type ObservationalMemoryRetrievalScope = "thread" | "resource";
 
 type CreateAgentMemoryInput = {
   requestContext: RequestContext<MnemonicRequestContext>;
@@ -22,7 +23,7 @@ type CreateAgentMemoryInput = {
 const providerKeyCtx = Kit.createContext(dbKit);
 
 export const getAgentMemory =
-  (scope: ObservationalMemoryScope) =>
+  (retrievalScope: ObservationalMemoryRetrievalScope) =>
   async ({ requestContext }: CreateAgentMemoryInput): Promise<Memory> => {
     const result = await resolveProviderKeyById(
       providerKeyCtx,
@@ -33,14 +34,12 @@ export const getAgentMemory =
       throw result.error;
     }
 
-    const apiKey = result.value.key;
-
     return new Memory({
-      embedder: getEmbeddingModel(apiKey),
+      embedder: getEmbeddingModel(result.value),
       options: {
         observationalMemory: observationalMemoryOptions(
-          { scope, vector: true },
-          getObservationalMemoryModel(apiKey),
+          { scope: retrievalScope, vector: true },
+          getModel(result.value)(OBSERVATIONAL_MEMORY_MODEL),
         ),
       },
       storage: mastraStore,

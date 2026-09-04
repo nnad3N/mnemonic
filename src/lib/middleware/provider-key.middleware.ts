@@ -25,7 +25,7 @@ export const providerKeyMiddleware = createMiddleware()
 
     return next({
       context: {
-        apiKey: result.value.key,
+        providerKey: result.value,
       },
     });
   });

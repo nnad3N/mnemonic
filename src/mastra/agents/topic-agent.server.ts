@@ -9,7 +9,7 @@ import { getAgentMemory } from "@/mastra/agent-memory.server";
 import { baseInstructions } from "@/mastra/agents/base-instructions.server";
 import { readerAgent } from "@/mastra/agents/reader-agent.server";
 import { workerAgent } from "@/mastra/agents/worker-agent.server";
-import { getThreadModel } from "@/mastra/config.server";
+import { resolveAgentModel } from "@/mastra/config.server";
 import { TOPIC_AGENT_ID } from "@/mastra/models.server";
 import { hoistToolResultMediaProcessor } from "@/mastra/processors/hoist-tool-result-media.server";
 import { pinSubagentSteps } from "@/mastra/processors/soft-stop.server";
@@ -43,12 +43,10 @@ const getTopicAgentTools = async ({ requestContext }: GetTopicAgentToolsInput) =
     throw result.error;
   }
 
-  const apiKey = result.value.key;
-
   return {
     compute: computeTool,
     computeDocs: computeDocsTool,
-    fileVectorSearch: createFileVectorSearchTool(apiKey),
+    fileVectorSearch: createFileVectorSearchTool(result.value),
     listFiles: listFilesTool,
     readFile: readFileTool,
     readNote: readNoteTool,
@@ -95,7 +93,7 @@ Report answers its task; never redo its work to check it. Part unanswered -> del
   ],
   memory: getAgentMemory("resource"),
   requestContextSchema: mnemonicRequestContextSchema,
-  model: getThreadModel,
+  model: resolveAgentModel(TOPIC_AGENT_ID),
   name: "Topic",
   tools: getTopicAgentTools,
 });

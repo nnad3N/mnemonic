@@ -3,8 +3,8 @@ import { createCodeMode } from "@mastra/core/tools";
 import { IsolatedVmCodeModeTransport } from "@mastra/isolated-vm";
 import { Memory } from "@mastra/memory";
 
-import { getStaticModel } from "@/mastra/config.server";
-import { READER_AGENT_ID, SUBAGENT_MODEL } from "@/mastra/models.server";
+import { resolveAgentModel } from "@/mastra/config.server";
+import { READER_AGENT_ID } from "@/mastra/models.server";
 import { hoistToolResultMediaProcessor } from "@/mastra/processors/hoist-tool-result-media.server";
 import { readerSoftStop } from "@/mastra/processors/soft-stop.server";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
@@ -46,7 +46,7 @@ ${codeMode.instructions}
   inputProcessors: [hoistToolResultMediaProcessor, readerSoftStop.processor],
   memory: readerMemory,
   requestContextSchema: mnemonicRequestContextSchema,
-  model: getStaticModel(SUBAGENT_MODEL),
+  model: resolveAgentModel(READER_AGENT_ID),
   name: "Reader",
   tools: {
     execute_typescript: codeMode.tool,

@@ -103,6 +103,8 @@ export const filePage = pgTable(
   ],
 );
 
+export type Provider = "openrouter";
+
 export const byok = pgTable(
   "byok",
   {
@@ -115,7 +117,8 @@ export const byok = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
 
-    name: text("name").notNull().default("OpenRouter"),
+    name: text("name").notNull(),
+    provider: text("provider").$type<Provider>().notNull().default("openrouter"),
 
     value: text("value").notNull(),
     keyPreview: text("key_preview").notNull(),

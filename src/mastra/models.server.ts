@@ -11,6 +11,7 @@ export const WORKER_AGENT_ID = "worker-agent";
 export const ModelAgentIds = Kit.literals.from()([
   CONVERSATION_AGENT_ID,
   TOPIC_AGENT_ID,
+  READER_AGENT_ID,
   WORKER_AGENT_ID,
 ]);
 
@@ -37,7 +38,7 @@ type AgentModel = {
 };
 
 // oxlint-disable-next-line anti-slop/no-known-value-widening
-export const models: Record<ModelOption, AgentModel> = {
+const models: Record<ModelOption, AgentModel> = {
   research: {
     model: "z-ai/glm-5.3-flash",
   },
@@ -54,7 +55,18 @@ export const models: Record<ModelOption, AgentModel> = {
   },
 };
 
-export const SUBAGENT_MODEL: ChatModel = "z-ai/glm-5.3-flash";
+const SUBAGENT_MODEL: ChatModel = "z-ai/glm-5.3-flash";
+
+export const getAgentModel = (agentId: ModelAgentId, modelOption: ModelOption): AgentModel => {
+  switch (agentId) {
+    case CONVERSATION_AGENT_ID:
+    case TOPIC_AGENT_ID:
+      return models[modelOption];
+    case READER_AGENT_ID:
+    case WORKER_AGENT_ID:
+      return { model: SUBAGENT_MODEL };
+  }
+};
 export const OBSERVATIONAL_MEMORY_MODEL: ChatModel = "z-ai/glm-5.3-flash";
 export const THREAD_TITLE_MODEL: ChatModel = "google/gemma-4-26b-a4b-it";
 export const FILE_DESCRIPTION_MODEL: ChatModel = "google/gemma-4-26b-a4b-it";
