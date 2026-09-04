@@ -157,7 +157,7 @@ describe("getDominantWorkActivityKind", () => {
     expect(
       getDominantWorkActivityKind([
         toolPart("webSearch", "c1"),
-        toolPart("webFetch", "c2"),
+        toolPart("searchFiles", "c2"),
         toolPart("compute", "c3"),
       ]),
     ).toBe("research");
