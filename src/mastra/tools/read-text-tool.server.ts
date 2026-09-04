@@ -5,7 +5,7 @@ import { Result } from "better-result";
 import * as v from "valibot";
 
 import { ImageMimeType } from "@/lib/file-validation";
-import { toFileText } from "@/lib/get-file.server";
+import { extractFileText } from "@/lib/get-file.server";
 import { mentionKeyFormat } from "@/lib/mention-key";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
 import { extractSchema, loadMentionedFile } from "@/mastra/tools/file-tool-helpers.server";
@@ -67,7 +67,7 @@ export const readTextTool = createTool({
       return { type: "error", message: "The file is an image; it has no text to extract." };
     }
 
-    const text = await toFileText(file.value, { extract, pages });
+    const text = await extractFileText(file.value, { extract, pages });
 
     if (Result.isError(text)) {
       return { type: "error", message: text.error.message };

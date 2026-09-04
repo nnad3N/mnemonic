@@ -1,4 +1,3 @@
-import { extractBytes } from "@kreuzberg/node";
 import { createStep, createWorkflow } from "@mastra/core/workflows";
 import { MDocument } from "@mastra/rag";
 import { toStandardJsonSchema } from "@valibot/to-json-schema";
@@ -6,10 +5,11 @@ import { Result, TaggedError } from "better-result";
 import { and, eq, inArray } from "drizzle-orm";
 import * as v from "valibot";
 
-import { file, filePage } from "@/db/schema.server";
+import { file, fileContent } from "@/db/schema.server";
 import { dbKit } from "@/lib/db-kit.server";
 import type { DbKit } from "@/lib/db-kit.server";
 import { ImageMimeType } from "@/lib/file-validation";
+import { extractFileContent } from "@/lib/get-file.server";
 import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
 import { resolveProviderKey } from "@/lib/middleware/resolve-provider-key.server";
@@ -139,12 +139,12 @@ const workflowOutputSchema = v.object({
   fileId: v.pipe(v.string(), v.nanoid()),
 });
 
-type ExtractedPage = {
-  page: number;
+type ExtractedContent = {
   content: string;
+  page?: number;
 };
 
-const chunkPage = async ({ page, content }: ExtractedPage) => {
+const chunkContent = async ({ page, content }: ExtractedContent) => {
   const chunked = await MDocument.fromText(content).chunk({
     strategy: "recursive",
     maxSize: 512,
@@ -154,9 +154,9 @@ const chunkPage = async ({ page, content }: ExtractedPage) => {
   return chunked.map((chunk) => ({ page, text: chunk.text }));
 };
 
-export const sampleForDescription = (pages: ExtractedPage[]) => {
+export const sampleForDescription = (contents: { content: string }[]) => {
   let sample = "";
-  const first = pages.at(0);
+  const first = contents.at(0);
 
   if (first && first.content.length > DESCRIPTION_SAMPLE_CHARS) {
     const sentences = new Intl.Segmenter(undefined, { granularity: "sentence" }).segment(
@@ -174,7 +174,7 @@ export const sampleForDescription = (pages: ExtractedPage[]) => {
     return sample;
   }
 
-  for (const { content } of pages) {
+  for (const { content } of contents) {
     if (sample.length + content.length > DESCRIPTION_SAMPLE_CHARS) {
       break;
     }
@@ -201,28 +201,12 @@ export const processForRagFn = Kit.gen(async function* (
     ctx.s3.getObject(input.s3Key),
     resolveProviderKey(ctx, input.userId),
   ]);
-  const { pages, chunks } = yield* await Result.tryPromise(async () => {
-    const extraction = await extractBytes(Buffer.from(object), input.mimeType, {
-      pages: { extractPages: true },
-    });
-    const extractedPages =
-      extraction.pages
-        ?.map((page) => ({ page: page.pageNumber, content: page.content }))
-        .filter((page) => page.content.trim().length > 0) ?? [];
-
-    if (extractedPages.length === 0) {
-      const whole = { page: 1, content: extraction.content };
-
-      return { pages: [whole], chunks: await chunkPage(whole) };
-    }
-
-    const chunks = await Promise.all(extractedPages.map(chunkPage));
-
-    return {
-      pages: extractedPages,
-      chunks: chunks.flat(),
-    };
-  });
+  const extracted = yield* await extractFileContent({ bytes: object, mimeType: input.mimeType });
+  const contents: ExtractedContent[] =
+    extracted.type === "pages"
+      ? extracted.pages.filter((page) => page.content.trim().length > 0)
+      : [{ content: extracted.content }];
+  const chunks = await Promise.all(contents.map(chunkContent)).then((chunked) => chunked.flat());
 
   if (chunks.length === 0) {
     yield* await ctx.db.run((db) =>
@@ -241,7 +225,7 @@ export const processForRagFn = Kit.gen(async function* (
     ctx.rag.describe({
       abortSignal: input.abortSignal,
       instructions: DESCRIPTION_INSTRUCTIONS,
-      prompt: `${input.displayName}\n\n${sampleForDescription(pages)}`,
+      prompt: `${input.displayName}\n\n${sampleForDescription(contents)}`,
       providerKey,
     }),
   ]);
@@ -258,11 +242,14 @@ export const processForRagFn = Kit.gen(async function* (
   });
 
   yield* await ctx.db.transaction(async (tx) => {
-    await tx
-      .insert(filePage)
-      .values(
-        pages.map((page) => ({ fileId: input.fileId, page: page.page, content: page.content })),
-      );
+    await tx.insert(fileContent).values(
+      contents.map(({ content, page }, index) => ({
+        content,
+        fileId: input.fileId,
+        page,
+        seq: index + 1,
+      })),
+    );
     await tx.update(file).set({ description, status: "ready" }).where(eq(file.id, input.fileId));
   });
 

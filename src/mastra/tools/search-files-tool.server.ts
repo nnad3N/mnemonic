@@ -11,7 +11,7 @@ import {
   SEARCH_CONFIG_BY_LANGUAGE,
 } from "@/db/full-text-search.server";
 import type { SearchLanguage } from "@/db/full-text-search.server";
-import { file, filePage } from "@/db/schema.server";
+import { file, fileContent } from "@/db/schema.server";
 import { dbKit } from "@/lib/db-kit.server";
 import type { DbKit } from "@/lib/db-kit.server";
 import { ToolError } from "@/lib/errors/tool-error";
@@ -25,8 +25,8 @@ import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
 const DEFAULT_LIMIT = 10;
 
 const SEARCH_VECTOR_BY_LANGUAGE = {
-  english: filePage.searchVectorEnglish,
-  other: filePage.searchVectorSimple,
+  english: fileContent.searchVectorEnglish,
+  other: fileContent.searchVectorSimple,
 } satisfies Record<SearchLanguage, PgColumn>;
 
 type SearchFilesCtx = Kits<[DbKit]>;
@@ -52,11 +52,11 @@ export const searchAgentFilesFn = Kit.gen(async function* (
       .select({
         displayName: file.displayName,
         fileId: file.id,
-        page: filePage.page,
-        snippet: sql<string>`ts_headline(${config}, ${filePage.content}, ${tsQuery}, ${HEADLINE_OPTIONS})`,
+        page: fileContent.page,
+        snippet: sql<string>`ts_headline(${config}, ${fileContent.content}, ${tsQuery}, ${HEADLINE_OPTIONS})`,
       })
-      .from(filePage)
-      .innerJoin(file, eq(file.id, filePage.fileId))
+      .from(fileContent)
+      .innerJoin(file, eq(file.id, fileContent.fileId))
       .where(
         and(
           eq(file.topicId, input.topicId),
@@ -73,7 +73,7 @@ export const searchAgentFilesFn = Kit.gen(async function* (
     matches: found.map((row) => ({
       fileKey: getMentionKey({ type: "file", value: rawId(row.fileId) }),
       displayName: row.displayName,
-      page: row.page,
+      page: row.page ?? undefined,
       snippet: row.snippet,
     })),
   });
@@ -117,9 +117,13 @@ const outputSchema = v.variant("type", [
       v.object({
         fileKey: v.string(),
         displayName: v.string(),
-        page: v.pipe(
-          v.number(),
-          v.description("Position in the file, 1-based, not the number printed on the page."),
+        page: v.optional(
+          v.pipe(
+            v.number(),
+            v.description(
+              "Position in the file, 1-based, not the number printed on the page. Only when the format has pages.",
+            ),
+          ),
         ),
         snippet: v.string(),
       }),

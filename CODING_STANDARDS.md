@@ -10,6 +10,7 @@ How to write code in Mnemonic. Generic TypeScript lives in the `typescript-best-
 - [TanStack Query](#tanstack-query)
 - [Error handling](#error-handling)
 - [Kit](#kit)
+- [Types](#types)
 - [Code organization](#code-organization)
 - [TanStack Router](#tanstack-router)
 - [Server and client](#server-and-client)
@@ -346,6 +347,22 @@ export const searchItems = createServerFn({ method: "GET" })
       }),
     ),
   );
+```
+
+---
+
+## Types
+
+Each function declares its own options or input type as a plain object type that spells out every field. Two functions whose options overlap each get their own complete type; the overlap is written twice. Do not build one function's type out of another's with `&`, `Pick`, or `Omit`. That couples two signatures for a saved line and hides what the function accepts behind a name the reader has to chase.
+
+```ts
+// Bad
+type ExtractOptions = { extract?: boolean };
+type ExtractFileTextOptions = ExtractOptions & { pages?: boolean };
+
+// Good
+type ExtractFileTextOptions = { extract?: boolean; pages?: boolean };
+type ExtractFileContentOptions = { extract?: boolean };
 ```
 
 ---

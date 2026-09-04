@@ -1,10 +1,10 @@
 import { createTool } from "@mastra/core/tools";
 import { toStandardJsonSchema } from "@valibot/to-json-schema";
 import { panic, Result } from "better-result";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNotNull } from "drizzle-orm";
 import * as v from "valibot";
 
-import { file, filePage } from "@/db/schema.server";
+import { file, fileContent } from "@/db/schema.server";
 import { dbKit } from "@/lib/db-kit.server";
 import { ToolError } from "@/lib/errors/tool-error";
 import * as Kit from "@/lib/kit";
@@ -46,7 +46,10 @@ export const listFilesTool = createTool({
           displayName: file.displayName,
           id: file.id,
           mimeType: file.mimeType,
-          pageCount: db.$count(filePage, eq(filePage.fileId, file.id)),
+          pageCount: db.$count(
+            fileContent,
+            and(eq(fileContent.fileId, file.id), isNotNull(fileContent.page)),
+          ),
           sizeBytes: file.sizeBytes,
         })
         .from(file)

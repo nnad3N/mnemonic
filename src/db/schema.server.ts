@@ -79,27 +79,29 @@ export const file = pgTable(
   (table) => [uniqueIndex("file_topic_sha256_unique").on(table.topicId, table.sha256)],
 );
 
-export const filePage = pgTable(
-  "file_page",
+export const fileContent = pgTable(
+  "file_content",
   {
     fileId: text("file_id")
       .$type<SafeId<"file">>()
       .notNull()
       .references(() => file.id, { onDelete: "cascade" }),
-    /** Position in the file, 1-based, not the number printed on the page. */
-    page: integer("page").notNull(),
+    /** 1-based position among the file's contents. */
+    seq: integer("seq").notNull(),
+    /** Position in the file, 1-based, not the number printed on the page. Null when the format has no pages. */
+    page: integer("page"),
     content: text("content").notNull(),
     searchVectorEnglish: tsvector("search_vector_english").generatedAlwaysAs(
-      (): SQL => sql`to_tsvector('english', ${filePage.content})`,
+      (): SQL => sql`to_tsvector('english', ${fileContent.content})`,
     ),
     searchVectorSimple: tsvector("search_vector_simple").generatedAlwaysAs(
-      (): SQL => sql`to_tsvector('simple', ${filePage.content})`,
+      (): SQL => sql`to_tsvector('simple', ${fileContent.content})`,
     ),
   },
   (table) => [
-    primaryKey({ columns: [table.fileId, table.page] }),
-    index("file_page_search_english_idx").using("gin", table.searchVectorEnglish),
-    index("file_page_search_simple_idx").using("gin", table.searchVectorSimple),
+    primaryKey({ columns: [table.fileId, table.seq] }),
+    index("file_content_search_english_idx").using("gin", table.searchVectorEnglish),
+    index("file_content_search_simple_idx").using("gin", table.searchVectorSimple),
   ],
 );
 
@@ -262,18 +264,18 @@ export const noteVersion = pgTable(
 );
 
 export const appRelations = defineRelationsPart(
-  { file, filePage, byok, note, noteVersion, threadRun, threadSettings, topic, user },
+  { file, fileContent, byok, note, noteVersion, threadRun, threadSettings, topic, user },
   (r) => ({
     file: {
-      pages: r.many.filePage(),
+      contents: r.many.fileContent(),
       topic: r.one.topic({
         from: r.file.topicId,
         to: r.topic.id,
       }),
     },
-    filePage: {
+    fileContent: {
       file: r.one.file({
-        from: r.filePage.fileId,
+        from: r.fileContent.fileId,
         to: r.file.id,
       }),
     },

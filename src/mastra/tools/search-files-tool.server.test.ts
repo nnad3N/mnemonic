@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { filePage } from "@/db/schema.server";
+import { fileContent } from "@/db/schema.server";
 import { dbKit } from "@/lib/db-kit.server";
 import * as Kit from "@/lib/kit";
 import { getMentionKey } from "@/lib/mention-key";
@@ -20,9 +20,14 @@ const otherTopicId = createSafeId<"topic">();
 const seedPages = async (fileId: SafeId<"file">, contents: string[]) =>
   expectOk(
     await ctx.db.run((db) =>
-      db
-        .insert(filePage)
-        .values(contents.map((content, index) => ({ fileId, page: index + 1, content }))),
+      db.insert(fileContent).values(
+        contents.map((content, index) => ({
+          content,
+          fileId,
+          page: index + 1,
+          seq: index + 1,
+        })),
+      ),
     ),
   );
 

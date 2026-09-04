@@ -1,4 +1,3 @@
-import { extractBytes } from "@kreuzberg/node";
 import { createTool } from "@mastra/core/tools";
 import { FuzzySearch } from "@stll/fuzzy-search";
 import { toStandardJsonSchema } from "@valibot/to-json-schema";
@@ -7,6 +6,7 @@ import * as v from "valibot";
 
 import { ToolError } from "@/lib/errors/tool-error";
 import { ImageMimeType } from "@/lib/file-validation";
+import { extractFileContent } from "@/lib/get-file.server";
 import { mentionKeyFormat } from "@/lib/mention-key";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
 import { loadMentionedFile } from "@/mastra/tools/file-tool-helpers.server";
@@ -41,7 +41,14 @@ const inputSchema = v.object({
 });
 
 const matchSchema = v.object({
-  page: v.optional(v.number()),
+  page: v.optional(
+    v.pipe(
+      v.number(),
+      v.description(
+        "Position in the file, 1-based, not the number printed on the page. Only when the format has pages.",
+      ),
+    ),
+  ),
   line: v.pipe(
     v.number(),
     v.description("1-based line within the page, or the file when unpaged."),
@@ -146,14 +153,10 @@ export const searchFileTool = createTool({
       return { type: "error", message: "The query has no searchable words." };
     }
 
-    const extraction = await Result.tryPromise(async () =>
-      extractBytes(Buffer.from(file.value.bytes), file.value.mimeType, {
-        pages: { extractPages: true },
-      }),
-    );
+    const extracted = await extractFileContent(file.value);
 
-    if (Result.isError(extraction)) {
-      throw new ToolError({ message: "File could not be loaded.", cause: extraction.error });
+    if (Result.isError(extracted)) {
+      throw new ToolError({ message: extracted.error.message, cause: extracted.error });
     }
 
     const search = new FuzzySearch(
@@ -164,11 +167,10 @@ export const searchFileTool = createTool({
       { caseInsensitive: true, normalizeDiacritics: true, wholeWords: false },
     );
 
-    const pages = extraction.value.pages ?? [];
     const units =
-      pages.length > 0
-        ? pages.map((page) => ({ page: page.pageNumber, content: page.content }))
-        : [{ page: undefined, content: extraction.value.content }];
+      extracted.value.type === "pages"
+        ? extracted.value.pages
+        : [{ page: undefined, content: extracted.value.content }];
 
     const matches: (FileMatch & { score: number })[] = [];
 

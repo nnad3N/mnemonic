@@ -17,7 +17,7 @@ export class VectorError extends TaggedError("VectorError")<{
 }> {}
 
 export type FileChunk = {
-  page: number;
+  page?: number;
   text: string;
 };
 

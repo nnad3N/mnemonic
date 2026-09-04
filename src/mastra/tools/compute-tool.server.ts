@@ -1,4 +1,3 @@
-import { extractBytes } from "@kreuzberg/node";
 import { createTool } from "@mastra/core/tools";
 import { toStandardJsonSchema } from "@valibot/to-json-schema";
 import { matchError, Result } from "better-result";
@@ -9,7 +8,8 @@ import { docsLibraries } from "@/lib/docs/docs-types";
 import { ToolError } from "@/lib/errors/tool-error";
 import { ImageMimeType } from "@/lib/file-validation";
 import type { FetchedFile } from "@/lib/get-file.server";
-import { GetFileError, toFileText } from "@/lib/get-file.server";
+import type { GetFileError } from "@/lib/get-file.server";
+import { extractFileContent, extractFileText } from "@/lib/get-file.server";
 import { mentionKeyFormat } from "@/lib/mention-key";
 import { runCode } from "@/lib/sandbox/run-code.server";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
@@ -78,7 +78,7 @@ const inputSchema = v.object({
           v.pipe(
             v.boolean(),
             v.description(
-              `Also loads \`env.file.pages\`, one entry per page with ${sandboxPageFields}. \`page\` is the position in the file, 1-based, not the number printed on the page. Paginated formats only, such as PDF.`,
+              `Also loads \`env.file.pages\`, one entry per page with ${sandboxPageFields}, absent when the format has no pages. \`page\` is the position in the file, 1-based, not the number printed on the page.`,
             ),
           ),
         ),
@@ -132,22 +132,28 @@ const toSandboxFile = async (
   }
 
   if (!options.pages) {
-    const text = await toFileText(file, { extract: options.extract });
+    const text = await extractFileText(file, { extract: options.extract });
 
     return Result.map(text, (contents) => ({ ...base, contents }));
   }
 
-  const extraction = await Result.tryPromise({
-    try: async () =>
-      extractBytes(Buffer.from(file.bytes), file.mimeType, { pages: { extractPages: true } }),
-    catch: () => new GetFileError({ message: "File could not be loaded." }),
-  });
+  const extracted = await extractFileContent(file, options);
 
-  return Result.map(extraction, (result) => ({
+  if (Result.isError(extracted)) {
+    return extracted;
+  }
+
+  if (extracted.value.type === "text") {
+    return Result.ok({ ...base, contents: extracted.value.content });
+  }
+
+  const { pages } = extracted.value;
+
+  return Result.ok({
     ...base,
-    contents: result.content,
-    pages: (result.pages ?? []).map((page) => ({ page: page.pageNumber, text: page.content })),
-  }));
+    contents: pages.map((page) => page.content).join("\n\n"),
+    pages: pages.map((page) => ({ page: page.page, text: page.content })),
+  });
 };
 
 export const computeTool = createTool({

@@ -48,7 +48,7 @@ const getFileRow = async (fileId: string) => {
     database.query.file.findFirst({
       where: { id: toSafeId<"file">(fileId) },
       columns: { description: true, status: true },
-      with: { pages: { columns: { content: true, page: true } } },
+      with: { contents: { columns: { content: true, page: true, seq: true } } },
     }),
   );
 
@@ -148,11 +148,7 @@ describe("sampleForDescription", () => {
     const filler = "x".repeat(6000);
 
     expect(
-      sampleForDescription([
-        { page: 1, content: "first" },
-        { page: 2, content: filler },
-        { page: 3, content: "third" },
-      ]),
+      sampleForDescription([{ content: "first" }, { content: filler }, { content: "third" }]),
     ).toBe("first\n");
   });
 
@@ -160,7 +156,7 @@ describe("sampleForDescription", () => {
     const sentence = "A sentence that ends here. ";
     const content = sentence.repeat(400);
 
-    const sample = sampleForDescription([{ page: 1, content }]);
+    const sample = sampleForDescription([{ content }]);
 
     expect(sample.length).toBeLessThanOrEqual(6000);
     expect(sample.endsWith(sentence)).toBe(true);
@@ -277,14 +273,15 @@ describe("processForRagFn", () => {
       topicId,
       fileId,
       chunkIndex: 0,
-      page: 1,
     });
+    expect(vectors.at(0)?.metadata).not.toHaveProperty("page");
     expect(String(vectors.at(0)?.metadata?.text ?? "")).toContain(RAG_SAMPLE_PHRASE);
 
     const row = await getFileRow(fileId);
     expect(row?.description).toEqual(expect.any(String));
-    expect(row?.pages.map((page) => page.page)).toEqual([1]);
-    expect(row?.pages.at(0)?.content).toContain(RAG_SAMPLE_PHRASE);
+    expect(row?.contents).toEqual([
+      { content: expect.stringContaining(RAG_SAMPLE_PHRASE), page: null, seq: 1 },
+    ]);
   });
 });
 
