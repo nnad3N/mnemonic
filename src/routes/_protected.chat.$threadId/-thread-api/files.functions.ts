@@ -6,18 +6,20 @@ import * as v from "valibot";
 
 import { file } from "@/db/schema.server";
 import { dbKit } from "@/lib/db-kit.server";
+import type { DatabaseError } from "@/lib/db-kit.server";
 import { FileUploadError } from "@/lib/errors/file-upload-error";
-import { ServerFnError, toServerFnError } from "@/lib/errors/server-fn-error";
+import { toServerFnError } from "@/lib/errors/server-fn-error";
+import type { ServerFnError } from "@/lib/errors/server-fn-error";
 import * as Kit from "@/lib/kit";
 import {
   fileAccessMiddleware,
   topicAccessMiddleware,
 } from "@/lib/middleware/assert-thread-access.middleware";
 import { s3Kit } from "@/lib/s3-kit.server";
-import type { SafeId } from "@/lib/safe-id";
 import { mastra } from "@/mastra/instance.server";
 
-import { FILE_PROCESSING_TTL_SECONDS, getPresignedUrlFn, markFileFailed } from "./files.server";
+import { getPresignedUrlFn, processFileFn, retryFileFn } from "./files.server";
+import { processFileWorkflow } from "./upload-file-workflow.server";
 
 const getPresignedUrlInputSchema = v.object({
   displayName: v.pipe(v.string(), v.nonEmpty()),
@@ -52,87 +54,40 @@ export const getPresignedUrl = createServerFn({ method: "POST" })
     ),
   );
 
-type ProcessFileContext = {
-  file: { id: SafeId<"file"> };
-  topicId: SafeId<"topic">;
-  user: { id: SafeId<"user"> };
-};
+const processFileCtx = Kit.createContext(dbKit);
 
-const runProcessFile = async (context: ProcessFileContext) => {
-  const workflowResult = await Result.tryPromise(async () => {
-    const workflow = mastra.getWorkflow("process-file");
-    const run = await workflow.createRun();
-    const abortSignal = AbortSignal.timeout(FILE_PROCESSING_TTL_SECONDS * 1000);
-
-    abortSignal.addEventListener(
-      "abort",
-      () => {
-        void run.cancel();
-      },
-      { once: true },
-    );
-
-    return run.start({
-      inputData: {
-        fileId: context.file.id,
-        topicId: context.topicId,
-        userId: context.user.id,
-      },
-    });
+const toProcessFileError = (error: DatabaseError | ServerFnError) =>
+  matchError(error, {
+    DatabaseError: () => toServerFnError.serverError("Failed to update the file status"),
+    ServerFnError: (error) => error,
   });
-
-  if (Result.isError(workflowResult)) {
-    await markFileFailed(uploadFileCtx, context.file.id, context.user.id);
-
-    throw toServerFnError.serverError("File processing could not be started");
-  }
-
-  const result = workflowResult.value;
-
-  if (result.status === "failed") {
-    // The workflow's onError already marks the file failed; this covers that hook's own DB write failing.
-    await markFileFailed(uploadFileCtx, context.file.id, context.user.id);
-
-    throw new ServerFnError({
-      message: "File processing failed",
-      status: "server-error",
-      cause: result.error,
-    });
-  }
-
-  if (result.status !== "success") {
-    await markFileFailed(uploadFileCtx, context.file.id, context.user.id);
-
-    throw new ServerFnError({
-      message: "File processing did not complete",
-      status: "server-error",
-    });
-  }
-
-  return { fileId: context.file.id };
-};
 
 export const processFile = createServerFn({ method: "POST" })
   .middleware([fileAccessMiddleware])
-  .handler(async ({ context }) => runProcessFile(context));
+  .handler(async ({ context }) =>
+    Kit.run(async () =>
+      processFileFn(processFileCtx, {
+        fileId: context.file.id,
+        topicId: context.topicId,
+        userId: context.user.id,
+        workflow: mastra.getWorkflow(processFileWorkflow.id),
+      }),
+    ).throws<ServerFnError>(toProcessFileError),
+  );
 
 export const retryFile = createServerFn({ method: "POST" })
   .middleware([fileAccessMiddleware])
-  .handler(async ({ context }) => {
-    if (context.file.status !== "failed") {
-      throw toServerFnError.badRequest("Only a failed file can be retried");
-    }
-
-    const reset = await Kit.get(dbKit).run((db) =>
-      db.update(file).set({ status: "uploading" }).where(eq(file.id, context.file.id)),
-    );
-
-    if (Result.isError(reset)) {
-      throw toServerFnError.serverError("Failed to reset file for processing");
-    }
-
-    return runProcessFile(context);
-  });
+  .handler(async ({ context }) =>
+    Kit.run(async () =>
+      retryFileFn(processFileCtx, {
+        fileId: context.file.id,
+        status: context.file.status,
+        topicId: context.topicId,
+        userId: context.user.id,
+        workflow: mastra.getWorkflow(processFileWorkflow.id),
+      }),
+    ).throws<ServerFnError>(toProcessFileError),
+  );
 
 const findFilesBySha256InputSchema = v.object({
   sha256s: v.array(v.pipe(v.string(), v.nonEmpty())),

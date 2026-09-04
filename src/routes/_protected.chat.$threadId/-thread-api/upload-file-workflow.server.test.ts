@@ -1,8 +1,10 @@
 import { noopLogger } from "@mastra/core/logger";
+import { Result } from "better-result";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { dbKit } from "@/lib/db-kit.server";
 import * as Kit from "@/lib/kit";
+import { createRagKit } from "@/lib/rag-kit.server";
 import { createSafeId, toSafeId } from "@/lib/safe-id";
 import { vectorKit } from "@/lib/vector-kit.server";
 import { EMBEDDING_DIMENSION } from "@/mastra/models.server";
@@ -35,7 +37,12 @@ const db = Kit.get(dbKit);
 const userId = createSafeId<"user">();
 const topicId = createSafeId<"topic">();
 const fakeS3 = createFakeS3();
-const ctx = Kit.createContext(dbKit, fakeS3.kit, vectorKit);
+const fakeRag = createRagKit({
+  describe: async () =>
+    Promise.resolve(Result.ok("A sample document about the mnemonic RAG pipeline.")),
+  embed: async ({ values }) => Promise.resolve(Result.ok(values.map(() => unitVector))),
+});
+const ctx = Kit.createContext(dbKit, fakeS3.kit, vectorKit, fakeRag);
 
 const getFileRow = async (fileId: string) => {
   const result = await db.run((database) =>

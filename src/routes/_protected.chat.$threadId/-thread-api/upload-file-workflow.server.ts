@@ -2,7 +2,6 @@ import { extractBytes } from "@kreuzberg/node";
 import { createStep, createWorkflow } from "@mastra/core/workflows";
 import { MDocument } from "@mastra/rag";
 import { toStandardJsonSchema } from "@valibot/to-json-schema";
-import { embedMany, generateText } from "ai";
 import { Result, TaggedError } from "better-result";
 import { and, eq, inArray } from "drizzle-orm";
 import * as v from "valibot";
@@ -14,18 +13,15 @@ import { ImageMimeType } from "@/lib/file-validation";
 import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
 import { resolveProviderKey } from "@/lib/middleware/resolve-provider-key.server";
+import { ragKit } from "@/lib/rag-kit.server";
+import type { RagKit } from "@/lib/rag-kit.server";
 import { s3Kit } from "@/lib/s3-kit.server";
 import type { S3Kit } from "@/lib/s3-kit.server";
 import { safeId, toSafeId } from "@/lib/safe-id";
 import { sanitizeGeneratedText } from "@/lib/sanitize-generated-text";
 import { vectorKit } from "@/lib/vector-kit.server";
 import type { VectorKit } from "@/lib/vector-kit.server";
-import {
-  FILE_EMBEDDINGS_INDEX,
-  FILE_EMBEDDINGS_INDEX_CONFIG,
-  getRagDescriptionModel,
-  getRagEmbeddingModel,
-} from "@/mastra/rag-config.server";
+import { FILE_EMBEDDINGS_INDEX, FILE_EMBEDDINGS_INDEX_CONFIG } from "@/mastra/rag-config.server";
 
 const DESCRIPTION_SAMPLE_CHARS = 6000;
 const DESCRIPTION_INSTRUCTIONS =
@@ -56,7 +52,7 @@ export class FileProcessingError extends TaggedError("FileProcessingError")<{
   reason: FileProcessingErrorReason;
 }> {}
 
-type ProcessFileCtx = Kits<[DbKit, S3Kit, VectorKit]>;
+type ProcessFileCtx = Kits<[DbKit, S3Kit, VectorKit, RagKit]>;
 
 export const validateFileFn = Kit.gen(async function* (
   ctx: ProcessFileCtx,
@@ -130,7 +126,7 @@ export const validateFileFn = Kit.gen(async function* (
   });
 });
 
-const processFileCtx = Kit.createContext(dbKit, s3Kit, vectorKit);
+const processFileCtx = Kit.createContext(dbKit, s3Kit, vectorKit, ragKit);
 
 const validateFileStep = createStep({
   id: "validate-file",
@@ -237,31 +233,23 @@ export const processForRagFn = Kit.gen(async function* (
     return Result.ok({ fileId: input.fileId });
   }
 
-  const [{ embeddings }, description] = yield* await Kit.promiseAll([
-    Result.tryPromise(async () =>
-      embedMany({
-        abortSignal: input.abortSignal,
-        model: getRagEmbeddingModel(key.key),
-        values: chunks.map((chunk) => chunk.text),
-      }),
-    ),
-    Result.tryPromise(
-      async ({ signal }) => {
-        const result = await generateText({
-          abortSignal: signal,
-          instructions: DESCRIPTION_INSTRUCTIONS,
-          model: getRagDescriptionModel(key.key),
-          prompt: `${input.displayName}\n\n${sampleForDescription(pages)}`,
-        });
-
-        return sanitizeGeneratedText({ maxLength: MAX_DESCRIPTION_LENGTH, value: result.text });
-      },
-      {
-        retry: { times: 3, delayMs: 500, backoff: "exponential" },
-        signal: input.abortSignal,
-      },
-    ),
+  const [embeddings, described] = yield* await Kit.promiseAll([
+    ctx.rag.embed({
+      abortSignal: input.abortSignal,
+      apiKey: key.key,
+      values: chunks.map((chunk) => chunk.text),
+    }),
+    ctx.rag.describe({
+      abortSignal: input.abortSignal,
+      apiKey: key.key,
+      instructions: DESCRIPTION_INSTRUCTIONS,
+      prompt: `${input.displayName}\n\n${sampleForDescription(pages)}`,
+    }),
   ]);
+  const description = sanitizeGeneratedText({
+    maxLength: MAX_DESCRIPTION_LENGTH,
+    value: described,
+  });
 
   yield* await ctx.vector.createIndex(FILE_EMBEDDINGS_INDEX_CONFIG);
 

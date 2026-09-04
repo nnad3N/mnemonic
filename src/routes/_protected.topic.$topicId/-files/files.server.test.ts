@@ -10,12 +10,16 @@ import type { VectorApi } from "@/lib/vector-kit.server";
 import { EMBEDDING_DIMENSION } from "@/mastra/models.server";
 import { FILE_EMBEDDINGS_INDEX, FILE_EMBEDDINGS_INDEX_CONFIG } from "@/mastra/rag-config.server";
 import { mastraVector } from "@/mastra/storage.server";
+import {
+  FILE_PROCESSING_TTL_SECONDS,
+  FILE_UPLOAD_TTL_SECONDS,
+} from "@/routes/_protected.chat.$threadId/-thread-api/files.server";
 import { clearDatabase } from "@/test/clear-database";
 import { createFakeS3 } from "@/test/fake-s3";
 import { expectErr, expectOk } from "@/test/result";
 import { seedFile, seedTopic, seedUser } from "@/test/seed";
 
-import { deleteFileFn } from "./files.server";
+import { deleteFileFn, listFilesFn, listPendingFilesFn } from "./files.server";
 
 const db = Kit.get(dbKit);
 const vector = Kit.get(vectorKit);
@@ -37,6 +41,19 @@ const fileExists = async (fileId: string) => {
 
   return expectOk(result) !== undefined;
 };
+
+const fileStatus = async (fileId: string) => {
+  const result = await db.run((database) =>
+    database.query.file.findFirst({
+      where: { id: toSafeId<"file">(fileId) },
+      columns: { status: true },
+    }),
+  );
+
+  return expectOk(result)?.status;
+};
+
+const secondsAgo = (seconds: number) => new Date(Date.now() - seconds * 1000);
 
 const upsertFileVector = async (fileId: string) => {
   expectOk(
@@ -137,5 +154,61 @@ describe("deleteFileFn", () => {
     expect(await fileExists(fileId)).toBe(true);
     // S3 and vector delete run concurrently; S3 may still succeed when vector fails.
     expect(fakeS3.objects.has(s3Key)).toBe(false);
+  });
+});
+
+describe("listPendingFilesFn", () => {
+  it("fails uploads and processing past their TTL and lists what is still pending", async () => {
+    const ctx = Kit.createContext(dbKit);
+    const [staleUpload, staleProcessing, fresh, ready] = await Promise.all([
+      seedFile({
+        userId,
+        topicId,
+        status: "uploading",
+        updatedAt: secondsAgo(FILE_UPLOAD_TTL_SECONDS + 1),
+      }),
+      seedFile({
+        userId,
+        topicId,
+        status: "processing",
+        updatedAt: secondsAgo(FILE_PROCESSING_TTL_SECONDS + 1),
+      }),
+      seedFile({
+        userId,
+        topicId,
+        status: "processing",
+        updatedAt: secondsAgo(FILE_UPLOAD_TTL_SECONDS + 1),
+      }),
+      seedFile({ userId, topicId, status: "ready" }),
+    ]);
+
+    const pending = expectOk(await listPendingFilesFn(ctx, { topicId }));
+
+    expect(pending).toEqual([{ id: fresh.fileId }]);
+    expect(await fileStatus(staleUpload.fileId)).toBe("failed");
+    expect(await fileStatus(staleProcessing.fileId)).toBe("failed");
+    expect(await fileStatus(ready.fileId)).toBe("ready");
+  });
+});
+
+describe("listFilesFn", () => {
+  it("pages newest first and filters by display name", async () => {
+    const ctx = Kit.createContext(dbKit);
+    const [oldest, middle, newest] = await Promise.all([
+      seedFile({ userId, topicId, displayName: "report-q1.pdf", createdAt: secondsAgo(30) }),
+      seedFile({ userId, topicId, displayName: "notes.txt", createdAt: secondsAgo(20) }),
+      seedFile({ userId, topicId, displayName: "report-q2.pdf", createdAt: secondsAgo(10) }),
+    ]);
+
+    const firstPage = expectOk(
+      await listFilesFn(ctx, { page: 1, pageSize: 2, search: undefined, topicId }),
+    );
+    const reports = expectOk(
+      await listFilesFn(ctx, { page: 1, pageSize: 10, search: "report", topicId }),
+    );
+
+    expect(firstPage.totalCount).toBe(3);
+    expect(firstPage.items.map((item) => item.id)).toEqual([newest.fileId, middle.fileId]);
+    expect(reports.items.map((item) => item.id)).toEqual([newest.fileId, oldest.fileId]);
   });
 });
