@@ -365,6 +365,16 @@ type ExtractFileTextOptions = { extract?: boolean; pages?: boolean };
 type ExtractFileContentOptions = { extract?: boolean };
 ```
 
+A function that takes two or more parameters of the same type takes one options object instead. Positional parameters of one type let a call with two of them swapped still typecheck. The exceptions are signatures a library dictates, such as comparators and callbacks, and Kit's `(ctx, input)` shape, whose two parameters differ in type anyway.
+
+```ts
+// Bad
+const replaceUniqueText = (content: string, oldText: string, newText: string) => …
+
+// Good
+const replaceUniqueText = ({ content, newText, oldText }: ReplaceUniqueTextInput) => …
+```
+
 ---
 
 ## Code organization

@@ -30,78 +30,121 @@ type UpdateNoteInput = {
   | { mode: "overwrite"; newText: string }
 );
 
-/**
- * The ways a model's echo of prose drifts from the stored bytes: trailing whitespace, smart
- * quotes, Unicode dashes and spaces. Never touches newlines, so line numbers stay aligned with
- * the original content.
- */
-const normalizeForFuzzyMatch = (text: string): string =>
-  text
+const graphemeSegmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+
+type MatchSpace = {
+  text: string;
+  /** Original offset for a normalized offset, `undefined` when it falls inside a grapheme. */
+  toOriginal: (offset: number) => number | undefined;
+};
+
+const foldGrapheme = (grapheme: string): string =>
+  grapheme
     .normalize("NFKC")
-    .split("\n")
-    .map((line) => line.trimEnd())
-    .join("\n")
     .replaceAll(/[\u2018\u2019\u201A\u201B]/gu, "'")
     .replaceAll(/[\u201C\u201D\u201E\u201F]/gu, '"')
-    .replaceAll(/[\u2010\u2011\u2012\u2013\u2014\u2015\u2212]/gu, "-")
-    .replaceAll(/[\u00A0\u2002-\u200A\u202F\u205F\u3000]/gu, " ");
+    .replaceAll(/[\u2010\u2011\u2012\u2013\u2014\u2015\u2212]/gu, "-");
 
-type ReplaceNoteTextResult =
-  | { type: "replaced"; content: string }
-  | { type: "not-found" }
-  | { type: "ambiguous"; occurrences: number };
+/**
+ * Folds the ways a model's echo of prose drifts from the stored bytes: trailing whitespace, CRLF,
+ * compatibility forms, smart quotes, Unicode dashes. Works per grapheme so a base letter still
+ * composes with its accent and every normalized offset maps back to the original.
+ */
+const normalizeForFuzzyMatch = (content: string): MatchSpace => {
+  const boundaries = new Map<number, number>();
+  let text = "";
+  let nextLineStart = 0;
+  let trimmedLineEnd = 0;
 
-export const replaceNoteText = (
-  content: string,
-  oldText: string,
-  newText: string,
-): ReplaceNoteTextResult => {
-  const exactOccurrences = content.split(oldText).length - 1;
+  for (const { index, segment } of graphemeSegmenter.segment(content)) {
+    if (index >= nextLineStart) {
+      const newline = content.indexOf("\n", index);
+      nextLineStart = newline === -1 ? content.length : newline + 1;
+      trimmedLineEnd = index + content.slice(index, nextLineStart).trimEnd().length;
+    }
 
-  if (exactOccurrences === 1) {
-    // The callback form keeps $-sequences in the replacement literal.
-    return { type: "replaced", content: content.replace(oldText, () => newText) };
+    // First claim wins, so a match ending before dropped trailing whitespace leaves it in place.
+    if (!boundaries.has(text.length)) {
+      boundaries.set(text.length, index);
+    }
+
+    if (segment.endsWith("\n")) {
+      text += "\n";
+    } else if (index < trimmedLineEnd) {
+      text += foldGrapheme(segment);
+    }
   }
 
-  if (exactOccurrences > 1) {
-    return { type: "ambiguous", occurrences: exactOccurrences };
+  if (!boundaries.has(text.length)) {
+    boundaries.set(text.length, content.length);
   }
 
+  return { text, toOriginal: (offset) => boundaries.get(offset) };
+};
+
+const findOccurrences = (haystack: string, needle: string): number[] => {
+  const starts: number[] = [];
+
+  for (
+    let start = haystack.indexOf(needle);
+    start !== -1;
+    start = haystack.indexOf(needle, start + needle.length)
+  ) {
+    starts.push(start);
+  }
+
+  return starts;
+};
+
+type ReplaceUniqueTextInput = {
+  content: string;
+  newText: string;
+  oldText: string;
+};
+
+export const replaceUniqueText = ({
+  content,
+  newText,
+  oldText,
+}: ReplaceUniqueTextInput): Result<string, NoteToolError> => {
   const fuzzyContent = normalizeForFuzzyMatch(content);
-  const fuzzyOldText = normalizeForFuzzyMatch(oldText);
-  const fuzzyOccurrences = fuzzyContent.split(fuzzyOldText).length - 1;
+  const passes = [
+    { needle: oldText, space: { text: content, toOriginal: (offset: number) => offset } },
+    { needle: normalizeForFuzzyMatch(oldText).text, space: fuzzyContent },
+  ];
 
-  if (fuzzyOccurrences === 0) {
-    return { type: "not-found" };
+  for (const { needle, space } of passes) {
+    if (needle === "") {
+      continue;
+    }
+
+    const starts = findOccurrences(space.text, needle);
+
+    if (starts.length > 1) {
+      return Result.err(
+        new NoteToolError({
+          message: `oldText appears ${starts.length} times in the note; extend it until it matches once`,
+        }),
+      );
+    }
+
+    const start = starts.at(0);
+
+    if (start === undefined) {
+      continue;
+    }
+
+    const originalStart = space.toOriginal(start);
+    const originalEnd = space.toOriginal(start + needle.length);
+
+    if (originalStart === undefined || originalEnd === undefined) {
+      continue;
+    }
+
+    return Result.ok(content.slice(0, originalStart) + newText + content.slice(originalEnd));
   }
 
-  if (fuzzyOccurrences > 1) {
-    return { type: "ambiguous", occurrences: fuzzyOccurrences };
-  }
-
-  // Replace in normalized space, then splice only the matched lines back into the original,
-  // so every line outside the match keeps its exact bytes.
-  const matchStart = fuzzyContent.indexOf(fuzzyOldText);
-  const matchEnd = matchStart + fuzzyOldText.length;
-  const firstLine = fuzzyContent.slice(0, matchStart).split("\n").length - 1;
-  const lastLine = fuzzyContent.slice(0, matchEnd).split("\n").length - 1;
-  const fuzzyLines = fuzzyContent.split("\n");
-  const originalLines = content.split("\n");
-  const spanStart = fuzzyLines
-    .slice(0, firstLine)
-    .reduce((length, line) => length + line.length + 1, 0);
-  const span = fuzzyLines.slice(firstLine, lastLine + 1).join("\n");
-  const newSpan =
-    span.slice(0, matchStart - spanStart) + newText + span.slice(matchEnd - spanStart);
-
-  return {
-    type: "replaced",
-    content: [
-      ...originalLines.slice(0, firstLine),
-      newSpan,
-      ...originalLines.slice(lastLine + 1),
-    ].join("\n"),
-  };
+  return Result.err(new NoteToolError({ message: "oldText was not found in the note" }));
 };
 
 export const updateAgentNoteFn = Kit.gen(async function* (
@@ -120,22 +163,14 @@ export const updateAgentNoteFn = Kit.gen(async function* (
     return Result.ok(written);
   }
 
-  const replaced = replaceNoteText(visible.latestVersion.content, input.oldText, input.newText);
-
-  if (replaced.type === "not-found") {
-    return Result.err(new NoteToolError({ message: "oldText was not found in the note" }));
-  }
-
-  if (replaced.type === "ambiguous") {
-    return Result.err(
-      new NoteToolError({
-        message: `oldText appears ${replaced.occurrences} times in the note; extend it until it matches once`,
-      }),
-    );
-  }
+  const content = yield* replaceUniqueText({
+    content: visible.latestVersion.content,
+    newText: input.newText,
+    oldText: input.oldText,
+  });
 
   const written = yield* await writeAgentNoteVersion(ctx, {
-    content: replaced.content,
+    content,
     noteId: input.noteId,
     threadId: input.threadId,
   });

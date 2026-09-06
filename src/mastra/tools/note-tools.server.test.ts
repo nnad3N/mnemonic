@@ -14,7 +14,7 @@ import {
   writeAgentNoteVersion,
 } from "@/mastra/tools/note-tool-helpers.server";
 import { searchAgentNotesFn } from "@/mastra/tools/search-notes-tool.server";
-import { replaceNoteText, updateAgentNoteFn } from "@/mastra/tools/update-note-tool.server";
+import { replaceUniqueText, updateAgentNoteFn } from "@/mastra/tools/update-note-tool.server";
 import {
   addNoteToTopicFn,
   createNoteFn,
@@ -227,36 +227,77 @@ describe("agent note versioning", () => {
     expect(versions.at(-1)?.content).toBe('intro\nplan - "final" stage\noutro');
   });
 
-  describe("replaceNoteText fuzzy fallback", () => {
+  describe("replaceUniqueText fuzzy fallback", () => {
     it("keeps the exact bytes of every line outside the matched span", () => {
-      const result = replaceNoteText(
-        "keep  these  spaces  \nfoo’s bar\nalso — untouched",
-        "foo's bar",
-        "swapped",
+      const content = expectOk(
+        replaceUniqueText({
+          content: "keep  these  spaces  \nfoo’s bar\nalso — untouched",
+          newText: "swapped",
+          oldText: "foo's bar",
+        }),
       );
 
-      expect(result).toEqual({
-        type: "replaced",
-        content: "keep  these  spaces  \nswapped\nalso — untouched",
-      });
+      expect(content).toBe("keep  these  spaces  \nswapped\nalso — untouched");
+    });
+
+    it("keeps the exact bytes of the matched line outside the match", () => {
+      const content = expectOk(
+        replaceUniqueText({ content: "it’s a – test", newText: "done", oldText: "a - test" }),
+      );
+
+      expect(content).toBe("it’s done");
     });
 
     it("matches across stripped trailing whitespace on multi-line spans", () => {
-      const result = replaceNoteText("alpha  \nbeta\ngamma", "alpha\nbeta", "one\ntwo");
+      const content = expectOk(
+        replaceUniqueText({
+          content: "alpha  \nbeta\ngamma",
+          newText: "one\ntwo",
+          oldText: "alpha\nbeta",
+        }),
+      );
 
-      expect(result).toEqual({ type: "replaced", content: "one\ntwo\ngamma" });
+      expect(content).toBe("one\ntwo\ngamma");
+    });
+
+    it("matches a decomposed accent against its precomposed form", () => {
+      const content = expectOk(
+        replaceUniqueText({ content: "caf\u00E9 au lait", newText: "tea", oldText: "cafe\u0301" }),
+      );
+
+      expect(content).toBe("tea au lait");
     });
 
     it("prefers the exact occurrence over a fuzzy one", () => {
-      const result = replaceNoteText("a – b\na - b", "a - b", "x");
+      const content = expectOk(
+        replaceUniqueText({ content: "a – b\na - b", newText: "x", oldText: "a - b" }),
+      );
 
-      expect(result).toEqual({ type: "replaced", content: "a – b\nx" });
+      expect(content).toBe("a – b\nx");
     });
 
     it("reports ambiguity when only fuzzy matches exist and there are several", () => {
-      const result = replaceNoteText("a – b\na — b", "a - b", "x");
+      const error = expectErr(
+        replaceUniqueText({ content: "a – b\na — b", newText: "x", oldText: "a - b" }),
+      );
 
-      expect(result).toEqual({ type: "ambiguous", occurrences: 2 });
+      expect(error.message).toBe(
+        "oldText appears 2 times in the note; extend it until it matches once",
+      );
+    });
+
+    it("reports not found when oldText folds to nothing", () => {
+      const error = expectErr(replaceUniqueText({ content: "a b", newText: "x", oldText: "  " }));
+
+      expect(error.message).toBe("oldText was not found in the note");
+    });
+
+    it("reports not found when the match would split a grapheme", () => {
+      const error = expectErr(
+        replaceUniqueText({ content: "\uFB01ne", newText: "x", oldText: "f" }),
+      );
+
+      expect(error.message).toBe("oldText was not found in the note");
     });
   });
 
