@@ -134,6 +134,24 @@ describe("getPresignedUrlFn", () => {
     });
   });
 
+  it("gives concurrent uploads of the same bytes one row", async () => {
+    const [first, second] = await Promise.all([
+      getPresignedUrlFn(ctx, { ...uploadInput(), topicId, userId }),
+      getPresignedUrlFn(ctx, { ...uploadInput(), fileId: createSafeId<"file">(), topicId, userId }),
+    ]);
+
+    expect(expectOk(first).type).toBe("upload");
+    expect(expectOk(second).type).toBe("upload");
+
+    const rows = expectOk(
+      await db.run((database) =>
+        database.query.file.findMany({ where: { topicId }, columns: { status: true } }),
+      ),
+    );
+
+    expect(rows).toEqual([{ status: "uploading" }]);
+  });
+
   it("rejects unsupported and oversized files before touching the database", async () => {
     const unsupported = expectErr(
       await getPresignedUrlFn(ctx, {

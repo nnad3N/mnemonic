@@ -6,7 +6,7 @@ import { alias } from "drizzle-orm/pg-core";
 import { note, noteVersion } from "@/db/schema.server";
 import type { NoteVersionAuthor } from "@/db/schema.server";
 import { ilike } from "@/db/sql.server";
-import type { DatabaseError, DbKit } from "@/lib/db-kit.server";
+import type { DatabaseError, DbKit, DbTransaction } from "@/lib/db-kit.server";
 import { toServerFnError } from "@/lib/errors/server-fn-error";
 import { hashText } from "@/lib/hash";
 import * as Kit from "@/lib/kit";
@@ -86,7 +86,11 @@ const settledVersionWhere = (noteId: SafeId<"note">) => ({
   OR: [{ author: "user" as const }, { reviewedAt: { isNotNull: true as const } }],
 });
 
-type CreateNoteInput = {
+export const lockNote = async (tx: DbTransaction, noteId: SafeId<"note">) => {
+  await tx.select({ id: note.id }).from(note).where(eq(note.id, noteId)).for("update");
+};
+
+type InsertNoteInput = {
   author: NoteVersionAuthor;
   content: string;
   threadId: string;
@@ -94,30 +98,34 @@ type CreateNoteInput = {
   userId: SafeId<"user">;
 };
 
-export const createNoteFn = Kit.gen(async function* (ctx: NoteCtx, input: CreateNoteInput) {
+export const insertNote = async (tx: DbTransaction, input: InsertNoteInput) => {
   const id = createSafeId<"note">();
   const versionId = createSafeId<"noteVersion">();
   const contentHash = await hashText(input.content);
 
-  yield* await ctx.db.transaction(async (tx) => {
-    await tx.insert(note).values({
-      id,
-      threadId: input.threadId,
-      title: input.title,
-      userId: input.userId,
-    });
-
-    await tx.insert(noteVersion).values({
-      author: input.author,
-      content: input.content,
-      contentHash,
-      id: versionId,
-      noteId: id,
-      seq: 1,
-    });
+  await tx.insert(note).values({
+    id,
+    threadId: input.threadId,
+    title: input.title,
+    userId: input.userId,
   });
 
-  return Result.ok({ id, versionId });
+  await tx.insert(noteVersion).values({
+    author: input.author,
+    content: input.content,
+    contentHash,
+    id: versionId,
+    noteId: id,
+    seq: 1,
+  });
+
+  return { id, versionId };
+};
+
+export const createNoteFn = Kit.gen(async function* (ctx: NoteCtx, input: InsertNoteInput) {
+  const created = yield* await ctx.db.transaction(async (tx) => insertNote(tx, input));
+
+  return Result.ok(created);
 });
 
 type ListNotesInput = {
@@ -357,6 +365,8 @@ export const saveNoteBodyFn = Kit.gen(async function* (ctx: NoteCtx, input: Save
   const contentHash = await hashText(input.content);
 
   const saved = yield* await ctx.db.transaction(async (tx) => {
+    await lockNote(tx, input.noteId);
+
     const [latestVersion, latestUserVersion] = await Promise.all([
       tx.query.noteVersion.findFirst({
         where: { noteId: input.noteId },
@@ -458,6 +468,8 @@ export const saveAgentVersionFn = Kit.gen(async function* (
   const contentHash = await hashText(input.content);
 
   const saved = yield* await ctx.db.transaction(async (tx) => {
+    await lockNote(tx, input.noteId);
+
     const latestVersion = await tx.query.noteVersion.findFirst({
       where: { noteId: input.noteId },
       columns: { author: true, id: true, updatedAt: true },
@@ -509,6 +521,8 @@ export const declineAgentVersionsFn = Kit.gen(async function* (
   input: DeclineAgentVersionsInput,
 ) {
   const restored = yield* await ctx.db.transaction(async (tx) => {
+    await lockNote(tx, input.noteId);
+
     const latestSettledVersion = await tx.query.noteVersion.findFirst({
       where: settledVersionWhere(input.noteId),
       columns: {
@@ -565,6 +579,8 @@ export const resetNoteToVersionFn = Kit.gen(async function* (
   input: ResetNoteToVersionInput,
 ) {
   const target = yield* await ctx.db.transaction(async (tx) => {
+    await lockNote(tx, input.noteId);
+
     const target = await tx.query.noteVersion.findFirst({
       // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with the noteId filter.
       where: { id: toSafeId<"noteVersion">(input.versionId), noteId: input.noteId },

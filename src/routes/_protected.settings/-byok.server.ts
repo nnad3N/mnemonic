@@ -1,9 +1,10 @@
 import { Result } from "better-result";
-import { and, eq, isNotNull, ne } from "drizzle-orm";
+import { and, eq, isNotNull } from "drizzle-orm";
 
 import { byok } from "@/db/schema.server";
 import type { DbKit } from "@/lib/db-kit.server";
 import { decryptSecret, encryptSecret } from "@/lib/encryption.server";
+import { EncryptionError } from "@/lib/errors/encryption-error";
 import { toServerFnError } from "@/lib/errors/server-fn-error";
 import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
@@ -41,29 +42,29 @@ type CreateByokInput = {
 };
 
 export const createByokFn = Kit.gen(async function* (ctx: ByokCtx, input: CreateByokInput) {
-  const existing = yield* await ctx.db.run((db) =>
-    db.query.byok.findFirst({
-      where: { userId: input.userId },
-      columns: { id: true },
-    }),
-  );
-
   const id = createSafeId<"byok">();
   const value = yield* encryptSecret(input.key, {
     byokId: id,
     userId: input.userId,
   });
 
-  yield* await ctx.db.run((db) =>
-    db.insert(byok).values({
-      activatedAt: existing ? null : new Date(),
+  yield* await ctx.db.transaction(async (tx) => {
+    const existing = await tx
+      .select({ id: byok.id })
+      .from(byok)
+      .where(eq(byok.userId, input.userId))
+      .limit(1)
+      .for("update");
+
+    await tx.insert(byok).values({
+      activatedAt: existing.length === 0 ? new Date() : null,
       id,
       keyPreview: keyPreviewFromSecret(input.key),
       name: input.name,
       userId: input.userId,
       value,
-    }),
-  );
+    });
+  });
 
   return Result.ok();
 });
@@ -96,34 +97,28 @@ type DeleteByokInput = {
 };
 
 export const deleteByokFn = Kit.gen(async function* (ctx: ByokCtx, input: DeleteByokInput) {
-  const row = yield* await ctx.db.run((db) =>
-    db.query.byok.findFirst({
-      where: { id: input.id, userId: input.userId },
-      columns: { activatedAt: true, id: true },
-    }),
-  );
+  const deleted = yield* await ctx.db.transaction(async (tx) => {
+    const rows = await tx
+      .select({ activatedAt: byok.activatedAt, id: byok.id })
+      .from(byok)
+      .where(eq(byok.userId, input.userId))
+      .for("update");
+    const row = rows.find((candidate) => candidate.id === input.id);
 
-  if (!row) {
-    return Result.err(toServerFnError.notFound("API key not found"));
-  }
-
-  if (row.activatedAt) {
-    const other = yield* await ctx.db.run((db) =>
-      db
-        .select({ id: byok.id })
-        .from(byok)
-        .where(and(eq(byok.userId, input.userId), ne(byok.id, input.id)))
-        .limit(1),
-    );
-
-    if (other.length > 0) {
-      return Result.err(
-        toServerFnError.badRequest("Activate another API key before deleting the active one"),
-      );
+    if (!row) {
+      return toServerFnError.notFound("API key not found");
     }
-  }
 
-  yield* await ctx.db.run((db) => db.delete(byok).where(eq(byok.id, input.id)));
+    if (row.activatedAt && rows.length > 1) {
+      return toServerFnError.badRequest("Activate another API key before deleting the active one");
+    }
+
+    await tx.delete(byok).where(eq(byok.id, input.id));
+  });
+
+  if (deleted) {
+    return Result.err(deleted);
+  }
 
   return Result.ok();
 });
@@ -174,30 +169,30 @@ export const reencryptByokFn = Kit.gen(async function* (ctx: ByokCtx, _input: vo
       })
       .from(byok);
 
+    const values: { id: SafeId<"byok">; value: string }[] = [];
+
     for (const row of rows) {
-      const plaintext = decryptSecret(row.value, {
-        byokId: row.id,
-        userId: row.userId,
-      });
-
-      if (Result.isError(plaintext)) {
-        throw plaintext.error;
-      }
-
-      const value = encryptSecret(plaintext.value, {
-        byokId: row.id,
-        userId: row.userId,
-      });
+      const value = decryptSecret(row.value, { byokId: row.id, userId: row.userId }).andThen(
+        (plaintext) => encryptSecret(plaintext, { byokId: row.id, userId: row.userId }),
+      );
 
       if (Result.isError(value)) {
-        throw value.error;
+        return value.error;
       }
 
-      await tx.update(byok).set({ value: value.value }).where(eq(byok.id, row.id));
+      values.push({ id: row.id, value: value.value });
     }
+
+    await Promise.all(
+      values.map(async ({ id, value }) => tx.update(byok).set({ value }).where(eq(byok.id, id))),
+    );
 
     return rows.length;
   });
+
+  if (EncryptionError.is(reencrypted)) {
+    return Result.err(reencrypted);
+  }
 
   return Result.ok({ reencrypted });
 });

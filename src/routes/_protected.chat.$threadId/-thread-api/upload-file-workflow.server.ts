@@ -111,9 +111,22 @@ export const validateFileFn = Kit.gen(async function* (
     );
   }
 
-  yield* await ctx.db.run((db) =>
-    db.update(file).set({ status: "processing" }).where(eq(file.id, row.id)),
+  const claimed = yield* await ctx.db.run((db) =>
+    db
+      .update(file)
+      .set({ status: "processing" })
+      .where(and(eq(file.id, row.id), eq(file.status, "uploading")))
+      .returning({ id: file.id }),
   );
+
+  if (claimed.length === 0) {
+    return Result.err(
+      new FileProcessingError({
+        message: "File is not awaiting processing",
+        reason: "invalid-status",
+      }),
+    );
+  }
 
   return Result.ok({
     topicId: row.topicId,
@@ -241,17 +254,19 @@ export const processForRagFn = Kit.gen(async function* (
     vectors: embeddings,
   });
 
-  yield* await ctx.db.transaction(async (tx) => {
-    await tx.insert(fileContent).values(
-      contents.map(({ content, page }, index) => ({
-        content,
-        fileId: input.fileId,
-        page,
-        seq: index + 1,
-      })),
-    );
-    await tx.update(file).set({ description, status: "ready" }).where(eq(file.id, input.fileId));
-  });
+  yield* await ctx.db.transaction(async (tx) =>
+    Promise.all([
+      tx.insert(fileContent).values(
+        contents.map(({ content, page }, index) => ({
+          content,
+          fileId: input.fileId,
+          page,
+          seq: index + 1,
+        })),
+      ),
+      tx.update(file).set({ description, status: "ready" }).where(eq(file.id, input.fileId)),
+    ]),
+  );
 
   return Result.ok({ fileId: input.fileId });
 });

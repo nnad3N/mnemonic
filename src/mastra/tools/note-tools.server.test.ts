@@ -8,7 +8,11 @@ import { memoryKit } from "@/lib/memory-kit.server";
 import { createSafeId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
 import { createAgentNoteFn } from "@/mastra/tools/create-note-tool.server";
-import { NoteToolError, readVisibleNote } from "@/mastra/tools/note-tool-helpers.server";
+import {
+  NoteToolError,
+  readVisibleNote,
+  writeAgentNoteVersion,
+} from "@/mastra/tools/note-tool-helpers.server";
 import { searchAgentNotesFn } from "@/mastra/tools/search-notes-tool.server";
 import { replaceNoteText, updateAgentNoteFn } from "@/mastra/tools/update-note-tool.server";
 import {
@@ -396,5 +400,52 @@ describe("agent note search", () => {
     const { matches } = await search({ threadId }, "kumquat");
 
     expect(matches.map((match) => match.noteKey)).toEqual([`note::${id}`]);
+  });
+});
+
+describe("concurrent note writes", () => {
+  it("serializes parallel writes to one note into consecutive versions", async () => {
+    const threadId = await seedThread({ resourceId: userId });
+    const { id } = expectOk(
+      await createNoteFn(ctx, {
+        author: "user",
+        content: "draft",
+        threadId,
+        title: "Plan",
+        userId,
+      }),
+    );
+
+    const results = await Promise.all(
+      ["a", "b", "c"].map(async (content) =>
+        writeAgentNoteVersion(ctx, { content, noteId: id, threadId }),
+      ),
+    );
+
+    for (const result of results) {
+      expectOk(result);
+    }
+
+    expect((await listVersions(id)).map((version) => version.seq)).toEqual([1, 2, 3, 4]);
+  });
+
+  it("records every note created by parallel tool calls in the run", async () => {
+    const threadId = await seedThread({ resourceId: userId });
+    await seedRun(threadId);
+
+    const created = await Promise.all(
+      ["A", "B", "C"].map(async (title) =>
+        createAgentNoteFn(ctx, { content: "", threadId, title, userId }),
+      ),
+    );
+    const ids = created.map((result) => expectOk(result).id);
+    const run = expectOk(
+      await ctx.db.run((db) =>
+        db.query.threadRun.findFirst({ where: { threadId }, columns: { versionedNoteIds: true } }),
+      ),
+    );
+
+    expect(run?.versionedNoteIds).toHaveLength(3);
+    expect(run?.versionedNoteIds).toEqual(expect.arrayContaining(ids));
   });
 });

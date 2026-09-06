@@ -81,7 +81,6 @@ export const retryFile = createServerFn({ method: "POST" })
     Kit.run(async () =>
       retryFileFn(processFileCtx, {
         fileId: context.file.id,
-        status: context.file.status,
         topicId: context.topicId,
         userId: context.user.id,
         workflow: mastra.getWorkflow(processFileWorkflow.id),

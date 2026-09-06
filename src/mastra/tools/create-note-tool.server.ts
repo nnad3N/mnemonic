@@ -9,11 +9,12 @@ import { dbKit, type DbKit } from "@/lib/db-kit.server";
 import { ToolError } from "@/lib/errors/tool-error";
 import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
-import { memoryKit, type MemoryKit } from "@/lib/memory-kit.server";
+import { memoryKit } from "@/lib/memory-kit.server";
 import { rawId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
-import { createNoteFn } from "@/routes/_protected.chat.$threadId/-thread-api/notes.server";
+import { appendVersionedNoteId } from "@/mastra/tools/note-tool-helpers.server";
+import { insertNote } from "@/routes/_protected.chat.$threadId/-thread-api/notes.server";
 
 type CreateAgentNoteInput = {
   content: string;
@@ -22,30 +23,23 @@ type CreateAgentNoteInput = {
   userId: SafeId<"user">;
 };
 
-type CreateAgentNoteCtx = Kits<[DbKit, MemoryKit]>;
-
 export const createAgentNoteFn = Kit.gen(async function* (
-  ctx: CreateAgentNoteCtx,
+  ctx: Kits<[DbKit]>,
   input: CreateAgentNoteInput,
 ) {
-  const { id, versionId } = yield* await createNoteFn(ctx, { ...input, author: "agent" });
+  const created = yield* await ctx.db.transaction(async (tx) => {
+    const { id, versionId } = await insertNote(tx, { ...input, author: "agent" });
 
-  // Created in this run, so later writes in the same run overwrite version 1.
-  yield* await ctx.db.transaction(async (tx) => {
-    const run = await tx.query.threadRun.findFirst({
-      where: { threadId: input.threadId },
-      columns: { versionedNoteIds: true },
-    });
+    // Created in this run, so later writes in the same run overwrite version 1.
+    await tx
+      .update(threadRun)
+      .set({ versionedNoteIds: appendVersionedNoteId(id) })
+      .where(eq(threadRun.threadId, input.threadId));
 
-    if (run) {
-      await tx
-        .update(threadRun)
-        .set({ versionedNoteIds: [...run.versionedNoteIds, id] })
-        .where(eq(threadRun.threadId, input.threadId));
-    }
+    return { id, versionId };
   });
 
-  return Result.ok({ id, versionId });
+  return Result.ok(created);
 });
 
 const inputSchema = v.object({

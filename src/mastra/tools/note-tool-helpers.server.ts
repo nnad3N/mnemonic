@@ -8,6 +8,7 @@ import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
 import { createSafeId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
+import { lockNote } from "@/routes/_protected.chat.$threadId/-thread-api/notes.server";
 
 export class NoteToolError extends TaggedError("NoteToolError")<{
   message: string;
@@ -62,6 +63,9 @@ export const readVisibleNote = Kit.gen(async function* (
   return Result.ok({ id: noteRow.id, latestVersion, title: noteRow.title });
 });
 
+export const appendVersionedNoteId = (noteId: SafeId<"note">) =>
+  sql`${threadRun.versionedNoteIds} || ${JSON.stringify([noteId])}::jsonb`;
+
 type WriteAgentVersionInput = {
   content: string;
   noteId: SafeId<"note">;
@@ -75,6 +79,8 @@ export const writeAgentNoteVersion = Kit.gen(async function* (
   const contentHash = await hashText(input.content);
 
   const versionId = yield* await ctx.db.transaction(async (tx) => {
+    await lockNote(tx, input.noteId);
+
     const [run, latestVersion] = await Promise.all([
       tx.query.threadRun.findFirst({
         where: { threadId: input.threadId },
@@ -109,12 +115,10 @@ export const writeAgentNoteVersion = Kit.gen(async function* (
       seq: (latestVersion?.seq ?? 0) + 1,
     });
 
-    if (run) {
-      await tx
-        .update(threadRun)
-        .set({ versionedNoteIds: [...run.versionedNoteIds, input.noteId] })
-        .where(eq(threadRun.threadId, input.threadId));
-    }
+    await tx
+      .update(threadRun)
+      .set({ versionedNoteIds: appendVersionedNoteId(input.noteId) })
+      .where(eq(threadRun.threadId, input.threadId));
 
     return nextVersionId;
   });

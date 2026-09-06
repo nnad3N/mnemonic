@@ -141,6 +141,26 @@ describe("validateFileFn", () => {
     });
     expect(await getFileStatus(fileId)).toBe("processing");
   });
+
+  it("lets only one of two concurrent validations claim the file", async () => {
+    const body = new TextEncoder().encode("hello");
+    const { fileId, s3Key } = await seedFile({
+      userId,
+      topicId,
+      status: "uploading",
+      sizeBytes: body.byteLength,
+    });
+    fakeS3.put(s3Key, body);
+
+    const results = await Promise.all([
+      validateFileFn(ctx, { fileId, topicId, userId }),
+      validateFileFn(ctx, { fileId, topicId, userId }),
+    ]);
+    const errors = results.flatMap((result) => (Result.isError(result) ? [result.error] : []));
+
+    expect(errors).toMatchObject([{ reason: "invalid-status" }]);
+    expect(await getFileStatus(fileId)).toBe("processing");
+  });
 });
 
 describe("sampleForDescription", () => {

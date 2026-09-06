@@ -45,7 +45,7 @@ export const createTopicFn = Kit.gen(async function* (
   );
 
   const now = new Date();
-  const thread = yield* await ctx.memory.saveThread({
+  const thread = await ctx.memory.saveThread({
     thread: {
       id: nanoid(),
       resourceId: getResourceId({ topicId, userId: input.userId }),
@@ -55,7 +55,14 @@ export const createTopicFn = Kit.gen(async function* (
     },
   });
 
-  return Result.ok({ topicId, threadId: thread.id });
+  // The thread lives in Mastra's store, so the topic insert cannot share its transaction.
+  if (Result.isError(thread)) {
+    yield* await ctx.db.run((db) => db.delete(topic).where(eq(topic.id, topicId)));
+
+    return Result.err(thread.error);
+  }
+
+  return Result.ok({ topicId, threadId: thread.value.id });
 });
 
 type DeleteThreadCtx = Kits<[DbKit, S3Kit, MemoryKit, VectorKit]>;
@@ -94,39 +101,19 @@ export const deleteTopicFn = Kit.gen(async function* (
   ]);
   // Keep durable rows until external deletes succeed so a failed S3/vector/memory
   // call can be retried.
-  yield* await ctx.db.transaction(async (tx) =>
-    Promise.all([
+  yield* await ctx.db.transaction(async (tx) => {
+    const threadIds = threads.map((thread) => thread.id);
+
+    await Promise.all([
       tx.delete(file).where(eq(file.topicId, input.topicId)),
-      tx.delete(threadSettings).where(
-        inArray(
-          threadSettings.threadId,
-          threads.map((thread) => thread.id),
-        ),
-      ),
-      tx.delete(threadRun).where(
-        inArray(
-          threadRun.threadId,
-          threads.map((thread) => thread.id),
-        ),
-      ),
-      tx.delete(threadReply).where(
-        inArray(
-          threadReply.threadId,
-          threads.map((thread) => thread.id),
-        ),
-      ),
-      tx.delete(note).where(
-        or(
-          eq(note.topicId, input.topicId),
-          inArray(
-            note.threadId,
-            threads.map((thread) => thread.id),
-          ),
-        ),
-      ),
-      tx.delete(topic).where(eq(topic.id, input.topicId)),
-    ]),
-  );
+      tx.delete(threadSettings).where(inArray(threadSettings.threadId, threadIds)),
+      tx.delete(threadRun).where(inArray(threadRun.threadId, threadIds)),
+      tx.delete(threadReply).where(inArray(threadReply.threadId, threadIds)),
+      tx.delete(note).where(or(eq(note.topicId, input.topicId), inArray(note.threadId, threadIds))),
+    ]);
+    // Files and notes reference the topic with `restrict`, so the topic goes last.
+    await tx.delete(topic).where(eq(topic.id, input.topicId));
+  });
 
   return Result.ok({ id: input.topicId });
 });

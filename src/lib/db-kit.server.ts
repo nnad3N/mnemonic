@@ -5,7 +5,7 @@ import { drizzleDb } from "@/db/client.server";
 import * as Kit from "@/lib/kit";
 
 type DrizzleDb = typeof drizzleDb;
-type DbTransaction = Parameters<Parameters<DrizzleDb["transaction"]>[0]>[0];
+export type DbTransaction = Parameters<Parameters<DrizzleDb["transaction"]>[0]>[0];
 
 export class DatabaseError extends TaggedError("DatabaseError")<{
   cause: unknown;
