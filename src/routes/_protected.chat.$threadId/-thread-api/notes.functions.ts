@@ -78,8 +78,8 @@ const listNotesInputSchema = v.object({
   page: v.pipe(v.number(), v.integer(), v.minValue(1)),
   pageSize: v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100)),
   scope: v.variant("type", [
-    v.object({ id: v.pipe(v.string(), v.nanoid()), type: v.literal("thread") }),
-    v.object({ id: v.pipe(v.string(), v.nanoid()), type: v.literal("topic") }),
+    v.object({ type: v.literal("thread"), id: v.pipe(v.string(), v.nanoid()) }),
+    v.object({ type: v.literal("topic"), id: v.pipe(v.string(), v.nanoid()) }),
   ]),
   search: v.optional(
     v.pipe(
@@ -261,14 +261,14 @@ export const declineAgentVersions = createServerFn({ method: "POST" })
 
 const saveNoteBodyInputSchema = v.variant("intent", [
   v.object({
-    content: v.string(),
     intent: v.literal("append"),
+    content: v.string(),
     noteId: v.pipe(v.string(), v.nanoid()),
   }),
   v.object({
+    intent: v.literal("overwrite"),
     baseVersionId: v.pipe(v.string(), v.nanoid()),
     content: v.string(),
-    intent: v.literal("overwrite"),
     noteId: v.pipe(v.string(), v.nanoid()),
   }),
 ]);

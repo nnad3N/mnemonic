@@ -67,7 +67,7 @@ export const resolveNoteView = (
   historyDiffId: string | undefined,
 ): NoteViewState => {
   if (historyDiffId) {
-    return { baseVersionId: historyDiffId, kind: "history" };
+    return { kind: "history", baseVersionId: historyDiffId };
   }
 
   if (!note.pendingReviewBaseVersionId) {
@@ -83,7 +83,7 @@ export const resolveNoteView = (
     return { kind: "editor" };
   }
 
-  return { baseVersionId: note.pendingReviewBaseVersionId, kind: "review" };
+  return { kind: "review", baseVersionId: note.pendingReviewBaseVersionId };
 };
 
 export const shouldAdoptRemoteWrite = (

@@ -20,7 +20,7 @@ describe("resolveNoteView", () => {
         baseline({}),
         "old-version",
       ),
-    ).toEqual({ baseVersionId: "old-version", kind: "history" });
+    ).toEqual({ kind: "history", baseVersionId: "old-version" });
   });
 
   it("shows the editor when no review is pending", () => {
@@ -40,7 +40,7 @@ describe("resolveNoteView", () => {
         baseline({}),
         undefined,
       ),
-    ).toEqual({ baseVersionId: "base", kind: "review" });
+    ).toEqual({ kind: "review", baseVersionId: "base" });
   });
 
   it("keeps the editor while it has unsaved edits", () => {
@@ -70,6 +70,6 @@ describe("resolveNoteView", () => {
         baseline({ suppressedReviewVersionId: "agent-version-1" }),
         undefined,
       ),
-    ).toEqual({ baseVersionId: "base", kind: "review" });
+    ).toEqual({ kind: "review", baseVersionId: "base" });
   });
 });

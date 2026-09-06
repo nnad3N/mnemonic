@@ -74,7 +74,7 @@ describe("note body saves", () => {
     );
 
     const saved = expectOk(
-      await saveNoteBodyFn(ctx, { content: "user text", intent: "append", noteId: id }),
+      await saveNoteBodyFn(ctx, { intent: "append", content: "user text", noteId: id }),
     );
 
     expect(saved.isLatest).toBe(true);
@@ -100,9 +100,9 @@ describe("note body saves", () => {
 
     const saved = expectOk(
       await saveNoteBodyFn(ctx, {
+        intent: "overwrite",
         baseVersionId,
         content: "late user text",
-        intent: "overwrite",
         noteId: id,
       }),
     );
@@ -128,9 +128,9 @@ describe("note body saves", () => {
 
     const denied = expectErr(
       await saveNoteBodyFn(ctx, {
+        intent: "overwrite",
         baseVersionId: createSafeId<"noteVersion">(),
         content: "user edits",
-        intent: "overwrite",
         noteId: id,
       }),
     );
@@ -152,7 +152,7 @@ describe("note body saves", () => {
     );
 
     const denied = expectErr(
-      await saveNoteBodyFn(ctx, { content: "user edits", intent: "append", noteId: id }),
+      await saveNoteBodyFn(ctx, { intent: "append", content: "user edits", noteId: id }),
     );
 
     expect(StaleNoteVersionError.is(denied)).toBe(true);

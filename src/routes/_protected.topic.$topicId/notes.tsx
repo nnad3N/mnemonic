@@ -44,7 +44,7 @@ function RouteComponent() {
         })
       }
       page={page}
-      scope={{ id: topicId, type: "topic" }}
+      scope={{ type: "topic", id: topicId }}
       search={search}
     />
   );

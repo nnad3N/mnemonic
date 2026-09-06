@@ -46,7 +46,7 @@ function RouteComponent() {
           })
         }
         page={page}
-        scope={{ id: threadId, type: "thread" }}
+        scope={{ type: "thread", id: threadId }}
         search={search}
       />
     </PageContent>

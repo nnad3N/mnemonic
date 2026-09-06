@@ -28,11 +28,11 @@ export const toNoteScope = (row: {
   topicId: SafeId<"topic"> | null;
 }): NoteScope => {
   if (row.topicId) {
-    return { id: row.topicId, type: "topic" };
+    return { type: "topic", id: row.topicId };
   }
 
   if (row.threadId) {
-    return { id: row.threadId, type: "thread" };
+    return { type: "thread", id: row.threadId };
   }
 
   return panic("Note has neither a thread nor a topic");
@@ -136,7 +136,7 @@ type ListNotesInput = {
   userId: SafeId<"user">;
 };
 
-export type NoteScope = { id: string; type: "thread" } | { id: string; type: "topic" };
+export type NoteScope = { type: "thread"; id: string } | { type: "topic"; id: string };
 
 export type NoteListItem = {
   id: SafeId<"note">;

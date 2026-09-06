@@ -377,6 +377,18 @@ const replaceUniqueText = (content: string, oldText: string, newText: string) =>
 const replaceUniqueText = ({ content, newText, oldText }: ReplaceUniqueTextInput) => …
 ```
 
+In a discriminated union the discriminator is the first field, in every member type and in every object literal built from it. The reader learns which variant they are looking at before reading its payload, and `switch` arms line up with the shape on the page.
+
+```ts
+// Bad
+type Extracted = { text: string; type: "plain" } | { pages: Page[]; type: "paged" };
+return { text, type: "plain" };
+
+// Good
+type Extracted = { type: "plain"; text: string } | { type: "paged"; pages: Page[] };
+return { type: "plain", text };
+```
+
 ---
 
 ## Code organization
