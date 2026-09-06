@@ -79,10 +79,10 @@ export const FileRow = ({ file, topicId }: FileRowProps) => {
           queryKey: fileQueries.byTopic(topicId),
         }),
         queryClient.invalidateQueries({
-          queryKey: mentionQueries.byId({ type: "file", id: file.id }).queryKey,
+          queryKey: mentionQueries.detail({ type: "file", id: file.id }).queryKey,
         }),
         queryClient.invalidateQueries({
-          queryKey: mentionQueries.listBase(),
+          queryKey: mentionQueries.lists(),
         }),
       ]);
     },

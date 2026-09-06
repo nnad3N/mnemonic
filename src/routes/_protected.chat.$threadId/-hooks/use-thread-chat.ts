@@ -39,13 +39,13 @@ export const getMessagesToSend = <TMessage extends UIMessage>(
 };
 
 export const threadQueries = {
-  all: () => ["thread"] as const,
+  all: () => ["threads"] as const,
   chat: (threadId: string) =>
     queryOptions({
       gcTime: Infinity,
       staleTime: Infinity,
       structuralSharing: false,
-      queryKey: [...threadQueries.all(), threadId, "chat"] as const,
+      queryKey: [...threadQueries.all(), "chat", threadId] as const,
       queryFn: async ({ client }) => {
         const data = await getThread({
           data: { threadId },
@@ -71,9 +71,9 @@ export const threadQueries = {
 
             if (dataPart.type === "data-note-updated") {
               void client.invalidateQueries({
-                queryKey: noteQueries.byId(dataPart.data.noteId).queryKey,
+                queryKey: noteQueries.detail(dataPart.data.noteId).queryKey,
               });
-              void client.invalidateQueries({ queryKey: noteQueries.affectedAll() });
+              void client.invalidateQueries({ queryKey: noteQueries.affectedLists() });
             }
           },
           onError: (error) => {

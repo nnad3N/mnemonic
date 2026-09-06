@@ -11,7 +11,7 @@ export const useUploadFile = (threadId: string) => {
   return useMutation({
     ...fileMutations.upload(threadId),
     onMutate: async ({ fileId, file }) => {
-      const mentionQuery = mentionQueries.byId({
+      const mentionQuery = mentionQueries.detail({
         type: "file",
         id: fileId,
       });
@@ -27,10 +27,10 @@ export const useUploadFile = (threadId: string) => {
     onSettled: async (_data, _error, { fileId }) => {
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: mentionQueries.byId({ type: "file", id: fileId }).queryKey,
+          queryKey: mentionQueries.detail({ type: "file", id: fileId }).queryKey,
         }),
         queryClient.invalidateQueries({
-          queryKey: mentionQueries.listBase(),
+          queryKey: mentionQueries.lists(),
         }),
       ]);
     },

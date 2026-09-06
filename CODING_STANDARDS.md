@@ -115,30 +115,32 @@ Do not destructure and rename several fields from a query hook. Keep the result 
 
 ### Query keys live inside their query options
 
-A feature exports one `xQueries` object that holds the key hierarchy and the fetching. There is no standalone key factory. Follow [TkDodo's Query Options API](https://tkdodo.eu/blog/the-query-options-api).
+A feature exports one `{resource}Queries` object that holds the key hierarchy and the fetching. There is no standalone key factory. Follow [TkDodo's Query Options API](https://tkdodo.eu/blog/the-query-options-api):
 
 ```ts
-export const byokQueries = {
-  all: () => ["byok"] as const,
-  mine: () =>
+export const todoQueries = {
+  all: () => ["todos"] as const,
+  lists: () => [...todoQueries.all(), "list"] as const,
+  list: (filters: string) =>
     queryOptions({
-      queryFn: async () => listMyByok(),
-      queryKey: [...byokQueries.all(), "mine"] as const,
+      queryFn: async () => listTodos({ data: { filters } }),
+      queryKey: [...todoQueries.lists(), { filters }] as const,
     }),
-  user: (userId: string) =>
+  details: () => [...todoQueries.all(), "detail"] as const,
+  detail: (id: string) =>
     queryOptions({
-      queryFn: async () => listUserByok({ data: { userId } }),
-      queryKey: [...byokQueries.all(), "user", userId] as const,
+      queryFn: async () => getTodo({ data: { id } }),
+      queryKey: [...todoQueries.details(), id] as const,
     }),
 };
 ```
 
-- Every entry is a function, including `all`. A property evaluated eagerly cannot reference `byokQueries` while the object is still being constructed.
-- Leaf entries return `queryOptions(...)`. Grouping entries (`all`, and any intermediate level) return a bare key array used only as an invalidation prefix.
-- Reach keys through the object: `useQuery(byokQueries.mine())`, `invalidateQueries({ queryKey: byokQueries.all() })`, `setQueryData(byokQueries.mine().queryKey, …)`.
-- Keep the object next to the server functions it calls, in the feature's `.functions.ts`. Reference: [`-byok.functions.ts`](src/routes/_protected.settings/-byok.functions.ts).
-
-`threadKeys` / `threadMutationKeys` / `topicKeys` / `authKeys` are the old shape and are being migrated. `threadKeys` groups sidebar queries under a thread namespace they do not belong to. Do not add entries to them. Write new queries in the shape above.
+- Every entry is a function, including `all`. A property evaluated eagerly cannot reference `todoQueries` while the object is still being constructed.
+- Leaf entries return `queryOptions(...)`. Grouping entries (`all`, `lists`, `details`, and any intermediate level such as `byTopic`) return a bare key array used only as an invalidation prefix. A leaf key always extends its grouping key; a leaf never reuses `all()` as its own key.
+- Keys go from most generic to most specific: the plural resource (`"todos"`), then `"list"` or `"detail"`, then ids, then filters in an object. Sub-resources nest under the parent's detail key: `[...todoQueries.detail(id).queryKey, "version", "detail", versionId]`.
+- Names are `all`, `lists`, `list`, `details`, `detail` when the object is named after the entity (`noteQueries.detail`). When the object is a namespace rather than an entity (`adminQueries`, `sidebarQueries`), name entries by the entity they fetch (`adminQueries.users`, `sidebarQueries.topics`) so the call reads as what it returns. Several lists or details of one entity are named by what distinguishes them (`mine`, `pending`, `versions`), not `byId` or `listBase`.
+- Reach keys through the object: `useQuery(todoQueries.list(filters))`, `invalidateQueries({ queryKey: todoQueries.lists() })`, `setQueryData(todoQueries.detail(id).queryKey, …)`.
+- Keep the object next to the server functions it calls, in the feature's `.functions.ts`. Reference: [`notes.functions.ts`](src/routes/_protected.chat.$threadId/-thread-api/notes.functions.ts).
 
 ---
 

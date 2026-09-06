@@ -149,7 +149,7 @@ const NoteMenuItems = ({ noteId, onCloseTab }: NoteMenuItemsProps) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const activeNoteId = useSearch({ from: "/_protected", select: (search) => search.note?.id });
-  const note = useQuery(noteQueries.byId(noteId));
+  const note = useQuery(noteQueries.detail(noteId));
 
   const moveToTopic = useMutation({
     mutationFn: async () => addNoteToTopic({ data: { noteId } }),
@@ -157,7 +157,7 @@ const NoteMenuItems = ({ noteId, onCloseTab }: NoteMenuItemsProps) => {
       toast.error(gt("Failed to move the note to the topic"));
     },
     onSuccess: async (added) =>
-      queryClient.invalidateQueries({ queryKey: noteQueries.byId(added.id).queryKey }),
+      queryClient.invalidateQueries({ queryKey: noteQueries.detail(added.id).queryKey }),
   });
 
   const remove = useMutation({
@@ -167,7 +167,7 @@ const NoteMenuItems = ({ noteId, onCloseTab }: NoteMenuItemsProps) => {
     },
     onSuccess: async () => {
       await onCloseTab();
-      queryClient.removeQueries({ queryKey: noteQueries.byId(noteId).queryKey });
+      queryClient.removeQueries({ queryKey: noteQueries.detail(noteId).queryKey });
     },
   });
 
@@ -330,7 +330,7 @@ type NoteTabTitleProps = {
 
 const NoteTabTitle = ({ noteId, threadId, topicId }: NoteTabTitleProps) => {
   const { data: note } = useSuspenseQuery({
-    ...noteQueries.byId(noteId),
+    ...noteQueries.detail(noteId),
     select: (data) => ({ scope: data.scope, title: data.title }),
   });
   const isInTopic = note.scope.type === "topic";

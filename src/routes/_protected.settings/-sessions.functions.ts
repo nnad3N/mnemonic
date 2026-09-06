@@ -45,6 +45,6 @@ export const sessionQueries = {
   list: () =>
     queryOptions({
       queryFn: async () => listSessions(),
-      queryKey: sessionQueries.all(),
+      queryKey: [...sessionQueries.all(), "list"] as const,
     }),
 };

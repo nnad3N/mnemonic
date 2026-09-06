@@ -42,29 +42,29 @@ export const noteQueries = {
   byScope: (scope: ListNotesParams["scope"]) =>
     [...noteQueries.lists(), scope.type, scope.id] as const,
   details: () => [...noteQueries.all(), "detail"] as const,
-  byId: (noteId: string) =>
+  detail: (noteId: string) =>
     queryOptions({
       queryFn: async () => getNote({ data: { noteId } }),
       queryKey: [...noteQueries.details(), noteId] as const,
     }),
-  versionDetails: (noteId: string) => [...noteQueries.byId(noteId).queryKey, "version"] as const,
+  versionDetails: (noteId: string) =>
+    [...noteQueries.detail(noteId).queryKey, "version", "detail"] as const,
   version: (noteId: string, versionId: string) =>
     queryOptions({
       queryFn: async () => getNoteVersion({ data: { noteId, versionId } }),
       queryKey: [...noteQueries.versionDetails(noteId), versionId] as const,
       staleTime: Infinity,
     }),
-  versionLists: (noteId: string) => [...noteQueries.byId(noteId).queryKey, "versions"] as const,
   versions: (noteId: string) =>
     queryOptions({
       queryFn: async () => listNoteVersions({ data: { noteId } }),
-      queryKey: [...noteQueries.versionLists(noteId), "list"] as const,
+      queryKey: [...noteQueries.detail(noteId).queryKey, "version", "list"] as const,
     }),
-  affectedAll: () => [...noteQueries.all(), "affected"] as const,
+  affectedLists: () => [...noteQueries.all(), "affected", "list"] as const,
   affected: (versionIds: string[]) =>
     queryOptions({
       queryFn: async () => listAffectedNotes({ data: { versionIds } }),
-      queryKey: [...noteQueries.affectedAll(), { versionIds }] as const,
+      queryKey: [...noteQueries.affectedLists(), { versionIds }] as const,
     }),
 };
 

@@ -305,8 +305,8 @@ const TimelineResetDialog = ({
     mutationFn: async () => {
       await resetNoteToVersion({ data: { noteId, versionId } });
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: noteQueries.byId(noteId).queryKey }),
-        queryClient.invalidateQueries({ queryKey: noteQueries.versionLists(noteId) }),
+        queryClient.invalidateQueries({ queryKey: noteQueries.detail(noteId).queryKey }),
+        queryClient.invalidateQueries({ queryKey: noteQueries.versions(noteId).queryKey }),
       ]);
       await navigate({ search: clearNoteDiff, to: "." });
     },

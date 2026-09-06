@@ -74,7 +74,7 @@ const ThreadRemoteMentionElement = ({
   ...props
 }: ThreadRemoteMentionElementProps) => {
   const mention = useQuery(
-    mentionQueries.byId({
+    mentionQueries.detail({
       id: mentionId,
       type: mentionType,
     }),

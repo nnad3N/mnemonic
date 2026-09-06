@@ -28,21 +28,9 @@ A self-hosted research tool for one person. Each thread is a function. Highly un
 
 `.server.ts` has the business logic. Test that.
 
-### Query key factories
+### Query keys
 
-One factory per feature, named `{resource}Queries`, in that feature's `.functions.ts`. Always array keys, most generic to most specific, each level spreading the parent. `as const` on every entry. This is TkDodo's factory from [Effective React Query Keys](https://tkdodo.eu/blog/effective-react-query-keys):
-
-```
-const todoQueries = {
-  all: ['todos'] as const,
-  lists: () => [...todoQueries.all, 'list'] as const,
-  list: (filters: string) => [...todoQueries.lists(), { filters }] as const,
-  details: () => [...todoQueries.all, 'detail'] as const,
-  detail: (id: number) => [...todoQueries.details(), id] as const,
-}
-```
-
-Methods are `all`, `lists`, `list`, `details`, `detail`. Segments are the resource (`todos`), then `list` or `detail`. Filters sit in an object. Wrap the leaves in `queryOptions`. `all`, `lists`, and `details` stay key-only so prefix invalidation still works.
+One `{resource}Queries` object per feature, in its `.functions.ts`. Keys live inside `queryOptions`. The shape and naming rules are in [`CODING_STANDARDS.md`](CODING_STANDARDS.md#query-keys-live-inside-their-query-options).
 
 ## How to write code
 

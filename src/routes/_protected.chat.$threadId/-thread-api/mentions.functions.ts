@@ -24,9 +24,9 @@ type GetMentionByIdParams = {
 };
 
 export const mentionQueries = {
-  all: () => ["mention"] as const,
-  listBase: () => [...mentionQueries.all(), "list"] as const,
-  byThread: (threadId: string) => [...mentionQueries.listBase(), threadId] as const,
+  all: () => ["mentions"] as const,
+  lists: () => [...mentionQueries.all(), "list"] as const,
+  byThread: (threadId: string) => [...mentionQueries.lists(), threadId] as const,
   list: ({ threadId, query }: MentionsQueryParams) =>
     queryOptions({
       queryKey: [...mentionQueries.byThread(threadId), { query }] as const,
@@ -36,7 +36,7 @@ export const mentionQueries = {
         }),
       placeholderData: keepPreviousData,
     }),
-  byId: ({ id, type }: GetMentionByIdParams) =>
+  detail: ({ id, type }: GetMentionByIdParams) =>
     queryOptions({
       // without this the optimistic update for file upload might be discarded
       refetchOnMount: false,

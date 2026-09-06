@@ -5,11 +5,7 @@ import { Result } from "better-result";
 import { dbKit } from "@/lib/db-kit.server";
 import * as Kit from "@/lib/kit";
 import { resolveProviderKeyById } from "@/lib/middleware/resolve-provider-key.server";
-import {
-  getModel,
-  getEmbeddingModel,
-  observationalMemoryOptions,
-} from "@/mastra/config.server";
+import { getModel, getEmbeddingModel, observationalMemoryOptions } from "@/mastra/config.server";
 import { OBSERVATIONAL_MEMORY_MODEL } from "@/mastra/models.server";
 import type { MnemonicRequestContext } from "@/mastra/request-context.server";
 import { mastraStore, mastraVector } from "@/mastra/storage.server";

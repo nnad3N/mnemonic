@@ -80,7 +80,7 @@ const createNoteSession = (
 
 const NoteView = ({ noteId }: NoteViewProps) => {
   const historyDiffId = useSearch({ from: "/_protected", select: (search) => search.note?.diff });
-  const { data: note } = useSuspenseQuery(noteQueries.byId(noteId));
+  const { data: note } = useSuspenseQuery(noteQueries.detail(noteId));
   const [session, setSession] = useState(() => createNoteSession(note, 0));
   const baseline = useStore(session.store);
 
@@ -132,7 +132,7 @@ type NoteEditorProps = {
 };
 
 const NoteEditor = ({ noteId }: NoteEditorProps) => {
-  const { data: note } = useSuspenseQuery(noteQueries.byId(noteId));
+  const { data: note } = useSuspenseQuery(noteQueries.detail(noteId));
   const allowReview = useStore(useNoteBaselineStore(), (state) => state.allowReview);
   const editor = usePlateEditor({
     plugins: notesEditorPlugins,

@@ -55,7 +55,7 @@ const NoteTitleInput = ({ noteId, title }: NoteTitleInputProps) => {
   );
 
   const setTitle = (nextTitle: string) => {
-    queryClient.setQueryData(noteQueries.byId(noteId).queryKey, (previous) =>
+    queryClient.setQueryData(noteQueries.detail(noteId).queryKey, (previous) =>
       produce(previous, (draft) => {
         if (!draft) return;
 

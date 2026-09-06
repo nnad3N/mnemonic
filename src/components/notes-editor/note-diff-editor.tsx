@@ -194,7 +194,7 @@ const NoteVersionNavButton = ({ children, opensLatest, versionId }: NoteVersionN
 
 const NoteDiffBar = ({ children, counts, noteId, selectedVersionId }: NoteDiffBarProps) => {
   const { data: reviewPending } = useSuspenseQuery({
-    ...noteQueries.byId(noteId),
+    ...noteQueries.detail(noteId),
     select: (note) => Boolean(note.pendingReviewBaseVersionId),
   });
   const {
@@ -247,7 +247,7 @@ type NoteReviewEditorProps = {
 export const NoteReviewEditor = ({ baseVersionId, noteId }: NoteReviewEditorProps) => {
   const gt = useGT();
   const queryClient = useQueryClient();
-  const noteQuery = noteQueries.byId(noteId);
+  const noteQuery = noteQueries.detail(noteId);
   const { data: note } = useSuspenseQuery(noteQuery);
   const { data: base } = useSuspenseQuery(noteQueries.version(noteId, baseVersionId));
   const seedBaseline = useStore(useNoteBaselineStore(), (state) => state.seedBaseline);
@@ -344,7 +344,7 @@ export const NoteReviewEditor = ({ baseVersionId, noteId }: NoteReviewEditorProp
       }),
     );
     seedBaseline({ baseVersionId: null, contentHash: saved.contentHash });
-    void queryClient.invalidateQueries({ queryKey: noteQueries.versionLists(noteId) });
+    void queryClient.invalidateQueries({ queryKey: noteQueries.versions(noteId).queryKey });
   };
 
   const reject = useMutation({
@@ -367,7 +367,7 @@ export const NoteReviewEditor = ({ baseVersionId, noteId }: NoteReviewEditorProp
         baseVersionId: restored.baseVersionId,
         contentHash: restored.contentHash,
       });
-      void queryClient.invalidateQueries({ queryKey: noteQueries.versionLists(noteId) });
+      void queryClient.invalidateQueries({ queryKey: noteQueries.versions(noteId).queryKey });
     },
     onError: () => {
       toast.error(gt("Failed to save the note"));
@@ -414,7 +414,7 @@ type NoteHistoryEditorProps = {
 };
 
 export const NoteHistoryEditor = ({ baseVersionId, noteId }: NoteHistoryEditorProps) => {
-  const { data: note } = useSuspenseQuery(noteQueries.byId(noteId));
+  const { data: note } = useSuspenseQuery(noteQueries.detail(noteId));
   const { data: base } = useSuspenseQuery(noteQueries.version(noteId, baseVersionId));
   const [diffValue] = useState(() => computeNoteDiffValue(base.content, note.content));
   const editor = usePlateEditor({ plugins: diffPlugins, value: diffValue });

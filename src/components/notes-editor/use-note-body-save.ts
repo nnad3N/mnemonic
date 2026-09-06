@@ -29,7 +29,7 @@ type UseNoteBodySaveInput = {
 export const useNoteBodySave = ({ noteId, onStale, serialize }: UseNoteBodySaveInput) => {
   const gt = useGT();
   const queryClient = useQueryClient();
-  const noteQuery = noteQueries.byId(noteId);
+  const noteQuery = noteQueries.detail(noteId);
   const { data: note } = useSuspenseQuery(noteQuery);
   const store = useNoteBaselineStore();
   const confirmSaved = useStore(store, (state) => state.confirmSaved);
@@ -76,7 +76,7 @@ export const useNoteBodySave = ({ noteId, onStale, serialize }: UseNoteBodySaveI
         );
       }
 
-      void queryClient.invalidateQueries({ queryKey: noteQueries.versionLists(noteId) });
+      void queryClient.invalidateQueries({ queryKey: noteQueries.versions(noteId).queryKey });
     },
     onError: async (error) => {
       if (ServerFnError.is(error) && error.status === STALE_NOTE_VERSION_STATUS) {

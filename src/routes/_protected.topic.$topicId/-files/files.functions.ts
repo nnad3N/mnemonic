@@ -117,7 +117,7 @@ export type FilesQueryParams = {
 };
 
 export const fileQueries = {
-  all: () => ["file"] as const,
+  all: () => ["files"] as const,
   byTopic: (topicId: string) => [...fileQueries.all(), "list", topicId] as const,
   list: ({ page, pageSize, search, topicId }: FilesQueryParams) =>
     queryOptions({
