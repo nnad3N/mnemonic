@@ -7,7 +7,7 @@ import * as v from "valibot";
 import { ToolError } from "@/lib/errors/tool-error";
 import { ImageMimeType, PDF_MIME_TYPE } from "@/lib/file-validation";
 import { mentionKeyFormat } from "@/lib/mention-key";
-import { getAgentModel, modelAcceptsPdf, ModelAgentIds } from "@/mastra/models.server";
+import { getAgentModel, ModelAgentIds } from "@/mastra/models.server";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
 import {
   extractFile,
@@ -109,10 +109,10 @@ export const readFileTool = createTool({
 
     const { bytes, displayName, mimeType } = file.value;
 
-    const agentModel = getAgentModel(agentId, modelOption).model;
+    const { inputs } = getAgentModel(agentId, modelOption);
 
     const viewable =
-      ImageMimeType.is(mimeType) || (mimeType === PDF_MIME_TYPE && modelAcceptsPdf(agentModel));
+      ImageMimeType.is(mimeType) || (mimeType === PDF_MIME_TYPE && inputs.pdf);
 
     if (viewable) {
       return {

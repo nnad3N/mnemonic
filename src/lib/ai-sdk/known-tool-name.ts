@@ -10,6 +10,7 @@ export const KnownToolName = Kit.literals.from<MnemonicToolName>()([
   "listFiles",
   "readFile",
   "readNote",
+  "readText",
   "recall",
   "searchFile",
   "searchFiles",

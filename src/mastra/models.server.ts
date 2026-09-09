@@ -17,45 +17,39 @@ export const ModelAgentIds = Kit.literals.from()([
 
 export type ModelAgentId = Kit.LiteralMember<typeof ModelAgentIds>;
 
-type ModelInputs = {
-  acceptsPdf: boolean;
-};
-
-const modelInputs = {
-  "google/gemini-3.8-flash": { acceptsPdf: true },
-  "google/gemma-4-26b-a4b-it": { acceptsPdf: false },
-  "moonshotai/kimi-k3": { acceptsPdf: false },
-  "z-ai/glm-5.3-flash": { acceptsPdf: false },
-} satisfies Record<string, ModelInputs>;
-
-export type ChatModel = keyof typeof modelInputs;
-
-export const modelAcceptsPdf = (model: ChatModel) => modelInputs[model].acceptsPdf;
-
 type AgentModel = {
-  model: ChatModel;
+  model: string;
+  inputs: {
+    pdf: boolean;
+    images: boolean;
+  };
   openrouter?: OpenRouterChatSettings;
 };
 
-// oxlint-disable-next-line anti-slop/no-known-value-widening
-const models: Record<ModelOption, AgentModel> = {
+const models = {
   research: {
     model: "z-ai/glm-5.3-flash",
+    inputs: { pdf: false, images: true },
   },
   analysis: {
-    model: "google/gemini-3.8-flash",
+    model: "deepseek/deepseek-v4-flash-vision-exp",
+    inputs: { pdf: false, images: true },
     openrouter: {
       reasoning: {
-        effort: "medium",
+        effort: "high",
       },
     },
   },
   knowledge: {
-    model: "moonshotai/kimi-k3",
+    model: "deepseek/deepseek-v4-pro-0813",
+    inputs: { pdf: false, images: false },
+    openrouter: {
+      reasoning: {
+        effort: "high",
+      },
+    },
   },
-};
-
-const SUBAGENT_MODEL: ChatModel = "z-ai/glm-5.3-flash";
+} as const satisfies Record<ModelOption, AgentModel>;
 
 export const getAgentModel = (agentId: ModelAgentId, modelOption: ModelOption): AgentModel => {
   switch (agentId) {
@@ -64,12 +58,16 @@ export const getAgentModel = (agentId: ModelAgentId, modelOption: ModelOption): 
       return models[modelOption];
     case READER_AGENT_ID:
     case WORKER_AGENT_ID:
-      return { model: SUBAGENT_MODEL };
+      return {
+        model: "z-ai/glm-5.3-flash",
+        inputs: { pdf: false, images: true },
+      };
   }
 };
-export const OBSERVATIONAL_MEMORY_MODEL: ChatModel = "z-ai/glm-5.3-flash";
-export const THREAD_TITLE_MODEL: ChatModel = "google/gemma-4-26b-a4b-it";
-export const FILE_DESCRIPTION_MODEL: ChatModel = "google/gemma-4-26b-a4b-it";
+
+export const OBSERVATIONAL_MEMORY_MODEL = "z-ai/glm-5.3-flash";
+export const THREAD_TITLE_MODEL = "google/gemma-4-26b-a4b-it";
+export const FILE_DESCRIPTION_MODEL = "google/gemma-4-26b-a4b-it";
 
 export const EMBEDDING_MODEL = "qwen/qwen3-embedding-8b";
 

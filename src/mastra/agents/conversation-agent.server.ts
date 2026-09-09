@@ -1,30 +1,32 @@
 import { Agent } from "@mastra/core/agent";
+import type { RequestContext } from "@mastra/core/request-context";
 
 import { getAgentMemory } from "@/mastra/agent-memory.server";
 import { baseInstructions } from "@/mastra/agents/base-instructions.server";
 import { readerAgent } from "@/mastra/agents/reader-agent.server";
 import { resolveAgentModel } from "@/mastra/config.server";
-import { CONVERSATION_AGENT_ID } from "@/mastra/models.server";
+import { CONVERSATION_AGENT_ID, getAgentModel } from "@/mastra/models.server";
 import { hoistToolResultMediaProcessor } from "@/mastra/processors/hoist-tool-result-media.server";
 import { pinSubagentSteps } from "@/mastra/processors/soft-stop.server";
 import { stripFilePartsProcessor } from "@/mastra/processors/strip-file-parts.server";
 import { stripGeminiReasoningProcessor } from "@/mastra/processors/strip-gemini-reasoning.server";
+import type { MnemonicRequestContext } from "@/mastra/request-context.server";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
 import { computeDocsTool } from "@/mastra/tools/compute-docs-tool.server";
 import { computeTool } from "@/mastra/tools/compute-tool.server";
 import { createNoteTool } from "@/mastra/tools/create-note-tool.server";
 import { readFileTool } from "@/mastra/tools/read-file-tool.server";
 import { readNoteTool } from "@/mastra/tools/read-note-tool.server";
+import { readTextTool } from "@/mastra/tools/read-text-tool.server";
 import { searchFileTool } from "@/mastra/tools/search-file-tool.server";
 import { searchNotesTool } from "@/mastra/tools/search-notes-tool.server";
 import { updateNoteTool } from "@/mastra/tools/update-note-tool.server";
 import { userLinkWebFetchTool } from "@/mastra/tools/web-fetch-tool.server";
 import { webSearchTool } from "@/mastra/tools/web-search-tool.server";
 
-const conversationAgentTools = {
+const conversationAgentSharedTools = {
   compute: computeTool,
   computeDocs: computeDocsTool,
-  readFile: readFileTool,
   readNote: readNoteTool,
   searchFile: searchFileTool,
   searchNotes: searchNotesTool,
@@ -34,7 +36,24 @@ const conversationAgentTools = {
   createNote: createNoteTool,
 } as const;
 
-export type ConversationAgentTools = typeof conversationAgentTools;
+type GetConversationAgentToolsInput = {
+  requestContext: RequestContext<MnemonicRequestContext>;
+};
+
+const getConversationAgentTools = ({ requestContext }: GetConversationAgentToolsInput) => {
+  const { inputs } = getAgentModel(CONVERSATION_AGENT_ID, requestContext.get("modelOption"));
+
+  if (inputs.images) {
+    return { ...conversationAgentSharedTools, readFile: readFileTool };
+  }
+
+  return { ...conversationAgentSharedTools, readText: readTextTool };
+};
+
+export type ConversationAgentTools = typeof conversationAgentSharedTools & {
+  readFile: typeof readFileTool;
+  readText: typeof readTextTool;
+};
 
 export const conversationAgent = new Agent({
   id: CONVERSATION_AGENT_ID,
@@ -60,5 +79,5 @@ Report answers its task; never redo its work to check it. Part unanswered -> del
   requestContextSchema: mnemonicRequestContextSchema,
   model: resolveAgentModel(CONVERSATION_AGENT_ID),
   name: "Conversation",
-  tools: conversationAgentTools,
+  tools: getConversationAgentTools,
 });

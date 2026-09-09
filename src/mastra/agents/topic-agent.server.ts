@@ -10,7 +10,7 @@ import { baseInstructions } from "@/mastra/agents/base-instructions.server";
 import { readerAgent } from "@/mastra/agents/reader-agent.server";
 import { workerAgent } from "@/mastra/agents/worker-agent.server";
 import { resolveAgentModel } from "@/mastra/config.server";
-import { TOPIC_AGENT_ID } from "@/mastra/models.server";
+import { getAgentModel, TOPIC_AGENT_ID } from "@/mastra/models.server";
 import { hoistToolResultMediaProcessor } from "@/mastra/processors/hoist-tool-result-media.server";
 import { pinSubagentSteps } from "@/mastra/processors/soft-stop.server";
 import { stripFilePartsProcessor } from "@/mastra/processors/strip-file-parts.server";
@@ -24,6 +24,7 @@ import { createFileVectorSearchTool } from "@/mastra/tools/file-vector-search-to
 import { listFilesTool } from "@/mastra/tools/list-files-tool.server";
 import { readFileTool } from "@/mastra/tools/read-file-tool.server";
 import { readNoteTool } from "@/mastra/tools/read-note-tool.server";
+import { readTextTool } from "@/mastra/tools/read-text-tool.server";
 import { searchFilesTool } from "@/mastra/tools/search-files-tool.server";
 import { searchNotesTool } from "@/mastra/tools/search-notes-tool.server";
 import { updateNoteTool } from "@/mastra/tools/update-note-tool.server";
@@ -43,12 +44,13 @@ const getTopicAgentTools = async ({ requestContext }: GetTopicAgentToolsInput) =
     throw result.error;
   }
 
-  return {
+  const { inputs } = getAgentModel(TOPIC_AGENT_ID, requestContext.get("modelOption"));
+
+  const tools = {
     compute: computeTool,
     computeDocs: computeDocsTool,
     fileVectorSearch: createFileVectorSearchTool(result.value),
     listFiles: listFilesTool,
-    readFile: readFileTool,
     readNote: readNoteTool,
     searchFiles: searchFilesTool,
     searchNotes: searchNotesTool,
@@ -57,6 +59,12 @@ const getTopicAgentTools = async ({ requestContext }: GetTopicAgentToolsInput) =
     webSearch: webSearchTool,
     createNote: createNoteTool,
   };
+
+  if (inputs.images) {
+    return { ...tools, readFile: readFileTool };
+  }
+
+  return { ...tools, readText: readTextTool };
 };
 
 export type TopicAgentTools = Awaited<ReturnType<typeof getTopicAgentTools>>;

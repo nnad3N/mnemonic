@@ -43,6 +43,13 @@ const isRecoverableFailure = (part: ToolUIPart<ThreadUITools>): boolean => {
         case "parsed":
           return false;
       }
+    case "tool-readText":
+      switch (part.output.type) {
+        case "error":
+          return true;
+        case "text":
+          return false;
+      }
     case "tool-readNote":
       switch (part.output.type) {
         case "error":
@@ -147,6 +154,15 @@ const renderToolLabel = (toolName: MnemonicToolName, status: ToolPartStatus): Re
           return <T>Could not list files</T>;
       }
     case "readFile":
+      switch (status) {
+        case "pending":
+          return <T>Reading the file</T>;
+        case "done":
+          return <T>Read the file</T>;
+        case "error":
+          return <T>Could not read the file</T>;
+      }
+    case "readText":
       switch (status) {
         case "pending":
           return <T>Reading the file</T>;

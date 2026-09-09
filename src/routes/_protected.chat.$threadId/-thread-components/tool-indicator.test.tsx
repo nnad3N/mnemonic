@@ -145,6 +145,11 @@ const TOOL_LABELS = {
     error: "Could not read the file",
     pending: "Reading the file",
   },
+  readText: {
+    done: "Read the file",
+    error: "Could not read the file",
+    pending: "Reading the file",
+  },
   recall: {
     done: "Recalled memories",
     error: "Could not recall memories",
