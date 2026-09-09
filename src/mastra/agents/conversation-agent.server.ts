@@ -31,7 +31,6 @@ const conversationAgentSharedTools = {
   searchFile: searchFileTool,
   searchNotes: searchNotesTool,
   updateNote: updateNoteTool,
-  webFetch: userLinkWebFetchTool,
   webSearch: webSearchTool,
   createNote: createNoteTool,
 } as const;
@@ -41,19 +40,30 @@ type GetConversationAgentToolsInput = {
 };
 
 const getConversationAgentTools = ({ requestContext }: GetConversationAgentToolsInput) => {
-  const { inputs } = getAgentModel(CONVERSATION_AGENT_ID, requestContext.get("modelOption"));
+  const modelOption = requestContext.get("modelOption");
 
-  if (inputs.images) {
-    return { ...conversationAgentSharedTools, readFile: readFileTool };
+  if (modelOption === "knowledge") {
+    return conversationAgentSharedTools;
   }
 
-  return { ...conversationAgentSharedTools, readText: readTextTool };
+  const { inputs } = getAgentModel(CONVERSATION_AGENT_ID, modelOption);
+
+  if (inputs.images) {
+    return {
+      ...conversationAgentSharedTools,
+      readFile: readFileTool,
+      webFetch: userLinkWebFetchTool,
+    };
+  }
+
+  return {
+    ...conversationAgentSharedTools,
+    readText: readTextTool,
+    webFetch: userLinkWebFetchTool,
+  };
 };
 
-export type ConversationAgentTools = typeof conversationAgentSharedTools & {
-  readFile: typeof readFileTool;
-  readText: typeof readTextTool;
-};
+export type ConversationAgentTools = ReturnType<typeof getConversationAgentTools>;
 
 export const conversationAgent = new Agent({
   id: CONVERSATION_AGENT_ID,

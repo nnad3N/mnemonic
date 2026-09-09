@@ -44,7 +44,7 @@ const getTopicAgentTools = async ({ requestContext }: GetTopicAgentToolsInput) =
     throw result.error;
   }
 
-  const { inputs } = getAgentModel(TOPIC_AGENT_ID, requestContext.get("modelOption"));
+  const modelOption = requestContext.get("modelOption");
 
   const tools = {
     compute: computeTool,
@@ -55,16 +55,21 @@ const getTopicAgentTools = async ({ requestContext }: GetTopicAgentToolsInput) =
     searchFiles: searchFilesTool,
     searchNotes: searchNotesTool,
     updateNote: updateNoteTool,
-    webFetch: userLinkWebFetchTool,
     webSearch: webSearchTool,
     createNote: createNoteTool,
   };
 
-  if (inputs.images) {
-    return { ...tools, readFile: readFileTool };
+  if (modelOption === "knowledge") {
+    return tools;
   }
 
-  return { ...tools, readText: readTextTool };
+  const { inputs } = getAgentModel(TOPIC_AGENT_ID, modelOption);
+
+  if (inputs.images) {
+    return { ...tools, readFile: readFileTool, webFetch: userLinkWebFetchTool };
+  }
+
+  return { ...tools, readText: readTextTool, webFetch: userLinkWebFetchTool };
 };
 
 export type TopicAgentTools = Awaited<ReturnType<typeof getTopicAgentTools>>;

@@ -111,8 +111,7 @@ export const readFileTool = createTool({
 
     const { inputs } = getAgentModel(agentId, modelOption);
 
-    const viewable =
-      ImageMimeType.is(mimeType) || (mimeType === PDF_MIME_TYPE && inputs.pdf);
+    const viewable = ImageMimeType.is(mimeType) || (mimeType === PDF_MIME_TYPE && inputs.pdf);
 
     if (viewable) {
       return {
