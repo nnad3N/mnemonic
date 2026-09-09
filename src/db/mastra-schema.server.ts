@@ -1,4 +1,4 @@
-import { sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { pgTable, text } from "drizzle-orm/pg-core";
 
 /**
  * Read-only mirror of the thread table Mastra creates and migrates at runtime, introspected
@@ -6,6 +6,6 @@ import { sqliteTable, text } from "drizzle-orm/sqlite-core";
  * `drizzle.config.ts`, whose `tablesFilter` also excludes `mastra_*`, so drizzle-kit can
  * never generate, alter or drop it. Only the columns we query are declared.
  */
-export const mastraThread = sqliteTable("mastra_threads", {
+export const mastraThread = pgTable("mastra_threads", {
   id: text("id").primaryKey(),
 });

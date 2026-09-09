@@ -3,7 +3,7 @@ import { and, eq, inArray } from "drizzle-orm";
 
 import { file } from "@/db/schema.server";
 import type { DbKit } from "@/lib/db-kit.server";
-import { ServerFnError } from "@/lib/errors/server-fn-error";
+import { ServerFnError, toServerFnError } from "@/lib/errors/server-fn-error";
 import { validateUploadFile } from "@/lib/file-validation";
 import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
@@ -11,8 +11,10 @@ import type { S3Kit } from "@/lib/s3-kit.server";
 import { toSafeId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
 
+import type { processFileWorkflow } from "./upload-file-workflow.server";
+
 export const FILE_UPLOAD_TTL_SECONDS = 60;
-export const FILE_PROCESSING_TTL_SECONDS = 60;
+export const FILE_PROCESSING_TTL_SECONDS = 300;
 
 type UploadFileCtx = Kits<[DbKit, S3Kit]>;
 
@@ -38,9 +40,9 @@ type GetPresignedUrlInput = {
   displayName: string;
   fileId: string;
   mimeType: string;
-  resourceId: string;
   sha256: string;
   sizeBytes: number;
+  topicId: SafeId<"topic">;
   userId: SafeId<"user">;
 };
 
@@ -53,63 +55,31 @@ export const getPresignedUrlFn = Kit.gen(async function* (
     sizeBytes: input.sizeBytes,
   });
 
-  const ownedTopic = yield* await ctx.db.run(async (db) =>
-    db.query.topic.findFirst({
-      columns: { id: true },
-      where: {
-        // oxlint-disable-next-line eslint-js/no-restricted-syntax -- ownership check.
-        id: toSafeId<"topic">(input.resourceId),
+  // Same bytes in the topic restart the existing row unless it is processing or ready, in which
+  // case nothing is returned; the existing row keeps its id, name and key.
+  const restarted = yield* await ctx.db.run((db) =>
+    db
+      .insert(file)
+      .values({
+        // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId write.
+        id: toSafeId<"file">(input.fileId),
         userId: input.userId,
-      },
-    }),
-  );
-
-  if (!ownedTopic) {
-    return Result.err(
-      new ServerFnError({
-        message: "File uploads are only supported in topic threads",
-        status: "bad-request",
-      }),
-    );
-  }
-
-  const topicId = ownedTopic.id;
-
-  const pendingUpload = yield* await ctx.db.transaction(async (tx) => {
-    const existing = await tx.query.file.findFirst({
-      columns: { id: true, s3Key: true, status: true },
-      where: {
+        topicId: input.topicId,
+        displayName: input.displayName,
+        mimeType: input.mimeType,
+        s3Key: `${input.userId}/${input.topicId}/${input.fileId}`,
         sha256: input.sha256,
-        topicId,
-      },
-    });
-
-    if (existing?.status === "ready" || existing?.status === "processing") return;
-
-    if (existing) {
-      await tx.update(file).set({ status: "uploading" }).where(eq(file.id, existing.id));
-
-      return { fileId: existing.id, s3Key: existing.s3Key };
-    }
-
-    // oxlint-disable-next-line eslint-js/no-restricted-syntax -- paired with userId write.
-    const fileId = toSafeId<"file">(input.fileId);
-    const s3Key = `${input.userId}/${topicId}/${input.fileId}`;
-
-    await tx.insert(file).values({
-      id: fileId,
-      userId: input.userId,
-      topicId,
-      displayName: input.displayName,
-      mimeType: input.mimeType,
-      s3Key,
-      sha256: input.sha256,
-      sizeBytes: input.sizeBytes,
-      status: "uploading",
-    });
-
-    return { fileId, s3Key };
-  });
+        sizeBytes: input.sizeBytes,
+        status: "uploading",
+      })
+      .onConflictDoUpdate({
+        target: [file.topicId, file.sha256],
+        set: { status: "uploading" },
+        setWhere: inArray(file.status, ["uploading", "failed"]),
+      })
+      .returning({ fileId: file.id, s3Key: file.s3Key }),
+  );
+  const pendingUpload = restarted.at(0);
 
   if (!pendingUpload) {
     return Result.ok({
@@ -134,4 +104,74 @@ export const getPresignedUrlFn = Kit.gen(async function* (
     type: "upload" as const,
     presignedUrl: presignedUrl.value,
   });
+});
+
+type ProcessFileInput = {
+  fileId: SafeId<"file">;
+  topicId: SafeId<"topic">;
+  userId: SafeId<"user">;
+  workflow: typeof processFileWorkflow;
+};
+
+export const processFileFn = Kit.gen(async function* (
+  ctx: Kits<[DbKit]>,
+  { workflow, ...input }: ProcessFileInput,
+) {
+  const started = await Result.tryPromise(async () => {
+    const run = await workflow.createRun();
+    const abortSignal = AbortSignal.timeout(FILE_PROCESSING_TTL_SECONDS * 1000);
+
+    abortSignal.addEventListener(
+      "abort",
+      () => {
+        void run.cancel();
+      },
+      { once: true },
+    );
+
+    return run.start({ inputData: input });
+  });
+
+  if (Result.isError(started)) {
+    yield* await markFileFailed(ctx, input.fileId, input.userId);
+
+    return Result.err(toServerFnError.serverError("File processing could not be started"));
+  }
+
+  if (started.value.status === "failed") {
+    // The workflow's onError already marks the file failed; this covers that hook's own DB write failing.
+    yield* await markFileFailed(ctx, input.fileId, input.userId);
+
+    return Result.err(
+      new ServerFnError({
+        message: "File processing failed",
+        status: "server-error",
+        cause: started.value.error,
+      }),
+    );
+  }
+
+  if (started.value.status !== "success") {
+    yield* await markFileFailed(ctx, input.fileId, input.userId);
+
+    return Result.err(toServerFnError.serverError("File processing did not complete"));
+  }
+
+  return Result.ok({ fileId: input.fileId });
+});
+
+export const retryFileFn = Kit.gen(async function* (ctx: Kits<[DbKit]>, input: ProcessFileInput) {
+  const retried = yield* await ctx.db.run((db) =>
+    db
+      .update(file)
+      .set({ status: "uploading" })
+      .where(and(eq(file.id, input.fileId), eq(file.status, "failed")))
+      .returning({ id: file.id }),
+  );
+
+  if (retried.length === 0) {
+    return Result.err(toServerFnError.badRequest("Only a failed file can be retried"));
+  }
+
+  return processFileFn(ctx, input);
 });

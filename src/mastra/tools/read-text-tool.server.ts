@@ -5,11 +5,10 @@ import { Result } from "better-result";
 import * as v from "valibot";
 
 import { ImageMimeType } from "@/lib/file-validation";
-import { toFileText } from "@/lib/get-file.server";
+import { extractFileText } from "@/lib/get-file.server";
 import { mentionKeyFormat } from "@/lib/mention-key";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
-import { loadMentionedFile } from "@/mastra/tools/file-tool-helpers.server";
-import { toToolInputSchema } from "@/mastra/tools/tool-input-schema.server";
+import { extractSchema, loadMentionedFile } from "@/mastra/tools/file-tool-helpers.server";
 
 const inputSchema = v.object({
   fileKey: v.pipe(
@@ -17,6 +16,15 @@ const inputSchema = v.object({
     v.nonEmpty(),
     v.description(
       `Mention key of the file, in the shape ${mentionKeyFormat(["file", "attachment"])}.`,
+    ),
+  ),
+  extract: extractSchema,
+  pages: v.optional(
+    v.pipe(
+      v.boolean(),
+      v.description(
+        "Marks page boundaries in the text with `<!-- PAGE n -->`, where n is the position in the file, 1-based, not the number printed on the page. Paginated formats only, such as PDF.",
+      ),
     ),
   ),
 });
@@ -43,12 +51,12 @@ const toModelOutput = (output: ReadTextOutput): ToolResultOutput => ({
 
 export const readTextTool = createTool({
   id: "read-text",
-  inputSchema: toToolInputSchema(inputSchema),
+  inputSchema: toStandardJsonSchema(inputSchema),
   outputSchema: toStandardJsonSchema(outputSchema),
   requestContextSchema: toStandardJsonSchema(mnemonicRequestContextSchema),
   description:
-    "Reads one file as plain text. PDFs, documents and spreadsheets are converted; images have no text to extract.",
-  execute: async ({ fileKey }, context): Promise<ReadTextOutput> => {
+    "Reads one file. Text formats come back as their source; other formats are converted to text; images have none to extract.",
+  execute: async ({ fileKey, extract, pages }, context): Promise<ReadTextOutput> => {
     const file = await loadMentionedFile({ fileKey, requestContext: context.requestContext });
 
     if (Result.isError(file)) {
@@ -59,7 +67,7 @@ export const readTextTool = createTool({
       return { type: "error", message: "The file is an image; it has no text to extract." };
     }
 
-    const text = await toFileText(file.value);
+    const text = await extractFileText(file.value, { extract, pages });
 
     if (Result.isError(text)) {
       return { type: "error", message: text.error.message };

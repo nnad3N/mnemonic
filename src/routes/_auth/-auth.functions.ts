@@ -30,7 +30,7 @@ export const authQueries = {
       queryFn: async () => {
         const response = await getAuthSession();
 
-        if (response.error !== null) {
+        if (response.error) {
           throw toAuthError(response.error);
         }
 

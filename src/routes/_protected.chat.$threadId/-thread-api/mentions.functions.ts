@@ -13,14 +13,55 @@ import { authMiddleware } from "@/lib/middleware/auth.middleware";
 import { getMentionByIdFn, getMentionsFn } from "./mentions.server";
 import type { MentionQueryType } from "./mentions.server";
 
+export type MentionsQueryParams = {
+  threadId: string;
+  query?: string;
+};
+
+type GetMentionByIdParams = {
+  id: string;
+  type: MentionQueryType;
+};
+
+export const mentionQueries = {
+  all: () => ["mentions"] as const,
+  lists: () => [...mentionQueries.all(), "list"] as const,
+  byThread: (threadId: string) => [...mentionQueries.lists(), threadId] as const,
+  list: ({ threadId, query }: MentionsQueryParams) =>
+    queryOptions({
+      queryKey: [...mentionQueries.byThread(threadId), { query }] as const,
+      queryFn: async () =>
+        getMentions({
+          data: { query, threadId },
+        }),
+      placeholderData: keepPreviousData,
+    }),
+  detail: ({ id, type }: GetMentionByIdParams) =>
+    queryOptions({
+      // without this the optimistic update for file upload might be discarded
+      refetchOnMount: false,
+      queryFn: async () =>
+        getMentionById({
+          data: { id, type },
+        }),
+      queryKey: [...mentionQueries.all(), "detail", type, id] as const,
+    }),
+};
+
 const getMentionsInputSchema = v.object({
-  resourceId: v.pipe(v.string(), v.nonEmpty()),
-  query: v.optional(v.string(), ""),
+  threadId: v.pipe(v.string(), v.nanoid()),
+  query: v.optional(
+    v.pipe(
+      v.string(),
+      v.trim(),
+      v.transform((value) => (value.length > 0 ? value : undefined)),
+    ),
+  ),
 });
 
 const getMentionByIdInputSchema = v.object({
   id: v.pipe(v.string(), v.nanoid()),
-  type: v.picklist(["file", "thread", "topic"]),
+  type: v.picklist(["file", "note", "thread", "topic"]),
 });
 
 const mentionsCtx = Kit.createContext(dbKit, memoryKit);
@@ -32,50 +73,17 @@ export const getMentions = createServerFn({ method: "GET" })
     Kit.run(async () =>
       getMentionsFn(mentionsCtx, {
         query: data.query,
-        resourceId: data.resourceId,
+        threadId: data.threadId,
         userId: context.user.id,
       }),
     ).throws<ServerFnError>((error) =>
       matchError(error, {
         DatabaseError: () => toServerFnError.serverError("Failed to load mentions"),
         MemoryError: () => toServerFnError.serverError("Failed to load conversation mentions"),
+        ThreadNotFoundError: () => toServerFnError.notFound(),
       }),
     ),
   );
-
-export type MentionsQueryParams = {
-  resourceId: string;
-  query?: string;
-};
-
-type GetMentionByIdParams = {
-  id: string;
-  type: MentionQueryType;
-};
-
-export const mentionQueries = {
-  all: () => ["mention"] as const,
-  lists: (resourceId: string) => [...mentionQueries.all(), "list", resourceId] as const,
-  list: ({ resourceId, query = "" }: MentionsQueryParams) =>
-    queryOptions({
-      queryKey: [...mentionQueries.lists(resourceId), { query }] as const,
-      queryFn: async () =>
-        getMentions({
-          data: { query, resourceId },
-        }),
-      placeholderData: keepPreviousData,
-    }),
-  byId: ({ id, type }: GetMentionByIdParams) =>
-    queryOptions({
-      // without this the optimistic update for file upload might be discarded
-      refetchOnMount: false,
-      queryFn: async () =>
-        getMentionById({
-          data: { id, type },
-        }),
-      queryKey: [...mentionQueries.all(), "detail", type, id] as const,
-    }),
-};
 
 export const getMentionById = createServerFn({ method: "GET" })
   .validator(getMentionByIdInputSchema)
@@ -91,6 +99,8 @@ export const getMentionById = createServerFn({ method: "GET" })
       matchError(error, {
         DatabaseError: () => toServerFnError.serverError("Failed to load mention"),
         MemoryError: () => toServerFnError.serverError("Failed to load conversation mention"),
+        ServerFnError: (error) => error,
+        ThreadNotFoundError: () => toServerFnError.notFound(),
       }),
     ),
   );

@@ -18,7 +18,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { authClient } from "@/lib/better-auth/auth-client";
 import TanStackQueryDevtools from "@/lib/tanstack-query/devtools";
 import type { RouterContext } from "@/lib/tanstack-query/root-provider";
-import loadTranslations from "@/loadTranslations";
+import loadTranslations from "@/load-translations";
 import { authQueries } from "@/routes/_auth/-auth.functions";
 
 import gtConfig from "../../gt.config.json";

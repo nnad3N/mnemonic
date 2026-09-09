@@ -8,6 +8,9 @@ type OmDataKey<P extends DataOmPart> = P["type"] extends `data-${infer K}` ? K :
 
 export type ThreadUIDataTypes = {
   [P in DataOmPart as OmDataKey<P>]: Extract<DataOmPart, { type: P["type"] }>["data"];
+} & {
+  "note-created": { noteId: string };
+  "note-updated": { noteId: string };
 };
 
 export type ThreadUITools = MnemonicUITools;

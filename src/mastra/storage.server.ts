@@ -1,21 +1,16 @@
-import { LibSQLStore, LibSQLVector } from "@mastra/libsql";
+import { PgVector, PostgresStore } from "@mastra/pg";
 
 import { env } from "@/env";
 
-const libsqlConnection = {
-  url: env.DATABASE_URL,
-  authToken: env.DATABASE_AUTH_TOKEN,
-};
-
-export const libsqlStore = new LibSQLStore({
-  id: "mnemonic-libsql-storage",
-  ...libsqlConnection,
+export const mastraStore = new PostgresStore({
+  id: "mnemonic-storage",
+  connectionString: env.DATABASE_URL,
 });
 
-export const libsqlVector = new LibSQLVector({
-  id: "mnemonic-libsql-vector",
-  ...libsqlConnection,
+export const mastraVector = new PgVector({
+  id: "mnemonic-vector",
+  connectionString: env.DATABASE_URL,
 });
 
 /** Mastra vector store key; includes embedder id so model changes can reindex into a new store. */
-export const VECTOR_STORE_NAME = "libsql-vector-v001";
+export const VECTOR_STORE_NAME = "mastra-vector-v001";

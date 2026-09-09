@@ -1,21 +1,48 @@
+import { generateText } from "ai";
 import { Result } from "better-result";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { note } from "@/db/schema.server";
 import { dbKit } from "@/lib/db-kit.server";
 import * as Kit from "@/lib/kit";
 import { createMemoryKit, type MemoryApi, MemoryError, memoryKit } from "@/lib/memory-kit.server";
+import type { ProviderKey } from "@/lib/middleware/resolve-provider-key.server";
 import { createSafeId, toSafeId } from "@/lib/safe-id";
+import type { SafeId } from "@/lib/safe-id";
 import { createVectorKit, type VectorApi, VectorError, vectorKit } from "@/lib/vector-kit.server";
-import { FILE_EMBEDDINGS_INDEX } from "@/mastra/file-rag-config.server";
-import { FILE_EMBEDDING_DIMENSION } from "@/mastra/file-rag-config.server";
-import { libsqlVector } from "@/mastra/storage.server";
+import { EMBEDDING_DIMENSION } from "@/mastra/models.server";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
 import { clearDatabase } from "@/test/clear-database";
 import { createFakeS3 } from "@/test/fake-s3";
 import { expectErr, expectOk } from "@/test/result";
 import { seedFile, seedThread, seedTopic, seedUser } from "@/test/seed";
 
-import { deleteTopicFn, mergeConsecutiveAssistantMessages, sanitizeTitle } from "./thread.server";
+import {
+  createThreadTitleFn,
+  createTopicFn,
+  deleteConversationFn,
+  deleteTopicFn,
+  mergeConsecutiveAssistantMessages,
+} from "./thread.server";
+
+// oxlint-disable-next-line anti-slop/no-module-mocking
+vi.mock("ai", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("ai")>();
+
+  return {
+    ...actual,
+    generateText: vi.fn<typeof generateText>(),
+  };
+});
+
+const generateTextMock = vi.mocked(generateText);
+
+const providerKey: ProviderKey = { key: "test-key", provider: "openrouter" };
+
+const stubGeneratedTitle = (text: string) => {
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- createThreadTitleFn only reads result.text
+  generateTextMock.mockResolvedValue({ text } as Awaited<ReturnType<typeof generateText>>);
+};
 
 const db = Kit.get(dbKit);
 const memory = Kit.get(memoryKit);
@@ -26,27 +53,23 @@ const topicId = createSafeId<"topic">();
 const fakeS3 = createFakeS3();
 
 /** Non-zero unit vector — cosine similarity of the zero vector is undefined and filters out. */
-const unitVector = Array.from({ length: FILE_EMBEDDING_DIMENSION }, (_, index) =>
-  index === 0 ? 1 : 0,
-);
+const unitVector = Array.from({ length: EMBEDDING_DIMENSION }, (_, index) => (index === 0 ? 1 : 0));
 
-const upsertTopicVector = async (vectorTopicId: string, fileId: string) => {
+const upsertTopicVector = async (vectorTopicId: SafeId<"topic">, fileId: SafeId<"file">) => {
   expectOk(
-    await vector.upsert({
-      ids: [`${fileId}:0`],
-      metadata: [{ fileId, topicId: vectorTopicId, text: "chunk" }],
+    await vector.indexFile({
+      chunks: [{ page: 1, text: "chunk" }],
+      fileId,
+      topicId: vectorTopicId,
       vectors: [unitVector],
     }),
   );
 };
 
-const vectorIdsForTopic = async (vectorTopicId: string) => {
-  const results = await libsqlVector.query({
-    indexName: FILE_EMBEDDINGS_INDEX,
-    queryVector: unitVector,
-    topK: 100,
-    filter: { topicId: vectorTopicId },
-  });
+const vectorIdsForTopic = async (vectorTopicId: SafeId<"topic">) => {
+  const results = expectOk(
+    await vector.search({ scope: { topicId: vectorTopicId }, topK: 100, vector: unitVector }),
+  );
 
   return results.map((result) => result.id);
 };
@@ -73,6 +96,27 @@ const fileIdsForTopic = async (id: string) => {
   return expectOk(result).map((row) => row.id);
 };
 
+const seedNote = async (input: { threadId?: string; title: string; topicId?: SafeId<"topic"> }) =>
+  expectOk(
+    await db.run((database) =>
+      database.insert(note).values({
+        id: createSafeId<"note">(),
+        threadId: input.threadId ?? null,
+        title: input.title,
+        topicId: input.topicId ?? null,
+        userId,
+      }),
+    ),
+  );
+
+const noteTitles = async () => {
+  const result = await db.run((database) =>
+    database.query.note.findMany({ columns: { title: true } }),
+  );
+
+  return expectOk(result).map((row) => row.title);
+};
+
 const threadIdsForResource = async (resourceId: string) => {
   const result = await memory.listThreads({
     filter: { resourceId },
@@ -85,8 +129,7 @@ const threadIdsForResource = async (resourceId: string) => {
 
 const createFailingVectorKit = () => {
   const api: VectorApi = {
-    createIndex: async () => Promise.resolve(Result.ok()),
-    deleteVectors: async () =>
+    forget: async () =>
       Promise.resolve(
         Result.err(
           new VectorError({
@@ -95,7 +138,8 @@ const createFailingVectorKit = () => {
           }),
         ),
       ),
-    upsert: async () => Promise.resolve(Result.ok()),
+    indexFile: async () => Promise.resolve(Result.ok()),
+    search: async () => Promise.resolve(Result.ok([])),
   };
 
   return createVectorKit(api);
@@ -128,10 +172,7 @@ const createFailingMemoryKit = () => {
 describe("deleteTopicFn", () => {
   beforeEach(async () => {
     fakeS3.reset();
-    await Promise.all([
-      vector.createIndex({ dimension: FILE_EMBEDDING_DIMENSION }).then(expectOk),
-      seedUser({ id: userId }),
-    ]);
+    await seedUser({ id: userId });
     await seedTopic({ userId, id: topicId });
   });
 
@@ -156,7 +197,7 @@ describe("deleteTopicFn", () => {
     fakeS3.put(second.s3Key, new TextEncoder().encode("two"));
     const ctx = Kit.createContext(dbKit, fakeS3.kit, memoryKit, vectorKit);
 
-    expect(expectOk(await deleteTopicFn(ctx, { topicId }))).toEqual({
+    expect(expectOk(await deleteTopicFn(ctx, { topicId, userId }))).toEqual({
       id: topicId,
     });
 
@@ -174,7 +215,7 @@ describe("deleteTopicFn", () => {
     ]);
     const ctx = Kit.createContext(dbKit, fakeS3.kit, memoryKit, vectorKit);
 
-    expectOk(await deleteTopicFn(ctx, { topicId }));
+    expectOk(await deleteTopicFn(ctx, { topicId, userId }));
 
     expect(fakeS3.calls).toEqual([
       { method: "deleteObjects", keys: expect.arrayContaining([first.s3Key, second.s3Key]) },
@@ -193,12 +234,29 @@ describe("deleteTopicFn", () => {
 
     const ctx = Kit.createContext(dbKit, fakeS3.kit, memoryKit, vectorKit);
 
-    expectOk(await deleteTopicFn(ctx, { topicId }));
+    expectOk(await deleteTopicFn(ctx, { topicId, userId }));
 
     expect(await topicExists(siblingTopicId)).toBe(true);
     expect(await fileIdsForTopic(siblingTopicId)).toEqual([sibling.fileId]);
     expect(await vectorIdsForTopic(siblingTopicId)).toEqual([`${sibling.fileId}:0`]);
     expect(await threadIdsForResource(userId)).toEqual([standaloneThreadId]);
+  });
+
+  it("deletes the notes shared with the topic and those private to its threads", async () => {
+    const [threadId, standaloneThreadId] = await Promise.all([
+      seedThread({ resourceId: topicId }),
+      seedThread({ resourceId: userId }),
+    ]);
+    await Promise.all([
+      seedNote({ title: "Shared note", topicId }),
+      seedNote({ title: "Private note", threadId }),
+      seedNote({ title: "Standalone note", threadId: standaloneThreadId }),
+    ]);
+    const ctx = Kit.createContext(dbKit, fakeS3.kit, memoryKit, vectorKit);
+
+    expectOk(await deleteTopicFn(ctx, { topicId, userId }));
+
+    expect(await noteTitles()).toEqual(["Standalone note"]);
   });
 
   it("keeps the database rows when the object delete fails", async () => {
@@ -207,7 +265,7 @@ describe("deleteTopicFn", () => {
     fakeS3.put(s3Key, new TextEncoder().encode("kept"));
     const ctx = Kit.createContext(dbKit, fakeS3.kit, memoryKit, vectorKit);
 
-    expectErr(await deleteTopicFn(ctx, { topicId }));
+    expectErr(await deleteTopicFn(ctx, { topicId, userId }));
 
     expect(await topicExists(topicId)).toBe(true);
     expect(await fileIdsForTopic(topicId)).toEqual([fileId]);
@@ -219,7 +277,7 @@ describe("deleteTopicFn", () => {
     fakeS3.put(s3Key, new TextEncoder().encode("kept"));
     const ctx = Kit.createContext(dbKit, fakeS3.kit, memoryKit, createFailingVectorKit());
 
-    expectErr(await deleteTopicFn(ctx, { topicId }));
+    expectErr(await deleteTopicFn(ctx, { topicId, userId }));
 
     expect(await topicExists(topicId)).toBe(true);
     expect(await fileIdsForTopic(topicId)).toEqual([fileId]);
@@ -235,13 +293,138 @@ describe("deleteTopicFn", () => {
     fakeS3.put(s3Key, new TextEncoder().encode("kept"));
     const ctx = Kit.createContext(dbKit, fakeS3.kit, createFailingMemoryKit(), vectorKit);
 
-    expectErr(await deleteTopicFn(ctx, { topicId }));
+    expectErr(await deleteTopicFn(ctx, { topicId, userId }));
 
     expect(await topicExists(topicId)).toBe(true);
     expect(await fileIdsForTopic(topicId)).toEqual([fileId]);
     expect(await threadIdsForResource(topicId)).toEqual([threadId]);
     // S3 and memory delete run concurrently; S3 may still succeed when memory fails.
     expect(fakeS3.objects.has(s3Key)).toBe(false);
+  });
+});
+
+describe("deleteConversationFn", () => {
+  beforeEach(async () => {
+    await seedUser({ id: userId });
+    await seedTopic({ userId, id: topicId });
+  });
+
+  afterEach(async () => {
+    await clearDatabase();
+  });
+
+  it("deletes the notes private to the conversation and keeps those shared with the topic", async () => {
+    const threadId = await seedThread({ resourceId: topicId });
+    await Promise.all([
+      seedNote({ title: "Private note", threadId }),
+      seedNote({ title: "Shared note", topicId }),
+    ]);
+    const ctx = Kit.createContext(dbKit, memoryKit);
+
+    expectOk(await deleteConversationFn(ctx, { threadId }));
+
+    expect(await noteTitles()).toEqual(["Shared note"]);
+  });
+});
+
+describe("createTopicFn", () => {
+  beforeEach(async () => {
+    await seedUser({ id: userId });
+  });
+
+  afterEach(async () => {
+    await clearDatabase();
+  });
+
+  it("creates the first topic thread with an empty title", async () => {
+    const ctx = Kit.createContext(dbKit, memoryKit);
+    const { threadId } = expectOk(await createTopicFn(ctx, { title: "Research", userId }));
+
+    const thread = expectOk(await memory.getThreadById({ threadId }));
+
+    expect(thread?.title).toBe("");
+  });
+});
+
+describe("createThreadTitleFn", () => {
+  const titleCtx = Kit.createContext(memoryKit);
+
+  beforeEach(async () => {
+    await seedUser({ id: userId });
+    generateTextMock.mockReset();
+    stubGeneratedTitle("Generated Title");
+  });
+
+  afterEach(async () => {
+    await clearDatabase();
+  });
+
+  it("generates and writes a title when the thread is untitled", async () => {
+    const threadId = await seedThread({ resourceId: userId, title: "" });
+
+    const result = expectOk(
+      await createThreadTitleFn(titleCtx, {
+        metadata: {},
+        providerKey,
+        text: "Tell me about kumquats",
+        threadId,
+      }),
+    );
+
+    expect(result).toEqual({
+      id: threadId,
+      title: "Generated Title",
+      updatedAt: expect.any(String),
+    });
+    expect(generateTextMock).toHaveBeenCalledOnce();
+    expect(expectOk(await memory.getThreadById({ threadId }))?.title).toBe("Generated Title");
+  });
+
+  it("skips generation when the thread already has a title", async () => {
+    const threadId = await seedThread({ resourceId: userId, title: "My Name" });
+
+    const result = expectOk(
+      await createThreadTitleFn(titleCtx, {
+        metadata: {},
+        providerKey,
+        text: "Tell me about kumquats",
+        threadId,
+      }),
+    );
+
+    expect(result).toBeNull();
+    expect(generateTextMock).not.toHaveBeenCalled();
+    expect(expectOk(await memory.getThreadById({ threadId }))?.title).toBe("My Name");
+  });
+
+  it("skips the write when the thread is renamed during generation", async () => {
+    const threadId = await seedThread({ resourceId: userId, title: "" });
+
+    generateTextMock.mockImplementation(async () => {
+      expectOk(
+        await memory.updateThread({
+          id: threadId,
+          metadata: {},
+          title: "Renamed Mid Flight",
+        }),
+      );
+
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- createThreadTitleFn only reads result.text
+      return { text: "Generated Title" } as Awaited<ReturnType<typeof generateText>>;
+    });
+
+    const result = expectOk(
+      await createThreadTitleFn(titleCtx, {
+        metadata: {},
+        providerKey,
+        text: "Tell me about kumquats",
+        threadId,
+      }),
+    );
+
+    expect(result).toBeNull();
+    expect(generateTextMock).toHaveBeenCalledOnce();
+    expect(expectOk(await memory.getThreadById({ threadId }))?.title).toBe("Renamed Mid Flight");
   });
 });
 
@@ -332,38 +515,5 @@ describe("mergeConsecutiveAssistantMessages", () => {
 
   it("returns an empty list unchanged", () => {
     expect(mergeConsecutiveAssistantMessages([])).toEqual([]);
-  });
-});
-
-describe("sanitizeTitle", () => {
-  it("keeps a clean title untouched", () => {
-    expect(sanitizeTitle("Quantum Computing Basics")).toBe("Quantum Computing Basics");
-  });
-
-  it("strips the quoting the model wraps titles in", () => {
-    expect(sanitizeTitle('"Quantum Computing"')).toBe("Quantum Computing");
-    expect(sanitizeTitle("'Quantum Computing'")).toBe("Quantum Computing");
-    expect(sanitizeTitle("```Quantum Computing```")).toBe("Quantum Computing");
-  });
-
-  it("keeps quotes that are inside the title", () => {
-    expect(sanitizeTitle(`What "ORM" Means`)).toBe(`What "ORM" Means`);
-  });
-
-  it("collapses newlines and runs of whitespace into single spaces", () => {
-    expect(sanitizeTitle("Line one\n\nLine   two\t")).toBe("Line one Line two");
-  });
-
-  it("returns null for input that sanitizes to nothing", () => {
-    expect(sanitizeTitle("")).toBeNull();
-    expect(sanitizeTitle("   \n  ")).toBeNull();
-    expect(sanitizeTitle(`"""`)).toBeNull();
-  });
-
-  it("truncates to the column limit without leaving trailing whitespace", () => {
-    const title = sanitizeTitle(`${"a".repeat(254)} bbbb`);
-
-    expect(title).toHaveLength(254);
-    expect(title).toBe("a".repeat(254));
   });
 });

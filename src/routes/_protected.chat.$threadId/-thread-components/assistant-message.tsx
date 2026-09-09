@@ -1,6 +1,7 @@
 import { isVisibleOmPart } from "@/lib/ai-sdk/tool-parts";
 import { groupAssistantParts } from "@/lib/ai-sdk/work-part";
 import { MessageStateContext } from "@/routes/_protected.chat.$threadId/-message-state-context";
+import { AffectedNotes } from "@/routes/_protected.chat.$threadId/-thread-components/affected-notes";
 import { AssistantMessagePart } from "@/routes/_protected.chat.$threadId/-thread-components/assistant-message-part";
 import { WorkedForIndicator } from "@/routes/_protected.chat.$threadId/-thread-components/worked-for-indicator";
 import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread-types";
@@ -31,6 +32,7 @@ export const AssistantMessage = ({ isStreaming, message }: AssistantMessageProps
 
           return <WorkedForIndicator key={block.id} parts={block.parts} timing={block.timing} />;
         })}
+        <AffectedNotes parts={message.parts} />
       </div>
     </MessageStateContext.Provider>
   );

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import * as Kit from "@/lib/kit";
 import { memoryKit } from "@/lib/memory-kit.server";
 import { createSafeId } from "@/lib/safe-id";
-import { libsqlVector } from "@/mastra/storage.server";
+import { mastraVector } from "@/mastra/storage.server";
 import { clearDatabase } from "@/test/clear-database";
 import { expectOk } from "@/test/result";
 import { seedThread, seedUser } from "@/test/seed";
@@ -21,11 +21,11 @@ const listAllThreadIds = async () => {
 };
 
 const seedObservationVector = async (id: string, metadata: Record<string, string>) => {
-  await libsqlVector.createIndex({
+  await mastraVector.createIndex({
     dimension: observationVector.length,
     indexName: OBSERVATION_INDEX,
   });
-  await libsqlVector.upsert({
+  await mastraVector.upsert({
     ids: [id],
     indexName: OBSERVATION_INDEX,
     metadata: [metadata],
@@ -34,7 +34,7 @@ const seedObservationVector = async (id: string, metadata: Record<string, string
 };
 
 const listObservationVectorIds = async () => {
-  const results = await libsqlVector.query({
+  const results = await mastraVector.query({
     indexName: OBSERVATION_INDEX,
     queryVector: observationVector,
     topK: 100,

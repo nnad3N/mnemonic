@@ -1,35 +1,32 @@
-import { spawnSync } from "node:child_process";
-import { mkdirSync, realpathSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { PostgreSqlContainer } from "@testcontainers/postgresql";
+import { exportSql } from "drizzle-kit/cli";
+import type { TestProject } from "vitest/node";
 
-import { SCHEMA_SQL_PATH, TEST_ENV } from "./env";
+declare module "vitest" {
+  // oxlint-disable-next-line typescript/consistent-type-definitions -- augmentation needs interface merging
+  interface ProvidedContext {
+    pgUrl: string;
+    schemaSql: string;
+  }
+}
 
-const projectRoot = realpathSync(`${import.meta.dirname}/../..`);
-const schemaSqlPath = `${projectRoot}/${SCHEMA_SQL_PATH}`;
-const drizzleKitBin = `${projectRoot}/node_modules/drizzle-kit/bin.cjs`;
-
-const exportSchemaSql = () => {
-  const result = spawnSync(process.execPath, [drizzleKitBin, "export", "--sql"], {
-    cwd: projectRoot,
-    encoding: "utf8",
-    env: {
-      ...process.env,
-      ...TEST_ENV,
-    },
+export default async function setup(project: TestProject) {
+  const exported = await exportSql({
+    dialect: "postgresql",
+    schema: "./src/db/{schema,auth-schema}.server.ts",
   });
 
-  if (result.status !== 0) {
-    throw new Error(
-      `drizzle-kit export failed (status ${String(result.status)}):\n${result.stderr}\n${result.stdout}`,
-    );
+  if (exported.status !== "ok") {
+    throw new Error(`drizzle-kit export failed: ${JSON.stringify(exported.error)}`);
   }
 
-  const sql = result.stdout.trim();
+  // One container for the whole run; each worker isolates itself with its own database.
+  const container = await new PostgreSqlContainer("pgvector/pgvector:pg18").start();
 
-  mkdirSync(dirname(schemaSqlPath), { recursive: true });
-  writeFileSync(schemaSqlPath, `${sql}\n`);
-};
+  project.provide("pgUrl", container.getConnectionUri());
+  project.provide("schemaSql", exported.statements.join("\n"));
 
-export default function setup() {
-  exportSchemaSql();
+  return async () => {
+    await container.stop();
+  };
 }

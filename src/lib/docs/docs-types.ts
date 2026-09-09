@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-export const docsLibraries = ["mathjs", "papaparse"] as const;
+export const docsLibraries = ["mathjs", "papaparse", "minisearch"] as const;
 
 export const docsMemberKinds = ["function", "constant", "interface"] as const;
 

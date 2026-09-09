@@ -14,6 +14,32 @@ export const ImageMimeType = Kit.literals.from<MimeType>()([
 
 export type ImageMimeType = Kit.LiteralMember<typeof ImageMimeType>;
 
+export const RawTextMimeType = Kit.literals.from<MimeType>()([
+  "application/docbook+xml",
+  "application/json",
+  "application/rtf",
+  "application/x-latex",
+  "application/x-research-info-systems",
+  "application/xhtml+xml",
+  "application/xml",
+  "message/rfc822",
+  "text/csv",
+  "text/html",
+  "text/markdown",
+  "text/plain",
+  "text/prs.fallenstein.rst",
+  "text/rtf",
+  "text/tab-separated-values",
+  "text/troff",
+  "text/x-markdown",
+  "text/x-opml",
+  "text/x-org",
+  "text/xml",
+  "text/yaml",
+]);
+
+export type RawTextMimeType = Kit.LiteralMember<typeof RawTextMimeType>;
+
 export const SupportedMimeType = Kit.literals.from<MimeType>()([
   "application/docbook+xml",
   "application/epub+zip",

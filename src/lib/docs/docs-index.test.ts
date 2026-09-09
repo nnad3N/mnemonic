@@ -25,6 +25,10 @@ describe("generated docs", () => {
     `);
   });
 
+  it("minisearch contains the public MiniSearch surface and its exported types", () => {
+    expect(docs.minisearch.library.members.map((member) => member.name)).toMatchSnapshot();
+  });
+
   it("mathjs contains exactly the namespace-importable members", () => {
     expect(docs.mathjs.library.members.map((member) => member.name)).toMatchSnapshot();
   });

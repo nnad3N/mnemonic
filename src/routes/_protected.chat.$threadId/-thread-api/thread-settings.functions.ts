@@ -8,7 +8,7 @@ import { duration } from "@/lib/durations";
 import { toServerFnError } from "@/lib/errors/server-fn-error";
 import * as Kit from "@/lib/kit";
 import { threadAccessMiddleware } from "@/lib/middleware/assert-thread-access.middleware";
-import { DEFAULT_MODEL_CAPABILITY, modelCapabilityLevels } from "@/lib/model-capability";
+import { DEFAULT_MODEL_OPTION, ModelOptions } from "@/lib/model-option";
 
 export const getThreadSettings = createServerFn({ method: "GET" })
   .middleware([threadAccessMiddleware])
@@ -16,23 +16,23 @@ export const getThreadSettings = createServerFn({ method: "GET" })
     const settings = await Kit.run(async () =>
       Kit.get(dbKit).run((db) =>
         db.query.threadSettings.findFirst({
-          columns: { modelCapability: true },
+          columns: { modelOption: true },
           where: { threadId: context.thread.id },
         }),
       ),
     ).throws(() => toServerFnError.serverError("Failed to load thread settings"));
 
     return {
-      modelCapability: settings?.modelCapability ?? DEFAULT_MODEL_CAPABILITY,
+      modelOption: settings?.modelOption ?? DEFAULT_MODEL_OPTION,
     };
   });
 
-const upsertCapabilitySchema = v.object({
-  modelCapability: v.picklist(modelCapabilityLevels),
+const upsertModelOptionSchema = v.object({
+  modelOption: v.picklist(ModelOptions.values),
 });
 
-export const upsertThreadCapability = createServerFn({ method: "POST" })
-  .validator(upsertCapabilitySchema)
+export const upsertThreadModelOption = createServerFn({ method: "POST" })
+  .validator(upsertModelOptionSchema)
   .middleware([threadAccessMiddleware])
   .handler(async ({ context, data }) => {
     await Kit.run(async () =>
@@ -40,13 +40,13 @@ export const upsertThreadCapability = createServerFn({ method: "POST" })
         db
           .insert(threadSettings)
           .values({
-            modelCapability: data.modelCapability,
+            modelOption: data.modelOption,
             threadId: context.thread.id,
             userId: context.user.id,
           })
           .onConflictDoUpdate({
             target: threadSettings.threadId,
-            set: { modelCapability: data.modelCapability },
+            set: { modelOption: data.modelOption },
           }),
       ),
     ).throws(() => toServerFnError.serverError("Failed to save thread settings"));

@@ -55,7 +55,7 @@ export const getAttachment = Kit.gen(async function* (
 
       const bytes = decodeBase64DataUrl(part.data);
 
-      if (bytes === null) {
+      if (!bytes) {
         continue;
       }
 

@@ -36,7 +36,7 @@ const formatDuration = (locale: string, durationMs: number): string => {
 
 const getDurationMs = (timing: WorkTiming | undefined): number | undefined => {
   if (!timing?.endedAt) {
-    return undefined;
+    return;
   }
 
   const duration = Temporal.Instant.from(timing.endedAt).since(

@@ -2,6 +2,7 @@ import { extractBytes } from "@kreuzberg/node";
 import { Result, TaggedError } from "better-result";
 
 import type { DbKit } from "@/lib/db-kit.server";
+import { RawTextMimeType } from "@/lib/file-validation";
 import * as Kit from "@/lib/kit";
 import type { Kits } from "@/lib/kit";
 import type { S3Kit } from "@/lib/s3-kit.server";
@@ -25,10 +26,26 @@ export type GetFileInput = {
   topicId: SafeId<"topic">;
 };
 
-export const toFileText = async (file: FetchedFile): Promise<Result<string, GetFileError>> =>
-  Result.tryPromise({
+type ExtractFileTextOptions = {
+  extract?: boolean;
+  pages?: boolean;
+};
+
+export const extractFileText = async (
+  file: FetchedFile,
+  { extract, pages }: ExtractFileTextOptions,
+): Promise<Result<string, GetFileError>> => {
+  if (!extract && RawTextMimeType.is(file.mimeType)) {
+    return Result.ok(new TextDecoder().decode(file.bytes));
+  }
+
+  return Result.tryPromise({
     try: async () => {
-      const extraction = await extractBytes(file.bytes, file.mimeType);
+      const extraction = await extractBytes(
+        file.bytes,
+        file.mimeType,
+        pages ? { pages: { insertPageMarkers: true } } : undefined,
+      );
       return extraction.content;
     },
     catch: () =>
@@ -36,6 +53,46 @@ export const toFileText = async (file: FetchedFile): Promise<Result<string, GetF
         message: "File could not be loaded.",
       }),
   });
+};
+
+export type FileContent =
+  | { type: "pages"; pages: { page: number; content: string }[] }
+  | { type: "text"; content: string };
+
+type ExtractFileContentOptions = {
+  extract?: boolean;
+};
+
+export const extractFileContent = async (
+  file: Pick<FetchedFile, "bytes" | "mimeType">,
+  { extract }: ExtractFileContentOptions = {},
+): Promise<Result<FileContent, GetFileError>> => {
+  if (!extract && RawTextMimeType.is(file.mimeType)) {
+    return Result.ok({ type: "text", content: new TextDecoder().decode(file.bytes) });
+  }
+
+  return Result.tryPromise({
+    try: async (): Promise<FileContent> => {
+      const extraction = await extractBytes(file.bytes, file.mimeType, {
+        pages: { extractPages: true },
+      });
+      const pages = extraction.pages ?? [];
+
+      if (pages.length === 0) {
+        return { type: "text", content: extraction.content };
+      }
+
+      return {
+        type: "pages",
+        pages: pages.map((page) => ({ page: page.pageNumber, content: page.content })),
+      };
+    },
+    catch: () =>
+      new GetFileError({
+        message: "File could not be loaded.",
+      }),
+  });
+};
 
 type GetFileCtx = Kits<[DbKit, S3Kit]>;
 

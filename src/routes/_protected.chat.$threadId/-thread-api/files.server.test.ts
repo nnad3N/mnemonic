@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { dbKit } from "@/lib/db-kit.server";
 import { FileUploadError } from "@/lib/errors/file-upload-error";
-import { ServerFnError } from "@/lib/errors/server-fn-error";
 import { UPLOAD_MAX_BYTES } from "@/lib/file-validation";
 import * as Kit from "@/lib/kit";
 import { createSafeId, type SafeId } from "@/lib/safe-id";
@@ -67,9 +66,7 @@ afterEach(async () => {
 
 describe("getPresignedUrlFn", () => {
   it("inserts an uploading row and presigns a put url for a new file", async () => {
-    const value = expectOk(
-      await getPresignedUrlFn(ctx, { ...uploadInput(), resourceId: topicId, userId }),
-    );
+    const value = expectOk(await getPresignedUrlFn(ctx, { ...uploadInput(), topicId, userId }));
 
     const s3Key = `${userId}/${topicId}/V1StGXR8_Z5jdHi6B-myT`;
     expect(value).toEqual({ type: "upload", presignedUrl: `https://s3.test/put/${s3Key}` });
@@ -85,7 +82,7 @@ describe("getPresignedUrlFn", () => {
     await seedFile({ userId, topicId, sha256, status: "processing" });
 
     const value = expectOk(
-      await getPresignedUrlFn(ctx, { ...uploadInput({ sha256 }), resourceId: topicId, userId }),
+      await getPresignedUrlFn(ctx, { ...uploadInput({ sha256 }), topicId, userId }),
     );
 
     expect(value).toEqual({ type: "skipped" });
@@ -98,7 +95,7 @@ describe("getPresignedUrlFn", () => {
     await seedFile({ userId, topicId, sha256, status: "ready" });
 
     const value = expectOk(
-      await getPresignedUrlFn(ctx, { ...uploadInput({ sha256 }), resourceId: topicId, userId }),
+      await getPresignedUrlFn(ctx, { ...uploadInput({ sha256 }), topicId, userId }),
     );
 
     expect(value).toEqual({ type: "skipped" });
@@ -111,7 +108,7 @@ describe("getPresignedUrlFn", () => {
     const { s3Key } = await seedFile({ userId, topicId, sha256, status: "failed" });
 
     const value = expectOk(
-      await getPresignedUrlFn(ctx, { ...uploadInput({ sha256 }), resourceId: topicId, userId }),
+      await getPresignedUrlFn(ctx, { ...uploadInput({ sha256 }), topicId, userId }),
     );
 
     expect(value).toEqual({ type: "upload", presignedUrl: `https://s3.test/put/${s3Key}` });
@@ -127,7 +124,7 @@ describe("getPresignedUrlFn", () => {
     expectOk(
       await getPresignedUrlFn(ctx, {
         ...uploadInput({ sha256, displayName: "renamed.pdf" }),
-        resourceId: topicId,
+        topicId,
         userId,
       }),
     );
@@ -137,18 +134,36 @@ describe("getPresignedUrlFn", () => {
     });
   });
 
+  it("gives concurrent uploads of the same bytes one row", async () => {
+    const [first, second] = await Promise.all([
+      getPresignedUrlFn(ctx, { ...uploadInput(), topicId, userId }),
+      getPresignedUrlFn(ctx, { ...uploadInput(), fileId: createSafeId<"file">(), topicId, userId }),
+    ]);
+
+    expect(expectOk(first).type).toBe("upload");
+    expect(expectOk(second).type).toBe("upload");
+
+    const rows = expectOk(
+      await db.run((database) =>
+        database.query.file.findMany({ where: { topicId }, columns: { status: true } }),
+      ),
+    );
+
+    expect(rows).toEqual([{ status: "uploading" }]);
+  });
+
   it("rejects unsupported and oversized files before touching the database", async () => {
     const unsupported = expectErr(
       await getPresignedUrlFn(ctx, {
         ...uploadInput({ mimeType: "application/x-unknown" }),
-        resourceId: topicId,
+        topicId,
         userId,
       }),
     );
     const tooLarge = expectErr(
       await getPresignedUrlFn(ctx, {
         ...uploadInput({ sizeBytes: UPLOAD_MAX_BYTES + 1 }),
-        resourceId: topicId,
+        topicId,
         userId,
       }),
     );
@@ -157,20 +172,6 @@ describe("getPresignedUrlFn", () => {
     expect(unsupported).toMatchObject({ reason: "unsupported-mime-type" });
     expect(tooLarge).toMatchObject({ reason: "file-too-large" });
     expect(await findFileBySha256(topicId, SHA256)).toBeUndefined();
-    expect(fakeS3.calls).toEqual([]);
-  });
-
-  it("reports a bad request when the thread is not inside a topic", async () => {
-    const error = expectErr(
-      await getPresignedUrlFn(ctx, {
-        ...uploadInput(),
-        resourceId: "Uakgb_J5m9g-0JDMbcJqL",
-        userId,
-      }),
-    );
-
-    expect(ServerFnError.is(error)).toBe(true);
-    expect(error).toMatchObject({ status: "bad-request" });
     expect(fakeS3.calls).toEqual([]);
   });
 });

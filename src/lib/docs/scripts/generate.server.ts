@@ -26,8 +26,17 @@ const readVersion = async (path: string): Promise<string> => {
   throw new Error(`No version field in ${path}`);
 };
 
-/** Upstream `.d.ts` files hard-wrap their doc comments; the model wants flowing prose. */
-const unwrap = (text: string): string => text.replace(/\s*\n\s*/g, " ").trim();
+/**
+ * Upstream `.d.ts` files hard-wrap their doc comments; the model wants flowing prose. Fenced code
+ * keeps its lines, since flattening them would turn a `//` comment into one that swallows the code
+ * after it.
+ */
+const unwrap = (text: string): string =>
+  text
+    .split(/(```[\s\S]*?```)/)
+    .map((part, index) => (index % 2 === 1 ? `\n${part}\n` : part.replace(/\s*\n\s*/g, " ")))
+    .join("")
+    .trim();
 
 type Documentation = {
   description: string;
@@ -272,6 +281,36 @@ const toPapaparseMembers = (file: SourceFile): DocsMember[] => {
   return groupOverloads(raw.filter((entry) => entry.name.length > 0));
 };
 
+// Everything the file declares but does not export is an internal of the radix tree.
+const toMinisearchMembers = (file: SourceFile): DocsMember[] => {
+  const miniSearch = file.getClassOrThrow("MiniSearch");
+  const isPublic = (member: { getScope: () => string }): boolean => member.getScope() === "public";
+  const exported = file
+    .getExportDeclarations()
+    .flatMap((declaration) =>
+      declaration.getNamedExports().map((specifier) => specifier.getName()),
+    );
+
+  const raw = [
+    ...miniSearch
+      .getConstructors()
+      .map((declaration) => toRawMember("MiniSearch", "function", declaration)),
+    ...[...miniSearch.getInstanceMethods(), ...miniSearch.getStaticMethods()]
+      .filter(isPublic)
+      .map((declaration) => toRawMember(declaration.getName(), "function", declaration)),
+    ...miniSearch
+      .getGetAccessors()
+      .filter(isPublic)
+      .map((declaration) => toRawMember(declaration.getName(), "constant", declaration)),
+    ...file
+      .getTypeAliases()
+      .filter((declaration) => exported.includes(declaration.getName()))
+      .map((declaration) => toRawMember(declaration.getName(), "interface", declaration)),
+  ];
+
+  return groupOverloads(raw);
+};
+
 type LibrarySource = {
   library: DocsLibrary["library"];
   importHint: string;
@@ -286,6 +325,15 @@ const sources: LibrarySource[] = [
     packagePath: "./node_modules/mathjs/package.json",
     members: () =>
       toMathjsMembers(project.addSourceFileAtPath("./node_modules/mathjs/types/index.d.ts")),
+  },
+  {
+    library: "minisearch",
+    importHint: 'import MiniSearch from "minisearch"',
+    packagePath: "./node_modules/minisearch/package.json",
+    members: () =>
+      toMinisearchMembers(
+        project.addSourceFileAtPath("./node_modules/minisearch/dist/es/index.d.ts"),
+      ),
   },
   {
     library: "papaparse",

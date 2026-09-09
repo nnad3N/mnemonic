@@ -1,5 +1,5 @@
 import { Result } from "better-result";
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 
 import type { ThreadRunStatus } from "@/db/schema.server";
 import { threadRun } from "@/db/schema.server";
@@ -48,4 +48,49 @@ export const getThreadStatesFn = Kit.gen(async function* (
   );
 
   return Result.ok(states);
+});
+
+type StopThreadRunCtx = Kits<[DbKit, DurableAgentsKit]>;
+
+type StopThreadRunInput = {
+  threadId: string;
+};
+
+export const stopThreadRunFn = Kit.gen(async function* (
+  ctx: StopThreadRunCtx,
+  input: StopThreadRunInput,
+) {
+  const run = yield* await ctx.db.run((db) =>
+    db.query.threadRun.findFirst({
+      columns: { runId: true, status: true },
+      where: { threadId: input.threadId },
+    }),
+  );
+
+  if (run?.status !== "running") {
+    return Result.ok();
+  }
+
+  yield* await ctx.durableAgents.publishCancel({ runId: run.runId });
+
+  return Result.ok();
+});
+
+type DeleteThreadRunCtx = Kits<[DbKit]>;
+
+type DeleteThreadRunInput = {
+  threadId: string;
+};
+
+export const deleteThreadRunFn = Kit.gen(async function* (
+  ctx: DeleteThreadRunCtx,
+  input: DeleteThreadRunInput,
+) {
+  yield* await ctx.db.run((db) =>
+    db
+      .delete(threadRun)
+      .where(and(eq(threadRun.threadId, input.threadId), ne(threadRun.status, "running"))),
+  );
+
+  return Result.ok();
 });

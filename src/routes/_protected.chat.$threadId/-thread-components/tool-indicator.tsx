@@ -4,7 +4,6 @@ import { ChevronRightIcon } from "lucide-react";
 import type { ComponentProps, PropsWithChildren } from "react";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useMessageState } from "@/routes/_protected.chat.$threadId/-hooks/use-message-state";
 
@@ -63,9 +62,10 @@ export const CollapsibleToolIndicatorContent = ({
   children,
   ...props
 }: PropsWithChildren<ComponentProps<typeof CollapsibleContent>>) => (
-  <CollapsibleContent {...props}>
-    <ScrollArea className={cn("text-sm whitespace-pre-wrap text-muted-foreground", className)}>
-      {children}
-    </ScrollArea>
+  <CollapsibleContent
+    {...props}
+    className={cn("text-sm whitespace-pre-wrap text-muted-foreground", className)}
+  >
+    {children}
   </CollapsibleContent>
 );

@@ -20,7 +20,7 @@ import { memoryKit, type MemoryKit } from "@/lib/memory-kit.server";
 import { authMiddleware } from "@/lib/middleware/auth.middleware";
 import { resolveProviderKey } from "@/lib/middleware/resolve-provider-key.server";
 import { resolveThread } from "@/lib/middleware/resolve-thread.server";
-import { modelCapabilityLevels } from "@/lib/model-capability";
+import { ModelOptions } from "@/lib/model-option";
 import type { SafeId } from "@/lib/safe-id";
 import { createSafeId } from "@/lib/safe-id";
 import { getMnemonicAgent } from "@/mastra/agents/id.server";
@@ -29,7 +29,7 @@ import type { WorkTiming } from "@/routes/_protected.chat.$threadId/-thread-type
 
 import { toThreadUIStream } from "./-chat-shared.server";
 
-export const uiMessageSchema = v.object({
+const uiMessageSchema = v.object({
   id: v.pipe(v.string(), v.nanoid()),
   role: v.picklist(["system", "user", "assistant"]),
   parts: v.array(v.any()),
@@ -40,13 +40,12 @@ const chatRequestSchema = v.object({
   threadId: v.pipe(v.string(), v.nanoid()),
   messages: v.array(uiMessageSchema),
   settings: v.object({
-    modelCapability: v.picklist(modelCapabilityLevels),
+    modelOption: v.picklist(ModelOptions.values),
   }),
   trigger: v.optional(v.picklist(["submit-message", "regenerate-message"])),
   id: v.optional(v.pipe(v.string(), v.nanoid())),
   messageId: v.optional(v.pipe(v.string(), v.nanoid())),
   metadata: v.optional(v.unknown()),
-  resourceId: v.optional(v.pipe(v.string(), v.nanoid())),
 });
 
 type ChatRequest = v.InferOutput<typeof chatRequestSchema>;
@@ -147,7 +146,7 @@ const settleRun = async (
 };
 
 const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
-  const [{ agentId, thread, topicId }, providerKey] = yield* await Kit.promiseAll([
+  const [{ agentId, resourceId, topicId }, providerKey] = yield* await Kit.promiseAll([
     resolveThread(ctx, { threadId: input.body.threadId, userId: input.userId }),
     resolveProviderKey(ctx, input.userId),
   ]);
@@ -178,7 +177,7 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
   const requestContext = new RequestContext<MnemonicRequestContext>();
   requestContext.set("providerKeyId", providerKey.id);
   requestContext.set("userId", input.userId);
-  requestContext.set("modelCapability", input.body.settings.modelCapability);
+  requestContext.set("modelOption", input.body.settings.modelOption);
   requestContext.set("threadId", input.body.threadId);
 
   if (topicId) {
@@ -212,9 +211,7 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
   yield* await Kit.promiseAll([
     ctx.durableAgents.connect(),
     ctx.memory.saveMessages({
-      messages: new MessageList({ threadId, resourceId: thread.resourceId })
-        .add(messagesToSend, "user")
-        .get.all.db(),
+      messages: new MessageList({ threadId, resourceId }).add(messagesToSend, "user").get.all.db(),
     }),
   ]);
 
@@ -225,7 +222,7 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
         delegation: { messageFilter: () => [] },
         maxSteps: 10,
         memory: {
-          resource: thread.resourceId,
+          resource: resourceId,
           thread: threadId,
         },
         requestContext,
@@ -291,6 +288,7 @@ const chatFn = Kit.gen(async function* (ctx: ChatCtx, input: ChatInput) {
     runId,
     agentId,
     status: "running" as const,
+    versionedNoteIds: [],
     startedAt: new Date(),
     finishedAt: null,
   };

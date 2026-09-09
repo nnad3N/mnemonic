@@ -7,28 +7,31 @@ import * as v from "valibot";
 import { dbKit } from "@/lib/db-kit.server";
 import * as Kit from "@/lib/kit";
 import { resolveProviderKeyById } from "@/lib/middleware/resolve-provider-key.server";
-import { DEFAULT_MODEL_CAPABILITY } from "@/lib/model-capability";
-import type { ChatModel, ModelAgentId } from "@/mastra/models.server";
-import { getAgentModelConfig } from "@/mastra/models.server";
+import type { ProviderKey } from "@/lib/middleware/resolve-provider-key.server";
+import { DEFAULT_MODEL_OPTION } from "@/lib/model-option";
+import type { ModelAgentId } from "@/mastra/models.server";
+import { EMBEDDING_DIMENSION, EMBEDDING_MODEL, getAgentModel } from "@/mastra/models.server";
 import { mnemonicRequestContextSchema } from "@/mastra/request-context.server";
 
-const createOpenrouterProvider = (apiKey: string) =>
-  createOpenRouter({
-    apiKey,
-    appName: "Mnemonic",
-  });
+export const getModel = (providerKey: ProviderKey) => {
+  switch (providerKey.provider) {
+    // oxlint-disable-next-line typescript/no-unnecessary-condition
+    case "openrouter":
+      return createOpenRouter({ apiKey: providerKey.key, appName: "Mnemonic" });
+  }
+};
 
-const EMBEDDING_MODEL = "qwen/qwen3-embedding-8b";
-const OBSERVATIONAL_MEMORY_MODEL: ChatModel = "xiaomi/mimo-v2.5";
-const THREAD_TITLE_MODEL: ChatModel = "google/gemma-4-26b-a4b-it";
+const EMBEDDING_BATCH_SIZE = 96;
 
 /**
  * Mastra only accepts embedding models tagged `v2` or `v3`, while the AI SDK v7 OpenRouter
  * provider emits `v4`. The interfaces are otherwise identical except for the `deprecated`
  * warning variant, which `v3` cannot represent. Drop this once Mastra supports v4 embedders.
  */
-export const getEmbeddingModel = (apiKey: string) => {
-  const openrouterEmbedding = createOpenrouterProvider(apiKey).textEmbeddingModel(EMBEDDING_MODEL);
+export const getEmbeddingModel = (providerKey: ProviderKey) => {
+  const openrouterEmbedding = getModel(providerKey).textEmbeddingModel(EMBEDDING_MODEL, {
+    extraBody: { dimensions: EMBEDDING_DIMENSION },
+  });
 
   return {
     doEmbed: async (options: Parameters<typeof openrouterEmbedding.doEmbed>[0]) => {
@@ -39,7 +42,8 @@ export const getEmbeddingModel = (apiKey: string) => {
         warnings: warnings.filter((warning) => warning.type !== "deprecated"),
       };
     },
-    maxEmbeddingsPerCall: openrouterEmbedding.maxEmbeddingsPerCall,
+    // OpenRouter reports no batch limit, which makes the AI SDK embed a whole document in one request.
+    maxEmbeddingsPerCall: EMBEDDING_BATCH_SIZE,
     modelId: openrouterEmbedding.modelId,
     provider: openrouterEmbedding.provider,
     specificationVersion: "v3" as const,
@@ -72,35 +76,19 @@ const getRequestProvider = async (input: ModelResolverInput) => {
     throw result.error;
   }
 
-  return {
-    modelCapability: parsed.output.modelCapability,
-    openrouter: createOpenrouterProvider(result.value.key),
-  };
+  return { modelOption: parsed.output.modelOption, providerKey: result.value };
 };
 
-export const getAgentModel = (agentId: ModelAgentId) => async (input: ModelResolverInput) => {
+export const resolveAgentModel = (agentId: ModelAgentId) => async (input: ModelResolverInput) => {
   const resolved = await getRequestProvider(input);
+  const config = getAgentModel(agentId, resolved?.modelOption ?? DEFAULT_MODEL_OPTION);
 
   if (!resolved) {
-    return getAgentModelConfig(agentId, DEFAULT_MODEL_CAPABILITY).model;
+    return config.model;
   }
 
-  const config = getAgentModelConfig(agentId, resolved.modelCapability);
-
-  return resolved.openrouter(config.model, config.openrouter);
+  return getModel(resolved.providerKey)(config.model, config.openrouter);
 };
-
-export const getStaticModel = (model: ChatModel) => async (input: ModelResolverInput) => {
-  const resolved = await getRequestProvider(input);
-
-  return resolved?.openrouter(model) ?? model;
-};
-
-export const getObservationalMemoryModel = (apiKey: string) =>
-  createOpenrouterProvider(apiKey)(OBSERVATIONAL_MEMORY_MODEL);
-
-export const getThreadTitleModel = (apiKey: string) =>
-  createOpenrouterProvider(apiKey)(THREAD_TITLE_MODEL);
 
 type ObservationalMemoryRetrieval = NonNullable<ObservationalMemoryOptions["retrieval"]>;
 
@@ -112,6 +100,8 @@ export const observationalMemoryOptions = (
   activateOnProviderChange: true,
   model,
   observation: {
+    bufferTokens: 0.5,
+    messageTokens: 60_000,
     observeAttachments: false,
   },
   reflection: {

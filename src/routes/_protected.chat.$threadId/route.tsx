@@ -1,5 +1,4 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { getGT } from "gt-tanstack-start";
 import { PlateController } from "platejs/react";
 
 import {
@@ -28,14 +27,10 @@ export const Route = createFileRoute("/_protected/chat/$threadId")({
       }
     }
 
-    const gt = await getGT();
-    const title = gt("New thread");
-
     if (search.topic) {
       await createTopicThread({
         data: {
           id: params.threadId,
-          title,
           topicId: search.topic,
         },
       });
@@ -43,7 +38,6 @@ export const Route = createFileRoute("/_protected/chat/$threadId")({
       await createConversation({
         data: {
           id: params.threadId,
-          title,
         },
       });
     }

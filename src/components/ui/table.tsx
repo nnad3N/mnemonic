@@ -167,7 +167,7 @@ export function TableSkeletonRows({
         <TableRow key={rowIndex}>
           {widths.map((width, cellIndex) => (
             <TableCell key={cellIndex}>
-              {width !== null && <Skeleton className={cn("h-5", width)} />}
+              {width && <Skeleton className={cn("h-5", width)} />}
             </TableCell>
           ))}
         </TableRow>

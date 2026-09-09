@@ -425,6 +425,51 @@ exports[`generated docs > mathjs contains exactly the namespace-importable membe
 ]
 `;
 
+exports[`generated docs > minisearch contains the public MiniSearch surface and its exported types 1`] = `
+[
+  "add",
+  "addAll",
+  "addAllAsync",
+  "AsPlainObject",
+  "autoSuggest",
+  "AutoVacuumOptions",
+  "BM25Params",
+  "CombinationOperator",
+  "dirtCount",
+  "dirtFactor",
+  "discard",
+  "discardAll",
+  "documentCount",
+  "getDefault",
+  "getStoredFields",
+  "has",
+  "isVacuuming",
+  "loadJS",
+  "loadJSAsync",
+  "loadJSON",
+  "loadJSONAsync",
+  "LowercaseCombinationOperator",
+  "MatchInfo",
+  "MiniSearch",
+  "Options",
+  "Query",
+  "QueryCombination",
+  "remove",
+  "removeAll",
+  "replace",
+  "search",
+  "SearchOptions",
+  "SearchResult",
+  "Suggestion",
+  "termCount",
+  "toJSON",
+  "vacuum",
+  "VacuumConditions",
+  "VacuumOptions",
+  "Wildcard",
+]
+`;
+
 exports[`generated docs > reads papaparse docs from the vendored types 1`] = `
 {
   "description": "Parse string

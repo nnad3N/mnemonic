@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
+import { plateToMarkdown } from "@/lib/plate";
 import { createComposerEditor } from "@/test/create-composer-editor";
 
-import { plateToMarkdown } from "./plate";
 import { getComposerLinkLabel, parseComposerLinkPasteSegments } from "./plate-plugins/link";
 
 describe("plateToMarkdown", () => {

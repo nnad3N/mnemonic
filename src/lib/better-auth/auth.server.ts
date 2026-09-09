@@ -24,7 +24,7 @@ const signUpContextSchema = v.pipe(
 export type SignUpContext = v.InferOutput<typeof signUpContextSchema>;
 
 export const auth = betterAuth({
-  database: drizzleAdapter(drizzleDb, { provider: "sqlite", schema: authSchema }),
+  database: drizzleAdapter(drizzleDb, { provider: "pg", schema: authSchema }),
   plugins: [
     passkey({
       registration: {

@@ -1,102 +1,104 @@
 import { defineRelationsPart } from "drizzle-orm";
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { boolean, index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
-export const user = sqliteTable("user", {
-  banExpires: integer("ban_expires", { mode: "timestamp_ms" }),
-  banned: integer("banned", { mode: "boolean" }),
-  banReason: text("ban_reason"),
-  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
-  email: text("email").notNull().unique(),
-  emailVerified: integer("email_verified", { mode: "boolean" }).default(false).notNull(),
+export const user = pgTable("user", {
   id: text("id").primaryKey(),
-  image: text("image"),
   name: text("name").notNull(),
-  role: text("role"),
-  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+  email: text("email").notNull().unique(),
+  emailVerified: boolean("email_verified").default(false).notNull(),
+  image: text("image"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
     .$onUpdate(() => new Date())
     .notNull(),
+  role: text("role"),
+  banned: boolean("banned").default(false),
+  banReason: text("ban_reason"),
+  banExpires: timestamp("ban_expires"),
 });
 
-export const session = sqliteTable(
+export const session = pgTable(
   "session",
   {
-    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
-    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
     id: text("id").primaryKey(),
-    impersonatedBy: text("impersonated_by"),
-    ipAddress: text("ip_address"),
+    expiresAt: timestamp("expires_at").notNull(),
     token: text("token").notNull().unique(),
-    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
       .$onUpdate(() => new Date())
       .notNull(),
+    ipAddress: text("ip_address"),
     userAgent: text("user_agent"),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    impersonatedBy: text("impersonated_by"),
   },
   (table) => [index("session_userId_idx").on(table.userId)],
 );
 
-export const account = sqliteTable(
+export const account = pgTable(
   "account",
   {
-    accessToken: text("access_token"),
-    accessTokenExpiresAt: integer("access_token_expires_at", { mode: "timestamp_ms" }),
-    accountId: text("account_id").notNull(),
-    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
     id: text("id").primaryKey(),
-    idToken: text("id_token"),
-    password: text("password"),
+    accountId: text("account_id").notNull(),
     providerId: text("provider_id").notNull(),
-    refreshToken: text("refresh_token"),
-    refreshTokenExpiresAt: integer("refresh_token_expires_at", { mode: "timestamp_ms" }),
-    scope: text("scope"),
-    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
-      .$onUpdate(() => new Date())
-      .notNull(),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    idToken: text("id_token"),
+    accessTokenExpiresAt: timestamp("access_token_expires_at"),
+    refreshTokenExpiresAt: timestamp("refresh_token_expires_at"),
+    scope: text("scope"),
+    password: text("password"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .$onUpdate(() => new Date())
+      .notNull(),
   },
   (table) => [index("account_userId_idx").on(table.userId)],
 );
 
-export const passkey = sqliteTable(
+export const verification = pgTable(
+  "verification",
+  {
+    id: text("id").primaryKey(),
+    identifier: text("identifier").notNull(),
+    value: text("value").notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [index("verification_identifier_idx").on(table.identifier)],
+);
+
+export const passkey = pgTable(
   "passkey",
   {
-    aaguid: text("aaguid"),
-    backedUp: integer("backed_up", { mode: "boolean" }).notNull(),
-    counter: integer("counter").notNull(),
-    createdAt: integer("created_at", { mode: "timestamp_ms" }),
-    credentialID: text("credential_id").notNull(),
-    deviceType: text("device_type").notNull(),
     id: text("id").primaryKey(),
     name: text("name"),
     publicKey: text("public_key").notNull(),
-    transports: text("transports"),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    credentialID: text("credential_id").notNull(),
+    counter: integer("counter").notNull(),
+    deviceType: text("device_type").notNull(),
+    backedUp: boolean("backed_up").notNull(),
+    transports: text("transports"),
+    createdAt: timestamp("created_at"),
+    aaguid: text("aaguid"),
   },
   (table) => [
     index("passkey_userId_idx").on(table.userId),
     index("passkey_credentialID_idx").on(table.credentialID),
   ],
-);
-
-export const verification = sqliteTable(
-  "verification",
-  {
-    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
-    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
-    id: text("id").primaryKey(),
-    identifier: text("identifier").notNull(),
-    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
-      .$onUpdate(() => new Date())
-      .notNull(),
-    value: text("value").notNull(),
-  },
-  (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
 const authTables = { account, passkey, session, user, verification };

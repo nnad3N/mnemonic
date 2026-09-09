@@ -1,10 +1,8 @@
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
-import { matchError, Result } from "better-result";
-import { and, eq, ne } from "drizzle-orm";
+import { matchError } from "better-result";
 import { produce } from "immer";
 
-import { threadRun } from "@/db/schema.server";
 import { dbKit } from "@/lib/db-kit.server";
 import { durableAgentsKit } from "@/lib/durable-agents-kit.server";
 import { ServerFnError, toServerFnError } from "@/lib/errors/server-fn-error";
@@ -13,7 +11,7 @@ import { threadAccessMiddleware } from "@/lib/middleware/assert-thread-access.mi
 import { authMiddleware } from "@/lib/middleware/auth.middleware";
 import { sidebarQueries } from "@/routes/-sidebar/sidebar.functions";
 
-import { getThreadStatesFn } from "./thread-run.server";
+import { deleteThreadRunFn, getThreadStatesFn, stopThreadRunFn } from "./thread-run.server";
 import { createThreadTitle } from "./thread.functions";
 
 export const threadRunQueries = {
@@ -59,13 +57,13 @@ export const threadMutations = {
     }),
 };
 
-const threadStatesCtx = Kit.createContext(dbKit, durableAgentsKit);
+const threadRunCtx = Kit.createContext(dbKit, durableAgentsKit);
 
 export const getThreadStates = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .handler(async ({ context }) =>
     Kit.run(async () =>
-      getThreadStatesFn(threadStatesCtx, { userId: context.user.id }),
+      getThreadStatesFn(threadRunCtx, { userId: context.user.id }),
     ).throws<ServerFnError>((error) =>
       matchError(error, {
         DatabaseError: () => toServerFnError.serverError("Failed to load thread run state"),
@@ -76,39 +74,25 @@ export const getThreadStates = createServerFn({ method: "GET" })
 
 export const deleteThreadRun = createServerFn({ method: "POST" })
   .middleware([threadAccessMiddleware])
-  .handler(async ({ context }) => {
-    const result = await Kit.get(dbKit).run((db) =>
-      db
-        .delete(threadRun)
-        .where(and(eq(threadRun.threadId, context.thread.id), ne(threadRun.status, "running"))),
-    );
-
-    if (Result.isError(result)) {
-      throw toServerFnError.serverError("Failed to dismiss the conversation run");
-    }
-  });
+  .handler(async ({ context }) =>
+    Kit.run(async () =>
+      deleteThreadRunFn(threadRunCtx, { threadId: context.thread.id }),
+    ).throws<ServerFnError>((error) =>
+      matchError(error, {
+        DatabaseError: () => toServerFnError.serverError("Failed to dismiss the conversation run"),
+      }),
+    ),
+  );
 
 export const stopThreadRun = createServerFn({ method: "POST" })
   .middleware([threadAccessMiddleware])
-  .handler(async ({ context }) => {
-    const result = await Kit.get(dbKit).run((db) =>
-      db.query.threadRun.findFirst({
-        columns: { runId: true, status: true },
-        where: { threadId: context.thread.id },
+  .handler(async ({ context }) =>
+    Kit.run(async () =>
+      stopThreadRunFn(threadRunCtx, { threadId: context.thread.id }),
+    ).throws<ServerFnError>((error) =>
+      matchError(error, {
+        DatabaseError: () => toServerFnError.serverError("Failed to stop conversation"),
+        DurableAgentsError: () => toServerFnError.serverError("Failed to stop conversation"),
       }),
-    );
-
-    if (Result.isError(result)) {
-      throw toServerFnError.serverError("Failed to stop conversation");
-    }
-
-    if (result.value?.status !== "running") {
-      return;
-    }
-
-    const published = await Kit.get(durableAgentsKit).publishCancel({ runId: result.value.runId });
-
-    if (Result.isError(published)) {
-      throw toServerFnError.serverError("Failed to stop conversation");
-    }
-  });
+    ),
+  );

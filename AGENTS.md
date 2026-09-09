@@ -28,21 +28,9 @@ A self-hosted research tool for one person. Each thread is a function. Highly un
 
 `.server.ts` has the business logic. Test that.
 
-### Query key factories
+### Query keys
 
-One factory per feature, named `{resource}Queries`, in that feature's `.functions.ts`. Always array keys, most generic to most specific, each level spreading the parent. `as const` on every entry. This is TkDodo's factory from [Effective React Query Keys](https://tkdodo.eu/blog/effective-react-query-keys):
-
-```
-const todoQueries = {
-  all: ['todos'] as const,
-  lists: () => [...todoQueries.all, 'list'] as const,
-  list: (filters: string) => [...todoQueries.lists(), { filters }] as const,
-  details: () => [...todoQueries.all, 'detail'] as const,
-  detail: (id: number) => [...todoQueries.details(), id] as const,
-}
-```
-
-Methods are `all`, `lists`, `list`, `details`, `detail`. Segments are the resource (`todos`), then `list` or `detail`. Filters sit in an object. Wrap the leaves in `queryOptions`. `all`, `lists`, and `details` stay key-only so prefix invalidation still works.
+One `{resource}Queries` object per feature, in its `.functions.ts`. Keys live inside `queryOptions`. The shape and naming rules are in [`CODING_STANDARDS.md`](CODING_STANDARDS.md#query-keys-live-inside-their-query-options).
 
 ## How to write code
 
@@ -52,7 +40,9 @@ Fight for the smallest model that makes the correct behavior obvious without com
 
 Write like a lazy engineer. Import a trusted abstraction from a package this repo already uses before inventing a local copy. Reuse a function that already lives here when it fits. Every new function is maintenance and review load. Before adding code, name why adding it is a bad idea.
 
-Comments describe how a thing is used, workarounds, and move when the code moves. To be used mostly to describe functions, not to annotate every line of behavior.
+Do not comment code that explains itself. A comment earns its place only when it records something the code cannot: a workaround and the quirk it works around, an ordering that is load-bearing, a constraint that lives outside the file. Never restate a name, a signature, or the lines below it, and never write a doc comment just because a function is exported. State the fact plainly and stop; do not argue for the code. Comments move when the code moves.
+
+Brace a `return` that yields a value. The only one-line return is the bare `return;`.
 
 When writing code always follow [`CODING_STANDARDS.md`](CODING_STANDARDS.md). They describe in detail how you should structure and write code.
 

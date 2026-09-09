@@ -9,10 +9,11 @@ import type { PlateEditor } from "platejs/react";
 import { useEditorRef, useEditorSelector } from "platejs/react";
 
 import { useMessageScroller } from "@/components/ui/message-scroller";
+import { plateToMarkdown } from "@/lib/plate";
 import { sidebarQueries } from "@/routes/-sidebar/sidebar.functions";
 
 import { threadMutations } from "../-thread-api/thread-run.functions";
-import { getThreadEditorId, plateToMarkdown } from "../-thread-components/composer/plate";
+import { getThreadEditorId } from "../-thread-components/composer/plate";
 import type { ThreadMetadataAttachment, ThreadUIMessage } from "../-thread-types";
 import type { ThreadInputLocation } from "../../-chat-store";
 import { useChatStore } from "../../-chat-store";

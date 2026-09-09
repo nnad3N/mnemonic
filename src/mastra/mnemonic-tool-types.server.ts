@@ -7,7 +7,12 @@ import type { TopicAgentTools } from "@/mastra/agents/topic-agent.server";
 type EnabledMemoryToolName = "recall";
 type MemoryTools = Pick<ReturnType<Memory["listTools"]>, EnabledMemoryToolName>;
 
-type MnemonicTools = ConversationAgentTools & MemoryTools & TopicAgentTools;
+type MergeToolMaps<T> = {
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type
+  [K in T extends unknown ? keyof T : never]: Extract<T, Record<K, unknown>>[K];
+};
+
+type MnemonicTools = MergeToolMaps<ConversationAgentTools | MemoryTools | TopicAgentTools>;
 
 // Mastra's InferUITool only matches the first four Tool generics, so tools with a typed
 // request context fail its conditional type and infer input/output as never.

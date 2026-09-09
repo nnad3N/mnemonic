@@ -14,6 +14,8 @@ A chat conversation scoped to one topic. Mastra memory and the sidebar list thre
 
 An uploaded document attached to a topic. `SafeId<"file">` in Drizzle. Distinct from Mastra `resourceId` / `thread.resourceId`.
 
+A file's **content** is stored as rows of text: one per page for formats that have pages (PDF, DOCX), one holding the whole text otherwise. `file_content` in Drizzle; `page` is null when the format has no pages.
+
 ## note
 
 A markdown document the user owns. Work from a thread that is kept. Scoped to a thread or a topic. `SafeId<"note">`.

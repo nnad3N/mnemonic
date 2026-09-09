@@ -1,76 +1,75 @@
 import type { OpenRouterChatSettings } from "@openrouter/ai-sdk-provider";
 
 import * as Kit from "@/lib/kit";
-import type { ModelCapability } from "@/lib/model-capability";
+import type { ModelOption } from "@/lib/model-option";
 
 export const CONVERSATION_AGENT_ID = "conversation-agent";
 export const TOPIC_AGENT_ID = "topic-agent";
 export const READER_AGENT_ID = "reader-agent";
 export const WORKER_AGENT_ID = "worker-agent";
 
-/** Agents whose model follows the user's capability choice. The reader pins its own. */
 export const ModelAgentIds = Kit.literals.from()([
   CONVERSATION_AGENT_ID,
   TOPIC_AGENT_ID,
+  READER_AGENT_ID,
   WORKER_AGENT_ID,
 ]);
 
 export type ModelAgentId = Kit.LiteralMember<typeof ModelAgentIds>;
 
-type ModelInputs = {
-  /** OpenRouter routes a PDF part through its file-parser plugin unless the model takes files. */
-  acceptsPdf: boolean;
-};
-
-/** Every chat model Mnemonic calls, by OpenRouter id. */
-const modelInputs = {
-  "google/gemini-3.7-flash": { acceptsPdf: true },
-  "google/gemma-4-26b-a4b-it": { acceptsPdf: false },
-  "moonshotai/kimi-k3": { acceptsPdf: false },
-  "openai/gpt-5.6-luna": { acceptsPdf: true },
-  "xiaomi/mimo-v2.5": { acceptsPdf: false },
-} satisfies Record<string, ModelInputs>;
-
-export type ChatModel = keyof typeof modelInputs;
-
-export const modelAcceptsPdf = (model: ChatModel) => modelInputs[model].acceptsPdf;
-
 type AgentModel = {
-  model: ChatModel;
+  model: string;
+  inputs: {
+    pdf: boolean;
+    images: boolean;
+  };
   openrouter?: OpenRouterChatSettings;
 };
 
-// oxlint-disable-next-line anti-slop/no-known-value-widening
-const models: Record<ModelCapability, AgentModel> = {
-  standard: {
-    model: "openai/gpt-5.6-luna",
-    openrouter: {
-      extraBody: {
-        verbosity: "low",
-      },
-      reasoning: {
-        effort: "high",
-      },
-    },
+const models = {
+  research: {
+    model: "z-ai/glm-5.3-flash",
+    inputs: { pdf: false, images: true },
   },
-  balanced: {
-    model: "google/gemini-3.7-flash",
+  analysis: {
+    model: "deepseek/deepseek-v4-flash-vision-exp",
+    inputs: { pdf: false, images: true },
     openrouter: {
       reasoning: {
         effort: "high",
       },
     },
   },
-  max: {
-    model: "moonshotai/kimi-k3",
+  knowledge: {
+    model: "deepseek/deepseek-v4-pro-0813",
+    inputs: { pdf: false, images: false },
+    openrouter: {
+      reasoning: {
+        effort: "high",
+      },
+    },
   },
+} as const satisfies Record<ModelOption, AgentModel>;
+
+export const getAgentModel = (agentId: ModelAgentId, modelOption: ModelOption): AgentModel => {
+  switch (agentId) {
+    case CONVERSATION_AGENT_ID:
+    case TOPIC_AGENT_ID:
+      return models[modelOption];
+    case READER_AGENT_ID:
+    case WORKER_AGENT_ID:
+      return {
+        model: "z-ai/glm-5.3-flash",
+        inputs: { pdf: false, images: true },
+      };
+  }
 };
 
-const agentCapability = {
-  [CONVERSATION_AGENT_ID]: { standard: "standard", balanced: "balanced", max: "max" },
-  [TOPIC_AGENT_ID]: { standard: "standard", balanced: "balanced", max: "max" },
-  [WORKER_AGENT_ID]: { standard: "standard", balanced: "standard", max: "balanced" },
-} satisfies Record<ModelAgentId, Record<ModelCapability, ModelCapability>>;
+export const OBSERVATIONAL_MEMORY_MODEL = "z-ai/glm-5.3-flash";
+export const THREAD_TITLE_MODEL = "google/gemma-4-26b-a4b-it";
+export const FILE_DESCRIPTION_MODEL = "google/gemma-4-26b-a4b-it";
 
-export const getAgentModelConfig = (agentId: ModelAgentId, capability: ModelCapability) =>
-  models[agentCapability[agentId][capability]];
+export const EMBEDDING_MODEL = "qwen/qwen3-embedding-8b";
+
+// Matryoshka truncation from the native 4096: pgvector caps ANN indexes at 2000 dimensions,
+export const EMBEDDING_DIMENSION = 1024;

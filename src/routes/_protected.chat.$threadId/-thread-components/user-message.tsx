@@ -2,10 +2,8 @@ import { createStaticEditor, PlateStatic } from "platejs/static";
 import { useMemo } from "react";
 
 import { useClampHeight } from "@/hooks/use-clamp-height";
-import {
-  threadStaticEditorPlugins,
-  markdownToStaticPlate,
-} from "@/routes/_protected.chat.$threadId/-thread-components/composer/plate";
+import { markdownToStaticPlate } from "@/lib/plate";
+import { threadStaticEditorPlugins } from "@/routes/_protected.chat.$threadId/-thread-components/composer/plate";
 import {
   ComposerWrapper,
   ThreadComposer,

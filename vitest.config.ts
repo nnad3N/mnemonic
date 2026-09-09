@@ -27,6 +27,12 @@ export default defineConfig({
           sequence: {
             groupOrder: 0,
           },
+          // @platejs/math side-imports katex CSS; inline so Vite can stub it.
+          server: {
+            deps: {
+              inline: ["@platejs/math"],
+            },
+          },
           globalSetup: ["./src/test/global-setup.ts"],
           setupFiles: ["./src/test/setup-db.ts", "./src/test/setup.ts"],
           exclude: ["**/*.browser.test.{ts,tsx}", "**/node_modules/**"],

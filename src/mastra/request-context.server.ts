@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-import { modelCapabilityLevels } from "@/lib/model-capability";
+import { ModelOptions } from "@/lib/model-option";
 import { safeId } from "@/lib/safe-id";
 
 /**
@@ -12,8 +12,10 @@ import { safeId } from "@/lib/safe-id";
 export const mnemonicRequestContextSchema = v.object({
   providerKeyId: safeId<"byok">(),
   userId: safeId<"user">(),
-  modelCapability: v.picklist(modelCapabilityLevels),
+  modelOption: v.picklist(ModelOptions.values),
   threadId: v.pipe(v.string(), v.nanoid()),
+  // Mastra's `createVectorQueryTool` reads `filter` off the request context and applies it to
+  // every query; that is what scopes file vector search to the topic.
   filter: v.optional(
     v.object({
       topicId: v.optional(safeId<"topic">()),

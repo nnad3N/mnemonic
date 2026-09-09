@@ -2,10 +2,9 @@ import { BaseBasicBlocksPlugin, BaseBasicMarksPlugin } from "@platejs/basic-node
 import { MarkdownPlugin, remarkMention } from "@platejs/markdown";
 import { BaseMentionPlugin } from "@platejs/mention";
 import { MentionInputPlugin, MentionPlugin } from "@platejs/mention/react";
-import { normalizeStaticValue } from "platejs";
-import type { Value } from "platejs";
-import type { PlateEditor } from "platejs/react";
 import remarkGfm from "remark-gfm";
+
+import { toMentionUrl } from "@/lib/mention-key";
 
 import type { ThreadInputLocation } from "../../../-chat-store";
 import { ThreadLinkElement, ThreadLinkElementStatic } from "./link-node";
@@ -33,7 +32,7 @@ const sharedPlugins = [
             type: "link",
             children: [{ type: "text", value: node.value }],
             // oxlint-disable-next-line anti-slop/no-runtime-typeof
-            url: `mention:${typeof node.key === "string" ? node.key : node.value}`,
+            url: toMentionUrl(typeof node.key === "string" ? node.key : node.value),
           }),
         },
         a: {
@@ -75,17 +74,6 @@ export const threadEditorPlugins = [
   ThreadComposerFilePlugin,
   ThreadComposerPastePlugin,
 ];
-
-export const markdownToPlate = (editor: PlateEditor, markdown: string): Value =>
-  editor.getApi(MarkdownPlugin).markdown.deserialize(markdown);
-
-export const markdownToStaticPlate = (editor: PlateEditor, markdown: string): Value =>
-  normalizeStaticValue(markdownToPlate(editor, markdown));
-
-export const plateToMarkdown = (editor: PlateEditor, value?: Value): string =>
-  editor.getApi(MarkdownPlugin).markdown.serialize({
-    value: value ?? editor.children,
-  });
 
 export const getThreadEditorId = (threadId: string, location: ThreadInputLocation) =>
   `${threadId}-${location}`;

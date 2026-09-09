@@ -1,20 +1,24 @@
-import { sql } from "drizzle-orm";
-import type { SQLWrapper } from "drizzle-orm";
+import { ilike as ilikeOperator, like } from "drizzle-orm";
+import type { SQL, SQLWrapper } from "drizzle-orm";
 
 /**
- * `%` and `_` are LIKE wildcards, and SQLite applies no escape character unless the query
- * names one, so every pattern built here pairs this with an explicit `ESCAPE` clause.
+ * `%` and `_` are LIKE wildcards; Postgres treats `\` as the default escape character,
+ * so escaping the pattern is enough — no `ESCAPE` clause needed.
  */
 const escapeLikePattern = (value: string) =>
   value.replaceAll(/[\\%_]/g, (character) => `\\${character}`);
 
-/** Case-insensitive match on rows containing `value`, taken literally. */
-export const ilike = (column: SQLWrapper, value: string) =>
-  sql`lower(${column}) LIKE ${`%${escapeLikePattern(value.toLowerCase())}%`} ESCAPE '\\'`;
+/** Case-insensitive match on rows containing `value`, taken literally; no `value`, no filter. */
+export function ilike(column: SQLWrapper, value: string): SQL;
+export function ilike(column: SQLWrapper, value: string | undefined): SQL | undefined;
+export function ilike(column: SQLWrapper, value: string | undefined): SQL | undefined {
+  if (value === undefined) {
+    return;
+  }
+
+  return ilikeOperator(column, `%${escapeLikePattern(value)}%`);
+}
 
 /** Match rows whose column starts with `prefix`, taken literally. */
 export const startsWith = (column: SQLWrapper, prefix: string) =>
-  sql`${column} LIKE ${`${escapeLikePattern(prefix)}%`} ESCAPE '\\'`;
-
-/** Current time as Unix epoch milliseconds — use as `.default(now)` on `timestamp_ms` columns. */
-export const now = sql`(unixepoch() * 1000)`;
+  like(column, `${escapeLikePattern(prefix)}%`);

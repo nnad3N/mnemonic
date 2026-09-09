@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
-import { T, useLocale } from "gt-tanstack-start";
+import { T, useGT, useLocale } from "gt-tanstack-start";
 import { CircleIcon } from "lucide-react";
 
 import {
@@ -29,7 +29,9 @@ const PRESET_DAYS = {
 
 /** Inclusive instant bounds for a range, or null when no range is selected. */
 const resolveDateRange = (range: SidebarSearch["range"]) => {
-  if (range === undefined) return null;
+  if (range === undefined) {
+    return null;
+  }
 
   const timeZone = Temporal.Now.timeZoneId();
   const today = Temporal.Now.plainDateISO(timeZone);
@@ -56,7 +58,9 @@ const resolveDateRange = (range: SidebarSearch["range"]) => {
 type InstantRange = NonNullable<ReturnType<typeof resolveDateRange>>;
 
 const isWithinRange = (updatedAt: string, bounds: InstantRange | null) => {
-  if (!bounds) return true;
+  if (!bounds) {
+    return true;
+  }
 
   const instant = Temporal.Instant.from(updatedAt);
 
@@ -67,6 +71,7 @@ const isWithinRange = (updatedAt: string, bounds: InstantRange | null) => {
 };
 
 export const SidebarThreadList = () => {
+  const gt = useGT();
   const { q, range, topic } = useSearch({
     from: "/_protected",
     select: (search) => ({ q: search.q, range: search.range, topic: search.topic }),
@@ -78,7 +83,8 @@ export const SidebarThreadList = () => {
   }).data;
   const bounds = resolveDateRange(range);
   const visibleThreads = (threads.data ?? []).filter(
-    (thread) => matchesQuery(thread.title, q) && isWithinRange(thread.updatedAt, bounds),
+    (thread) =>
+      matchesQuery(thread.title || gt("New thread"), q) && isWithinRange(thread.updatedAt, bounds),
   );
 
   return (
@@ -111,7 +117,9 @@ type SidebarThreadItemProps = {
 };
 
 const SidebarThreadItem = ({ runState, thread }: SidebarThreadItemProps) => {
+  const gt = useGT();
   const locale = useLocale();
+  const displayTitle = thread.title || gt("New thread");
 
   return (
     <ThreadContextMenu
@@ -123,8 +131,9 @@ const SidebarThreadItem = ({ runState, thread }: SidebarThreadItemProps) => {
         <>
           <span
             className={cn("min-w-0 flex-1 truncate", runState?.status === "running" && "shimmer")}
+            title={displayTitle}
           >
-            {thread.title}
+            {displayTitle}
           </span>
           <ThreadTrailing
             isActive={isActive}

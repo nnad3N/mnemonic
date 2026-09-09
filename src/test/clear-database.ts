@@ -1,56 +1,27 @@
-import { createClient } from "@libsql/client";
+import { Client } from "pg";
 
-const isVectorTable = (name: string, sql: string) =>
-  sql.includes("F32_BLOB") || name.includes("vector_idx") || name.includes("libsql_vector");
-
-/**
- * Wipes the test database (app + Mastra).
- * Vector / F32_BLOB tables must be DROPped — DELETE leaves LibSQL shadow state
- * corrupt until the index is recreated via createIndex.
- */
+/** Wipes the test database (app + Mastra). A pgvector index survives a truncate. */
 export const clearDatabase = async () => {
   const url = process.env.DATABASE_URL;
   if (!url) {
     throw new Error("DATABASE_URL is required to clear the test database");
   }
 
-  const client = createClient({ url });
+  const client = new Client({ connectionString: url });
+  await client.connect();
 
   try {
-    const tables = await client.execute(
-      `SELECT name, sql FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'`,
+    const { rows } = await client.query<{ tablename: string }>(
+      `SELECT tablename FROM pg_tables WHERE schemaname = 'public'`,
     );
 
-    const statements: string[] = [];
-
-    for (const row of tables.rows) {
-      const name = row.name;
-      // oxlint-disable-next-line anti-slop/no-runtime-typeof
-      if (typeof name !== "string") {
-        continue;
-      }
-
-      // oxlint-disable-next-line anti-slop/no-runtime-typeof
-      const sql = typeof row.sql === "string" ? row.sql : "";
-
-      if (isVectorTable(name, sql)) {
-        statements.push(`DROP TABLE IF EXISTS "${name}";`);
-        continue;
-      }
-
-      statements.push(`DELETE FROM "${name}";`);
-    }
-
-    if (statements.length === 0) {
+    if (rows.length === 0) {
       return;
     }
 
-    await client.executeMultiple(`
-      PRAGMA foreign_keys = OFF;
-      ${statements.join("\n")}
-      PRAGMA foreign_keys = ON;
-    `);
+    const tables = rows.map((row) => `"${row.tablename}"`).join(", ");
+    await client.query(`TRUNCATE ${tables} RESTART IDENTITY CASCADE`);
   } finally {
-    client.close();
+    await client.end();
   }
 };
