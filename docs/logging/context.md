@@ -89,7 +89,7 @@ Three, each with an existing boundary that sees start and end:
 
 ### Existing boundary behaviour that matches the error decision
 
-`Kit.run(...).throws(mapError)` in `src/lib/kit/index.ts:80-95` already logs the *original* error
+`Kit.run(...).throws(mapError)` in `src/lib/kit/index.ts:80-95` already logs the _original_ error
 before applying `mapError`, and skips the log when the error is a `ServerFnError`. That is the
 "unexpected only, before transform" rule; it just writes to `console.error`.
 
