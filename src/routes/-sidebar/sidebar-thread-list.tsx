@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
-import { T, useLocale } from "gt-tanstack-start";
+import { T, useGT, useLocale } from "gt-tanstack-start";
 import { CircleIcon } from "lucide-react";
 
 import {
@@ -71,6 +71,7 @@ const isWithinRange = (updatedAt: string, bounds: InstantRange | null) => {
 };
 
 export const SidebarThreadList = () => {
+  const gt = useGT();
   const { q, range, topic } = useSearch({
     from: "/_protected",
     select: (search) => ({ q: search.q, range: search.range, topic: search.topic }),
@@ -82,7 +83,8 @@ export const SidebarThreadList = () => {
   }).data;
   const bounds = resolveDateRange(range);
   const visibleThreads = (threads.data ?? []).filter(
-    (thread) => matchesQuery(thread.title, q) && isWithinRange(thread.updatedAt, bounds),
+    (thread) =>
+      matchesQuery(thread.title || gt("New thread"), q) && isWithinRange(thread.updatedAt, bounds),
   );
 
   return (
@@ -115,7 +117,9 @@ type SidebarThreadItemProps = {
 };
 
 const SidebarThreadItem = ({ runState, thread }: SidebarThreadItemProps) => {
+  const gt = useGT();
   const locale = useLocale();
+  const displayTitle = thread.title || gt("New thread");
 
   return (
     <ThreadContextMenu
@@ -127,8 +131,9 @@ const SidebarThreadItem = ({ runState, thread }: SidebarThreadItemProps) => {
         <>
           <span
             className={cn("min-w-0 flex-1 truncate", runState?.status === "running" && "shimmer")}
+            title={displayTitle}
           >
-            {thread.title}
+            {displayTitle}
           </span>
           <ThreadTrailing
             isActive={isActive}

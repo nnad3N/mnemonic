@@ -58,7 +58,6 @@ export const SidebarScopeCombobox = () => {
     mutationFn: async () =>
       createTopic({
         data: {
-          conversationTitle: gt("New thread"),
           title: newTopicTitle,
         },
       }),
@@ -84,10 +83,10 @@ export const SidebarScopeCombobox = () => {
   const createThreadMutation = useMutation({
     mutationFn: async () => {
       if (selectedTopic) {
-        return createTopicThread({ data: { title: gt("New thread"), topicId: selectedTopic.id } });
+        return createTopicThread({ data: { topicId: selectedTopic.id } });
       }
 
-      return createConversation({ data: { title: gt("New thread") } });
+      return createConversation({ data: {} });
     },
     onError: () => {
       toast.error(gt("Could not create thread"));

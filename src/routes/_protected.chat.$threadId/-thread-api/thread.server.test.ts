@@ -1,10 +1,12 @@
+import { generateText } from "ai";
 import { Result } from "better-result";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { note } from "@/db/schema.server";
 import { dbKit } from "@/lib/db-kit.server";
 import * as Kit from "@/lib/kit";
 import { createMemoryKit, type MemoryApi, MemoryError, memoryKit } from "@/lib/memory-kit.server";
+import type { ProviderKey } from "@/lib/middleware/resolve-provider-key.server";
 import { createSafeId, toSafeId } from "@/lib/safe-id";
 import type { SafeId } from "@/lib/safe-id";
 import { createVectorKit, type VectorApi, VectorError, vectorKit } from "@/lib/vector-kit.server";
@@ -16,10 +18,31 @@ import { expectErr, expectOk } from "@/test/result";
 import { seedFile, seedThread, seedTopic, seedUser } from "@/test/seed";
 
 import {
+  createThreadTitleFn,
+  createTopicFn,
   deleteConversationFn,
   deleteTopicFn,
   mergeConsecutiveAssistantMessages,
 } from "./thread.server";
+
+// oxlint-disable-next-line anti-slop/no-module-mocking
+vi.mock("ai", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("ai")>();
+
+  return {
+    ...actual,
+    generateText: vi.fn<typeof generateText>(),
+  };
+});
+
+const generateTextMock = vi.mocked(generateText);
+
+const providerKey: ProviderKey = { key: "test-key", provider: "openrouter" };
+
+const stubGeneratedTitle = (text: string) => {
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- createThreadTitleFn only reads result.text
+  generateTextMock.mockResolvedValue({ text } as Awaited<ReturnType<typeof generateText>>);
+};
 
 const db = Kit.get(dbKit);
 const memory = Kit.get(memoryKit);
@@ -301,6 +324,107 @@ describe("deleteConversationFn", () => {
     expectOk(await deleteConversationFn(ctx, { threadId }));
 
     expect(await noteTitles()).toEqual(["Shared note"]);
+  });
+});
+
+describe("createTopicFn", () => {
+  beforeEach(async () => {
+    await seedUser({ id: userId });
+  });
+
+  afterEach(async () => {
+    await clearDatabase();
+  });
+
+  it("creates the first topic thread with an empty title", async () => {
+    const ctx = Kit.createContext(dbKit, memoryKit);
+    const { threadId } = expectOk(await createTopicFn(ctx, { title: "Research", userId }));
+
+    const thread = expectOk(await memory.getThreadById({ threadId }));
+
+    expect(thread?.title).toBe("");
+  });
+});
+
+describe("createThreadTitleFn", () => {
+  const titleCtx = Kit.createContext(memoryKit);
+
+  beforeEach(async () => {
+    await seedUser({ id: userId });
+    generateTextMock.mockReset();
+    stubGeneratedTitle("Generated Title");
+  });
+
+  afterEach(async () => {
+    await clearDatabase();
+  });
+
+  it("generates and writes a title when the thread is untitled", async () => {
+    const threadId = await seedThread({ resourceId: userId, title: "" });
+
+    const result = expectOk(
+      await createThreadTitleFn(titleCtx, {
+        metadata: {},
+        providerKey,
+        text: "Tell me about kumquats",
+        threadId,
+      }),
+    );
+
+    expect(result).toEqual({
+      id: threadId,
+      title: "Generated Title",
+      updatedAt: expect.any(String),
+    });
+    expect(generateTextMock).toHaveBeenCalledOnce();
+    expect(expectOk(await memory.getThreadById({ threadId }))?.title).toBe("Generated Title");
+  });
+
+  it("skips generation when the thread already has a title", async () => {
+    const threadId = await seedThread({ resourceId: userId, title: "My Name" });
+
+    const result = expectOk(
+      await createThreadTitleFn(titleCtx, {
+        metadata: {},
+        providerKey,
+        text: "Tell me about kumquats",
+        threadId,
+      }),
+    );
+
+    expect(result).toBeNull();
+    expect(generateTextMock).not.toHaveBeenCalled();
+    expect(expectOk(await memory.getThreadById({ threadId }))?.title).toBe("My Name");
+  });
+
+  it("skips the write when the thread is renamed during generation", async () => {
+    const threadId = await seedThread({ resourceId: userId, title: "" });
+
+    generateTextMock.mockImplementation(async () => {
+      expectOk(
+        await memory.updateThread({
+          id: threadId,
+          metadata: {},
+          title: "Renamed Mid Flight",
+        }),
+      );
+
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- createThreadTitleFn only reads result.text
+      return { text: "Generated Title" } as Awaited<ReturnType<typeof generateText>>;
+    });
+
+    const result = expectOk(
+      await createThreadTitleFn(titleCtx, {
+        metadata: {},
+        providerKey,
+        text: "Tell me about kumquats",
+        threadId,
+      }),
+    );
+
+    expect(result).toBeNull();
+    expect(generateTextMock).toHaveBeenCalledOnce();
+    expect(expectOk(await memory.getThreadById({ threadId }))?.title).toBe("Renamed Mid Flight");
   });
 });
 

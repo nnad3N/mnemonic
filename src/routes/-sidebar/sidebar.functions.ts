@@ -97,7 +97,7 @@ export const getOrCreateLatestConversation = createServerFn({ method: "GET" })
       thread: {
         id: nanoid(),
         resourceId: getResourceId({ topicId: undefined, userId: context.user.id }),
-        title: "New conversation",
+        title: "",
         createdAt: now,
         updatedAt: now,
       },

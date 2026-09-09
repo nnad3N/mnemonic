@@ -25,7 +25,6 @@ import type { ThreadUIMessage } from "@/routes/_protected.chat.$threadId/-thread
 type CreateTopicCtx = Kits<[DbKit, MemoryKit]>;
 
 type CreateTopicInput = {
-  conversationTitle: string;
   title: string;
   userId: SafeId<"user">;
 };
@@ -49,7 +48,7 @@ export const createTopicFn = Kit.gen(async function* (
     thread: {
       id: nanoid(),
       resourceId: getResourceId({ topicId, userId: input.userId }),
-      title: input.conversationTitle,
+      title: "",
       createdAt: now,
       updatedAt: now,
     },
@@ -239,6 +238,12 @@ export const createThreadTitleFn = Kit.gen(async function* (
   ctx: CreateThreadTitleCtx,
   input: CreateThreadTitleInput,
 ) {
+  const existing = yield* await ctx.memory.getThreadById({ threadId: input.threadId });
+
+  if (existing?.title) {
+    return Result.ok(null);
+  }
+
   const text = yield* await Result.tryPromise(
     {
       try: async () => {
@@ -267,6 +272,12 @@ export const createThreadTitleFn = Kit.gen(async function* (
   const title = sanitizeGeneratedText({ maxLength: MAX_TITLE_LENGTH, value: text });
 
   if (!title) {
+    return Result.ok(null);
+  }
+
+  const current = yield* await ctx.memory.getThreadById({ threadId: input.threadId });
+
+  if (current?.title) {
     return Result.ok(null);
   }
 

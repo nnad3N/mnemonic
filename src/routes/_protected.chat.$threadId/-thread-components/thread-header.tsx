@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useSearch } from "@tanstack/react-router";
 import { panic } from "better-result";
-import { T } from "gt-tanstack-start";
+import { T, useGT } from "gt-tanstack-start";
 import { FileIcon, FileTextIcon, PencilIcon, Trash2Icon } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
@@ -60,12 +60,10 @@ export const ThreadHeader = ({ page, threadId }: ThreadHeaderProps) => {
             <TopicCrumb title={topic.data.title} topicId={topic.data.id} />
           </BreadcrumbItem>
         )}
-        {topic.data && thread.data && <BreadcrumbSeparator className="shrink-0" />}
-        {thread.data && (
-          <BreadcrumbItem className="min-w-0 shrink">
-            <ThreadCrumb threadId={threadId} title={thread.data} />
-          </BreadcrumbItem>
-        )}
+        {topic.data && <BreadcrumbSeparator className="shrink-0" />}
+        <BreadcrumbItem className="min-w-0 shrink">
+          <ThreadCrumb threadId={threadId} title={thread.data} />
+        </BreadcrumbItem>
         {page !== undefined && (
           <>
             <BreadcrumbSeparator className="shrink-0" />
@@ -152,17 +150,22 @@ type ThreadCrumbProps = {
   title: string;
 };
 
-const ThreadCrumb = ({ threadId, title }: ThreadCrumbProps) => (
-  <ThreadContextMenu
-    render={
-      <BreadcrumbLink
-        className="rounded-md px-1.5 py-1.5 hover:bg-accent hover:text-accent-foreground max-md:truncate"
-        render={<Link params={{ threadId }} to="/chat/$threadId" />}
-      />
-    }
-    threadId={threadId}
-    title={title}
-  >
-    {title}
-  </ThreadContextMenu>
-);
+const ThreadCrumb = ({ threadId, title }: ThreadCrumbProps) => {
+  const gt = useGT();
+  const displayTitle = title || gt("New thread");
+
+  return (
+    <ThreadContextMenu
+      render={
+        <BreadcrumbLink
+          className="rounded-md px-1.5 py-1.5 hover:bg-accent hover:text-accent-foreground max-md:truncate"
+          render={<Link params={{ threadId }} to="/chat/$threadId" />}
+        />
+      }
+      threadId={threadId}
+      title={title}
+    >
+      {displayTitle}
+    </ThreadContextMenu>
+  );
+};

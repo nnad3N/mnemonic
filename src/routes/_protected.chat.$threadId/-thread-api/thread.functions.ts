@@ -37,7 +37,6 @@ export const createConversation = createServerFn({ method: "POST" })
   .validator(
     v.object({
       id: v.optional(v.pipe(v.string(), v.nanoid())),
-      title: v.pipe(v.string(), v.nonEmpty()),
     }),
   )
   .middleware([authMiddleware])
@@ -47,7 +46,7 @@ export const createConversation = createServerFn({ method: "POST" })
       thread: {
         id: data.id ?? nanoid(),
         resourceId: getResourceId({ topicId: undefined, userId: context.user.id }),
-        title: data.title,
+        title: "",
         createdAt: now,
         updatedAt: now,
       },
@@ -65,7 +64,6 @@ export const createConversation = createServerFn({ method: "POST" })
 export const createTopic = createServerFn({ method: "POST" })
   .validator(
     v.object({
-      conversationTitle: v.pipe(v.string(), v.nonEmpty()),
       title: v.pipe(v.string(), v.nonEmpty()),
     }),
   )
@@ -73,7 +71,6 @@ export const createTopic = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) =>
     Kit.run(async () =>
       createTopicFn(createTopicCtx, {
-        conversationTitle: data.conversationTitle,
         title: data.title,
         userId: context.user.id,
       }),
@@ -89,7 +86,6 @@ export const createTopicThread = createServerFn({ method: "POST" })
   .validator(
     v.object({
       id: v.optional(v.pipe(v.string(), v.nanoid())),
-      title: v.pipe(v.string(), v.nonEmpty()),
     }),
   )
   .middleware([topicAccessMiddleware])
@@ -99,7 +95,7 @@ export const createTopicThread = createServerFn({ method: "POST" })
       thread: {
         id: data.id ?? nanoid(),
         resourceId: getResourceId({ topicId: context.topic.id, userId: context.user.id }),
-        title: data.title,
+        title: "",
         createdAt: now,
         updatedAt: now,
       },
